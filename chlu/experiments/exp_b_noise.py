@@ -8,6 +8,7 @@ from typing import Optional
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from chlu.config import CHLUConfig, get_default_config
 from chlu.core.baselines import LSTMPredictor, NeuralODE
@@ -400,6 +401,22 @@ def run_experiment_b(
         "NODE": jnp.array(mse_node),
         "CHLU": jnp.array(mse_chlu),
     }
+
+    # Save lightweight metrics for downstream analysis (results-analyst consumes these)
+    results_dir = os.path.join(save_dir, "..", "results")
+    os.makedirs(results_dir, exist_ok=True)
+    metrics_path = os.path.join(results_dir, "exp_b_metrics.npz")
+    np.savez(
+        metrics_path,
+        sigmas=np.asarray(sigmas),
+        mse_chlu=np.asarray(mse_chlu),
+        mse_node=np.asarray(mse_node),
+        mse_lstm=np.asarray(mse_lstm),
+        target_energy=np.asarray(
+            target_energy if target_energy is not None else np.nan
+        ),
+    )
+    print(f"  Saved metrics to {metrics_path}")
 
     # Multi-level noise grid (NEW)
     if len(multi_level_data["sigmas"]) == 3:

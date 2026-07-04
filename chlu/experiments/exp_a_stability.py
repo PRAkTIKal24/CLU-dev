@@ -7,6 +7,7 @@ import os
 from typing import Optional
 
 import jax
+import numpy as np
 
 from chlu.config import CHLUConfig, get_default_config
 from chlu.core.baselines import LSTMPredictor, NeuralODE
@@ -15,6 +16,7 @@ from chlu.data.figure8 import generate_figure8
 from chlu.training.train import train_chlu
 from chlu.training.train_baselines import train_lstm, train_neural_ode
 from chlu.utils.checkpoints import load_checkpoint, save_checkpoint
+from chlu.utils.metrics import compute_mse
 from chlu.utils.plotting import (
     create_trajectory_animation,
     plot_energy_conservation,
@@ -161,6 +163,8 @@ def run_experiment_a(
         and os.path.exists(lstm_path)
     )
 
+    chlu_losses = None  # populated only when training (not when loading pretrained)
+
     if use_pretrained and models_exist:
         print(f"\n[3/5] Loading pre-trained models from {models_dir}...")
         chlu, _ = load_checkpoint(chlu_path, chlu)
@@ -253,6 +257,31 @@ def run_experiment_a(
 
     print("  LSTM: Autoregressive generation...")
     lstm_traj = lstm.generate(z_last, steps=test_steps)
+
+    # Save lightweight metrics for downstream analysis (results-analyst consumes these)
+    results_dir = os.path.join(save_dir, "..", "results")
+    os.makedirs(results_dir, exist_ok=True)
+    chlu_energy = np.asarray(
+        jax.vmap(chlu.H)(chlu_traj[:, :chlu_dim], chlu_traj[:, chlu_dim:])
+    )
+
+    def _traj_mse(traj):
+        n = min(len(traj), len(test_data))
+        return float(compute_mse(traj[:n], test_data[:n]))
+
+    metrics = {
+        "chlu_energy": chlu_energy,
+        "energy_drift": float(chlu_energy.max() - chlu_energy.min()),
+        "mse_chlu": _traj_mse(chlu_traj),
+        "mse_node": _traj_mse(node_traj),
+        "mse_lstm": _traj_mse(lstm_traj),
+        "dt": float(dt),
+    }
+    if chlu_losses is not None:
+        metrics["chlu_loss_history"] = np.asarray(chlu_losses)
+    metrics_path = os.path.join(results_dir, "exp_a_metrics.npz")
+    np.savez(metrics_path, **metrics)
+    print(f"  Saved metrics to {metrics_path}")
 
     # 5. Plot results
     print("\n[5/5] Creating visualization...")

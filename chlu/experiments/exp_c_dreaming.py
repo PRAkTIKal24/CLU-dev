@@ -205,6 +205,9 @@ def run_experiment_c(
     chlu_path = os.path.join(models_dir, "exp_c_chlu.pkl")
     model_exists = os.path.exists(chlu_path)
 
+    losses = None  # populated only when training (not when loading pretrained)
+    target_energy = None
+
     if use_pretrained and model_exists:
         print(f"\n[2/4] Loading pre-trained model from {models_dir}...")
         chlu, _ = load_checkpoint(chlu_path, chlu)
@@ -240,6 +243,22 @@ def run_experiment_c(
             config=config,
         )
         print(f"    Saved to {models_dir}")
+
+    # Save lightweight metrics for downstream analysis (results-analyst consumes these)
+    results_dir = os.path.join(save_dir, "..", "results")
+    os.makedirs(results_dir, exist_ok=True)
+    if losses is not None:
+        metrics_path = os.path.join(results_dir, "exp_c_metrics.npz")
+        np.savez(
+            metrics_path,
+            wake_loss=np.asarray(losses["wake"]),
+            sleep_loss=np.asarray(losses["sleep"]),
+            total_loss=np.asarray(losses["total"]),
+            target_energy=np.asarray(
+                target_energy if target_energy is not None else np.nan
+            ),
+        )
+        print(f"  Saved metrics to {metrics_path}")
 
     # 3. Generative Dreaming: Evolving from noise
     print(f"\n[3/4] Dreaming: evolving from noise ({dream_steps} steps)...")
