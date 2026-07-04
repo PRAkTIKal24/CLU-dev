@@ -9,20 +9,23 @@ from chlu.data.sine_waves import generate_sine_waves, add_noise
 
 def test_figure8_shape():
     """Figure-8 generator produces correct shape."""
-    data = generate_figure8(jax.random.PRNGKey(0), steps=1000)
-    
-    assert data.shape == (1000, 4)  # (x, y, vx, vy)
+    # generate_figure8 works in whole cycles (period 2*pi); with dt=0.02 one
+    # cycle is ~314 steps, so 2 cycles gives a multi-hundred-step trajectory.
+    data = generate_figure8(jax.random.PRNGKey(0), n_cycles=2)
+
+    steps_per_cycle = int(2 * jnp.pi / 0.02)
+    assert data.shape == (2 * steps_per_cycle, 4)  # (x, y, vx, vy)
     assert jnp.all(jnp.isfinite(data))
 
 
 def test_figure8_periodic():
     """Figure-8 should be approximately periodic."""
-    data = generate_figure8(jax.random.PRNGKey(0), steps=1000, dt=0.01)
-    
+    data = generate_figure8(jax.random.PRNGKey(0), n_cycles=2, dt=0.01)
+
     # The lemniscate has period 2π, so at t≈2π should be back to start
     # With dt=0.01, one period is ~628 steps
     period_steps = int(2 * jnp.pi / 0.01)
-    
+
     if period_steps < len(data):
         start = data[0]
         end = data[min(period_steps, len(data) - 1)]

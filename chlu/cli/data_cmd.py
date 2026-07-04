@@ -1,5 +1,6 @@
 """Data generation CLI commands."""
 
+import math
 from pathlib import Path
 from rich.console import Console
 import numpy as np
@@ -52,61 +53,88 @@ def setup_data_parser(subparsers):
 
 def cmd_data_figure8(args):
     """Generate figure-8 data."""
-    from ..data.figure8 import generate_figure8_data
+    import jax
+
+    from ..data.figure8 import generate_figure8
     from ..config import get_default_config
-    
+
     config = get_default_config()
     dt = args.dt if args.dt else config.data.figure8_dt
-    
+    scale = config.data.figure8_scale
+    seed = config.project.seed
+
     console.print("[bold cyan]Generating figure-8 data[/bold cyan]")
     console.print(f"  Steps: {args.steps}, dt: {dt}")
-    
+
     try:
-        q, p = generate_figure8_data(steps=args.steps, dt=dt)
-        
+        # generate_figure8 works in whole cycles (period 2*pi); generate enough
+        # cycles to cover the requested number of steps, then truncate.
+        steps_per_cycle = int(2 * math.pi / dt)
+        n_cycles = max(1, math.ceil(args.steps / max(steps_per_cycle, 1)))
+        key = jax.random.PRNGKey(seed)
+
+        trajectory = generate_figure8(key, n_cycles=n_cycles, dt=dt, scale=scale)
+        trajectory = np.asarray(trajectory[: args.steps])  # (steps, 4) [x, y, vx, vy]
+
+        # Split into generalized position q=[x, y] and momentum p=[vx, vy]
+        q = trajectory[:, :2]
+        p = trajectory[:, 2:]
+
         if args.output:
             output_path = args.output
         else:
             output_path = Path('figure8_data.npz')
-        
-        np.savez(output_path, q=q, p=p, dt=dt)
-        console.print(f"✓ Saved to {output_path}", style="green")
+
+        np.savez(output_path, q=q, p=p, trajectory=trajectory, dt=dt)
+        console.print(f"✓ Saved to {output_path} (q={q.shape}, p={p.shape})", style="green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
-    
+
     return 0
 
 
 def cmd_data_sine(args):
     """Generate sine wave data."""
-    from ..data.sine_waves import generate_sine_data
+    import jax
+
+    from ..data.sine_waves import generate_sine_waves
     from ..config import get_default_config
-    
+
     config = get_default_config()
     dt = args.dt if args.dt else config.data.sine_dt
-    
+    seed = config.project.seed
+
     console.print("[bold cyan]Generating sine wave data[/bold cyan]")
     console.print(f"  Waves: {args.n_waves}, Steps: {args.steps}, dt: {dt}")
-    
+
     try:
-        q_data, p_data = generate_sine_data(
-            n_samples=args.n_waves,
+        key = jax.random.PRNGKey(seed)
+        waves = generate_sine_waves(
+            key,
+            n_waves=args.n_waves,
             steps=args.steps,
-            dt=dt
+            dt=dt,
         )
-        
+        waves = np.asarray(waves)  # (n_waves, steps, 2) [x, dx/dt]
+
+        # Split state into generalized position q=[x] and momentum p=[dx/dt]
+        q_data = waves[..., 0:1]
+        p_data = waves[..., 1:2]
+
         if args.output:
             output_path = args.output
         else:
             output_path = Path('sine_data.npz')
-        
-        np.savez(output_path, q=q_data, p=p_data, dt=dt)
-        console.print(f"✓ Saved to {output_path}", style="green")
+
+        np.savez(output_path, q=q_data, p=p_data, waves=waves, dt=dt)
+        console.print(
+            f"✓ Saved to {output_path} (q={q_data.shape}, p={p_data.shape})", style="green"
+        )
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
-    
+
     return 0
 
 
