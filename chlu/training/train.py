@@ -102,6 +102,7 @@ def train_chlu(
 
     sleep_frequency = config.training.sleep_frequency
     sleep_friction = config.training.sleep_friction
+    persistent_sleep_buffer = config.training.persistent_sleep_buffer
     if sleep_temperature is None:
         sleep_temperature = config.training.sleep_temperature
     clamp_strength = jnp.array(config.training.clamp_strength)
@@ -166,11 +167,16 @@ def train_chlu(
         return model, opt_state, loss
 
     @eqx.filter_jit
-    def sleep_step(model, opt_state, buffer, key, sleep_friction=0.0, sleep_temperature=0.0):
-        """Sleep phase: energy minimization."""
-        # Sample from buffer
-        key, subkey = jax.random.split(key)
-        q_batch, p_batch, indices = buffer.sample(subkey, batch_size)
+    def sleep_step(
+        model, opt_state, q_batch, p_batch, key, sleep_friction=0.0, sleep_temperature=0.0
+    ):
+        """Sleep phase: energy maximization on buffer samples.
+
+        Buffer sampling is done by the caller (outside the jit) so that persisting
+        evolved states back into the buffer doesn't force recompilation. Returns
+        the evolved (q, p) states so the caller can update the replay buffer (PCD)
+        when ``persistent_sleep_buffer`` is enabled.
+        """
 
         def loss_fn(model):
             # Evolve states for k steps using scan to avoid slow compilation
@@ -214,14 +220,16 @@ def train_chlu(
             # Negative sign because we want to *maximize* sleep energy
             sleep_energy = -energy_loss(model, q_evolved, p_evolved)
 
-            return sleep_energy
+            # Return evolved states as aux so the caller can persist them (PCD)
+            return sleep_energy, (q_evolved, p_evolved)
 
-        loss, grads = eqx.filter_value_and_grad(loss_fn)(model)
+        (loss, (q_evolved, p_evolved)), grads = eqx.filter_value_and_grad(
+            loss_fn, has_aux=True
+        )(model)
         updates, opt_state = optimizer.update(grads, opt_state, model)
         model = eqx.apply_updates(model, updates)
 
-        # Update buffer with evolved states (not implemented in-place, return info)
-        return model, opt_state, loss
+        return model, opt_state, loss, q_evolved, p_evolved
 
     # Training loop
     for epoch in tqdm(range(epochs), desc="Training CHLU"):
@@ -252,15 +260,22 @@ def train_chlu(
 
         # Sleep phase (every few epochs to save compute)
         if epoch % sleep_frequency == 0:
-            k5, k6 = jax.random.split(k5)
-            model, opt_state, sleep_loss = sleep_step(
+            k5, k6, k7 = jax.random.split(k5, 3)
+            # Sample from the buffer outside the jit so that (optional) persistence
+            # of evolved states doesn't retrigger compilation.
+            q_batch, p_batch, indices = buffer.sample(k7, batch_size)
+            model, opt_state, sleep_loss, q_evolved, p_evolved = sleep_step(
                 model,
                 opt_state,
-                buffer,
+                q_batch,
+                p_batch,
                 k6,
                 sleep_friction,
                 sleep_temperature,
             )
+            # Persistent Contrastive Divergence: write evolved negatives back.
+            if persistent_sleep_buffer:
+                buffer.update((q_evolved, p_evolved), indices)
 
         losses.append(float(wake_loss))
 

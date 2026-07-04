@@ -39,6 +39,10 @@ class TrainingConfig:
     clamp_strength: float = 1000.0
     clamp_ramp: float = 0.5
     sleep_frequency: int = 5
+    # If True, evolved sleep states are written back into the replay buffer at
+    # their sampled indices (true PCD, mirrors train_generative). Default False
+    # preserves the current Exp A/B behavior: CD with fresh random negatives.
+    persistent_sleep_buffer: bool = False
 
     # Generative training (Experiment C)
     reinit_prob: float = 0.25  # Probability of resetting chains to noise
