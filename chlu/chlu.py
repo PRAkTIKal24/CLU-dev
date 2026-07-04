@@ -10,6 +10,7 @@ import sys
 from art import text2art
 from rich.console import Console
 
+from . import __version__
 from .cli import (
     setup_data_parser,
     setup_experiment_parsers,
@@ -36,7 +37,9 @@ Examples:
     )
 
     # Global options
-    parser.add_argument("--version", action="version", version="CHLU 0.2.3")
+    parser.add_argument(
+        "--version", action="version", version=f"CHLU {__version__}"
+    )
 
     # Create subparsers
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
