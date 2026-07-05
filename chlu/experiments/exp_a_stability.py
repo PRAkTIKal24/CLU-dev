@@ -181,11 +181,14 @@ def run_experiment_a(
 
         print("  Training CHLU...")
         k6, k7 = jax.random.split(k6)
+        # Pass epochs explicitly: the trainers default to config.training.epochs,
+        # not the experiment's train_epochs (--quick relies on this, §7.10)
         chlu, chlu_losses, _ = train_chlu(
             chlu,
             train_data,
             key=k7,
             config=config,
+            epochs=train_epochs,
             window_size=window_size,
         )
         print(f"    Final loss: {chlu_losses[-1]:.6f}")
@@ -197,6 +200,7 @@ def run_experiment_a(
             train_data,
             key=k8,
             config=config,
+            epochs=train_epochs,
             window_size=window_size,
         )
         print(f"    Final loss: {node_losses[-1]:.6f}")
@@ -208,6 +212,7 @@ def run_experiment_a(
             train_data,
             key=k9,
             config=config,
+            epochs=train_epochs,
             window_size=window_size,
         )
         print(f"    Final loss: {lstm_losses[-1]:.6f}")

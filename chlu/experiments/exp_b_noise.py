@@ -186,17 +186,25 @@ def run_experiment_b(
             print(f"\n[2/4] Training models on clean data ({train_epochs} epochs)...")
 
         # CHLU (1D sine wave, but we track [x, dx/dt] so dim=1 for position)
+        # Pass epochs explicitly: the trainers default to config.training.epochs,
+        # not the experiment's train_epochs (--quick relies on this, §7.10)
         print("  Training CHLU...")
-        chlu, _, target_energy = train_chlu(chlu, train_data, key=k3, config=config)
+        chlu, _, target_energy = train_chlu(
+            chlu, train_data, key=k3, config=config, epochs=train_epochs
+        )
         print(f"    Computed target energy: {target_energy:.4f}")
 
         # Neural ODE (2D: [x, dx/dt])
         print("  Training Neural ODE...")
-        node, _ = train_neural_ode(node, train_data, key=k4, config=config)
+        node, _ = train_neural_ode(
+            node, train_data, key=k4, config=config, epochs=train_epochs
+        )
 
         # LSTM
         print("  Training LSTM...")
-        lstm, lstm_losses = train_lstm(lstm, train_data, key=k5, config=config)
+        lstm, lstm_losses = train_lstm(
+            lstm, train_data, key=k5, config=config, epochs=train_epochs
+        )
 
         # Save trained models
         print("\n  Saving trained models...")
