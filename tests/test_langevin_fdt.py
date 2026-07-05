@@ -44,8 +44,15 @@ def _stationary_p_var(
             def step_fn(carry, _):
                 q_c, p_c, key_c = carry
                 q_n, p_n, key_n = langevin_step(
-                    H_fn, q_c, p_c, _DT, _GAMMA, _TEMPERATURE, key_c,
-                    noise_mode=noise_mode, m_eff=m_eff,
+                    H_fn,
+                    q_c,
+                    p_c,
+                    _DT,
+                    _GAMMA,
+                    _TEMPERATURE,
+                    key_c,
+                    noise_mode=noise_mode,
+                    m_eff=m_eff,
                 )
                 return (q_n, p_n, key_n), p_n
 
@@ -65,7 +72,7 @@ def _stationary_p_var(
 
 
 def test_fdt_noise_satisfies_maxwell_boltzmann():
-    """"fdt": stationary Var(p_i) ≈ M_eff_i * T per mode (5% tolerance)."""
+    """ "fdt": stationary Var(p_i) ≈ M_eff_i * T per mode (5% tolerance)."""
     var_p = _stationary_p_var("fdt")
     expected = _M * _TEMPERATURE  # Maxwell-Boltzmann: [0.25, 1.0]
     assert jnp.allclose(var_p, expected, rtol=0.05), (
@@ -74,7 +81,7 @@ def test_fdt_noise_satisfies_maxwell_boltzmann():
 
 
 def test_legacy_noise_reproduces_fdt_mismatch():
-    """"legacy": Var(p_i) ≈ 2*T*dt/(2-gamma), mass-independent != M_eff_i*T."""
+    """ "legacy": Var(p_i) ≈ 2*T*dt/(2-gamma), mass-independent != M_eff_i*T."""
     var_p = _stationary_p_var("legacy")
     predicted = 2.0 * _TEMPERATURE * _DT / (2.0 - _GAMMA)  # ≈ 0.0588, both modes
     maxwell_boltzmann = _M * _TEMPERATURE
@@ -95,9 +102,7 @@ def test_effective_mass_per_kinetic_mode():
     assert jnp.allclose(identity.effective_mass(), jnp.ones(3))
 
     learned = CHLU(dim=3, hidden=8, kinetic_mode="newtonian_learned", key=key)
-    assert jnp.allclose(
-        learned.effective_mass(), jax.nn.softplus(learned.log_mass)
-    )
+    assert jnp.allclose(learned.effective_mass(), jax.nn.softplus(learned.log_mass))
 
     relativistic = CHLU(
         dim=3, hidden=8, rest_mass=2.0, kinetic_mode="relativistic", key=key
@@ -127,8 +132,14 @@ def test_stochastic_step_and_rollout_accept_noise_mode():
     assert jnp.allclose(q_leg, q_fdt)
 
     traj = model.stochastic_rollout(
-        q, p, steps=10, dt=0.05, gamma=0.2, temperature=1.0,
-        key=key, noise_mode="fdt",
+        q,
+        p,
+        steps=10,
+        dt=0.05,
+        gamma=0.2,
+        temperature=1.0,
+        key=key,
+        noise_mode="fdt",
     )
     assert traj.shape == (10, 4)
     assert jnp.all(jnp.isfinite(traj))

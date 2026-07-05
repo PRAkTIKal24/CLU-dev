@@ -32,13 +32,11 @@ def _grad_norm(penalty: str) -> float:
 
     grads = eqx.filter_grad(loss_fn)(model)
     leaves = jax.tree_util.tree_leaves(eqx.filter(grads, eqx.is_array))
-    return float(
-        jnp.sqrt(sum(jnp.sum(leaf**2) for leaf in leaves if leaf.size > 0))
-    )
+    return float(jnp.sqrt(sum(jnp.sum(leaf**2) for leaf in leaves if leaf.size > 0)))
 
 
 def test_new_penalties_have_nonzero_theta_gradients():
-    """"max"/"sq"/"pos" must provide a usable training signal."""
+    """ "max"/"sq"/"pos" must provide a usable training signal."""
     for penalty in ("max", "sq", "pos"):
         norm = _grad_norm(penalty)
         assert norm > 1e-6, f"penalty={penalty!r} has ~zero grad norm {norm:.3e}"

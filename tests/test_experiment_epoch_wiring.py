@@ -30,8 +30,12 @@ def test_train_chlu_epochs_override_controls_loss_history():
     data = jnp.zeros((1, 20, 4))
 
     _, losses, _ = train_chlu(
-        model, data, key=jax.random.PRNGKey(0), config=config,
-        epochs=3, window_size=10,
+        model,
+        data,
+        key=jax.random.PRNGKey(0),
+        config=config,
+        epochs=3,
+        window_size=10,
     )
     assert len(losses) == 3
 
