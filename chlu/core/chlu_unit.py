@@ -5,7 +5,13 @@ import jax
 import jax.numpy as jnp
 
 from chlu.core.integrators import velocity_verlet_step, langevin_step
-from chlu.core.potentials import PotentialMLP, DeepPotentialMLP, ConvPotential
+from chlu.core.potentials import (
+    PotentialMLP,
+    DeepPotentialMLP,
+    ConvPotential,
+    SO2InvariantPotential,
+    TiltedPotential,
+)
 
 
 class CHLU(eqx.Module):
@@ -24,7 +30,7 @@ class CHLU(eqx.Module):
         - V(q): learnable potential function (MLP)
     """
 
-    potential_net: eqx.Module  # PotentialMLP, DeepPotentialMLP, or ConvPotential
+    potential_net: eqx.Module  # PotentialMLP, DeepPotentialMLP, ConvPotential, SO2InvariantPotential (opt. TiltedPotential-wrapped)
     log_mass: jnp.ndarray  # Log-parameterized for positivity
     rest_mass: float = eqx.field(static=True)
     c: float = eqx.field(static=True)  # Speed of causality
@@ -32,7 +38,11 @@ class CHLU(eqx.Module):
     kinetic_mode: str = eqx.field(
         static=True
     )  # "newtonian_identity", "newtonian_learned", "relativistic"
-    potential_type: str = eqx.field(static=True)  # "mlp", "deep_mlp", "conv"
+    potential_type: str = eqx.field(static=True)  # "mlp", "deep_mlp", "conv", "so2_invariant"
+    # Kinetic isotropy on the SO(2) channel (coords 0, 1): tie the channel's
+    # inertial masses so the kinetic term cannot explicitly break the channel
+    # symmetry (F5 §4.1 — multiplet members share a common inertial mass).
+    tie_channel_mass: bool = eqx.field(static=True)
 
     def __init__(
         self,
@@ -42,6 +52,9 @@ class CHLU(eqx.Module):
         c: float = 1.0,
         kinetic_mode: str = "newtonian_identity",
         potential_type: str = "mlp",
+        tie_channel_mass: bool = False,
+        tilt_delta: float = 0.0,
+        tilt_n: int = 1,
         key: jax.random.PRNGKey = None,
     ):
         """
@@ -55,7 +68,17 @@ class CHLU(eqx.Module):
             kinetic_mode: Kinetic energy calculation mode (default: "newtonian_identity")
                          Options: "newtonian_identity", "newtonian_learned", "relativistic"
             potential_type: Potential network architecture (default: "mlp")
-                           Options: "mlp" (standard), "deep_mlp" (high-capacity), "conv" (convolutional)
+                           Options: "mlp" (standard), "deep_mlp" (high-capacity),
+                           "conv" (convolutional), "so2_invariant" (SO(2)-equivariant
+                           channel over coords (0, 1) — F5 §4)
+            tie_channel_mass: If True, tie the inertial masses of coords (0, 1)
+                           (kinetic isotropy for the SO(2) channel, F5 §4.1).
+                           False (default) preserves independent per-coordinate
+                           masses — the "broken isotropy" switch.
+            tilt_delta: Explicit SO(2)-breaking amplitude delta for an additive
+                           delta*cos(n*theta) tilt on the channel (F5 §3.3c GMOR
+                           probe). 0.0 (default) = no tilt (no wrapper added).
+            tilt_n: Harmonic n of the tilt (default 1). Ignored if tilt_delta == 0.
             key: JAX random key
         """
         if key is None:
@@ -68,6 +91,11 @@ class CHLU(eqx.Module):
         self.c = c
         self.kinetic_mode = kinetic_mode
         self.potential_type = potential_type
+        if tie_channel_mass and dim < 2:
+            raise ValueError(
+                f"tie_channel_mass requires dim >= 2 (channel = coords (0, 1)), got dim={dim}"
+            )
+        self.tie_channel_mass = tie_channel_mass
 
         # Initialize potential network based on potential_type
         if potential_type == "conv":
@@ -83,14 +111,66 @@ class CHLU(eqx.Module):
         elif potential_type == "mlp":
             # Standard MLP for low-dimensional dynamics
             self.potential_net = PotentialMLP(dim, hidden, key=k1)
+        elif potential_type == "so2_invariant":
+            # Exactly SO(2)-invariant potential on channel (0, 1) (F5 §4)
+            self.potential_net = SO2InvariantPotential(dim, hidden, key=k1)
         else:
             raise ValueError(
                 f"Unknown potential_type: {potential_type}. "
-                f"Must be 'mlp', 'deep_mlp', or 'conv'."
+                f"Must be 'mlp', 'deep_mlp', 'conv', or 'so2_invariant'."
             )
+
+        # Controlled explicit symmetry breaking (GMOR probe, F5 §3.3c):
+        # compose the potential with an additive delta*cos(n*theta) tilt.
+        if tilt_delta != 0.0:
+            self.potential_net = TiltedPotential(self.potential_net, tilt_delta, tilt_n)
 
         # Initialize log mass (use log for positive-definiteness via softplus)
         self.log_mass = jax.random.normal(k2, (dim,)) * 0.1
+
+    def mass_vector(self) -> jnp.ndarray:
+        """
+        Per-coordinate inertial mass M = softplus(log_mass), with optional
+        channel tying.
+
+        If ``tie_channel_mass`` the channel entries (0, 1) are replaced by
+        their log-space mean *at use time* (constraint by reparameterization),
+        so the dynamics see exactly equal channel inertial masses regardless
+        of what gradient descent does to the raw entries (F5 §4.1 kinetic
+        isotropy). ``getattr`` guards checkpoints saved before this field
+        existed (see handover §7.13).
+
+        Note (F5 Def-2): this is the *inertial* mass M — do not conflate with
+        the spectral mass mu (eigenvalues of M_eff^{-1} Hess V).
+        """
+        log_m = self.log_mass
+        if getattr(self, "tie_channel_mass", False):
+            tied = 0.5 * (log_m[0] + log_m[1])
+            log_m = log_m.at[0].set(tied).at[1].set(tied)
+        return jax.nn.softplus(log_m)
+
+    def effective_inertia(self) -> jnp.ndarray:
+        """
+        Exact per-coordinate rest inertia M_eff used by this unit's dynamics
+        (the inertia at p ≈ 0; F5 §2.1 table):
+
+            newtonian_identity: 1
+            newtonian_learned:  M + 1e-6
+            relativistic:       rest_mass * (M + 1e-6)
+
+        The 1e-6 is the numerical-stability epsilon inside ``H`` (the dynamics
+        invert M + 1e-6, not M), included here so spectrum probes and latch
+        predictions are exactly consistent with the integrated dynamics.
+        """
+        if self.kinetic_mode == "newtonian_identity":
+            return jnp.ones(self.dim)
+        M = self.mass_vector() + 1e-6
+        if self.kinetic_mode == "newtonian_learned":
+            return M
+        elif self.kinetic_mode == "relativistic":
+            return self.rest_mass * M
+        else:
+            raise ValueError(f"Unknown kinetic mode: {self.kinetic_mode}.")
 
     def H(self, q: jnp.ndarray, p: jnp.ndarray) -> float:
         """
@@ -110,9 +190,11 @@ class CHLU(eqx.Module):
         Returns:
             Total energy (scalar)
         """
-        # Compute mass vector (always prepared, used if needed)
-        M = jax.nn.softplus(self.log_mass)  # Ensure positive-definite
-        M_inv = 1.0 / (M + 1e-6)  # Inverse mass with numerical stability
+        # Compute inertial-mass vector (always prepared, used if needed).
+        # mass_vector() == softplus(log_mass), with optional channel tying
+        # (bit-identical to the historical computation when untied).
+        M = self.mass_vector()  # Ensure positive-definite
+        M_inv = 1.0 / (M + 1e-6)  # Inverse inertial mass with numerical stability
 
         # Select kinetic energy calculation based on mode
         if self.kinetic_mode == "newtonian_identity":
