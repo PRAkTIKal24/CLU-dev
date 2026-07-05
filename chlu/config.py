@@ -152,6 +152,62 @@ class ExperimentCConfig:
 
 
 @dataclass
+class ExperimentV1GateConfig:
+    """Configuration for the V1 L0 gate experiment: boost-retry cascade on MQAR.
+
+    An energy-based associative memory (CHLU trained with generative PCD on a
+    per-episode MQAR dictionary) is queried by governed relaxation; failed
+    retrievals are retried with mass-weighted symplectic squeezes S^(M)
+    (F5 Def-6/7). Measures Q1 (residual-energy-vs-correctness calibration)
+    and Q2 (boost-retry recovery vs matched-compute controls).
+    """
+
+    # --- MQAR task (Zoology-legible knobs) ---
+    vocab_size: int = 256  # scaled down from Zoology's 8192 for small CLU dims
+    embed_dim: int = 16  # per-token embedding; CLU dim = 2 * embed_dim (key||value)
+    embed_scale: float = 1.0  # embedding norm scale (entries ~ scale/sqrt(embed_dim))
+    # Difficulty grid: list of [seq_len N, num_kv_pairs] levels
+    difficulty_levels: List[List[int]] = field(
+        default_factory=lambda: [[64, 4], [64, 8], [128, 16], [128, 32], [256, 64]]
+    )
+    min_trials_per_level: int = 64  # episodes are added until this many queries
+    max_episodes_per_level: int = 8
+    gap_distribution: str = "uniform"  # or "powerlaw" ("Based"-style gaps)
+    powerlaw_alpha: float = 0.01
+
+    # --- memory model & PCD training (per-episode "write") ---
+    kinetic_energy_mode: str = "relativistic"
+    potential_type: str = "mlp"  # coercive potential (confinement) — see F5 Prop-10
+    hidden_dim: int = 128
+    train_epochs: int = 500
+    train_lr: float = 1e-3
+    train_batch_size: int = 32
+    train_k_steps: int = 50
+    train_buffer_capacity: int = 256
+    train_friction: float = 0.3
+    train_temperature: float = 0.3
+    train_input_noise_sigma: float = 0.05
+    use_pretrained: bool = False
+
+    # --- retrieval / cascade (F5 Def-7, single shell) ---
+    dt: float = 0.05
+    relax_steps: int = 300  # base governed relaxation n0
+    retry_relax_steps: int = 150  # re-relaxation per line-search candidate
+    governor_sensitivity: float = 0.95
+    retry_budget: int = 3  # B
+    zeta_grid: List[float] = field(
+        default_factory=lambda: [-0.6, -0.3, -0.15, 0.15, 0.3, 0.6]
+    )
+    zeta_scale_per_retry: float = 1.5  # retry b uses zeta_grid * scale**b
+    n_tau: int = 9  # post-hoc tau sweep = this many quantiles of the residual
+
+    # --- baselines / comparison flags ---
+    compare_raw_squeeze: bool = True  # mass-blind S_zeta cascade (F5 says: flag only)
+    compare_noise_kick: bool = True  # random p-kick retries at matched energy injection
+    hopfield_beta: float = 20.0  # modern-Hopfield softmax inverse temperature
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -185,6 +241,9 @@ class CHLUConfig:
     experiment_a: ExperimentAConfig = field(default_factory=ExperimentAConfig)
     experiment_b: ExperimentBConfig = field(default_factory=ExperimentBConfig)
     experiment_c: ExperimentCConfig = field(default_factory=ExperimentCConfig)
+    experiment_v1_gate: ExperimentV1GateConfig = field(
+        default_factory=ExperimentV1GateConfig
+    )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
@@ -244,6 +303,11 @@ def load_config(path: Path) -> CHLUConfig:
         experiment_c=ExperimentCConfig(
             **filter_valid_fields(ExperimentCConfig, data.get("experiment_c", {}))
         ),
+        experiment_v1_gate=ExperimentV1GateConfig(
+            **filter_valid_fields(
+                ExperimentV1GateConfig, data.get("experiment_v1_gate", {})
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -267,6 +331,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_a": asdict(config.experiment_a),
         "experiment_b": asdict(config.experiment_b),
         "experiment_c": asdict(config.experiment_c),
+        "experiment_v1_gate": asdict(config.experiment_v1_gate),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
