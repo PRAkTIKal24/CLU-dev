@@ -47,7 +47,36 @@ def test_add_noise():
     """Noise addition works correctly."""
     data = jnp.ones((10, 10))
     noisy = add_noise(data, jax.random.PRNGKey(0), sigma=0.1)
-    
+
     assert noisy.shape == data.shape
     assert not jnp.allclose(noisy, data)  # Should be different
     assert jnp.all(jnp.isfinite(noisy))
+
+
+def test_mnist_subsample_is_seeded(monkeypatch):
+    """Same seed ⇒ identical MNIST subsample; different seed ⇒ different (§7.11).
+
+    fetch_openml is monkeypatched (no network); rows are distinct by
+    construction so array equality ⇔ identical selection.
+    """
+    from types import SimpleNamespace
+
+    import numpy as np
+
+    import chlu.data.mnist as mnist_mod
+
+    fake_pixels = (np.arange(100 * 784, dtype=np.float32).reshape(100, 784)) % 255.0
+    monkeypatch.setattr(
+        mnist_mod,
+        "fetch_openml",
+        lambda *args, **kwargs: SimpleNamespace(data=fake_pixels),
+    )
+
+    # dim=784 skips PCA -> selection is directly visible in the returned arrays
+    train1, test1, _ = mnist_mod.load_mnist_pca(dim=784, n_samples=20, seed=7)
+    train2, test2, _ = mnist_mod.load_mnist_pca(dim=784, n_samples=20, seed=7)
+    train3, _, _ = mnist_mod.load_mnist_pca(dim=784, n_samples=20, seed=8)
+
+    assert jnp.array_equal(train1, train2), "Same seed must select the same subsample"
+    assert jnp.array_equal(test1, test2)
+    assert not jnp.array_equal(train1, train3), "Different seeds must differ"

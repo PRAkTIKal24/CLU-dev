@@ -133,7 +133,9 @@ def run_experiment_c(
 
     # 1. Load MNIST with PCA
     print(f"\n[1/4] Loading MNIST (PCA → {pca_dim} dims, {n_samples} samples)...")
-    train_data, test_data, pca = load_mnist_pca(dim=pca_dim, n_samples=n_samples)
+    train_data, test_data, pca = load_mnist_pca(
+        dim=pca_dim, n_samples=n_samples, seed=seed
+    )
 
     print(f"  Train data: {train_data.shape}")
     if pca is not None:

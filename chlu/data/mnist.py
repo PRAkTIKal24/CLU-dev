@@ -6,20 +6,23 @@ from sklearn.decomposition import PCA
 from sklearn.datasets import fetch_openml
 
 
-def load_mnist_pca(dim: int = 32, n_samples: int = None) -> tuple:
+def load_mnist_pca(dim: int = 32, n_samples: int = None, seed: int = None) -> tuple:
     """
     Load MNIST dataset and apply PCA for dimensionality reduction.
-    
+
     This reduces 28×28 = 784 dimensional images to a lower dimensional
     representation suitable for CHLU training.
-    
+
     If dim=784 (original dimension), PCA is automatically skipped.
-    
+
     Args:
         dim: Target dimensionality after PCA (default: 32).
              Set to 784 to skip PCA and use raw pixel data.
         n_samples: Number of samples to use (None = all)
-    
+        seed: Seed for the subsample selection (None = non-deterministic).
+              Callers should thread config.project.seed so the training set
+              is reproducible at fixed seed (handover §7.11).
+
     Returns:
         (train_data, test_data, pca_model):
             - train_data: Training data (n_train, dim)
@@ -32,9 +35,11 @@ def load_mnist_pca(dim: int = 32, n_samples: int = None) -> tuple:
     X = mnist.data.astype(np.float32)
     X = (X / 127.5) - 1.0  # Normalize to [-1, 1]
     
-    # Optionally subsample
+    # Optionally subsample (seeded — an unseeded selection made every Exp-C
+    # training set a different 10k subset even at fixed project seed)
     if n_samples is not None and n_samples < len(X):
-        indices = np.random.choice(len(X), n_samples, replace=False)
+        rng = np.random.default_rng(seed)
+        indices = rng.choice(len(X), n_samples, replace=False)
         X = X[indices]
     
     # Split into train/test (80/20)
