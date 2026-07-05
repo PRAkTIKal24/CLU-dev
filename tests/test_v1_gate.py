@@ -35,7 +35,12 @@ def test_cascade_records_shapes_and_cost():
     true_tok = jnp.array([100, 101, 102])
     cfg = _tiny_cfg()
 
-    for arm, kick in [("mass", None), ("raw", None), ("kick", kt)]:
+    for arm, kick, cd in [
+        ("mass", None, e),  # clamped (cue-conditioned) retrieval
+        ("mass", None, 0),  # unclamped
+        ("raw", None, e),
+        ("kick", kt, e),
+    ]:
         rec = _run_cascade(
             model,
             m_eff,
@@ -50,6 +55,7 @@ def test_cascade_records_shapes_and_cost():
             arm=arm,
             select_by="energy",
             kick_key=kick,
+            clamp_dims=cd,
         )
         B1 = cfg.retry_budget + 1
         assert rec["R"].shape == (T, B1)
@@ -57,17 +63,35 @@ def test_cascade_records_shapes_and_cost():
         assert rec["correct"].shape == (T, B1)
         assert rec["correct"].dtype == bool
         assert rec["cost"].shape == (B1,)
-        # cost: relax-1, then + G*(retry-1) per stage
+        # cost: relax steps, then + G*retry steps per stage
         G = len(cfg.zeta_grid)
-        expected = [cfg.relax_steps - 1]
+        expected = [cfg.relax_steps]
         for _ in range(cfg.retry_budget):
-            expected.append(expected[-1] + G * (cfg.retry_relax_steps - 1))
+            expected.append(expected[-1] + G * cfg.retry_relax_steps)
         assert rec["cost"].tolist() == expected
         # best-so-far residual is non-increasing for energy selection
         assert np.all(np.diff(rec["R"], axis=1) <= 1e-5)
         if arm == "mass":
             assert "scatter" in rec
-            assert rec["scatter"]["dq_total"].shape == (T, dim)
+            # scatter covers the free (boostable) coordinates only
+            assert rec["scatter"]["dq_total"].shape == (T, dim - cd)
+            assert rec["scatter"]["m_eff"].shape == (dim - cd,)
+
+
+def test_clamped_relax_freezes_key_half():
+    """With clamp_dims=e the key half must stay exactly at the cue."""
+    from chlu.experiments.exp_v1_gate import _settle_batch
+
+    key = jax.random.PRNGKey(1)
+    e, dim, T = 2, 4, 5
+    model = CHLU(dim=dim, hidden=8, kinetic_mode="newtonian_learned", key=key)
+    q0 = jax.random.normal(jax.random.fold_in(key, 1), (T, dim))
+    p0 = jnp.zeros((T, dim))
+    qf, pf, _ = _settle_batch(model, q0, p0, 20, 0.05, jnp.asarray(0.0), 0.9, e)
+    assert np.allclose(np.asarray(qf[:, :e]), np.asarray(q0[:, :e]))
+    assert np.allclose(np.asarray(pf[:, :e]), 0.0)
+    # free half moved (dynamics actually ran)
+    assert not np.allclose(np.asarray(qf[:, e:]), np.asarray(q0[:, e:]))
 
 
 def test_simulate_tau_policy_hand_case():

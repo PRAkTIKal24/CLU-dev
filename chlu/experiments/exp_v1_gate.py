@@ -63,16 +63,36 @@ from chlu.utils.plotting import (
 
 
 @eqx.filter_jit
-def _settle_batch(model, q0, p0, steps, dt, floor, sensitivity):
+def _settle_batch(model, q0, p0, steps, dt, floor, sensitivity, clamp_dims):
     """Governed relaxation of a batch of states; returns final (q, p, H).
 
-    Executes steps-1 Verlet steps per trial (governed_rollout prepends the
-    initial state).
+    Executes exactly `steps` Verlet steps per trial, with the energy governor
+    gamma = sensitivity * tanh(max(0, H - floor)) (same policy as
+    CHLU.governed_rollout, re-implemented here to support clamping).
+
+    If clamp_dims > 0, the first clamp_dims coordinates are frozen at their
+    initial values with zero momentum after every step (cue-conditioned
+    retrieval). Freezing coordinates and zeroing their momenta is the
+    legitimate sub-system Hamiltonian dynamics in the remaining coordinates
+    for all three kinetic modes (for the relativistic T, setting p_k = 0
+    yields a valid sub-kinetic; see F5 Prop-2).
     """
 
-    def one(q, p):
-        traj = model.governed_rollout(q, p, steps, dt, floor, sensitivity)
-        return traj[-1, : model.dim], traj[-1, model.dim :]
+    def one(q_init, p_init):
+        def scan_fn(state, _):
+            q, p = state
+            H_now = model.H(q, p)
+            gamma = sensitivity * jnp.tanh(jnp.maximum(0.0, H_now - floor))
+            q_next, p_next = model.step((q, p), dt, gamma)
+            if clamp_dims:
+                q_next = q_next.at[:clamp_dims].set(q_init[:clamp_dims])
+                p_next = p_next.at[:clamp_dims].set(0.0)
+            return (q_next, p_next), None
+
+        (qf, pf), _ = jax.lax.scan(
+            scan_fn, (q_init, p_init), None, length=steps
+        )
+        return qf, pf
 
     qf, pf = jax.vmap(one)(q0, p0)
     Hf = jax.vmap(model.H)(qf, pf)
@@ -80,14 +100,30 @@ def _settle_batch(model, q0, p0, steps, dt, floor, sensitivity):
 
 
 @eqx.filter_jit
-def _relax_checkpoints_batch(model, q0, p0, steps, dt, floor, sensitivity, idx):
-    """Long governed relaxation, returning (q, H) at the requested row indices.
+def _relax_checkpoints_batch(
+    model, q0, p0, steps, dt, floor, sensitivity, clamp_dims, idx
+):
+    """Long governed relaxation; returns (q, H) at the requested checkpoints.
 
-    Row t of a governed rollout is the state after t Verlet steps.
+    Same dynamics (and clamping semantics) as _settle_batch; `idx` indexes
+    states by the number of Verlet steps executed (0 = initial state).
     """
 
-    def one(q, p):
-        traj = model.governed_rollout(q, p, steps, dt, floor, sensitivity)
+    def one(q_init, p_init):
+        def scan_fn(state, _):
+            q, p = state
+            H_now = model.H(q, p)
+            gamma = sensitivity * jnp.tanh(jnp.maximum(0.0, H_now - floor))
+            q_next, p_next = model.step((q, p), dt, gamma)
+            if clamp_dims:
+                q_next = q_next.at[:clamp_dims].set(q_init[:clamp_dims])
+                p_next = p_next.at[:clamp_dims].set(0.0)
+            return (q_next, p_next), jnp.concatenate([q_next, p_next])
+
+        _, ys = jax.lax.scan(scan_fn, (q_init, p_init), None, length=steps)
+        traj = jnp.concatenate(
+            [jnp.concatenate([q_init, p_init])[None, :], ys], axis=0
+        )
         qs = traj[idx, : model.dim]
         ps = traj[idx, model.dim :]
         Hs = jax.vmap(model.H)(qs, ps)
@@ -138,8 +174,13 @@ def _run_cascade(
     arm: str,
     select_by: str = "energy",
     kick_key=None,
+    clamp_dims: int = 0,
 ):
     """Run the ungated boost-retry cascade for one batch of queries.
+
+    If clamp_dims > 0 (cue-conditioned retrieval), boosts/kicks act on the
+    free (value) coordinates only — the clamped key coordinates are frozen by
+    the relaxation anyway, so boosting them would be a no-op wasting rapidity.
 
     Returns a dict of per-stage records (stage 0 = after base relaxation,
     stage b = best-so-far after b retry rounds):
@@ -149,15 +190,19 @@ def _run_cascade(
         correct:(T, B+1)
         cost:   (B+1,) cumulative Verlet steps per trial
         scatter: (mass arm only) per-mode displacement records of retry 1
+                 (free coordinates only)
     """
     dt = cfg.dt
     sens = cfg.governor_sensitivity
     B = cfg.retry_budget
     zeta_grid = list(cfg.zeta_grid)
     G = len(zeta_grid)
+    cd = clamp_dims
     floor_j = jnp.asarray(floor)
 
-    q, p, H = _settle_batch(model, q0, p0, cfg.relax_steps, dt, floor_j, sens)
+    q, p, H = _settle_batch(
+        model, q0, p0, cfg.relax_steps, dt, floor_j, sens, cd
+    )
     R = H - floor_j
     pred, margin = _decode_values(q[:, embed_dim:], val_embeds, val_tokens)
 
@@ -165,7 +210,7 @@ def _run_cascade(
     rec_R = [R]
     rec_margin = [margin]
     rec_pred = [pred]
-    cost = [cfg.relax_steps - 1]
+    cost = [cfg.relax_steps]
     scatter = None
 
     for b in range(B):
@@ -180,24 +225,32 @@ def _run_cascade(
             [],
             [],
         )
+        fq, fp = q_entry[:, cd:], p_entry[:, cd:]  # free (boostable) coords
+        fm = m_eff[cd:]
         for z in zetas:
             if arm == "raw":
-                qb, pb = squeeze(q_entry, p_entry, z)
+                fq_b, fp_b = squeeze(fq, fp, z)
             elif arm == "kick":
                 # Kinetically-matched random kick: same p^T M^-1 p as the
                 # paired squeeze candidate would inject, random direction
                 # (isotropic in the M^-1 metric), q unchanged.
-                _, p_sq = mass_weighted_squeeze(q_entry, p_entry, z, m_eff)
+                _, p_sq = mass_weighted_squeeze(fq, fp, z, fm)
                 kick_key, sub = jax.random.split(kick_key)
-                u = jax.random.normal(sub, p_entry.shape) * jnp.sqrt(m_eff)
-                target = jnp.sqrt(jnp.sum(p_sq**2 / m_eff, axis=1, keepdims=True))
-                unorm = jnp.sqrt(jnp.sum(u**2 / m_eff, axis=1, keepdims=True)) + 1e-12
-                qb, pb = q_entry, u * target / unorm
+                u = jax.random.normal(sub, fp.shape) * jnp.sqrt(fm)
+                target = jnp.sqrt(jnp.sum(p_sq**2 / fm, axis=1, keepdims=True))
+                unorm = jnp.sqrt(jnp.sum(u**2 / fm, axis=1, keepdims=True)) + 1e-12
+                fq_b, fp_b = fq, u * target / unorm
             else:  # "mass" (and "margin" uses the same mass-weighted action)
-                qb, pb = mass_weighted_squeeze(q_entry, p_entry, z, m_eff)
+                fq_b, fp_b = mass_weighted_squeeze(fq, fp, z, fm)
+
+            if cd:
+                qb = jnp.concatenate([q_entry[:, :cd], fq_b], axis=1)
+                pb = jnp.concatenate([p_entry[:, :cd], fp_b], axis=1)
+            else:
+                qb, pb = fq_b, fp_b
 
             qs, ps, Hs = _settle_batch(
-                model, qb, pb, cfg.retry_relax_steps, dt, floor_j, sens
+                model, qb, pb, cfg.retry_relax_steps, dt, floor_j, sens, cd
             )
             Rs = Hs - floor_j
             pr, mg = _decode_values(qs[:, embed_dim:], val_embeds, val_tokens)
@@ -240,21 +293,23 @@ def _run_cascade(
         }
 
         if b == 0 and arm == "mass" and select_by == "energy":
-            # Thread-5 falsifiable (ii): per-mode displacement of retry 1.
+            # Thread-5 falsifiable (ii): per-mode displacement of retry 1
+            # (free coordinates only when clamped).
             ch_qboost = cand_qboost[chosen, t_idx]
             zeta_arr = jnp.asarray(zetas)[chosen]
             scatter = {
-                "p_before": np.asarray(p_entry),
-                "q_before": np.asarray(q_entry),
-                "dq_instant": np.asarray(ch_qboost - q_entry),
-                "dq_total": np.asarray(ch_q - q_entry),
+                "p_before": np.asarray(p_entry[:, cd:]),
+                "q_before": np.asarray(q_entry[:, cd:]),
+                "dq_instant": np.asarray(ch_qboost[:, cd:] - q_entry[:, cd:]),
+                "dq_total": np.asarray(ch_q[:, cd:] - q_entry[:, cd:]),
                 "zeta_chosen": np.asarray(zeta_arr),
+                "m_eff": np.asarray(m_eff[cd:]),
             }
 
         rec_R.append(best["R"])
         rec_margin.append(best["margin"])
         rec_pred.append(best["pred"])
-        cost.append(cost[-1] + G * (cfg.retry_relax_steps - 1))
+        cost.append(cost[-1] + G * cfg.retry_relax_steps)
 
     pred_arr = np.stack([np.asarray(x) for x in rec_pred], axis=1)  # (T, B+1)
     out = {
@@ -364,7 +419,8 @@ def run_experiment_v1_gate(
     )
     print(
         f"cascade: relax={cfg.relax_steps}, retry={cfg.retry_relax_steps} x "
-        f"G={G} candidates x B={cfg.retry_budget} retries"
+        f"G={G} candidates x B={cfg.retry_budget} retries | "
+        f"clamp_key={cfg.clamp_key}"
     )
 
     master = jax.random.PRNGKey(seed)
@@ -479,6 +535,8 @@ def run_experiment_v1_gate(
             )
             p0 = jnp.zeros_like(q0)
 
+            cd = e if cfg.clamp_key else 0
+
             # Storage fidelity: relax from the stored pattern itself.
             qs_f, _, _ = _settle_batch(
                 model,
@@ -488,6 +546,7 @@ def run_experiment_v1_gate(
                 cfg.dt,
                 floor_j,
                 cfg.governor_sensitivity,
+                cd,
             )
             pred_f, _ = _decode_values(qs_f[:, e:], val_embeds, val_tokens)
             lvl["fidelity"].append(np.asarray(pred_f == vals_tok))
@@ -509,6 +568,7 @@ def run_experiment_v1_gate(
                     arm="mass" if arm == "margin" else arm,
                     select_by=sel,
                     kick_key=k_kick if arm == "kick" else None,
+                    clamp_dims=cd,
                 )
                 lvl["arms"][arm]["R"].append(rec["R"])
                 lvl["arms"][arm]["margin"].append(rec["margin"])
@@ -520,18 +580,17 @@ def run_experiment_v1_gate(
                     lvl["correct0"].append(rec["correct"][:, 0])
                     if "scatter" in rec:
                         sc = rec["scatter"]
-                        sc["m_eff"] = np.asarray(m_eff)
                         sc["correct0"] = np.asarray(rec["correct"][:, 0])
                         sc["level"] = li
                         scatter_pool.append(sc)
 
             # --- always-relax-longer control at matched budgets ---
-            total = (cfg.relax_steps - 1) + cfg.retry_budget * G * (
-                cfg.retry_relax_steps - 1
+            total = cfg.relax_steps + cfg.retry_budget * G * (
+                cfg.retry_relax_steps
             )
             ckpts = np.asarray(
                 [
-                    (cfg.relax_steps - 1) + b * G * (cfg.retry_relax_steps - 1)
+                    cfg.relax_steps + b * G * cfg.retry_relax_steps
                     for b in range(cfg.retry_budget + 1)
                 ]
             )
@@ -539,10 +598,11 @@ def run_experiment_v1_gate(
                 model,
                 q0,
                 p0,
-                total + 1,
+                total,
                 cfg.dt,
                 floor_j,
                 cfg.governor_sensitivity,
+                cd,
                 jnp.asarray(ckpts),
             )
             pred_c = []

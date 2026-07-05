@@ -165,7 +165,10 @@ class ExperimentV1GateConfig:
     # --- MQAR task (Zoology-legible knobs) ---
     vocab_size: int = 256  # scaled down from Zoology's 8192 for small CLU dims
     embed_dim: int = 16  # per-token embedding; CLU dim = 2 * embed_dim (key||value)
-    embed_scale: float = 1.0  # embedding norm scale (entries ~ scale/sqrt(embed_dim))
+    # embedding norm scale (entries ~ scale/sqrt(embed_dim)); default 2.0 puts
+    # entries at ~0.5 so data lives at the scale train_generative's negative
+    # chains explore (buffer N(0,1), re-init U(-1,1), clamp [-1,1])
+    embed_scale: float = 2.0
     # Difficulty grid: list of [seq_len N, num_kv_pairs] levels
     difficulty_levels: List[List[int]] = field(
         default_factory=lambda: [[64, 4], [64, 8], [128, 16], [128, 32], [256, 64]]
@@ -190,6 +193,11 @@ class ExperimentV1GateConfig:
     use_pretrained: bool = False
 
     # --- retrieval / cascade (F5 Def-7, single shell) ---
+    # Cue-conditioned retrieval: freeze the key half (q_k = cue, p_k = 0) and
+    # relax only the value subspace — the standard associative-memory readout
+    # (Hopfield's setting); the frozen-coordinate map is the legitimate
+    # sub-system Hamiltonian dynamics for all three kinetic modes.
+    clamp_key: bool = True
     dt: float = 0.05
     relax_steps: int = 300  # base governed relaxation n0
     retry_relax_steps: int = 150  # re-relaxation per line-search candidate
