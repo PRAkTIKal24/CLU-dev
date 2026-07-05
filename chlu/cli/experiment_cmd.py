@@ -6,6 +6,7 @@ from ..project import ProjectManager
 from ..experiments.exp_a_stability import run_experiment_a
 from ..experiments.exp_b_noise import run_experiment_b
 from ..experiments.exp_c_dreaming import run_experiment_c
+from ..experiments.exp_d_goldstone import run_experiment_d
 
 console = Console()
 
@@ -47,6 +48,23 @@ def setup_experiment_parsers(subparsers):
                               help='Gaussian perturbation scale when using centroid init (default: 0.5)')
     exp_c_parser.set_defaults(func=cmd_exp_c)
     
+    # exp-d
+    exp_d_parser = subparsers.add_parser(
+        'exp-d',
+        help='Run Experiment D: SO(2) Goldstone Memory (V2)'
+    )
+    exp_d_parser.add_argument('--project', help='Project name to use')
+    exp_d_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_d_parser.add_argument('--quick', action='store_true', help='Quick mode (100 epochs)')
+    exp_d_parser.add_argument('--potential-type', choices=['so2_invariant', 'mlp'],
+                              help="Potential: 'so2_invariant' (designed symmetry, default) or 'mlp' (emergent)")
+    exp_d_parser.add_argument('--broken-isotropy', action='store_true',
+                              help='Untie the channel inertial masses (F5 §4.1 falsifiable)')
+    exp_d_parser.add_argument('--tilt-delta', type=float,
+                              help='Explicit SO(2)-breaking amplitude delta (GMOR probe)')
+    exp_d_parser.add_argument('--tilt-n', type=int, help='Tilt harmonic n')
+    exp_d_parser.set_defaults(func=cmd_exp_d)
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -93,7 +111,9 @@ def _get_config_and_paths(args):
             config.experiment_b.train_epochs = 50
         if hasattr(config, 'experiment_c'):
             config.experiment_c.train_epochs = 100
-    
+        if hasattr(config, 'experiment_d'):
+            config.experiment_d.train_epochs = 100
+
     return config, paths
 
 
@@ -164,6 +184,38 @@ def cmd_exp_c(args):
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
     
+    return 0
+
+
+def cmd_exp_d(args):
+    """Run Experiment D."""
+    console.print("[bold cyan]Running Experiment D: SO(2) Goldstone Memory[/bold cyan]")
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    # Set save directory in config
+    config.project.save_dir = str(paths['plots'])
+
+    # Extract CLI overrides (None = keep config value)
+    kwargs = {'config': config, 'models_dir': str(paths['models'])}
+    if getattr(args, 'potential_type', None) is not None:
+        kwargs['potential_type'] = args.potential_type
+    if getattr(args, 'broken_isotropy', False):
+        kwargs['tie_channel_mass'] = False
+    if getattr(args, 'tilt_delta', None) is not None:
+        kwargs['tilt_delta'] = args.tilt_delta
+    if getattr(args, 'tilt_n', None) is not None:
+        kwargs['tilt_n'] = args.tilt_n
+
+    try:
+        run_experiment_d(**kwargs)
+        console.print("✓ Experiment D completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
     return 0
 
 
