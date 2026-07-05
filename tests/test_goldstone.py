@@ -348,6 +348,22 @@ def test_tied_channel_inertial_mass():
     assert float(mv_u[0]) != float(mv_u[1]), "broken-isotropy switch has no effect"
 
 
+def test_pre_field_checkpoint_compat():
+    """Models unpickled from checkpoints saved before ``tie_channel_mass``
+    existed lack the attribute (handover §7.13 pattern); the getattr guard in
+    mass_vector() must keep them working. Simulated by deleting the field."""
+    m = CHLU(
+        dim=2, hidden=8, kinetic_mode="newtonian_learned", key=jax.random.PRNGKey(0)
+    )
+    object.__delattr__(m, "tie_channel_mass")
+    assert not hasattr(m, "tie_channel_mass")
+    q, p = jnp.array([0.5, -0.2]), jnp.array([0.1, 0.3])
+    assert jnp.isfinite(m.H(q, p))
+    assert m.mass_vector().shape == (2,)
+    assert m.effective_inertia().shape == (2,)
+    assert m(q, p, steps=5, dt=DT).shape == (5, 4)
+
+
 def test_so2_gradients_flow():
     model = CHLU(
         dim=4,

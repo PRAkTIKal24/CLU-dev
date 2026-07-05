@@ -343,7 +343,9 @@ def run_experiment_d(
         "theta_final": float(theta[-1]),
         "theta_drift_last_half": theta_drift,
         "noether_max_err": noether_max_err,
-        "flat_decay_rate_fit": fit_decay_rate(
+        # Decay rate of the stiffest mode's envelope (compare ln|lambda| =
+        # 0.5*ln(1-gamma) for an underdamped mode, F5 §3.3b)
+        "stiff_decay_rate_fit": fit_decay_rate(
             res_stiff["retention"], n_fit=min(500, cfg.probe_steps)
         ),
         "q_star": np.asarray(q_star),
