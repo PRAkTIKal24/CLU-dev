@@ -28,10 +28,10 @@ Cascades run ungated to the full retry budget while recording per-stage
 (residual, margin, prediction); every threshold policy tau is then simulated
 post-hoc, which yields the entire calibration/compute curve from one run.
 
-Compute accounting: a governed rollout of `n` output rows executes n-1 Verlet
-steps (the initial state is prepended); each line-search candidate costs one
-retry relaxation. Squeezes are O(d) and counted as free. Hopfield cost is one
-(kv x 2e) matvec — incommensurable with Verlet steps; reported separately.
+Compute accounting: settle(n) executes exactly n Verlet steps; each
+line-search candidate costs one retry relaxation. Squeezes are O(d) and
+counted as free. Hopfield cost is one (kv x 2e) matvec — incommensurable with
+Verlet steps; reported separately.
 """
 
 import json
@@ -89,9 +89,7 @@ def _settle_batch(model, q0, p0, steps, dt, floor, sensitivity, clamp_dims):
                 p_next = p_next.at[:clamp_dims].set(0.0)
             return (q_next, p_next), None
 
-        (qf, pf), _ = jax.lax.scan(
-            scan_fn, (q_init, p_init), None, length=steps
-        )
+        (qf, pf), _ = jax.lax.scan(scan_fn, (q_init, p_init), None, length=steps)
         return qf, pf
 
     qf, pf = jax.vmap(one)(q0, p0)
@@ -121,9 +119,7 @@ def _relax_checkpoints_batch(
             return (q_next, p_next), jnp.concatenate([q_next, p_next])
 
         _, ys = jax.lax.scan(scan_fn, (q_init, p_init), None, length=steps)
-        traj = jnp.concatenate(
-            [jnp.concatenate([q_init, p_init])[None, :], ys], axis=0
-        )
+        traj = jnp.concatenate([jnp.concatenate([q_init, p_init])[None, :], ys], axis=0)
         qs = traj[idx, : model.dim]
         ps = traj[idx, model.dim :]
         Hs = jax.vmap(model.H)(qs, ps)
@@ -200,9 +196,7 @@ def _run_cascade(
     cd = clamp_dims
     floor_j = jnp.asarray(floor)
 
-    q, p, H = _settle_batch(
-        model, q0, p0, cfg.relax_steps, dt, floor_j, sens, cd
-    )
+    q, p, H = _settle_batch(model, q0, p0, cfg.relax_steps, dt, floor_j, sens, cd)
     R = H - floor_j
     pred, margin = _decode_values(q[:, embed_dim:], val_embeds, val_tokens)
 
@@ -585,9 +579,7 @@ def run_experiment_v1_gate(
                         scatter_pool.append(sc)
 
             # --- always-relax-longer control at matched budgets ---
-            total = cfg.relax_steps + cfg.retry_budget * G * (
-                cfg.retry_relax_steps
-            )
+            total = cfg.relax_steps + cfg.retry_budget * G * (cfg.retry_relax_steps)
             ckpts = np.asarray(
                 [
                     cfg.relax_steps + b * G * cfg.retry_relax_steps
