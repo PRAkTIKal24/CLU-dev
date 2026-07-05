@@ -103,6 +103,7 @@ def train_chlu(
     sleep_frequency = config.training.sleep_frequency
     sleep_friction = config.training.sleep_friction
     persistent_sleep_buffer = config.training.persistent_sleep_buffer
+    lyapunov_penalty = config.training.lyapunov_penalty
     if sleep_temperature is None:
         sleep_temperature = config.training.sleep_temperature
     clamp_strength = jnp.array(config.training.clamp_strength)
@@ -151,11 +152,13 @@ def train_chlu(
             # Use precomputed clamp strength
             mse = effective_clamp * mse_loss(pred_trajectory, trajectory)
 
-            # Lyapunov regularization
+            # Lyapunov regularization (penalty selected via config;
+            # "legacy_degenerate" reproduces the old theta-independent loss)
             lyap_loss = compute_lyapunov_loss(
                 lambda state: model.step(state, dt),
                 pred_trajectory,
                 n_samples=min(10, len(trajectory) // 2),
+                penalty=lyapunov_penalty,
             )
 
             return mse + lyapunov_lambda * lyap_loss

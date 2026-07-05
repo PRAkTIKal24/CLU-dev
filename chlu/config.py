@@ -35,6 +35,13 @@ class TrainingConfig:
 
     # Dynamics training (Experiments A & B)
     lyapunov_lambda: float = 0.01
+    # Penalty on the step-Jacobian log singular values (local Lyapunov
+    # exponents): "max" (max_i log sigma_i, chaos-relevant, default), "sq"
+    # (sum_i (log sigma_i)^2), "pos" (sum_i max(0, log sigma_i)), "none"
+    # (disabled), or "legacy_degenerate" (mean_i log sigma_i — provably
+    # theta-independent, identically 0.5*ln(1-gamma); reproduction only,
+    # see F5 Prop-5).
+    lyapunov_penalty: str = "max"
     sleep_steps: int = 500
     clamp_strength: float = 1000.0
     clamp_ramp: float = 0.5
