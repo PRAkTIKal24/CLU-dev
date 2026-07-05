@@ -146,6 +146,39 @@ class CHLU(eqx.Module):
 
         return kinetic + potential
 
+    def effective_mass(self) -> jnp.ndarray:
+        """
+        Per-coordinate *inertial* mass M_eff at p ≈ 0 (F5 Def-2 / §2.1 table).
+
+        This is the kinetic-term inertia (velocity = p / M_eff near rest) —
+        not to be confused with the *spectral* mass mu of a potential mode.
+        Per kinetic mode:
+            - "newtonian_identity": M_eff = 1        (identity inertia)
+            - "newtonian_learned":  M_eff = M        (learned diagonal mass)
+            - "relativistic":       M_eff = m0 * M   (rest mass × learned mass)
+        where M = softplus(log_mass).
+
+        Used e.g. for the discrete-FDT Langevin noise scale
+        sigma_i* = sqrt(M_eff_i * T * gamma * (2 - gamma)) (F5 Prop-9).
+
+        Returns:
+            Effective inertial mass vector of shape (dim,)
+        """
+        M = jax.nn.softplus(self.log_mass)
+
+        if self.kinetic_mode == "newtonian_identity":
+            return jnp.ones(self.dim)
+        elif self.kinetic_mode == "newtonian_learned":
+            return M
+        elif self.kinetic_mode == "relativistic":
+            # T = c*sqrt(p^T M^-1 p + (m0 c)^2)  =>  grad_p T ≈ p/(m0 M) at p≈0
+            return self.rest_mass * M
+        else:
+            raise ValueError(
+                f"Unknown kinetic mode: {self.kinetic_mode}. "
+                f"Must be 'newtonian_identity', 'newtonian_learned', or 'relativistic'."
+            )
+
     def step(self, state: tuple, dt: float, gamma: float = 0.0) -> tuple:
         """
         Single time step using Velocity Verlet integrator.
@@ -167,6 +200,7 @@ class CHLU(eqx.Module):
         gamma: float,
         temperature: float,
         key: jax.random.PRNGKey,
+        noise_mode: str = "legacy",
     ) -> tuple:
         """
         Single stochastic time step using Langevin dynamics.
@@ -181,12 +215,19 @@ class CHLU(eqx.Module):
             gamma: Friction coefficient (required for temperature to have effect)
             temperature: Temperature parameter (0 = deterministic, >0 = stochastic)
             key: JAX random key for reproducible noise generation
+            noise_mode: "legacy" (historical sqrt(2*gamma*T*dt) scale, default)
+                        or "fdt" (exact discrete-FDT per-mode scale using this
+                        unit's inertial mass M_eff; see F5 Prop-9)
 
         Returns:
             (q_next, p_next, new_key): Updated state and split key
         """
         q, p = state
-        return langevin_step(self.H, q, p, dt, gamma, temperature, key)
+        m_eff = self.effective_mass() if noise_mode == "fdt" else None
+        return langevin_step(
+            self.H, q, p, dt, gamma, temperature, key,
+            noise_mode=noise_mode, m_eff=m_eff,
+        )
 
     def __call__(
         self,
@@ -289,6 +330,7 @@ class CHLU(eqx.Module):
         gamma: float,
         temperature: float | jnp.ndarray,
         key: jax.random.PRNGKey,
+        noise_mode: str = "legacy",
     ) -> jnp.ndarray:
         """
         Unroll stochastic trajectory using Langevin dynamics.
@@ -305,6 +347,8 @@ class CHLU(eqx.Module):
             temperature: Temperature parameter for thermal noise.
                         Can be scalar (constant) or array of shape (steps,) for annealing.
             key: JAX random key for reproducible stochastic evolution
+            noise_mode: "legacy" (historical scale, default) or "fdt"
+                        (exact discrete-FDT per-mode scale; see F5 Prop-9)
 
         Returns:
             Trajectory of shape (steps, 2*dim) where each row is [q, p]
@@ -320,7 +364,7 @@ class CHLU(eqx.Module):
         def scan_fn(carry, temp_t):
             q, p, key_state = carry
             q_next, p_next, new_key = self.stochastic_step(
-                (q, p), dt, gamma, temp_t, key_state
+                (q, p), dt, gamma, temp_t, key_state, noise_mode=noise_mode
             )
             # Concatenate q and p for output
             output = jnp.concatenate([q_next, p_next])

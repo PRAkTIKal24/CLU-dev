@@ -41,6 +41,7 @@ def train_generative(
     sleep_friction: Optional[float] = None,
     sleep_temperature: Optional[float] = None,
     input_noise_sigma: Optional[float] = None,
+    langevin_noise: Optional[str] = None,
 ):
     """
     Train CHLU as an Energy-Based Model using Persistent Contrastive Divergence.
@@ -69,6 +70,8 @@ def train_generative(
         sleep_friction: Friction during negative phase (overrides config)
         sleep_temperature: Temperature for Langevin noise during sleep phase (overrides config)
         input_noise_sigma: Gaussian noise std for real data (denoising EBM, overrides config)
+        langevin_noise: Langevin noise scale, "legacy" or "fdt" (overrides config;
+            see F5 Prop-9 / TrainingConfig.langevin_noise)
 
     Returns:
         (trained_model, losses): Trained model and loss history dict
@@ -102,6 +105,8 @@ def train_generative(
         sleep_temperature = config.training.sleep_temperature
     if input_noise_sigma is None:
         input_noise_sigma = config.training.input_noise_sigma
+    if langevin_noise is None:
+        langevin_noise = config.training.langevin_noise
 
     # Handle data shape
     if data.ndim == 1:
@@ -185,6 +190,7 @@ def train_generative(
                         gamma=sleep_friction,
                         temperature=sleep_temperature,
                         key=key_state,
+                        noise_mode=langevin_noise,
                     )
                     return ((q_next, p_next), new_key), None
 

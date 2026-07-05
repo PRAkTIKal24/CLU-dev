@@ -63,6 +63,12 @@ class TrainingConfig:
 
     # Langevin dynamics (temperature-based noise for exploration)
     sleep_temperature: float = 0.5  # Temperature for sleep phase (0.0 = deterministic)
+    # Langevin noise scale: "legacy" = sqrt(2*gamma*T*dt) (historical; violates
+    # the discrete FDT — per-mode effective temperature 2*dt*T/((2-gamma)*M_eff),
+    # F5 Prop-9) or "fdt" = per-mode sigma_i* = sqrt(M_eff_i*T*gamma*(2-gamma))
+    # (exact discrete fluctuation-dissipation; temperatures in energy units).
+    # Default "legacy" preserves behavior for existing checkpoints/schedules.
+    langevin_noise: str = "legacy"
 
 
 @dataclass

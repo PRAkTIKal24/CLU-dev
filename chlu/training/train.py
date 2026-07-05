@@ -47,6 +47,7 @@ def train_chlu(
     dt: Optional[float] = None,
     window_size: Optional[int] = None,
     sleep_temperature: Optional[float] = None,
+    langevin_noise: Optional[str] = None,
 ):
     """
     Train CHLU using Persistent Contrastive Divergence (Wake-Sleep).
@@ -68,6 +69,8 @@ def train_chlu(
         dt: Time step for dynamics (overrides config)
         window_size: Window size for sub-sequence sampling (overrides config)
         sleep_temperature: Temperature for Langevin noise during sleep phase (overrides config)
+        langevin_noise: Langevin noise scale, "legacy" or "fdt" (overrides config;
+            see F5 Prop-9 / TrainingConfig.langevin_noise)
 
     Returns:
         (trained_model, losses): Trained model and loss history
@@ -106,6 +109,8 @@ def train_chlu(
     lyapunov_penalty = config.training.lyapunov_penalty
     if sleep_temperature is None:
         sleep_temperature = config.training.sleep_temperature
+    if langevin_noise is None:
+        langevin_noise = config.training.langevin_noise
     clamp_strength = jnp.array(config.training.clamp_strength)
     clamp_ramp = config.training.clamp_ramp
 
@@ -197,7 +202,8 @@ def train_chlu(
                         q_s, p_s = state
                         q_next, p_next, new_key = model.stochastic_step(
                             (q_s, p_s), dt=dt, gamma=sleep_friction,
-                            temperature=sleep_temperature, key=key_state
+                            temperature=sleep_temperature, key=key_state,
+                            noise_mode=langevin_noise,
                         )
                         return ((q_next, p_next), new_key), None
 
