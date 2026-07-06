@@ -45,3 +45,41 @@ def test_yaml_round_trip(tmp_path):
     assert loaded.experiment_v1_gate.hopfield_beta == 12.5
     assert loaded.experiment_v1_gate.difficulty_levels == [[32, 4]]
     assert loaded.experiment_v1_gate.zeta_grid == cfg.experiment_v1_gate.zeta_grid
+
+
+def test_default_config_full_round_trip(tmp_path):
+    """Every field group must survive save->load unchanged (the w2/w3 merge
+    artifact killer: a group dropped from save_config/load_config, or one that
+    lost its @dataclass decorator, breaks this)."""
+    cfg = get_default_config()
+    path = tmp_path / "config.yaml"
+    save_config(cfg, path)
+    loaded = load_config(path)
+    assert dataclasses.asdict(loaded) == dataclasses.asdict(cfg)
+
+
+def _mutate_group(group):
+    """Flip every bool and bump every numeric field to a non-default value
+    (bool is an int subclass, so it is checked first)."""
+    for f in dataclasses.fields(group):
+        v = getattr(group, f.name)
+        if isinstance(v, bool):
+            setattr(group, f.name, not v)
+        elif isinstance(v, int):
+            setattr(group, f.name, v + 7)
+        elif isinstance(v, float):
+            setattr(group, f.name, v * 2.0 + 1.0)
+    return group
+
+
+def test_every_group_round_trips_mutated(tmp_path):
+    """Mutate a numeric/bool field in EVERY group, round-trip, assert full
+    equality. A group missing from load_config's reconstruction would silently
+    revert its mutated values to defaults and fail this comparison."""
+    cfg = get_default_config()
+    for f in dataclasses.fields(cfg):
+        _mutate_group(getattr(cfg, f.name))
+    path = tmp_path / "config.yaml"
+    save_config(cfg, path)
+    loaded = load_config(path)
+    assert dataclasses.asdict(loaded) == dataclasses.asdict(cfg)
