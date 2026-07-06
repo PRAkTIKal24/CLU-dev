@@ -58,7 +58,7 @@ Composability / scope notes:
       (``__call__`` and ``hole_params``).
 """
 
-from typing import Optional
+from typing import NamedTuple, Optional
 
 import equinox as eqx
 import jax
@@ -290,3 +290,146 @@ def c1_regularizer(model, dt: float) -> jnp.ndarray:
 
     t = jax.lax.stop_gradient(jax.vmap(target)(centers))
     return jnp.mean((strengths - t) ** 2)
+
+
+# ---------------------------------------------------------------------------
+# Adaptive-K: spawn / prune holes at runtime (gamma-field-build follow-up 1)
+# ---------------------------------------------------------------------------
+#
+# Structural edits (K changes) must happen OUTSIDE jit — they resize the field's
+# leaf arrays, so the owning optimizer state has to be reinitialized by the
+# caller (train_chlu does this). These helpers rebuild the FrictionField with a
+# different K via eqx.tree_at on the three raw-parameter leaves.
+
+
+def _replace_holes(field, centers, log_radii, strength_logits) -> "FrictionField":
+    return eqx.tree_at(
+        lambda f: [f.centers, f.log_radii, f.strength_logits],
+        field,
+        [centers, log_radii, strength_logits],
+    )
+
+
+def add_hole(field: FrictionField, center, radius, strength) -> FrictionField:
+    """Return a copy of ``field`` with one extra hole (K -> K+1).
+
+    center: (dim,) position; radius/strength in physical units (exact inverse
+    transforms, strength clipped into (0, gamma_max) by ``_logit``).
+    """
+    center = jnp.asarray(center, dtype=field.centers.dtype).reshape(1, -1)
+    lr = jnp.reshape(
+        _inv_softplus(jnp.asarray(radius, dtype=field.log_radii.dtype)), (1,)
+    )
+    frac = jnp.asarray(strength, dtype=field.strength_logits.dtype) / field.gamma_max
+    sl = jnp.reshape(_logit(frac), (1,))
+    return _replace_holes(
+        field,
+        jnp.concatenate([field.centers, center], axis=0),
+        jnp.concatenate([field.log_radii, lr], axis=0),
+        jnp.concatenate([field.strength_logits, sl], axis=0),
+    )
+
+
+def prune_holes(field: FrictionField, keep_mask) -> FrictionField:
+    """Return a copy of ``field`` keeping only holes where ``keep_mask`` is True."""
+    keep_mask = jnp.asarray(keep_mask)
+    return _replace_holes(
+        field,
+        field.centers[keep_mask],
+        field.log_radii[keep_mask],
+        field.strength_logits[keep_mask],
+    )
+
+
+class AdaptiveKState(NamedTuple):
+    """Running accumulator for adaptive-K spawning (carried across sleep events).
+
+    density:   decayed sum of uncovered energy-gated hallucination weight
+    pos_accum: running sum of w_eff * q (uncovered negatives)
+    w_accum:   running sum of w_eff
+    """
+
+    density: jnp.ndarray
+    pos_accum: jnp.ndarray
+    w_accum: jnp.ndarray
+
+
+def init_adaptive_state(dim: int) -> AdaptiveKState:
+    return AdaptiveKState(jnp.array(0.0), jnp.zeros(dim), jnp.array(0.0))
+
+
+def maybe_adapt_holes(
+    field: FrictionField,
+    q_hallu: jnp.ndarray,
+    weights: jnp.ndarray,
+    state: AdaptiveKState,
+    *,
+    spawn_threshold: float,
+    spawn_min_dist: float,
+    spawn_radius: float,
+    spawn_strength: float,
+    prune_floor: float,
+    max_holes: int,
+    decay: float = 0.9,
+    cover_frac: float = 0.5,
+) -> tuple:
+    """Spawn/prune holes from accumulated persistent-hallucination density.
+
+    Runs OUTSIDE jit. ``weights`` is the SAME energy gate used in the sleep
+    training term (sigmoid((H - band_top)/std)) — only persistent (above-band)
+    negatives vote. A negative is "uncovered" if gamma_phi(q) < cover_frac *
+    gamma_max there (not yet inside a hole).
+
+    Spawn rule: accumulate uncovered energy-gated weight; when the decayed
+    density exceeds ``spawn_threshold`` and K < ``max_holes``, allocate a new
+    hole at the weighted-mean uncovered locus provided it is > ``spawn_min_dist``
+    from every existing center. Prune rule: drop holes whose strength gamma_k <
+    ``prune_floor`` (always keep at least one).
+
+    Returns (new_field, new_state, changed: bool). ``changed`` signals the
+    caller to reinitialize the optimizer state (leaf shapes moved).
+    """
+    gammas = jax.vmap(field)(q_hallu)  # (N,)
+    cover_level = cover_frac * field.gamma_max
+    uncovered = (gammas < cover_level).astype(q_hallu.dtype)
+    w_eff = weights.astype(q_hallu.dtype) * uncovered  # (N,)
+    batch_w = jnp.sum(w_eff)
+    batch_pos = jnp.sum(w_eff[:, None] * q_hallu, axis=0)
+
+    density = decay * state.density + batch_w
+    pos_accum = state.pos_accum + batch_pos
+    w_accum = state.w_accum + batch_w
+
+    changed = False
+    field_out = field
+
+    # --- spawn ---
+    if (
+        float(density) > spawn_threshold
+        and field_out.k < max_holes
+        and float(w_accum) > 0.0
+    ):
+        centroid = pos_accum / (w_accum + 1e-12)
+        centers, _, _ = field_out.hole_params()
+        dmin = float(
+            jnp.min(jnp.linalg.norm(centers - centroid[None, :], axis=-1))
+        )
+        if dmin > spawn_min_dist:
+            field_out = add_hole(field_out, centroid, spawn_radius, spawn_strength)
+            changed = True
+        # Reset the accumulator whether or not the placement was accepted, so we
+        # don't re-trigger on a covered/too-close locus every sleep event.
+        density = jnp.array(0.0)
+        pos_accum = jnp.zeros_like(pos_accum)
+        w_accum = jnp.array(0.0)
+
+    # --- prune ---
+    _, _, strengths = field_out.hole_params()
+    keep = strengths >= prune_floor
+    if bool(jnp.any(~keep)) and field_out.k > 1:
+        if not bool(jnp.any(keep)):  # never prune below one hole
+            keep = jnp.zeros_like(keep).at[jnp.argmax(strengths)].set(True)
+        field_out = prune_holes(field_out, keep)
+        changed = True
+
+    return field_out, AdaptiveKState(density, pos_accum, w_accum), changed

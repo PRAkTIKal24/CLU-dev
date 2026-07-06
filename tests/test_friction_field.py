@@ -477,3 +477,122 @@ def test_compact_gate_validation():
 
     with pytest.raises(ValueError):
         FrictionField(dim=2, gate="bogus")
+
+
+# ---------------------------------------------------------------------------
+# Adaptive-K spawn / prune (gamma-field-build follow-up 1)
+# ---------------------------------------------------------------------------
+
+
+def test_add_and_prune_holes_roundtrip():
+    from chlu.core.friction_field import add_hole, prune_holes
+
+    field = _field_at([0.0, 0.0], radius=0.6, strength=0.3, gamma_max=0.5)
+    assert field.k == 1
+    grown = add_hole(field, jnp.array([2.0, -1.0]), radius=0.4, strength=0.2)
+    assert grown.k == 2
+    c, r, s = grown.hole_params()
+    # Exact inverse transforms on the appended hole.
+    assert np.allclose(np.asarray(c[1]), [2.0, -1.0], atol=1e-10)
+    assert abs(float(r[1]) - 0.4) < 1e-10
+    assert abs(float(s[1]) - 0.2) < 1e-10
+    # Static config (gate/gamma_max/width) survives the rebuild.
+    assert grown.gamma_max == field.gamma_max and grown.gate == field.gate
+    pruned = prune_holes(grown, jnp.array([False, True]))
+    assert pruned.k == 1
+    assert np.allclose(np.asarray(pruned.centers[0]), [2.0, -1.0], atol=1e-10)
+
+
+def test_adaptive_k_spawns_at_missed_locus():
+    """A persistent-hallucination locus far from the lone K=1 hole gets a
+    spawned hole; the new hole then covers it (gamma_phi rises there)."""
+    from chlu.core.friction_field import init_adaptive_state, maybe_adapt_holes
+
+    field = _field_at([0.0, 0.0], radius=0.5, strength=0.4, gamma_max=0.5)
+    locus = jnp.array([3.0, 0.0])
+    gamma_before = float(field(locus))
+    assert gamma_before < 0.05  # locus is uncovered by the origin hole
+
+    # 64 negatives clustered at the locus, all persistent (weight 1).
+    key = jax.random.PRNGKey(0)
+    q_hallu = locus[None, :] + 0.05 * jax.random.normal(key, (64, 2))
+    weights = jnp.ones(64)
+
+    state = init_adaptive_state(2)
+    new_field, state, changed = maybe_adapt_holes(
+        field,
+        q_hallu,
+        weights,
+        state,
+        spawn_threshold=5.0,
+        spawn_min_dist=0.5,
+        spawn_radius=0.5,
+        spawn_strength=0.15,
+        prune_floor=0.02,
+        max_holes=8,
+    )
+    assert changed and new_field.k == 2
+    # Spawned near the locus...
+    assert float(jnp.linalg.norm(new_field.centers[1] - locus)) < 0.2
+    # ...and now covering it.
+    assert float(new_field(locus)) > gamma_before + 0.1
+
+
+def test_adaptive_k_no_spawn_below_threshold():
+    from chlu.core.friction_field import init_adaptive_state, maybe_adapt_holes
+
+    field = _field_at([0.0, 0.0], radius=0.5, strength=0.4, gamma_max=0.5)
+    q_hallu = jnp.array([[3.0, 0.0]])
+    weights = jnp.array([0.5])  # tiny accumulated weight
+    state = init_adaptive_state(2)
+    new_field, state, changed = maybe_adapt_holes(
+        field, q_hallu, weights, state,
+        spawn_threshold=5.0, spawn_min_dist=0.5, spawn_radius=0.5,
+        spawn_strength=0.15, prune_floor=0.02, max_holes=8,
+    )
+    assert not changed and new_field.k == 1
+    assert float(state.density) > 0.0  # but density is accumulating
+
+
+def test_adaptive_k_prunes_decayed_hole():
+    from chlu.core.friction_field import init_adaptive_state, maybe_adapt_holes
+
+    # Two holes: one healthy, one below the prune floor.
+    field = FrictionField(
+        dim=2,
+        gamma_max=0.5,
+        width=0.25,
+        centers=jnp.asarray([[0.0, 0.0], [2.0, 2.0]]),
+        init_radius=0.5,
+        init_strength=0.3,  # both start healthy
+    )
+    from chlu.core.friction_field import _replace_holes, _logit
+
+    weak_logits = field.strength_logits.at[1].set(
+        _logit(jnp.asarray(0.005 / field.gamma_max))
+    )
+    field = _replace_holes(field, field.centers, field.log_radii, weak_logits)
+
+    state = init_adaptive_state(2)
+    # No spawn (zero weight); prune should still fire on the weak hole.
+    new_field, state, changed = maybe_adapt_holes(
+        field, jnp.zeros((1, 2)), jnp.zeros(1), state,
+        spawn_threshold=1e9, spawn_min_dist=0.5, spawn_radius=0.5,
+        spawn_strength=0.15, prune_floor=0.02, max_holes=8,
+    )
+    assert changed and new_field.k == 1
+    assert np.allclose(np.asarray(new_field.centers[0]), [0.0, 0.0], atol=1e-10)
+
+
+def test_adaptive_k_config_roundtrip(tmp_path):
+    cfg = get_default_config()
+    assert cfg.training.friction_field_adaptive_k is False  # default off
+    cfg.training.friction_field_adaptive_k = True
+    cfg.training.friction_field_max_k = 6
+    cfg.training.friction_field_spawn_threshold = 3.5
+    p = tmp_path / "c.yaml"
+    save_config(cfg, p)
+    loaded = load_config(p)
+    assert loaded.training.friction_field_adaptive_k is True
+    assert loaded.training.friction_field_max_k == 6
+    assert abs(loaded.training.friction_field_spawn_threshold - 3.5) < 1e-12

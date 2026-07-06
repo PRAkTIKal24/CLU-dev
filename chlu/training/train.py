@@ -9,7 +9,11 @@ import optax
 from tqdm import tqdm
 
 from chlu.config import CHLUConfig, get_default_config
-from chlu.core.friction_field import c1_regularizer
+from chlu.core.friction_field import (
+    c1_regularizer,
+    init_adaptive_state,
+    maybe_adapt_holes,
+)
 from chlu.core.regularization import compute_lyapunov_loss
 from chlu.training.losses import energy_loss, mse_loss
 from chlu.training.replay_buffer import ReplayBuffer
@@ -126,6 +130,7 @@ def train_chlu(
     ff_c1_lambda = config.training.friction_field_c1_lambda
     ff_hallu_gate = config.training.friction_field_hallu_gate
     ff_lr = config.training.friction_field_lr
+    ff_adaptive_k = config.training.friction_field_adaptive_k
     if sleep_temperature is None:
         sleep_temperature = config.training.sleep_temperature
     if langevin_noise is None:
@@ -181,6 +186,11 @@ def train_chlu(
         buffer.update((q_seed[:n_seed], p_seed[:n_seed]), jnp.arange(n_seed))
 
     losses = []
+
+    # Adaptive-K spawning accumulator (only used when the model carries a
+    # trainable field and friction_field_adaptive_k is set).
+    adapt_active = ff_adaptive_k and getattr(model, "friction_field", None) is not None
+    adapt_state = init_adaptive_state(dim) if adapt_active else None
 
     @eqx.filter_jit
     def wake_step(
@@ -412,6 +422,35 @@ def train_chlu(
             # Persistent Contrastive Divergence: write evolved negatives back.
             if persistent_sleep_buffer:
                 buffer.update((q_evolved, p_evolved), indices)
+
+            # Adaptive-K: spawn a hole where persistent-hallucination density
+            # accumulates, prune decayed holes. Uses the SAME energy gate as the
+            # sleep training term. Structural edits reset the optimizer state.
+            if adapt_active:
+                H_h = jax.vmap(model.H)(q_evolved, p_evolved)
+                if ff_hallu_gate == "energy":
+                    adapt_w = jax.nn.sigmoid((H_h - e_ref) / e_scale)
+                else:
+                    adapt_w = jnp.ones_like(H_h)
+                new_field, adapt_state, changed = maybe_adapt_holes(
+                    model.friction_field,
+                    q_evolved,
+                    adapt_w,
+                    adapt_state,
+                    spawn_threshold=config.training.friction_field_spawn_threshold,
+                    spawn_min_dist=config.training.friction_field_spawn_min_dist,
+                    spawn_radius=config.training.friction_field_spawn_radius,
+                    spawn_strength=config.training.friction_field_spawn_strength,
+                    prune_floor=config.training.friction_field_prune_floor,
+                    max_holes=config.training.friction_field_max_k,
+                )
+                if changed:
+                    # eqx.Module is frozen — replace the field leaf via tree_at,
+                    # then reinit the optimizer (leaf shapes moved).
+                    model = eqx.tree_at(
+                        lambda m: m.friction_field, model, new_field
+                    )
+                    opt_state = optimizer.init(eqx.filter(model, eqx.is_array))
 
         losses.append(float(wake_loss))
 

@@ -110,6 +110,21 @@ class TrainingConfig:
     # parameter velocity at ~lr/step — at the base lr the placement cannot
     # move at pilot scale (observed in the S1 smoke run). None = base lr.
     friction_field_lr: Optional[float] = 1e-2
+    # --- Adaptive-K (gamma-field-build follow-up 1) ---
+    # When True, the sleep phase spawns a new hole where persistent
+    # (energy-gated) hallucination density accumulates beyond a threshold, and
+    # prunes holes whose strength decays below a floor. Fixes the S1 finding
+    # that a lone sigmoid hole far from all negatives gets no placement
+    # gradient (gradient locality => locus discovery 2/6). Default False keeps
+    # the fixed-K behavior. Structural edits reset the optimizer state.
+    friction_field_adaptive_k: bool = False
+    friction_field_max_k: int = 8  # hard cap on spawned holes
+    # Decayed uncovered energy-gated weight at which to spawn (per sleep event)
+    friction_field_spawn_threshold: float = 5.0
+    friction_field_spawn_min_dist: float = 0.5  # min distance from existing holes
+    friction_field_spawn_radius: float = 0.5  # radius of a spawned hole
+    friction_field_spawn_strength: float = 0.15  # strength gamma_k of a spawned hole
+    friction_field_prune_floor: float = 0.02  # prune holes with gamma_k below this
 
 
 @dataclass
@@ -352,6 +367,76 @@ class ExperimentV1GateConfig:
 
 
 @dataclass
+class ExperimentV1WormholeConfig:
+    """Configuration for the V1 wormhole-routing experiment (V1 third pillar).
+
+    A chain lattice of N CHLU associative-memory units (each an EBM over its
+    own KV subset). A query arrives at the query unit (unit 0); its answer is
+    either local (bound in unit 0) or distant (bound only in the archive unit,
+    N-1). An energy-gated sparse non-local edge (built on the lattice's smooth
+    coupling machinery) opens as a function of the LOCAL residual energy
+    R0 = H_0(settled) - floor_0: high R0 (local retrieval failed => the answer
+    is elsewhere) opens the wormhole, which delivers the archived value into
+    unit 0's value coordinates; low R0 (local hit) keeps it closed. The readout
+    is always unit 0's value half — so opening the gate on a *local* query
+    corrupts the answer, giving gate selectivity real teeth (F5 §7.4 smooth
+    gate; Def-7 escalation beyond one shell; squeezes PARKED). Five arms:
+    local-only / gated-wormhole / dense-always-open / chain-multi-hop /
+    calibrated-tau-gate.
+    """
+
+    # --- lattice / task ---
+    n_units_values: List[int] = field(default_factory=lambda: [4, 8])
+    embed_dim: int = 8  # per-token embedding; unit dim = 2 * embed_dim (key||value)
+    embed_scale: float = 2.0
+    vocab_size: int = 128
+    kv_per_unit: int = 4  # stored KV pairs per unit (units hold disjoint pairs)
+    n_seeds: int = 2  # replicate seeds = project.seed + i
+    trials_per_type: int = 48  # jittered queries per {local, distant} per (N, seed)
+    query_cue_noise: float = 0.1  # cue jitter (noisy queries => genuine statistics)
+
+    # --- memory model & PCD "write" (per unit) ---
+    kinetic_energy_mode: str = "relativistic"
+    potential_type: str = "mlp"  # coercive (confinement) — see F5 Prop-10
+    hidden_dim: int = 64
+    train_epochs: int = 300
+    train_lr: float = 1e-3
+    train_batch_size: int = 16
+    train_k_steps: int = 50
+    train_buffer_capacity: int = 128
+    train_friction: float = 0.3
+    train_temperature: float = 0.3
+    train_input_noise_sigma: float = 0.05
+
+    # --- retrieval / routing ---
+    dt: float = 0.05
+    relax_steps: int = 200  # local relaxation (phase 1; the routing signal R0)
+    route_steps: int = 200  # joint routed relaxation (phase 2)
+    governor_sensitivity: float = 0.95
+    kappa_wormhole: float = 0.5  # gated value-channel coupling strength
+    kappa_chain: float = 0.5  # adjacent value-channel coupling (multi-hop arm)
+    # Smooth energy gate g = sigmoid((z - gate_z_threshold)/gate_z_width),
+    # z = (R0 - median R0)/(IQR R0 + eps): a LABEL-FREE within-deployment
+    # normalization of the residual (the v1-l0-gate finding: raw R is not
+    # cross-model comparable). g -> 1 as R0 rises (local failure => route).
+    gate_z_threshold: float = 0.0
+    gate_z_width: float = 0.7
+    gate_open_eps: float = 0.05  # a route is executed (charged) only if g > this
+
+    # --- calibrated tau-gate arm (Def-7 story minus squeezes) ---
+    calib_probes_per_key: int = 8
+    calib_cue_noise_scales: List[float] = field(
+        default_factory=lambda: [0.05, 0.15, 0.3]
+    )
+    calib_features: str = "r_margin"  # head input: "r" | "margin" | "r_margin"
+    calib_l2: float = 1.0
+    calib_p_route: float = 0.5  # route iff head.p_wrong(R0[,margin0]) > this
+
+    # --- reference baseline ---
+    hopfield_beta: float = 20.0  # modern-Hopfield over the UNION of all patterns
+
+
+@dataclass
 class ExperimentLatticeConfig:
     """Configuration for the CLU-lattice experiment (V3 first build, F5 §7).
 
@@ -508,6 +593,9 @@ class CHLUConfig:
     experiment_v1_gate: ExperimentV1GateConfig = field(
         default_factory=ExperimentV1GateConfig
     )
+    experiment_v1_wormhole: ExperimentV1WormholeConfig = field(
+        default_factory=ExperimentV1WormholeConfig
+    )
     experiment_lattice: ExperimentLatticeConfig = field(
         default_factory=ExperimentLatticeConfig
     )
@@ -579,6 +667,11 @@ def load_config(path: Path) -> CHLUConfig:
                 ExperimentV1GateConfig, data.get("experiment_v1_gate", {})
             )
         ),
+        experiment_v1_wormhole=ExperimentV1WormholeConfig(
+            **filter_valid_fields(
+                ExperimentV1WormholeConfig, data.get("experiment_v1_wormhole", {})
+            )
+        ),
         experiment_lattice=ExperimentLatticeConfig(
             **filter_valid_fields(
                 ExperimentLatticeConfig, data.get("experiment_lattice", {})
@@ -612,6 +705,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_c": asdict(config.experiment_c),
         "experiment_d": asdict(config.experiment_d),
         "experiment_v1_gate": asdict(config.experiment_v1_gate),
+        "experiment_v1_wormhole": asdict(config.experiment_v1_wormhole),
         "experiment_lattice": asdict(config.experiment_lattice),
         "experiment_s1": asdict(config.experiment_s1),
         "data": asdict(config.data),
