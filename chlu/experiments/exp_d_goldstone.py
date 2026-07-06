@@ -60,6 +60,7 @@ def run_experiment_d(
     tie_channel_mass: Optional[bool] = None,
     tilt_delta: Optional[float] = None,
     tilt_n: Optional[int] = None,
+    sleep_mode: Optional[str] = None,
 ) -> dict:
     """
     Experiment D: SO(2) Goldstone memory.
@@ -99,6 +100,15 @@ def run_experiment_d(
         config.experiment_d.tilt_delta = tilt_delta
     if tilt_n is not None:
         config.experiment_d.tilt_n = tilt_n
+    if sleep_mode is not None:
+        config.experiment_d.sleep_mode = sleep_mode
+
+    # sleep_mode="off" => wake-only training (sleep_frequency -> inf), the
+    # data-pinned regime that does NOT erode the designed vacuum (v2-full-runs
+    # Finding 0). Implemented as a large sleep_frequency so only the (harmless)
+    # epoch-0 sleep event can fire — matches the validated wake-only run.
+    if config.experiment_d.sleep_mode == "off":
+        config.training.sleep_frequency = 10**9
 
     save_dir = config.project.save_dir or "results/"
     models_dir = models_dir or os.path.join(save_dir, "../models")

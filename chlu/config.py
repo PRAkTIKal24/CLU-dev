@@ -211,7 +211,18 @@ class ExperimentDConfig:
 
     dim: int = 4  # 2 channel dims + (dim-2) curved spectator dims
     hidden_dim: int = 64
-    train_epochs: int = 1000
+    # Default lowered 1000 -> 150 after v2-full-runs Finding 0 (handover §7.14):
+    # at 1000 epochs the wake–sleep sleep phase EROSES the designed SO(2)
+    # vacuum (8/8 seeds: r*->0, the data ring inverts into a local MAXIMUM,
+    # ring depth +0.060@150 -> -0.047@1000 with inversion between 300–600 ep).
+    # 150 ep is the engineer-validated regime where the designed vacuum is
+    # intact. Set sleep_mode="off" for the wake-only, data-pinned regime
+    # (r*=1.0000 through 1000 ep) if you need longer training.
+    train_epochs: int = 150
+    # Sleep-phase switch for the erosion study. "on" (default) = standard
+    # wake–sleep contrastive training. "off" = wake-only (sleep_frequency->inf):
+    # the vacuum is data-pinned and does not erode (v2-full-runs Finding 0).
+    sleep_mode: str = "on"
     use_pretrained: bool = False
     kinetic_energy_mode: str = (
         "newtonian_learned"  # learned M => isotropy falsifiable is live

@@ -67,6 +67,9 @@ def setup_experiment_parsers(subparsers):
     exp_d_parser.add_argument('--tilt-delta', type=float,
                               help='Explicit SO(2)-breaking amplitude delta (GMOR probe)')
     exp_d_parser.add_argument('--tilt-n', type=int, help='Tilt harmonic n')
+    exp_d_parser.add_argument('--sleep-mode', choices=['on', 'off'],
+                              help='Sleep phase: "on" (wake-sleep) or "off" '
+                                   '(wake-only, data-pinned, no vacuum erosion)')
     exp_d_parser.set_defaults(func=cmd_exp_d)
 
     # exp-v1-gate
@@ -259,6 +262,8 @@ def cmd_exp_d(args):
         kwargs['tilt_delta'] = args.tilt_delta
     if getattr(args, 'tilt_n', None) is not None:
         kwargs['tilt_n'] = args.tilt_n
+    if getattr(args, 'sleep_mode', None) is not None:
+        kwargs['sleep_mode'] = args.sleep_mode
 
     try:
         run_experiment_d(**kwargs)
