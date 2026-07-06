@@ -86,7 +86,12 @@ class FrictionField(eqx.Module):
 
     Static:
         gamma_max: strict upper bound on gamma_phi (must be in (0, 1))
-        width:     sigmoid horizon width w (smaller = harder horizon)
+        width:     horizon width w (smaller = harder horizon)
+        gate:      horizon gate shape, "sigmoid" (default; smooth infinite tail)
+                   or "compact" (smoothstep with an EXACT hard cutoff at r_k —
+                   gamma_phi is identically 0 beyond every hole radius, closing
+                   the sigmoid tail-leakage retention gap; gamma-field-build
+                   follow-up 2)
         trainable: if False, parameters are stop_gradient-ed at use time
                    (the "fixed" / hand-placed control variant)
     """
@@ -97,6 +102,7 @@ class FrictionField(eqx.Module):
     gamma_max: float = eqx.field(static=True)
     width: float = eqx.field(static=True)
     trainable: bool = eqx.field(static=True)
+    gate: str = eqx.field(static=True)
 
     def __init__(
         self,
@@ -109,6 +115,7 @@ class FrictionField(eqx.Module):
         init_strength: float = 0.25,
         init_center_scale: float = 1.0,
         trainable: bool = True,
+        gate: str = "sigmoid",
         key: jax.random.PRNGKey = None,
     ):
         """
@@ -116,7 +123,7 @@ class FrictionField(eqx.Module):
             dim: position-space dimension.
             k: number of holes K (ignored if ``centers`` is given explicitly).
             gamma_max: strict cap on gamma_phi, in (0, 1).
-            width: sigmoid horizon width w.
+            width: horizon width w.
             centers: optional explicit (K, dim) centers (hand placement — the
                 "fixed"/oracle variant, or a designed init). If None, centers
                 are drawn ~ N(0, init_center_scale^2) using ``key``.
@@ -124,12 +131,16 @@ class FrictionField(eqx.Module):
             init_strength: initial hole strength gamma_k (exact, via inverse
                 sigmoid; clipped into (0, gamma_max)).
             trainable: False freezes all parameters (stop_gradient at use).
+            gate: "sigmoid" (smooth, infinite tail) or "compact" (smoothstep
+                with an exact zero beyond r_k — see the class docstring).
             key: PRNG key for random center init (required if centers is None).
         """
         if not 0.0 < gamma_max < 1.0:
             raise ValueError(f"gamma_max must be in (0, 1), got {gamma_max}")
         if width <= 0.0:
             raise ValueError(f"width must be positive, got {width}")
+        if gate not in ("sigmoid", "compact"):
+            raise ValueError(f"gate must be 'sigmoid' or 'compact', got {gate!r}")
 
         if centers is not None:
             centers = jnp.asarray(centers, dtype=jnp.result_type(float))
@@ -151,6 +162,7 @@ class FrictionField(eqx.Module):
         self.gamma_max = gamma_max
         self.width = width
         self.trainable = trainable
+        self.gate = gate
 
     @property
     def k(self) -> int:
@@ -178,7 +190,15 @@ class FrictionField(eqx.Module):
         # Safe distance (grad of ||.|| at 0 is NaN; the epsilon keeps
         # evaluation AT a hole center differentiable).
         dist = jnp.sqrt(jnp.sum((q[None, :] - c) ** 2, axis=-1) + 1e-12)
-        gate = jax.nn.sigmoid((radii - dist) / self.width)  # (K,)
+        if self.gate == "compact":
+            # Smoothstep on t = (r_k - dist)/w clipped to [0, 1]: gate == 1 at
+            # dist <= r_k - w, gate == 0 EXACTLY at dist >= r_k (hard cutoff),
+            # C1-smooth in between. No infinite sigmoid tail => gamma_phi is
+            # identically 0 outside the horizon radius.
+            t = jnp.clip((radii - dist) / self.width, 0.0, 1.0)
+            gate = t * t * (3.0 - 2.0 * t)  # (K,)
+        else:  # "sigmoid": smooth, infinite tail
+            gate = jax.nn.sigmoid((radii - dist) / self.width)  # (K,)
         u = (strengths / self.gamma_max) * gate  # per-hole fraction of gamma_max
         return self.gamma_max * (1.0 - jnp.prod(1.0 - u))
 
@@ -214,6 +234,7 @@ def build_friction_field(
             init_radius=training_config.friction_field_fixed_radius,
             init_strength=training_config.friction_field_fixed_strength,
             trainable=False,
+            gate=getattr(training_config, "friction_field_gate", "sigmoid"),
         )
     if mode == "learned":
         return FrictionField(
@@ -225,6 +246,7 @@ def build_friction_field(
             init_strength=training_config.friction_field_init_strength,
             init_center_scale=training_config.friction_field_init_center_scale,
             trainable=True,
+            gate=getattr(training_config, "friction_field_gate", "sigmoid"),
             key=key,
         )
     raise ValueError(

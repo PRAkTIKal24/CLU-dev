@@ -78,7 +78,13 @@ class TrainingConfig:
     friction_field: str = "none"
     friction_field_k: int = 1  # number of holes K
     friction_field_gamma_max: float = 0.5  # strict cap: gamma_phi in [0, gamma_max)
-    friction_field_width: float = 0.25  # sigmoid horizon width w
+    friction_field_width: float = 0.25  # horizon width w
+    # Horizon gate shape: "sigmoid" (default; smooth, infinite tail) or
+    # "compact" (smoothstep with an EXACT hard cutoff at each hole radius r_k —
+    # gamma_phi identically 0 beyond r_k, closing the sigmoid tail-leakage
+    # retention gap seen for learned arms in the S1 pilot; gamma-field-build
+    # follow-up 2).
+    friction_field_gate: str = "sigmoid"
     friction_field_init_radius: float = 1.0  # hole radius at init ("learned")
     friction_field_init_strength: float = 0.15  # hole strength gamma_k at init
     friction_field_init_center_scale: float = 1.0  # centers ~ N(0, scale^2)

@@ -421,3 +421,59 @@ def test_config_roundtrip(tmp_path):
         v1.difficulty_levels
         == get_default_config().experiment_v1_gate.difficulty_levels
     )
+
+
+# ---------------------------------------------------------------------------
+# Compact-support horizon gate (gamma-field-build follow-up 2)
+# ---------------------------------------------------------------------------
+
+
+def test_compact_gate_exact_zero_beyond_cutoff():
+    """gamma_phi is identically 0.0 (bitwise) outside every hole radius r_k."""
+    compact = FrictionField(
+        dim=2,
+        gamma_max=0.5,
+        width=0.25,
+        centers=jnp.asarray([[0.0, 0.0]]),
+        init_radius=0.8,
+        init_strength=0.4,
+        gate="compact",
+    )
+    r = float(jax.nn.softplus(compact.log_radii[0]))
+    # Inside the flat core: full strength gate == 1.
+    assert float(compact(jnp.array([0.0, 0.0]))) > 0.0
+    # Exactly at / beyond the cutoff radius: bitwise zero (no sigmoid tail).
+    for d in [r, r + 1e-9, r + 0.5, 5.0]:
+        q = jnp.array([d, 0.0])
+        assert float(compact(q)) == 0.0
+    # The sigmoid variant, by contrast, leaks a positive tail at the same radius.
+    sig = FrictionField(
+        dim=2,
+        gamma_max=0.5,
+        width=0.25,
+        centers=jnp.asarray([[0.0, 0.0]]),
+        init_radius=0.8,
+        init_strength=0.4,
+        gate="sigmoid",
+    )
+    assert float(sig(jnp.array([r + 0.5, 0.0]))) > 0.0
+
+
+def test_compact_gate_config_and_build():
+    cfg = get_default_config().training
+    assert cfg.friction_field_gate == "sigmoid"  # default unchanged
+    cfg.friction_field = "learned"
+    cfg.friction_field_gate = "compact"
+    field = build_friction_field(cfg, dim=2, key=jax.random.PRNGKey(0))
+    assert field.gate == "compact"
+    # Beyond r_k the built field damps by exactly (1 - 0) = identity.
+    r = float(jax.nn.softplus(field.log_radii[0]))
+    far = field.centers[0] + jnp.array([r + 1.0, 0.0])
+    assert float(field(far)) == 0.0
+
+
+def test_compact_gate_validation():
+    import pytest
+
+    with pytest.raises(ValueError):
+        FrictionField(dim=2, gate="bogus")
