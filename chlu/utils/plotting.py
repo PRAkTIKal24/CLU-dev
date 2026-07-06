@@ -1930,3 +1930,141 @@ def plot_v1_gate_mass_scatter(scatter_pool: list, save_path: str):
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"Saved mass scatter to {save_path}")
+
+
+def plot_lattice_pricing(
+    kappas,
+    sync_measured,
+    sync_predicted,
+    hl_measured,
+    hl_predicted,
+    mu_rel_sq_measured,
+    mu_rel_sq_predicted,
+    latch_freeze_drift,
+    mu_sym_sq_abs,
+    save_path: str,
+    gamma: float = None,
+    slopes: tuple = None,
+):
+    """
+    The V3 acceptance centerpiece (F5 §7.2): coupling strength prices
+    communication speed against relative-memory lifetime.
+
+    Panels:
+        1. Sync timescale of the relative angle vs kappa_c (log-log) with the
+           quarter-period prediction pi/(2 mu_rel dt) — slope -1/2.
+        2. Relative-information retention half-life vs kappa_c (log-log) with
+           the exact overdamped prediction — slope -1.
+        3. Quadratic-order law parity: measured mu_rel^2 vs 4 kappa_c / M.
+        4. The shared (diagonal) channel stays an exact latch at every
+           kappa_c: freeze drift and |mu_sym^2| (both ~ machine zero).
+
+    Args:
+        kappas: (K,) coupling strengths.
+        sync_measured / sync_predicted: (K,) sync steps (first alignment).
+        hl_measured / hl_predicted: (K,) relative-mode half-lives (steps).
+        mu_rel_sq_measured / mu_rel_sq_predicted: (K,) relative spectral
+            masses squared.
+        latch_freeze_drift: (K,) shared-channel drift over the probe's last
+            half (0 = frozen latch).
+        mu_sym_sq_abs: (K,) |mu^2| of the shared channel.
+        save_path: output PNG path.
+        gamma: probe friction (annotation only).
+        slopes: optional (sync_slope, hl_slope) fitted log-log slopes.
+    """
+    kappas = np.asarray(kappas, dtype=float)
+    fig, axes = plt.subplots(2, 2, figsize=(13, 9))
+
+    # 1. Sync timescale (communication speed)
+    ax = axes[0, 0]
+    ax.loglog(kappas, np.asarray(sync_measured), "o-", label="measured (first alignment)")
+    ax.loglog(
+        kappas,
+        np.asarray(sync_predicted),
+        "k--",
+        alpha=0.7,
+        label=r"$\pi/(2\mu_{\rm rel}\,\varepsilon)$  ($\propto \kappa_c^{-1/2}$)",
+    )
+    title = "Sync timescale of the relative angle"
+    if slopes is not None:
+        title += f"  (fit slope {slopes[0]:.3f})"
+    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_xlabel(r"coupling strength $\kappa_c$", fontsize=12)
+    ax.set_ylabel("steps to first alignment", fontsize=12)
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3, which="both")
+
+    # 2. Relative-memory lifetime
+    ax = axes[0, 1]
+    ax.loglog(kappas, np.asarray(hl_measured), "s-", color="tab:red", label="measured $n_{1/2}$")
+    ax.loglog(
+        kappas,
+        np.asarray(hl_predicted),
+        "k--",
+        alpha=0.7,
+        label=r"exact overdamped prediction ($\propto 1/\kappa_c$)",
+    )
+    title = "Relative-information retention"
+    if gamma is not None:
+        title += rf"  ($\gamma$={gamma})"
+    if slopes is not None:
+        title += f"  (fit slope {slopes[1]:.3f})"
+    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_xlabel(r"coupling strength $\kappa_c$", fontsize=12)
+    ax.set_ylabel(r"half-life $n_{1/2}$ (steps)", fontsize=12)
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3, which="both")
+
+    # 3. Quadratic-order law parity
+    ax = axes[1, 0]
+    pred = np.asarray(mu_rel_sq_predicted)
+    meas = np.asarray(mu_rel_sq_measured)
+    ax.loglog(pred, meas, "o", color="tab:green")
+    lim_lo, lim_hi = pred.min() * 0.5, pred.max() * 2.0
+    ax.loglog([lim_lo, lim_hi], [lim_lo, lim_hi], "k--", lw=1, label="y = x")
+    ax.set_title(
+        r"Communication has a mass: $\mu_{\rm rel}^2 = 4\kappa_c/M$",
+        fontsize=12,
+        fontweight="bold",
+    )
+    ax.set_xlabel(r"predicted $4\kappa_c/M$", fontsize=12)
+    ax.set_ylabel(r"measured $\mu_{\rm rel}^2$", fontsize=12)
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3, which="both")
+
+    # 4. Shared channel = exact latch at every kappa
+    ax = axes[1, 1]
+    ax.semilogy(
+        kappas,
+        np.clip(np.asarray(latch_freeze_drift), 1e-20, None),
+        "^-",
+        color="tab:purple",
+        label="latch freeze drift (last half)",
+    )
+    ax.semilogy(
+        kappas,
+        np.clip(np.asarray(mu_sym_sq_abs), 1e-20, None),
+        "v-",
+        color="tab:gray",
+        label=r"$|\mu_{\rm sym}^2|$ (shared channel)",
+    )
+    ax.set_xscale("log")
+    ax.set_title(
+        "Shared channel stays an exact latch", fontsize=12, fontweight="bold"
+    )
+    ax.set_xlabel(r"coupling strength $\kappa_c$", fontsize=12)
+    ax.set_ylabel("drift / spectral mass (log)", fontsize=12)
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3, which="both")
+
+    plt.suptitle(
+        "CLU lattice: coupling strength prices communication speed "
+        "against relative-memory lifetime (F5 §7.2)",
+        fontsize=14,
+        fontweight="bold",
+    )
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    print(f"Saved lattice pricing plot to {save_path}")

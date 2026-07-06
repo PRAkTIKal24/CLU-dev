@@ -8,6 +8,7 @@ from ..experiments.exp_b_noise import run_experiment_b
 from ..experiments.exp_c_dreaming import run_experiment_c
 from ..experiments.exp_d_goldstone import run_experiment_d
 from ..experiments.exp_v1_gate import run_experiment_v1_gate
+from ..experiments.exp_lattice import run_experiment_lattice
 
 console = Console()
 
@@ -76,6 +77,19 @@ def setup_experiment_parsers(subparsers):
     exp_v1_parser.add_argument('--quick', action='store_true',
                                help='Quick mode (small grid, short training)')
     exp_v1_parser.set_defaults(func=cmd_exp_v1_gate)
+
+    # exp-lattice
+    exp_lattice_parser = subparsers.add_parser(
+        'exp-lattice',
+        help='Run CLU-lattice experiment: communication pricing + scaling (V3)'
+    )
+    exp_lattice_parser.add_argument('--project', help='Project name to use')
+    exp_lattice_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_lattice_parser.add_argument('--quick', action='store_true',
+                                    help='Quick mode (short sweep, 60 epochs)')
+    exp_lattice_parser.add_argument('--skip-training', action='store_true',
+                                    help='Skip the banded-vs-uniform training smoke')
+    exp_lattice_parser.set_defaults(func=cmd_exp_lattice)
 
     # all-experiments
     all_parser = subparsers.add_parser(
@@ -248,6 +262,31 @@ def cmd_exp_v1_gate(args):
             quick=bool(getattr(args, 'quick', False)),
         )
         console.print("✓ V1 gate experiment completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_lattice(args):
+    """Run the CLU-lattice experiment."""
+    console.print("[bold cyan]Running CLU-Lattice Experiment: communication pricing (V3)[/bold cyan]")
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    try:
+        run_experiment_lattice(
+            config=config,
+            models_dir=str(paths['models']),
+            quick=bool(getattr(args, 'quick', False)),
+            skip_training=bool(getattr(args, 'skip_training', False)),
+        )
+        console.print("✓ Lattice experiment completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1

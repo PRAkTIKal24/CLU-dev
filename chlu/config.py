@@ -263,6 +263,67 @@ class ExperimentV1GateConfig:
 
 
 @dataclass
+class ExperimentLatticeConfig:
+    """Configuration for the CLU-lattice experiment (V3 first build, F5 §7).
+
+    A joint-Hamiltonian lattice of CHLU units (chlu.core.lattice.CLULattice):
+    position-only coupling on a declared edge list, one global Verlet step,
+    designed inertial-mass banding. The experiment measures the F5 §7.2
+    communication-pricing claim on a designed 2-unit SO(2) lattice (sync
+    timescale ∝ kappa_c^{-1/2}; relative-memory retention ∝ 1/kappa_c; shared
+    channel = exact latch at every kappa_c), runs N ∈ scaling_sizes chain
+    smoke checks (joint symplecticity, energy drift, wall-clock), a wormhole
+    gate smoke, and a small banded-vs-uniform training smoke.
+
+    Nomenclature per F5 Def-2: inertial mass M vs spectral mass mu.
+    """
+
+    # --- lattice / coupling knobs (build_lattice) ---
+    coupling_type: str = "spring"  # "spring" (kappa*||W_i q_i - W_j q_j||^2) or "mlp"
+    coupling_dim: int = 2
+    kappa_c: float = 0.05  # coupling strength for trained/smoke lattices
+    proj_init_scale: float = 0.1  # init scale of learnable spring projections W
+    kinetic_energy_mode: str = "newtonian_learned"  # banding needs log_mass read
+    hidden_dim: int = 32
+    dt: float = 0.05
+
+    # --- pricing measurement (designed 2-unit SO(2) lattice; no training) ---
+    hat_lambda: float = 1.0  # Mexican-hat stiffness (radial mu^2 = 8*lam*f^2/M)
+    vacuum_radius: float = 1.0  # designed vacuum circle radius f
+    channel_inertia: float = 1.0  # designed channel inertial mass M (per unit)
+    kappa_sweep: List[float] = field(
+        default_factory=lambda: [0.003, 0.01, 0.03, 0.1, 0.3]
+    )
+    sync_delta0: float = 0.4  # initial relative angle for the sync-time probe
+    sync_max_steps: int = 4000  # gamma=0 rollout cap for first alignment
+    probe_gamma: float = 0.2  # overdamped probe friction (h* = 0.111)
+    probe_kick: float = 0.05  # canonical kick size for retention/latch probes
+    max_probe_steps: int = 24000  # retention rollout cap (smallest kappa is slowest)
+    latch_steps: int = 3000  # shared-channel latch probe length
+
+    # --- scaling smoke ---
+    scaling_sizes: List[int] = field(default_factory=lambda: [2, 4, 8])
+    scaling_steps: int = 2000  # energy-drift & wall-clock rollout length
+
+    # --- wormhole skeleton ---
+    wormhole_gate_threshold: float = 1.0  # gate opens for V_c below ~threshold
+    wormhole_gate_width: float = 0.25  # smooth gate width (energy units)
+
+    # --- training smoke (2-unit banded vs uniform, single seed = indicative) ---
+    train_epochs: int = 300
+    use_pretrained: bool = False
+    train_n_traj: int = 64
+    train_seq_len: int = 256
+    train_window: int = 64
+    data_omegas: List[float] = field(default_factory=lambda: [0.5, 2.0])
+    data_masses: List[float] = field(default_factory=lambda: [4.0, 0.25])
+    data_radius: float = 1.0
+    banded_mass_scales: List[float] = field(default_factory=lambda: [4.0, 0.25])
+    train_kappa_c: float = 0.01  # small learnable coupling during training smoke
+    eval_steps: int = 255  # held-out rollout length for eval MSE
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -299,6 +360,9 @@ class CHLUConfig:
     experiment_d: ExperimentDConfig = field(default_factory=ExperimentDConfig)
     experiment_v1_gate: ExperimentV1GateConfig = field(
         default_factory=ExperimentV1GateConfig
+    )
+    experiment_lattice: ExperimentLatticeConfig = field(
+        default_factory=ExperimentLatticeConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -367,6 +431,11 @@ def load_config(path: Path) -> CHLUConfig:
                 ExperimentV1GateConfig, data.get("experiment_v1_gate", {})
             )
         ),
+        experiment_lattice=ExperimentLatticeConfig(
+            **filter_valid_fields(
+                ExperimentLatticeConfig, data.get("experiment_lattice", {})
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -392,6 +461,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_c": asdict(config.experiment_c),
         "experiment_d": asdict(config.experiment_d),
         "experiment_v1_gate": asdict(config.experiment_v1_gate),
+        "experiment_lattice": asdict(config.experiment_lattice),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
