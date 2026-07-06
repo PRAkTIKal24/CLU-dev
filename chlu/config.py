@@ -358,6 +358,7 @@ def load_config(path: Path) -> CHLUConfig:
         ),
         experiment_d=ExperimentDConfig(
             **filter_valid_fields(ExperimentDConfig, data.get("experiment_d", {}))
+        ),
         experiment_v1_gate=ExperimentV1GateConfig(
             **filter_valid_fields(
                 ExperimentV1GateConfig, data.get("experiment_v1_gate", {})
