@@ -7,7 +7,10 @@ from ..experiments.exp_a_stability import run_experiment_a
 from ..experiments.exp_b_noise import run_experiment_b
 from ..experiments.exp_c_dreaming import run_experiment_c
 from ..experiments.exp_d_goldstone import run_experiment_d
-from ..experiments.exp_v1_calibration import run_experiment_v1_calibration
+from ..experiments.exp_v1_calibration import (
+    run_experiment_v1_calibration,
+    run_v1_hopfield_regime_map,
+)
 from ..experiments.exp_v1_gate import run_experiment_v1_gate
 from ..experiments.exp_lattice import run_experiment_lattice
 from ..experiments.exp_s1_gamma_field import run_experiment_s1
@@ -104,6 +107,18 @@ def setup_experiment_parsers(subparsers):
     exp_v1c_parser.add_argument('--quick', action='store_true',
                                 help='Quick mode (small grid, short training)')
     exp_v1c_parser.set_defaults(func=cmd_exp_v1_calibration)
+
+    # exp-v1-regime
+    exp_v1r_parser = subparsers.add_parser(
+        'exp-v1-regime',
+        help='Run V1 CLU-vs-Hopfield regime map (capacity x stress sweep)'
+    )
+    exp_v1r_parser.add_argument('--project', help='Project name to use')
+    exp_v1r_parser.add_argument('--seed', type=int,
+                                help='Base random seed (replicates = seed + i)')
+    exp_v1r_parser.add_argument('--quick', action='store_true',
+                                help='Quick mode (small grid, short training)')
+    exp_v1r_parser.set_defaults(func=cmd_exp_v1_regime)
 
     # exp-s1
     exp_s1_parser = subparsers.add_parser(
@@ -338,6 +353,32 @@ def cmd_exp_v1_calibration(args):
             quick=bool(getattr(args, 'quick', False)),
         )
         console.print("✓ V1 calibration experiment completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_v1_regime(args):
+    """Run the V1 CLU-vs-Hopfield regime map."""
+    console.print(
+        "[bold cyan]Running V1 Regime Map: CLU gate vs Hopfield under stress[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    try:
+        run_v1_hopfield_regime_map(
+            config=config,
+            models_dir=str(paths['models']),
+            quick=bool(getattr(args, 'quick', False)),
+        )
+        console.print("✓ V1 regime map completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1

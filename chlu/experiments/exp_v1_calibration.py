@@ -73,6 +73,7 @@ from chlu.utils.plotting import (
     plot_v1_calib_compute,
     plot_v1_calib_reliability,
     plot_v1_calib_risk_coverage,
+    plot_v1_regime_map,
 )
 
 #: methods whose confidence IS a probability of correctness (ECE-eligible)
@@ -998,3 +999,419 @@ def _print_read(summary, cfg):
                 f"risk={ltt['eval_risk']['mean']:.3f}"
             )
     print("=" * 60 + "\n")
+
+
+# ===========================================================================
+# v1-hopfield-stress: CLU-vs-Hopfield regime map (Head decision 1b)
+# ===========================================================================
+#
+# Goal (NOT to hide Hopfield's dominance): chart WHERE the CLU-gate-vs-Hopfield
+# trade lives so a reader knows when to build with which. The v1-pivot run
+# proved Hopfield is near-perfect on vanilla MQAR at kv<=32 (abstention
+# head-to-head unwinnable). Here we stress both systems and classify each grid
+# cell. Two fair stress mechanics (CLU and Hopfield see identical stressed
+# cues/embeddings):
+#   - correlation: key/value embeddings pulled toward shared centroids (reduced
+#     separation = the classic Hopfield failure mode; retrains the memory).
+#   - eval_noise: Gaussian sigma on the deployment cue only (degrades
+#     retrieval, not storage; the memory is written from clean patterns).
+# "Hopfield wins everywhere we could reach" is a valid, reportable outcome
+# (trend lines are then the result).
+
+#: regime-cell classification codes (used by the map figure)
+REGIME_CATEGORIES = ("hopfield_dominant", "comparable", "clu_gate_advantage")
+
+
+def _clustered_embeddings(key, vocab_size, embed_dim, scale, rho, n_clusters):
+    """Token embeddings with tunable correlation (reduced separation stress).
+
+    rho=0 reproduces make_token_embeddings (iid Gaussian). rho>0 pulls each
+    token toward one of n_clusters shared centroids while preserving the
+    marginal norm::
+
+        emb = sqrt(1 - rho^2) * iid + rho * centroid[assign]
+
+    so E[<e_i, e_j>] ~= rho^2 * ||centroid||^2 for two same-cluster tokens
+    (cosine ~ rho^2) and ~0 across clusters. Keys (lower half-vocab) and values
+    (upper half) cluster independently, so both the Hopfield key-match and the
+    CLU/Hopfield value decode face the classic reduced-separation stress.
+    """
+    k_c, k_i, k_a = jax.random.split(key, 3)
+    sd = scale / jnp.sqrt(embed_dim)
+    iid = jax.random.normal(k_i, (vocab_size, embed_dim)) * sd
+    if rho <= 0.0:
+        return iid
+    centroids = jax.random.normal(k_c, (n_clusters, embed_dim)) * sd
+    assign = jax.random.randint(k_a, (vocab_size,), 0, n_clusters)
+    mix = float(np.sqrt(max(0.0, 1.0 - rho * rho)))
+    return mix * iid + rho * centroids[assign]
+
+
+def _regime_cell(config, cfg, e, dim, seed_i, N, kv, correlation, eval_noise,
+                 n_clusters, models_dir):
+    """One (capacity, stress, seed) cell of the regime map.
+
+    Trains the per-episode CLU memory (generative PCD) on possibly-correlated
+    embeddings, ends the write with the standard self-test -> per-model heads,
+    then runs the deployment ladder under the cell's stress (noisy cue if
+    eval_noise>0) and the modern-Hopfield baseline on the *same* stressed cue
+    with its Platt-calibrated logit-margin head (fair). Reuses the episode
+    helpers (_probe_cues, _ladder_records, _hopfield_confidences,
+    _fit_episode_heads) verbatim.
+
+    Returns per-cell arrays pooled over episodes: correct (T,S), pw_deployed
+    (T,S), R/margin (T,S), hop_correct (T,), hop_pw (T,), cost (S,), plus
+    fidelity and degenerate-head counts.
+    """
+    master = jax.random.PRNGKey(seed_i)
+    embed_key, run_key = jax.random.split(master)
+    embeds = _clustered_embeddings(
+        embed_key, cfg.vocab_size, e, cfg.embed_scale, correlation, n_clusters
+    )
+    val_tokens = jnp.arange(cfg.vocab_size // 2, cfg.vocab_size)
+    val_embeds = embeds[val_tokens]
+
+    acc = {k: [] for k in ("correct", "pw_deployed", "R", "margin",
+                           "hop_correct", "hop_pw")}
+    cost = None
+    fidelity, n_degenerate = [], 0
+
+    for ep in range(cfg.regime_episodes_per_cell):
+        ep_key = jax.random.fold_in(run_key, ep)
+        k_data, k_model, k_train, k_probe, k_cue = jax.random.split(ep_key, 5)
+
+        mq = generate_mqar(
+            k_data, 1, N, kv, vocab_size=cfg.vocab_size,
+            gap_distribution=cfg.gap_distribution, powerlaw_alpha=cfg.powerlaw_alpha,
+        )
+        keys_tok = mq["keys"][0]
+        vals_tok = mq["values"][0]
+        qk_idx = mq["query_key_idx"][0]
+        stored = jnp.concatenate([embeds[keys_tok], embeds[vals_tok]], axis=1)
+
+        model = CHLU(
+            dim=dim, hidden=cfg.hidden_dim, rest_mass=config.model.rest_mass,
+            c=config.model.speed_of_causality, kinetic_mode=cfg.kinetic_energy_mode,
+            potential_type=cfg.potential_type, key=k_model,
+        )
+        model, _losses, floor = train_generative(
+            model, stored, key=k_train, config=config, epochs=cfg.train_epochs,
+            lr=cfg.train_lr, batch_size=cfg.train_batch_size, dt=cfg.dt,
+            buffer_capacity=cfg.train_buffer_capacity, k_steps=cfg.train_k_steps,
+            sleep_friction=cfg.train_friction, sleep_temperature=cfg.train_temperature,
+            input_noise_sigma=cfg.train_input_noise_sigma,
+        )
+        cd = e if cfg.clamp_key else 0
+
+        # write-time self-test -> heads (probes = jittered clean cues)
+        q0p, true_p, _is_imp = _probe_cues(k_probe, embeds, keys_tok, vals_tok, cfg, e)
+        probe_rec = _ladder_records(
+            model, q0p, jnp.zeros_like(q0p), true_p, val_embeds, val_tokens,
+            e, floor, cfg, cd,
+        )
+        hp_pred, _hp_msp, hp_lm = _hopfield_confidences(
+            q0p, stored, cfg.hopfield_beta, e, val_embeds, val_tokens
+        )
+        heads = _fit_episode_heads(
+            probe_rec, hp_pred != np.asarray(true_p), hp_lm, cfg
+        )
+        n_degenerate += sum(1 for h in heads.values() if h.degenerate)
+        deployed = heads[cfg.calib_features]
+
+        # storage fidelity (relax from the stored pattern itself)
+        qs_f, _, _ = _settle_batch(
+            model, stored, jnp.zeros_like(stored), cfg.relax_steps, cfg.dt,
+            jnp.asarray(floor), cfg.governor_sensitivity, cd,
+        )
+        pred_f, _ = _decode_values(qs_f[:, e:], val_embeds, val_tokens)
+        fidelity.append(np.asarray(pred_f == vals_tok))
+
+        # --- deployment under stress: (optionally noisy) cue on the key half ---
+        true_tok = vals_tok[qk_idx]
+        cue = embeds[keys_tok[qk_idx]]
+        if eval_noise > 0.0:
+            cue = cue + jax.random.normal(k_cue, cue.shape) * eval_noise
+        q0 = jnp.concatenate([cue, jnp.zeros((qk_idx.shape[0], e))], axis=1)
+        rec = _ladder_records(
+            model, q0, jnp.zeros_like(q0), true_tok, val_embeds, val_tokens,
+            e, floor, cfg, cd,
+        )
+        acc["correct"].append(rec["correct"])
+        acc["R"].append(rec["R"])
+        acc["margin"].append(rec["margin"])
+        acc["pw_deployed"].append(deployed.p_wrong(R=rec["R"], margin=rec["margin"]))
+        cost = rec["cost"]
+
+        # modern-Hopfield on the SAME stressed cue + its Platt-calibrated margin
+        h_pred, _h_msp, h_lm = _hopfield_confidences(
+            q0, stored, cfg.hopfield_beta, e, val_embeds, val_tokens
+        )
+        acc["hop_correct"].append(h_pred == np.asarray(true_tok))
+        acc["hop_pw"].append(heads["hopfield"].p_wrong(R=h_lm))
+
+    out = {k: np.concatenate(v, axis=0) for k, v in acc.items()}
+    out["cost"] = np.asarray(cost)
+    out["fidelity"] = float(np.concatenate(fidelity).mean())
+    out["n_degenerate"] = int(n_degenerate)
+    return out
+
+
+def _regime_metrics(out, cfg):
+    """Scalar CLU-gate-vs-Hopfield comparison for one cell (per seed)."""
+    correct = out["correct"]
+    cost = out["cost"].astype(float)
+
+    # CLU learned operating point (tau fixed at write time, p_exit)
+    acc_pt, cost_pt = _simulate_tau_policy(
+        out["pw_deployed"], correct, cost, [cfg.calib_p_exit], mode="le"
+    )
+    clu_gate_acc = float(acc_pt[0])
+    clu_gate_cost = float(cost_pt[0])
+    savings = float(cost[-1] / clu_gate_cost) if clu_gate_cost > 0 else float("nan")
+
+    # CLU abstention frontier at full budget (deployed head, most compute)
+    clu_conf = 1.0 - out["pw_deployed"][:, -1]
+    cov_c, risk_c = risk_coverage_curve(clu_conf, correct[:, -1])
+    clu_aurc = aurc(cov_c, risk_c)
+
+    # Hopfield: single matvec + Platt-calibrated logit margin
+    hop_conf = 1.0 - out["hop_pw"]
+    cov_h, risk_h = risk_coverage_curve(hop_conf, out["hop_correct"])
+    hop_aurc = aurc(cov_h, risk_h)
+
+    eps = min(cfg.calib_risk_targets) if cfg.calib_risk_targets else 0.05
+    return {
+        "clu_gate_acc": clu_gate_acc,
+        "clu_gate_cost": clu_gate_cost,
+        "clu_base_acc": float(correct[:, 0].mean()),
+        "clu_full_acc": float(correct[:, -1].mean()),
+        "savings": savings,
+        "clu_aurc": clu_aurc,
+        "hop_acc": float(out["hop_correct"].mean()),
+        "hop_aurc": hop_aurc,
+        "clu_cov_at_risk": coverage_at_risk(cov_c, risk_c, eps),
+        "hop_cov_at_risk": coverage_at_risk(cov_h, risk_h, eps),
+        "fidelity": out["fidelity"],
+        "n_wrong": int((~correct[:, -1]).sum()),
+        "hop_n_wrong": int((~out["hop_correct"]).sum()),
+    }
+
+
+def _classify_regime(d_acc, d_aurc, margin):
+    """Classify a cell from mean CLU-minus-Hopfield deltas.
+
+    d_acc  = clu_gate_acc - hop_acc          (>0 => CLU better accuracy)
+    d_aurc = hop_aurc - clu_aurc             (>0 => CLU better abstention)
+    Returns (category, advantage_dim) where category in REGIME_CATEGORIES.
+    """
+    clu_acc, clu_abs = d_acc > margin, d_aurc > margin
+    hop_acc, hop_abs = d_acc < -margin, d_aurc < -margin
+    if hop_acc and hop_abs:
+        return "hopfield_dominant", None
+    if (clu_acc or clu_abs) and not (hop_acc or hop_abs):
+        dim = "both" if (clu_acc and clu_abs) else ("accuracy" if clu_acc else "abstention")
+        return "clu_gate_advantage", dim
+    return "comparable", None
+
+
+def _agg_regime(per_seed):
+    """Mean/std over seeds of each scalar in a list of _regime_metrics dicts."""
+    keys = per_seed[0].keys()
+    return {
+        k: {
+            "mean": float(np.nanmean([m[k] for m in per_seed])),
+            "std": float(np.nanstd([m[k] for m in per_seed])),
+        }
+        for k in keys
+    }
+
+
+def run_v1_hopfield_regime_map(
+    config: Optional[CHLUConfig] = None,
+    save_dir: Optional[str] = None,
+    models_dir: Optional[str] = None,
+    seed: Optional[int] = None,
+    quick: Optional[bool] = None,
+):
+    """Chart the CLU-gate-vs-Hopfield regime map over capacity x a stress axis.
+
+    Sweeps regime_capacity_levels (kv) x regime_stress_grid under
+    regime_stress_axis ("correlation" | "eval_noise"), regime_n_seeds seeds per
+    cell. Each cell reuses the exp_v1_calibration episode machinery. Emits a
+    regime-map figure (per-cell classification + deltas + compute savings), a
+    summary json, and a metrics npz.
+
+    Args mirror run_experiment_v1_calibration.
+
+    Returns:
+        results dict {"cells": ..., "summary": ...}.
+    """
+    if config is None:
+        config = get_default_config()
+    if save_dir is not None:
+        config.project.save_dir = save_dir
+    if seed is not None:
+        config.project.seed = seed
+
+    cfg = config.experiment_v1_gate
+    if quick:
+        cfg.regime_capacity_levels = [[64, 8], [128, 32]]
+        cfg.regime_stress_grid = [0.0, 0.6]
+        cfg.regime_n_seeds = 2
+        cfg.regime_episodes_per_cell = 1
+        cfg.train_epochs = min(cfg.train_epochs, 120)
+        cfg.relax_steps = min(cfg.relax_steps, 120)
+        cfg.calib_n_stages = 2
+        cfg.calib_stage_steps = 240
+        cfg.calib_probes_per_key = 4
+        cfg.calib_cue_noise_scales = [0.1, 0.3]
+        cfg.calib_n_impostors = 8
+
+    save_dir = config.project.save_dir or "results/"
+    models_dir = models_dir or os.path.join(save_dir, "..", "models")
+    results_dir = os.path.join(save_dir, "..", "results")
+    for d in (save_dir, models_dir, results_dir):
+        os.makedirs(d, exist_ok=True)
+
+    axis = cfg.regime_stress_axis
+    if axis not in ("correlation", "eval_noise"):
+        raise ValueError(f"regime_stress_axis must be correlation|eval_noise, got {axis}")
+    caps = [tuple(lv) for lv in cfg.regime_capacity_levels]
+    grid = [float(s) for s in cfg.regime_stress_grid]
+    base_seed = config.project.seed
+    seeds = [base_seed + i for i in range(cfg.regime_n_seeds)]
+    e = cfg.embed_dim
+    dim = 2 * e
+    margin = cfg.regime_comparable_margin
+
+    print("\n" + "=" * 64)
+    print("EXPERIMENT V1-HOPFIELD-STRESS: CLU-gate vs Hopfield regime map")
+    print("=" * 64)
+    print(
+        f"capacity (N,kv): {caps} | stress axis: {axis} = {grid} | seeds: {seeds}"
+    )
+    print(
+        f"gate features={cfg.calib_features} p_exit={cfg.calib_p_exit} | "
+        f"ladder {cfg.relax_steps}+{cfg.calib_n_stages}x{cfg.calib_stage_steps} | "
+        f"hopfield_beta={cfg.hopfield_beta}"
+    )
+
+    n_cap, n_str = len(caps), len(grid)
+    fields = ("clu_gate_acc", "hop_acc", "clu_full_acc", "clu_base_acc",
+              "savings", "clu_aurc", "hop_aurc", "clu_cov_at_risk",
+              "hop_cov_at_risk", "fidelity")
+    arr = {f: np.full((n_cap, n_str), np.nan) for f in fields}
+    arr_std = {f: np.full((n_cap, n_str), np.nan) for f in fields}
+    d_acc = np.full((n_cap, n_str), np.nan)
+    d_aurc = np.full((n_cap, n_str), np.nan)
+    cat = np.zeros((n_cap, n_str), dtype=int)
+    cells = {}
+
+    for ci, (N, kv) in enumerate(caps):
+        for sj, s in enumerate(grid):
+            corr = s if axis == "correlation" else cfg.regime_base_correlation
+            noise = s if axis == "eval_noise" else cfg.regime_base_eval_noise
+            per_seed = []
+            for seed_i in seeds:
+                out = _regime_cell(
+                    config, cfg, e, dim, seed_i, N, kv, corr, noise,
+                    cfg.regime_n_clusters, models_dir,
+                )
+                per_seed.append(_regime_metrics(out, cfg))
+            agg = _agg_regime(per_seed)
+            for f in fields:
+                arr[f][ci, sj] = agg[f]["mean"]
+                arr_std[f][ci, sj] = agg[f]["std"]
+            da = agg["clu_gate_acc"]["mean"] - agg["hop_acc"]["mean"]
+            dr = agg["hop_aurc"]["mean"] - agg["clu_aurc"]["mean"]
+            d_acc[ci, sj] = da
+            d_aurc[ci, sj] = dr
+            category, adv = _classify_regime(da, dr, margin)
+            cat[ci, sj] = REGIME_CATEGORIES.index(category)
+            cells[f"cap{N}_kv{kv}__{axis}{s}"] = {
+                "N": N, "kv": kv, "stress": s, "category": category,
+                "advantage_dim": adv, "d_acc": da, "d_aurc": dr,
+                "per_seed": per_seed, "agg": agg,
+            }
+            print(
+                f"  N={N} kv={kv} {axis}={s}: "
+                f"clu_gate={agg['clu_gate_acc']['mean']:.3f} "
+                f"hop={agg['hop_acc']['mean']:.3f} (dacc={da:+.3f}) | "
+                f"AURC clu={agg['clu_aurc']['mean']:.3f} "
+                f"hop={agg['hop_aurc']['mean']:.3f} (daurc={dr:+.3f}) | "
+                f"save={agg['savings']['mean']:.1f}x | fid={agg['fidelity']['mean']:.3f}"
+                f" => {category}"
+            )
+
+    cap_labels = [f"N{N}/kv{kv}" for (N, kv) in caps]
+    regime = {
+        "axis": axis,
+        "cap_labels": cap_labels,
+        "stress_grid": grid,
+        "categories": list(REGIME_CATEGORIES),
+        "cat": cat,
+        "d_acc": d_acc,
+        "d_aurc": d_aurc,
+        "clu_acc": arr["clu_gate_acc"],
+        "hop_acc": arr["hop_acc"],
+        "clu_aurc": arr["clu_aurc"],
+        "hop_aurc": arr["hop_aurc"],
+        "savings": arr["savings"],
+        "fidelity": arr["fidelity"],
+    }
+
+    plot_v1_regime_map(
+        regime, os.path.join(save_dir, "exp_v1_regime_map.png")
+    )
+
+    # summary json (JSON-safe: drop the raw per-seed metric dicts into lists)
+    summary = {
+        "axis": axis,
+        "capacities": [list(c) for c in caps],
+        "stress_grid": grid,
+        "seeds": seeds,
+        "comparable_margin": margin,
+        "categories": {
+            k: v.tolist() for k, v in
+            {"cat_codes": cat, "d_acc": d_acc, "d_aurc": d_aurc}.items()
+        },
+        "fields_mean": {f: arr[f].tolist() for f in fields},
+        "fields_std": {f: arr_std[f].tolist() for f in fields},
+        "cells": {
+            k: {kk: vv for kk, vv in v.items() if kk != "per_seed"}
+            for k, v in cells.items()
+        },
+    }
+    summary_path = os.path.join(results_dir, "exp_v1_regime_summary.json")
+    with open(summary_path, "w") as f:
+        json.dump(summary, f, indent=2)
+    npz_path = os.path.join(results_dir, "exp_v1_regime_metrics.npz")
+    np.savez(npz_path, cat=cat, d_acc=d_acc, d_aurc=d_aurc, **arr)
+    print(f"\nSaved regime map to {summary_path}\nSaved metrics to {npz_path}")
+
+    _print_regime_read(regime)
+    return {"cells": cells, "summary": summary, "regime": regime}
+
+
+def _print_regime_read(regime):
+    """Console digest of the regime map."""
+    print("\n" + "=" * 64)
+    print("V1-HOPFIELD-STRESS READ (heuristics; final read is the Hub's)")
+    print("=" * 64)
+    caps, grid = regime["cap_labels"], regime["stress_grid"]
+    cats = regime["categories"]
+    n_adv = int((regime["cat"] == cats.index("clu_gate_advantage")).sum())
+    n_comp = int((regime["cat"] == cats.index("comparable")).sum())
+    n_dom = int((regime["cat"] == cats.index("hopfield_dominant")).sum())
+    print(
+        f"  cells: {regime['cat'].size} | Hopfield-dominant {n_dom}, "
+        f"comparable {n_comp}, CLU-gate-advantage {n_adv}"
+    )
+    for ci, cl in enumerate(caps):
+        row = " ".join(
+            f"{regime['axis'][:4]}{grid[sj]}:{cats[regime['cat'][ci, sj]][:4]}"
+            f"(da{regime['d_acc'][ci, sj]:+.2f})"
+            for sj in range(len(grid))
+        )
+        print(f"  {cl:>10}: {row}")
+    print("=" * 64 + "\n")
