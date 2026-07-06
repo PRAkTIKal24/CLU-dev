@@ -233,6 +233,14 @@ def mode_amplitude(
     Feed THIS (not raw |d|) to half-life extractors for underdamped modes:
     first-crossing of raw |d| measures oscillation phase, not retention
     (F5 Appendix N, "known diagnostic artifacts").
+
+    mu_floor guidance: it must sit *above* the numerical residual spectral
+    mass of a genuinely flat mode, or the envelope divides pc-noise by a tiny
+    mu and spuriously inflates the "retention" of the latch (v2-full-runs §5:
+    an f32-trained flat mode probed pre-polish has mu ~= 4e-8, above the
+    default 1e-8, so its envelope blows up). Set mu_floor ~= 10 * sqrt(baseline
+    residual mu^2) measured at the settled vacuum; for latch modes read raw |d|
+    / the coset angle directly rather than the envelope.
     """
     mu = jnp.sqrt(jnp.clip(probe.mu_sq, 0.0, None))
     safe_mu = jnp.where(mu > mu_floor, mu, 1.0)
@@ -249,6 +257,7 @@ def perturb_and_track(
     steps: int = 4000,
     dt: float = 0.05,
     gamma: float = 0.05,
+    mu_floor: float = 1e-8,
 ) -> dict:
     """
     Kick one canonical mode at q* and roll out at fixed friction gamma.
@@ -265,6 +274,10 @@ def perturb_and_track(
         "d", "pc":   canonical mode positions/momenta (steps+1, dim),
         "amplitude": per-mode envelope amplitudes (steps+1, dim),
         "retention": amplitude of the kicked mode normalized to 1 at n=0.
+
+    ``mu_floor`` is forwarded to ``mode_amplitude`` — raise it above the
+    numerical residual of a flat mode (see that function's guidance) when
+    probing f32-trained latch modes.
     """
     v = probe.eigvecs[:, mode_idx]
     sqm = jnp.sqrt(probe.M_eff)
@@ -281,7 +294,7 @@ def perturb_and_track(
 
     traj = rollout_from(model, q0, p0, steps=steps, dt=dt, gamma=gamma)
     d, pc = mode_coordinates(probe, traj)
-    amp = mode_amplitude(probe, d, pc)
+    amp = mode_amplitude(probe, d, pc, mu_floor=mu_floor)
     retention = amp[:, mode_idx] / amp[0, mode_idx]
     return {"traj": traj, "d": d, "pc": pc, "amplitude": amp, "retention": retention}
 
