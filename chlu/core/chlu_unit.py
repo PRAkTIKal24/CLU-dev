@@ -172,23 +172,24 @@ class CHLU(eqx.Module):
         else:
             raise ValueError(f"Unknown kinetic mode: {self.kinetic_mode}.")
 
-    def H(self, q: jnp.ndarray, p: jnp.ndarray) -> float:
+    def T(self, p: jnp.ndarray) -> float:
         """
-        Compute the Hamiltonian with selectable kinetic energy mode.
+        Kinetic energy T(p) alone, per the configured kinetic_mode:
 
-        H(q, p) = T(p) + V(q)
-
-        Where T(p) depends on kinetic_mode:
         - "newtonian_identity": T = 0.5 * p^2 (identity mass, classic)
         - "newtonian_learned": T = 0.5 * p^T M^-1 p (learned mass, classic)
         - "relativistic": T = sqrt(p^T M^-1 p + m^2) (learned mass, relativistic)
 
+        Exposed separately from ``H`` so a lattice of units can assemble a
+        SEPARABLE joint Hamiltonian T_net = sum_i T_i(p_i) (F5 §7.2 condition
+        1) without duplicating the kinetic physics. ``H`` delegates here —
+        the op sequence is identical to the historical in-``H`` computation.
+
         Args:
-            q: Position (dim,)
             p: Momentum (dim,)
 
         Returns:
-            Total energy (scalar)
+            Kinetic energy (scalar)
         """
         # Compute inertial-mass vector (always prepared, used if needed).
         # mass_vector() == softplus(log_mass), with optional channel tying
@@ -200,12 +201,12 @@ class CHLU(eqx.Module):
         if self.kinetic_mode == "newtonian_identity":
             # Classic T = 0.5 * p^2 (identity mass)
             # Best for: Lemniscate/Figure-8 to preserve geometric properties
-            kinetic = 0.5 * jnp.sum(p * p)
+            return 0.5 * jnp.sum(p * p)
 
         elif self.kinetic_mode == "newtonian_learned":
             # T = 0.5 * p^T M^-1 p (learned diagonal mass)
             # Best for: Systems with varying inertia across dimensions
-            kinetic = 0.5 * jnp.sum((p * p) * M_inv)
+            return 0.5 * jnp.sum((p * p) * M_inv)
 
         elif self.kinetic_mode == "relativistic":
             # T = c(sqrt(p^T M^-1 p + (mc)^2)) (relativistic with learned mass)
@@ -215,13 +216,33 @@ class CHLU(eqx.Module):
             # Compute rest energy term
             rest_energy = (self.rest_mass * self.c) ** 2
 
-            kinetic = self.c * jnp.sqrt(p_norm_squared + rest_energy)
+            return self.c * jnp.sqrt(p_norm_squared + rest_energy)
 
         else:
             raise ValueError(
                 f"Unknown kinetic mode: {self.kinetic_mode}. "
                 f"Must be 'newtonian_identity', 'newtonian_learned', or 'relativistic'."
             )
+
+    def H(self, q: jnp.ndarray, p: jnp.ndarray) -> float:
+        """
+        Compute the Hamiltonian with selectable kinetic energy mode.
+
+        H(q, p) = T(p) + V(q)
+
+        Where T(p) depends on kinetic_mode (see ``T``):
+        - "newtonian_identity": T = 0.5 * p^2 (identity mass, classic)
+        - "newtonian_learned": T = 0.5 * p^T M^-1 p (learned mass, classic)
+        - "relativistic": T = sqrt(p^T M^-1 p + m^2) (learned mass, relativistic)
+
+        Args:
+            q: Position (dim,)
+            p: Momentum (dim,)
+
+        Returns:
+            Total energy (scalar)
+        """
+        kinetic = self.T(p)
 
         # Potential energy (always computed the same way)
         potential = self.potential_net(q)
