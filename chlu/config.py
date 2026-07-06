@@ -70,6 +70,29 @@ class TrainingConfig:
     # Default "legacy" preserves behavior for existing checkpoints/schedules.
     langevin_noise: str = "legacy"
 
+    # --- Friction field gamma_phi(q) (trash regions; F5 Def-5/Prop-11) ---
+    # "none" (default; scalar-gamma damping, bit-compatible with all prior
+    # behavior), "fixed" (hand-placed frozen holes — oracle/control arms),
+    # "learned" (contrastively trained holes: wake protects data, sleep damns
+    # hallucinations — brainstorm Thread 1).
+    friction_field: str = "none"
+    friction_field_k: int = 1  # number of holes K
+    friction_field_gamma_max: float = 0.5  # strict cap: gamma_phi in [0, gamma_max)
+    friction_field_width: float = 0.25  # sigmoid horizon width w
+    friction_field_init_radius: float = 1.0  # hole radius at init ("learned")
+    friction_field_init_strength: float = 0.15  # hole strength gamma_k at init
+    friction_field_init_center_scale: float = 1.0  # centers ~ N(0, scale^2)
+    # Hand-placed centers for "fixed" mode: list of [dim]-lists; None -> origin
+    friction_field_fixed_centers: Optional[List[List[float]]] = None
+    friction_field_fixed_radius: float = 0.6  # hole radius for "fixed"
+    friction_field_fixed_strength: float = 0.3  # hole strength for "fixed"
+    # Contrastive-training weights (only active when the model carries a field)
+    friction_field_protect_lambda: float = 1.0  # wake: push gamma_phi(q_data) down
+    friction_field_hallu_lambda: float = 1.0  # sleep: push gamma_phi(q_hallu) up
+    # Optional C1 ablation (mo-deep-read §5): nudge gamma_k -> 2*dt*mu(c_k),
+    # the critical-damping forgetting optimum. 0.0 = OFF (measure, don't force).
+    friction_field_c1_lambda: float = 0.0
+
 
 @dataclass
 class ExperimentAConfig:
@@ -263,6 +286,58 @@ class ExperimentV1GateConfig:
 
 
 @dataclass
+class ExperimentS1Config:
+    """Configuration for the S1 pilot: trash-region Pareto (gamma-field study).
+
+    Signal attractor (Figure-8 lemniscate, Exp-A machinery) + structured noise
+    injected from a localized off-attractor cluster. Arms: (i) global gamma
+    sweep, (ii) energy governor, (iii) learned gamma_phi (K in
+    ``learned_k_values``), (iv) fixed oracle hole at the known noise locus.
+    Metric: signal-retention vs noise-rejection Pareto (brainstorm Thread 1;
+    F5 Def-5/Prop-11; C1 comparison per mo-deep-read §5).
+    """
+
+    dt: float = 0.05
+    n_train_cycles: int = 3
+    window_size: int = 64
+    train_epochs: int = 300
+    hidden_dim: int = 64
+    kinetic_energy_mode: str = "newtonian_identity"  # match Exp-A defaults
+    use_pretrained: bool = False
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    sleep_steps: int = 100  # shorter sleep evolution than the global default
+
+    # Structured noise = the garbage source: a Gaussian cluster at a fixed
+    # off-attractor locus (known, so arm (iv) can place the oracle hole on it)
+    noise_center: List[float] = field(default_factory=lambda: [1.2, 1.2])
+    noise_q_std: float = 0.15
+    noise_p_std: float = 0.6
+    # Fraction of the replay buffer seeded at the noise locus: the training
+    # environment EXPOSES the garbage source to the sleep phase; the field
+    # must still LEARN to place friction there (exposure != placement).
+    buffer_noise_frac: float = 0.3
+
+    # Evaluation protocol
+    eval_clean_steps: int = 2000  # retention horizon (clean free-run)
+    eval_kick_steps: int = 400  # rejection horizon per injection
+    n_injections: int = 16
+    # Arm (i): global-gamma sweep traces the Pareto trade-off curve
+    # (0.0 = conservative reference point / model ceiling)
+    global_gamma_sweep: List[float] = field(
+        default_factory=lambda: [0.0, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3]
+    )
+    governor_sensitivity: float = 0.95  # arm (ii)
+
+    # Arm (iii): learned fields (one trained model per K per seed). Field
+    # geometry (gamma_max, width, init_*) comes from training.friction_field_*
+    # — single source of truth.
+    learned_k_values: List[int] = field(default_factory=lambda: [1, 4])
+    # Arm (iv): oracle hole hand-placed at noise_center
+    oracle_radius: float = 0.6
+    oracle_strength: float = 0.3
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -300,6 +375,7 @@ class CHLUConfig:
     experiment_v1_gate: ExperimentV1GateConfig = field(
         default_factory=ExperimentV1GateConfig
     )
+    experiment_s1: ExperimentS1Config = field(default_factory=ExperimentS1Config)
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
@@ -367,6 +443,9 @@ def load_config(path: Path) -> CHLUConfig:
                 ExperimentV1GateConfig, data.get("experiment_v1_gate", {})
             )
         ),
+        experiment_s1=ExperimentS1Config(
+            **filter_valid_fields(ExperimentS1Config, data.get("experiment_s1", {}))
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -392,6 +471,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_c": asdict(config.experiment_c),
         "experiment_d": asdict(config.experiment_d),
         "experiment_v1_gate": asdict(config.experiment_v1_gate),
+        "experiment_s1": asdict(config.experiment_s1),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
