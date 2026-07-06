@@ -9,6 +9,7 @@ import optax
 from tqdm import tqdm
 
 from chlu.config import CHLUConfig, get_default_config
+from chlu.core.friction_field import c1_regularizer
 from chlu.core.regularization import compute_lyapunov_loss
 from chlu.training.losses import energy_loss, mse_loss
 from chlu.training.replay_buffer import ReplayBuffer
@@ -48,6 +49,7 @@ def train_chlu(
     window_size: Optional[int] = None,
     sleep_temperature: Optional[float] = None,
     langevin_noise: Optional[str] = None,
+    negative_seed_states: Optional[tuple] = None,
 ):
     """
     Train CHLU using Persistent Contrastive Divergence (Wake-Sleep).
@@ -71,6 +73,17 @@ def train_chlu(
         sleep_temperature: Temperature for Langevin noise during sleep phase (overrides config)
         langevin_noise: Langevin noise scale, "legacy" or "fdt" (overrides config;
             see F5 Prop-9 / TrainingConfig.langevin_noise)
+        negative_seed_states: Optional (q, p) arrays of shape (n, dim) written
+            into the replay buffer after random init — lets an experiment
+            expose a structured "garbage source" to the sleep phase (e.g. the
+            S1 noise locus). Default None = unchanged random init.
+
+    If the model carries a ``friction_field`` (trash regions, F5 Def-5), the
+    wake loss adds a protection term pushing gamma_phi(q_data) down and the
+    sleep loss adds a term pushing gamma_phi up at the evolved negatives
+    (one contrastive signal, two fields — brainstorm Thread 1); weights =
+    ``training.friction_field_protect_lambda`` / ``_hallu_lambda``, plus the
+    optional C1 critical-damping nudge behind ``_c1_lambda``.
 
     Returns:
         (trained_model, losses): Trained model and loss history
@@ -107,6 +120,10 @@ def train_chlu(
     sleep_friction = config.training.sleep_friction
     persistent_sleep_buffer = config.training.persistent_sleep_buffer
     lyapunov_penalty = config.training.lyapunov_penalty
+    # Friction-field contrastive weights (inert unless the model carries a field)
+    ff_protect_lambda = config.training.friction_field_protect_lambda
+    ff_hallu_lambda = config.training.friction_field_hallu_lambda
+    ff_c1_lambda = config.training.friction_field_c1_lambda
     if sleep_temperature is None:
         sleep_temperature = config.training.sleep_temperature
     if langevin_noise is None:
@@ -133,6 +150,10 @@ def train_chlu(
     k1, k2 = jax.random.split(key)
     buffer = ReplayBuffer(capacity=buffer_capacity, dim=dim)
     buffer.initialize_random(k1, scale=1.0)
+    if negative_seed_states is not None:
+        q_seed, p_seed = negative_seed_states
+        n_seed = min(q_seed.shape[0], buffer_capacity)
+        buffer.update((q_seed[:n_seed], p_seed[:n_seed]), jnp.arange(n_seed))
 
     losses = []
 
@@ -166,7 +187,16 @@ def train_chlu(
                 penalty=lyapunov_penalty,
             )
 
-            return mse + lyapunov_lambda * lyap_loss
+            loss = mse + lyapunov_lambda * lyap_loss
+
+            # Trash-region protection (Thread-1 wake term): memories must
+            # live in frictionless regions — push gamma_phi(q_data) down.
+            # (gamma_phi >= 0, so this term drives friction at data to 0.)
+            field = getattr(model, "friction_field", None)
+            if field is not None:
+                loss = loss + ff_protect_lambda * jnp.mean(jax.vmap(field)(q_true))
+
+            return loss
 
         loss, grads = eqx.filter_value_and_grad(loss_fn)(model)
         updates, opt_state = optimizer.update(grads, opt_state, model)
@@ -228,9 +258,24 @@ def train_chlu(
 
             # Negative sign because we want to *maximize* sleep energy
             sleep_energy = -energy_loss(model, q_evolved, p_evolved)
+            loss = sleep_energy
+
+            # Trash-region terms (Thread-1 sleep side): garbage attracts
+            # friction — push gamma_phi UP at the persistent negatives.
+            field = getattr(model, "friction_field", None)
+            if field is not None:
+                # stop_gradient: the term places friction where the negatives
+                # ARE; it must not steer the negatives' dynamics themselves.
+                q_hallu = jax.lax.stop_gradient(q_evolved)
+                loss = loss - ff_hallu_lambda * jnp.mean(jax.vmap(field)(q_hallu))
+                if ff_c1_lambda > 0.0:
+                    # Optional C1 ablation: nudge hole strengths toward the
+                    # critical-damping forgetting optimum 2*dt*mu(c_k)
+                    # (mo-deep-read §5; default OFF — measure, don't force).
+                    loss = loss + ff_c1_lambda * c1_regularizer(model, dt)
 
             # Return evolved states as aux so the caller can persist them (PCD)
-            return sleep_energy, (q_evolved, p_evolved)
+            return loss, (q_evolved, p_evolved)
 
         (loss, (q_evolved, p_evolved)), grads = eqx.filter_value_and_grad(
             loss_fn, has_aux=True
