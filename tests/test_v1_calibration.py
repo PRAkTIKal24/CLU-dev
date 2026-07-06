@@ -8,6 +8,8 @@ from chlu.config import get_default_config
 from chlu.core.chlu_unit import CHLU
 from chlu.data.mqar import make_token_embeddings
 from chlu.experiments.exp_v1_calibration import (
+    _classify_regime,
+    _clustered_embeddings,
     _fit_episode_heads,
     _hopfield_confidences,
     _ladder_records,
@@ -133,3 +135,39 @@ def test_fit_episode_heads_returns_all_four():
     cfg.calib_fit_all_stages = False
     heads0 = _fit_episode_heads(probe_rec, hop_wrong, hop_lm, cfg)
     assert heads0["r_margin"].n_fit == T
+
+
+def test_clustered_embeddings_correlation_monotone():
+    # rho=0 reproduces iid make_token_embeddings behavior (unit-norm-ish, low
+    # cross-token cosine); rho>0 raises same-cluster overlap monotonically.
+    key = jax.random.PRNGKey(7)
+    vocab, e, ncl = 512, 16, 4
+    cos_by_rho = []
+    for rho in (0.0, 0.5, 0.9):
+        emb = np.asarray(
+            _clustered_embeddings(key, vocab, e, scale=2.0, rho=rho, n_clusters=ncl)
+        )
+        n = emb / (np.linalg.norm(emb, axis=1, keepdims=True) + 1e-9)
+        g = n @ n.T
+        off = g[~np.eye(vocab, dtype=bool)]
+        cos_by_rho.append(float(np.mean(np.abs(off))))
+        # norms stay ~preserved (marginal norm invariant to rho by construction)
+        assert 0.5 < float(np.mean(np.linalg.norm(emb, axis=1))) < 3.0
+    # mean |cosine| increases with correlation
+    assert cos_by_rho[0] < cos_by_rho[1] < cos_by_rho[2]
+
+
+def test_classify_regime_three_way():
+    m = 0.03
+    # Hopfield better on both accuracy and abstention
+    assert _classify_regime(-0.2, -0.1, m) == ("hopfield_dominant", None)
+    # CLU better accuracy, ties abstention
+    assert _classify_regime(0.1, 0.0, m) == ("clu_gate_advantage", "accuracy")
+    # CLU better abstention only
+    assert _classify_regime(0.0, 0.1, m) == ("clu_gate_advantage", "abstention")
+    # CLU better on both
+    assert _classify_regime(0.1, 0.1, m) == ("clu_gate_advantage", "both")
+    # within band => comparable
+    assert _classify_regime(0.01, -0.01, m) == ("comparable", None)
+    # mixed (CLU acc up, Hopfield abstention up) => comparable, not advantage
+    assert _classify_regime(0.1, -0.1, m) == ("comparable", None)
