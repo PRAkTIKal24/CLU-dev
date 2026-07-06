@@ -196,9 +196,27 @@ def train_chlu(
         effective_clamp = jnp.where(epoch < epochs_ramp, annealed_clamp, 1.0)
 
         def loss_fn(model):
+            # Wake rollout uses a friction field with STOPPED gradients (same
+            # principle as the sleep phase): for an imperfect model, damping
+            # near the data manifold suppresses rollout-error growth, so the
+            # (clamp-amplified) MSE gradient actively REWARDS on-manifold
+            # friction — S1 pilot evidence: learned holes parked ON the
+            # attractor at ~1.3x the critical-damping optimum (the
+            # fastest-error-settling friction), immune to a 10x protect/hallu
+            # rebalance. Field parameters are trained ONLY by the placement
+            # terms (protection below, sleep hallucination, optional C1).
+            field = getattr(model, "friction_field", None)
+            if field is not None:
+                frozen_field = jax.tree_util.tree_map(jax.lax.stop_gradient, field)
+                model_rollout = eqx.tree_at(
+                    lambda m: m.friction_field, model, replace=frozen_field
+                )
+            else:
+                model_rollout = model
+
             # Run CHLU dynamics from initial state for window_size steps
             q0, p0 = q_true[0], p_true[0]
-            pred_trajectory = model(q0, p0, steps=len(trajectory), dt=dt)
+            pred_trajectory = model_rollout(q0, p0, steps=len(trajectory), dt=dt)
 
             # Use precomputed clamp strength
             mse = effective_clamp * mse_loss(pred_trajectory, trajectory)
@@ -206,7 +224,7 @@ def train_chlu(
             # Lyapunov regularization (penalty selected via config;
             # "legacy_degenerate" reproduces the old theta-independent loss)
             lyap_loss = compute_lyapunov_loss(
-                lambda state: model.step(state, dt),
+                lambda state: model_rollout.step(state, dt),
                 pred_trajectory,
                 n_samples=min(10, len(trajectory) // 2),
                 penalty=lyapunov_penalty,
@@ -217,7 +235,6 @@ def train_chlu(
             # Trash-region protection (Thread-1 wake term): memories must
             # live in frictionless regions — push gamma_phi(q_data) down.
             # (gamma_phi >= 0, so this term drives friction at data to 0.)
-            field = getattr(model, "friction_field", None)
             if field is not None:
                 loss = loss + ff_protect_lambda * jnp.mean(jax.vmap(field)(q_true))
 
