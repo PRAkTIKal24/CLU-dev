@@ -1767,3 +1767,166 @@ def plot_goldstone_summary(
     plt.close()
 
     print(f"Saved Goldstone summary plot to {save_path}")
+def plot_v1_gate_calibration(
+    R0_by_level: list,
+    correct0_by_level: list,
+    level_names: list,
+    aurocs: list,
+    save_path: str,
+    n_bins: int = 5,
+):
+    """
+    Reliability-diagram-style calibration of residual energy vs correctness
+    (Experiment V1-Gate, Q1). One panel per difficulty level: retrieval
+    accuracy within quantile bins of the residual R = H(settled) - floor,
+    with the AUROC of R predicting incorrectness in the title.
+
+    Args:
+        R0_by_level: list of (T,) residual arrays, one per level
+        correct0_by_level: list of (T,) boolean arrays
+        level_names: list of level label strings
+        aurocs: list of AUROC floats (may contain NaN)
+        save_path: output path
+        n_bins: number of quantile bins
+    """
+    n = len(R0_by_level)
+    fig, axes = plt.subplots(1, n, figsize=(4 * n, 3.5), squeeze=False)
+    for i, (R, c, name, auc) in enumerate(
+        zip(R0_by_level, correct0_by_level, level_names, aurocs, strict=True)
+    ):
+        ax = axes[0, i]
+        R = np.asarray(R)
+        c = np.asarray(c).astype(float)
+        edges = np.quantile(R, np.linspace(0, 1, n_bins + 1))
+        edges[-1] += 1e-9
+        accs, centers, counts = [], [], []
+        for b in range(n_bins):
+            m = (R >= edges[b]) & (R < edges[b + 1])
+            if m.sum() > 0:
+                accs.append(c[m].mean())
+                centers.append(R[m].mean())
+                counts.append(int(m.sum()))
+        ax.plot(centers, accs, "o-", color="tab:blue")
+        for x, y, cnt in zip(centers, accs, counts, strict=True):
+            ax.annotate(str(cnt), (x, y), fontsize=7, xytext=(2, 4),
+                        textcoords="offset points")
+        ax.set_xlabel("residual R (binned)", fontsize=10)
+        if i == 0:
+            ax.set_ylabel("retrieval accuracy", fontsize=10)
+        ax.set_ylim(-0.05, 1.05)
+        ax.grid(True, alpha=0.3)
+        auc_str = "nan" if auc != auc else f"{auc:.3f}"
+        ax.set_title(f"{name}\nAUROC(R→wrong)={auc_str}", fontsize=10)
+    plt.suptitle("V1 gate Q1: residual-energy calibration", fontsize=12,
+                 fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved calibration plot to {save_path}")
+
+
+def plot_v1_gate_compute_curves(
+    curves: dict,
+    hopfield_acc: float,
+    save_path: str,
+    title: str = "V1 gate: accuracy vs compute",
+):
+    """
+    Compute-matched accuracy curves for the V1-Gate cascade arms.
+
+    Args:
+        curves: dict arm_name -> (mean_steps array, accuracy array)
+        hopfield_acc: modern-Hopfield accuracy (horizontal reference; its
+            cost is one matvec, incommensurable with Verlet steps)
+        save_path: output path
+        title: figure title
+    """
+    fig, ax = plt.subplots(figsize=(7, 5))
+    styles = {
+        "mass": ("tab:blue", "o-"),
+        "raw": ("tab:orange", "s--"),
+        "kick": ("tab:green", "^--"),
+        "margin": ("tab:purple", "v--"),
+        "relax-longer": ("tab:gray", "d-"),
+    }
+    for name, (steps, acc) in curves.items():
+        color, style = styles.get(name, ("black", "x-"))
+        order = np.argsort(np.asarray(steps))
+        ax.plot(np.asarray(steps)[order], np.asarray(acc)[order], style,
+                color=color, label=name, alpha=0.85)
+    ax.axhline(hopfield_acc, color="tab:red", linestyle=":",
+               label=f"modern Hopfield ({hopfield_acc:.3f}; ~1 matvec)")
+    ax.set_xlabel("mean Verlet steps per query", fontsize=11)
+    ax.set_ylabel("retrieval accuracy", fontsize=11)
+    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=9, loc="best")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved compute curves to {save_path}")
+
+
+def plot_v1_gate_mass_scatter(scatter_pool: list, save_path: str):
+    """
+    Per-mode displacement vs inverse effective inertial mass under the first
+    S^(M) boost retry (Thread-5 falsifiable (ii); F5 §5.4).
+
+    Left: |Δq_i| of boost+re-relax vs 1/M_eff,i (log-log, pooled).
+    Right: instantaneous check — the p-dependent part of the squeeze's Δq
+    against its exact prediction sinh(ζ)·p_i/M_eff,i.
+
+    Args:
+        scatter_pool: list of dicts with keys m_eff, p_before, q_before,
+            dq_instant, dq_total, zeta_chosen
+        save_path: output path
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+
+    inv_m, dq_tot, pred_inst, obs_inst = [], [], [], []
+    for sc in scatter_pool:
+        m = np.asarray(sc["m_eff"])
+        T = sc["dq_total"].shape[0]
+        inv_m.append(np.tile(1.0 / m, (T, 1)).ravel())
+        dq_tot.append(np.abs(np.asarray(sc["dq_total"])).ravel())
+        z = np.asarray(sc["zeta_chosen"])[:, None]
+        q_b = np.asarray(sc["q_before"])
+        p_b = np.asarray(sc["p_before"])
+        pred = np.sinh(z) * p_b / m[None, :]
+        obs = np.asarray(sc["dq_instant"]) - (np.cosh(z) - 1.0) * q_b
+        pred_inst.append(np.abs(pred).ravel())
+        obs_inst.append(np.abs(obs).ravel())
+    inv_m = np.concatenate(inv_m)
+    dq_tot = np.concatenate(dq_tot)
+    pred_inst = np.concatenate(pred_inst)
+    obs_inst = np.concatenate(obs_inst)
+
+    axes[0].scatter(inv_m, dq_tot + 1e-12, s=4, alpha=0.3, color="tab:blue")
+    axes[0].set_xscale("log")
+    axes[0].set_yscale("log")
+    axes[0].set_xlabel(r"$1/M_{\mathrm{eff},i}$", fontsize=11)
+    axes[0].set_ylabel(r"$|\Delta q_i|$ (boost + re-relax)", fontsize=11)
+    axes[0].set_title("per-mode displacement vs inverse inertial mass",
+                      fontsize=10)
+    axes[0].grid(True, alpha=0.3)
+
+    lim = max(pred_inst.max(), obs_inst.max()) + 1e-12
+    axes[1].scatter(pred_inst + 1e-15, obs_inst + 1e-15, s=4, alpha=0.3,
+                    color="tab:green")
+    axes[1].plot([1e-15, lim], [1e-15, lim], "k--", lw=1, label="y = x")
+    axes[1].set_xscale("log")
+    axes[1].set_yscale("log")
+    axes[1].set_xlabel(r"$|\sinh(\zeta)\, p_i / M_{\mathrm{eff},i}|$ (exact)",
+                       fontsize=11)
+    axes[1].set_ylabel(r"$|\Delta q_i^{\mathrm{boost}} - (\cosh\zeta - 1) q_i|$",
+                       fontsize=11)
+    axes[1].set_title("instantaneous S^(M) position response", fontsize=10)
+    axes[1].legend(fontsize=9)
+    axes[1].grid(True, alpha=0.3)
+
+    plt.suptitle("V1 gate: mass-weighted boost response", fontsize=12,
+                 fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved mass scatter to {save_path}")
