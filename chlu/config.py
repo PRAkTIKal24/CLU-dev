@@ -346,8 +346,9 @@ class ExperimentV1GateConfig:
     #     centroids (reduced separation = the classic Hopfield failure mode;
     #     changes stored content -> the memory is retrained per correlation).
     # Defaults are laptop-scale (pilot first; report runtimes).
+    # (N, kv) with N >= 3*kv so the kv-block (2*kv) + kv queries fit the seq.
     regime_capacity_levels: List[List[int]] = field(
-        default_factory=lambda: [[128, 32], [128, 64], [256, 128]]
+        default_factory=lambda: [[128, 32], [256, 64], [512, 128]]
     )
     regime_stress_axis: str = "correlation"  # "correlation" | "eval_noise"
     regime_stress_grid: List[float] = field(

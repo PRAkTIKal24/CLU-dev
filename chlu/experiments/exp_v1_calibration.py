@@ -1277,6 +1277,13 @@ def run_v1_hopfield_regime_map(
     if axis not in ("correlation", "eval_noise"):
         raise ValueError(f"regime_stress_axis must be correlation|eval_noise, got {axis}")
     caps = [tuple(lv) for lv in cfg.regime_capacity_levels]
+    # MQAR needs N >= 2*kv (kv-block) + kv (one query per key) = 3*kv.
+    bad = [(N, kv) for (N, kv) in caps if N < 3 * kv]
+    if bad:
+        raise ValueError(
+            f"regime_capacity_levels {bad} violate N >= 3*kv (kv-block 2*kv + "
+            "kv queries must fit the sequence)."
+        )
     grid = [float(s) for s in cfg.regime_stress_grid]
     base_seed = config.project.seed
     seeds = [base_seed + i for i in range(cfg.regime_n_seeds)]
