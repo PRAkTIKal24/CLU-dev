@@ -1,5 +1,7 @@
 """Causal Hamiltonian Learning Unit (CHLU) - Core Implementation."""
 
+from typing import Optional
+
 import equinox as eqx
 import jax
 import jax.numpy as jnp
@@ -43,6 +45,12 @@ class CHLU(eqx.Module):
     # inertial masses so the kinetic term cannot explicitly break the channel
     # symmetry (F5 §4.1 — multiplet members share a common inertial mass).
     tie_channel_mass: bool = eqx.field(static=True)
+    # Optional position-gated friction field gamma_phi(q) (trash regions,
+    # F5 Def-5/Prop-11; chlu/core/friction_field.py). None (default) keeps the
+    # historical scalar-gamma damping path bit-compatible. Access via
+    # getattr(self, "friction_field", None) — checkpoints saved before this
+    # field existed unpickle without it (handover §7.13 pattern).
+    friction_field: Optional[eqx.Module]
 
     def __init__(
         self,
@@ -55,6 +63,7 @@ class CHLU(eqx.Module):
         tie_channel_mass: bool = False,
         tilt_delta: float = 0.0,
         tilt_n: int = 1,
+        friction_field: Optional[eqx.Module] = None,
         key: jax.random.PRNGKey = None,
     ):
         """
@@ -79,6 +88,10 @@ class CHLU(eqx.Module):
                            delta*cos(n*theta) tilt on the channel (F5 §3.3c GMOR
                            probe). 0.0 (default) = no tilt (no wrapper added).
             tilt_n: Harmonic n of the tilt (default 1). Ignored if tilt_delta == 0.
+            friction_field: Optional position-gated friction field gamma_phi(q)
+                           (``chlu.core.friction_field.FrictionField``; trash
+                           regions, F5 Def-5). None (default) = scalar-gamma
+                           damping only, bit-compatible with prior behavior.
             key: JAX random key
         """
         if key is None:
@@ -127,6 +140,9 @@ class CHLU(eqx.Module):
 
         # Initialize log mass (use log for positive-definiteness via softplus)
         self.log_mass = jax.random.normal(k2, (dim,)) * 0.1
+
+        # Optional trash-region friction field (F5 Def-5); None = no field.
+        self.friction_field = friction_field
 
     def mass_vector(self) -> jnp.ndarray:
         """
@@ -286,6 +302,12 @@ class CHLU(eqx.Module):
         """
         Single time step using Velocity Verlet integrator.
 
+        If this unit carries a ``friction_field`` (trash regions, F5 Def-5),
+        the damping picks up the position-gated factor
+        (1 - gamma_phi(q_next)), composed multiplicatively with the scalar
+        gamma. Without a field the path is bit-compatible with the historical
+        integrator.
+
         Args:
             state: (q, p) tuple
             dt: Time step
@@ -294,7 +316,10 @@ class CHLU(eqx.Module):
             (q_next, p_next): Updated state
         """
         q, p = state
-        return velocity_verlet_step(self.H, q, p, dt, gamma)
+        return velocity_verlet_step(
+            self.H, q, p, dt, gamma,
+            gamma_field=getattr(self, "friction_field", None),
+        )
 
     def stochastic_step(
         self,
@@ -330,6 +355,7 @@ class CHLU(eqx.Module):
         return langevin_step(
             self.H, q, p, dt, gamma, temperature, key,
             noise_mode=noise_mode, m_eff=m_eff,
+            gamma_field=getattr(self, "friction_field", None),
         )
 
     def __call__(

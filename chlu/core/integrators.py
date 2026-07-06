@@ -5,7 +5,8 @@ import jax.numpy as jnp
 
 
 def velocity_verlet_step(
-    H_fn, q: jnp.ndarray, p: jnp.ndarray, dt: float, gamma: float = 0.0
+    H_fn, q: jnp.ndarray, p: jnp.ndarray, dt: float, gamma: float = 0.0,
+    gamma_field=None,
 ) -> tuple:
     """
     Velocity Verlet (Leapfrog) symplectic integrator.
@@ -24,6 +25,15 @@ def velocity_verlet_step(
         p: Momentum (dim,)
         dt: Time step
         gamma: Friction coefficient (default: 0.0, no friction)
+        gamma_field: Optional position-gated friction field gamma_phi(q)
+            (callable q -> scalar in [0, 1), e.g. ``FrictionField``). When
+            present, damping picks up the extra factor
+            (1 - gamma_phi(q_next)) evaluated at the POST-step position
+            (F5 Def-5); composes multiplicatively with the scalar gamma
+            (gamma=0 reduces exactly to Def-5). Prop-11: contributes exactly
+            (1 - gamma_phi(q_next))^dim to det(Jacobian) — volume destroyed
+            only inside the horizons. Default None = historical scalar-gamma
+            path, bit-compatible.
 
     Returns:
         (q_next, p_next): Updated state
@@ -45,6 +55,14 @@ def velocity_verlet_step(
     # Apply friction if gamma > 0
     p_next = (1.0 - gamma) * p_next
 
+    # Position-gated friction field (trash regions), F5 Def-5: evaluate at
+    # q_{n+1}, after the Verlet substeps. Python-level branch => the default
+    # None path traces identically to the historical integrator.
+    # [S2 re-emission hook: local Hawking noise would inject here, with a
+    #  scale tied to gamma_field(q_next) — out of scope for this build.]
+    if gamma_field is not None:
+        p_next = (1.0 - gamma_field(q_next)) * p_next
+
     return q_next, p_next
 
 
@@ -58,6 +76,7 @@ def langevin_step(
     key: jax.random.PRNGKey,
     noise_mode: str = "legacy",
     m_eff: jnp.ndarray = None,
+    gamma_field=None,
 ) -> tuple:
     """
     Velocity Verlet integrator with Langevin thermal noise.
@@ -106,6 +125,12 @@ def langevin_step(
         noise_mode: "legacy" (historical scale) or "fdt" (exact discrete FDT)
         m_eff: Per-coordinate inertial mass M_eff, shape (dim,) or scalar.
                Required for noise_mode="fdt"; ignored for "legacy".
+        gamma_field: Optional position-gated friction field gamma_phi(q)
+               (F5 Def-5; see velocity_verlet_step). Applied at q_next after
+               the scalar friction and BEFORE the thermal noise. NOTE: the
+               field friction is deliberately NOT coupled to the noise scale —
+               a pure sink (absorb-only). Coupling it (localized bath /
+               "Hawking re-emission") is the S2 study hook.
 
     Returns:
         (q_next, p_next, new_key): Updated state and split key for future use
@@ -125,6 +150,11 @@ def langevin_step(
 
     # Apply friction
     p_next = (1.0 - gamma) * p_next
+
+    # Position-gated friction field (F5 Def-5): after scalar friction,
+    # before the thermal noise. Absorb-only (S2 re-emission hook point).
+    if gamma_field is not None:
+        p_next = (1.0 - gamma_field(q_next)) * p_next
 
     # Add Langevin thermal noise
     # (Here temperature already includes Boltzmann constant k.)

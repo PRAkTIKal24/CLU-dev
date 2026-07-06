@@ -10,6 +10,7 @@ from ..experiments.exp_d_goldstone import run_experiment_d
 from ..experiments.exp_v1_calibration import run_experiment_v1_calibration
 from ..experiments.exp_v1_gate import run_experiment_v1_gate
 from ..experiments.exp_lattice import run_experiment_lattice
+from ..experiments.exp_s1_gamma_field import run_experiment_s1
 
 console = Console()
 
@@ -103,6 +104,17 @@ def setup_experiment_parsers(subparsers):
     exp_v1c_parser.add_argument('--quick', action='store_true',
                                 help='Quick mode (small grid, short training)')
     exp_v1c_parser.set_defaults(func=cmd_exp_v1_calibration)
+
+    # exp-s1
+    exp_s1_parser = subparsers.add_parser(
+        'exp-s1',
+        help='Run Experiment S1: Trash-Region Pareto (learned friction field)'
+    )
+    exp_s1_parser.add_argument('--project', help='Project name to use')
+    exp_s1_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_s1_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (1 seed, 60 epochs, short eval)')
+    exp_s1_parser.set_defaults(func=cmd_exp_s1)
 
     # all-experiments
     all_parser = subparsers.add_parser(
@@ -326,6 +338,34 @@ def cmd_exp_v1_calibration(args):
             quick=bool(getattr(args, 'quick', False)),
         )
         console.print("✓ V1 calibration experiment completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_s1(args):
+    """Run the S1 trash-region Pareto pilot."""
+    console.print(
+        "[bold cyan]Running Experiment S1: Trash-Region Pareto (gamma-field)[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        config.experiment_s1.train_epochs = 60
+        config.experiment_s1.seeds = config.experiment_s1.seeds[:1]
+        config.experiment_s1.eval_clean_steps = 1000
+        config.experiment_s1.n_injections = 8
+
+    try:
+        run_experiment_s1(config=config, models_dir=str(paths['models']))
+        console.print("✓ Experiment S1 completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
