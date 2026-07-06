@@ -7,6 +7,7 @@ from ..experiments.exp_a_stability import run_experiment_a
 from ..experiments.exp_b_noise import run_experiment_b
 from ..experiments.exp_c_dreaming import run_experiment_c
 from ..experiments.exp_d_goldstone import run_experiment_d
+from ..experiments.exp_v1_calibration import run_experiment_v1_calibration
 from ..experiments.exp_v1_gate import run_experiment_v1_gate
 from ..experiments.exp_lattice import run_experiment_lattice
 
@@ -90,6 +91,18 @@ def setup_experiment_parsers(subparsers):
     exp_lattice_parser.add_argument('--skip-training', action='store_true',
                                     help='Skip the banded-vs-uniform training smoke')
     exp_lattice_parser.set_defaults(func=cmd_exp_lattice)
+
+    # exp-v1-calib
+    exp_v1c_parser = subparsers.add_parser(
+        'exp-v1-calib',
+        help='Run V1 pivot: learned calibration gate + compute allocation on MQAR'
+    )
+    exp_v1c_parser.add_argument('--project', help='Project name to use')
+    exp_v1c_parser.add_argument('--seed', type=int,
+                                help='Base random seed (replicates = seed + i)')
+    exp_v1c_parser.add_argument('--quick', action='store_true',
+                                help='Quick mode (small grid, short training)')
+    exp_v1c_parser.set_defaults(func=cmd_exp_v1_calibration)
 
     # all-experiments
     all_parser = subparsers.add_parser(
@@ -287,6 +300,32 @@ def cmd_exp_lattice(args):
             skip_training=bool(getattr(args, 'skip_training', False)),
         )
         console.print("✓ Lattice experiment completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_v1_calibration(args):
+    """Run the pivoted V1 calibration experiment."""
+    console.print(
+        "[bold cyan]Running V1 Calibration: learned energy gate on MQAR[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    try:
+        run_experiment_v1_calibration(
+            config=config,
+            models_dir=str(paths['models']),
+            quick=bool(getattr(args, 'quick', False)),
+        )
+        console.print("✓ V1 calibration experiment completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1

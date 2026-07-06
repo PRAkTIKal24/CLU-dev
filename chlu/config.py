@@ -178,10 +178,18 @@ class ExperimentDConfig:
     hidden_dim: int = 64
     train_epochs: int = 1000
     use_pretrained: bool = False
-    kinetic_energy_mode: str = "newtonian_learned"  # learned M => isotropy falsifiable is live
-    potential_type: str = "so2_invariant"  # "so2_invariant" (designed) or "mlp" (emergent)
-    tie_channel_mass: bool = True  # kinetic isotropy (F5 §4.1); False = broken-isotropy switch
-    tilt_delta: float = 0.0  # explicit breaking delta*cos(n*theta) (GMOR probe, F5 §3.3c)
+    kinetic_energy_mode: str = (
+        "newtonian_learned"  # learned M => isotropy falsifiable is live
+    )
+    potential_type: str = (
+        "so2_invariant"  # "so2_invariant" (designed) or "mlp" (emergent)
+    )
+    tie_channel_mass: bool = (
+        True  # kinetic isotropy (F5 §4.1); False = broken-isotropy switch
+    )
+    tilt_delta: float = (
+        0.0  # explicit breaking delta*cos(n*theta) (GMOR probe, F5 §3.3c)
+    )
     tilt_n: int = 1
     dt: float = 0.05
 
@@ -260,6 +268,35 @@ class ExperimentV1GateConfig:
     compare_raw_squeeze: bool = True  # mass-blind S_zeta cascade (F5 says: flag only)
     compare_noise_kick: bool = True  # random p-kick retries at matched energy injection
     hopfield_beta: float = 20.0  # modern-Hopfield softmax inverse temperature
+
+    # --- v1-pivot: learned calibration head + escalation/abstention ---
+    # (exp_v1_calibration; Head decision 2026-07-07: squeeze retries PARKED,
+    #  escalation = staged governed relaxation on the gate run's cost ladder.)
+    calib_difficulty_levels: List[List[int]] = field(
+        default_factory=lambda: [[128, 16], [128, 24], [128, 32]]
+    )
+    calib_n_seeds: int = 5  # replicate seeds = project.seed + i
+    calib_min_trials_per_level: int = 128
+    calib_max_episodes_per_level: int = 8
+    # Write-time self-test probes: per stored key, jittered cues at these noise
+    # scales (cycled); plus impostor cues from unbound keys (label: wrong by
+    # definition — the memory holds no binding for them).
+    calib_probes_per_key: int = 8
+    calib_cue_noise_scales: List[float] = field(
+        default_factory=lambda: [0.05, 0.15, 0.3]
+    )
+    calib_n_impostors: int = 16
+    calib_features: str = "r_margin"  # deployed gate: "r" | "margin" | "r_margin"
+    calib_l2: float = 1.0  # ridge strength of the head fit
+    calib_fit_all_stages: bool = True  # fit on probe states at every ladder stage
+    # Escalation ladder: base relax_steps, then n_stages x stage_steps more
+    # (defaults reproduce the gate run's cost ladder 300/1200/2100/3000).
+    calib_n_stages: int = 3
+    calib_stage_steps: int = 900
+    calib_p_exit: float = 0.5  # learned-gate exit/abstain threshold on p_wrong
+    calib_n_policy_taus: int = 25  # swept-threshold points for compute curves
+    calib_risk_targets: List[float] = field(default_factory=lambda: [0.05, 0.10])
+    calib_ltt_delta: float = 0.1  # LTT confidence parameter
 
 
 @dataclass

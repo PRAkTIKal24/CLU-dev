@@ -2068,3 +2068,143 @@ def plot_lattice_pricing(
     plt.close()
 
     print(f"Saved lattice pricing plot to {save_path}")
+_V1_CALIB_STYLES = {
+    "clu_calib_rm": ("tab:blue", "-", "CLU calibrated (R+margin)"),
+    "clu_calib_r": ("tab:cyan", "-", "CLU calibrated (R only)"),
+    "clu_calib_margin": ("tab:purple", "-", "CLU calibrated (margin)"),
+    "clu_margin_raw": ("tab:purple", "--", "CLU margin (naive)"),
+    "clu_R_raw": ("tab:gray", "--", "CLU raw -R (naive)"),
+    "hop_msp": ("tab:red", "--", "Hopfield max-softmax (naive)"),
+    "hop_logit_margin": ("tab:orange", "--", "Hopfield logit margin (naive)"),
+    "hop_calib": ("tab:red", "-", "Hopfield calibrated"),
+    "calib_deployed": ("tab:blue", "-", "learned gate (swept)"),
+    "margin_raw": ("tab:purple", "--", "margin-gated (swept)"),
+    "R_raw": ("tab:gray", "--", "raw-R-gated (swept)"),
+}
+
+
+def plot_v1_calib_risk_coverage(panels: list, save_path: str,
+                                risk_line: float = 0.05):
+    """
+    Risk-coverage curves of the abstention head-to-head (exp_v1_calibration).
+    One panel per difficulty level (+ pooled); mean curve across seeds with a
+    ±1 std band.
+
+    Args:
+        panels: list of dicts {"title": str, "methods":
+            {name: (coverage_grid, mean_risk, std_risk)}}
+        save_path: output path
+        risk_line: horizontal reference (e.g. 0.05 = 95% precision)
+    """
+    n = len(panels)
+    fig, axes = plt.subplots(1, n, figsize=(4.5 * n, 3.8), squeeze=False)
+    for i, panel in enumerate(panels):
+        ax = axes[0, i]
+        for name, (grid, mean, std) in panel["methods"].items():
+            color, ls, label = _V1_CALIB_STYLES.get(name, ("black", "-", name))
+            ax.plot(grid, mean, ls, color=color, label=label, alpha=0.9, lw=1.6)
+            if std is not None and np.any(std > 0):
+                ax.fill_between(grid, mean - std, mean + std, color=color,
+                                alpha=0.12, lw=0)
+        ax.axhline(risk_line, color="k", linestyle=":", lw=1,
+                   label=f"risk = {risk_line}")
+        ax.set_xlabel("coverage", fontsize=10)
+        if i == 0:
+            ax.set_ylabel("selective risk (error rate)", fontsize=10)
+        ax.set_title(panel["title"], fontsize=10)
+        ax.set_xlim(0, 1)
+        ax.set_ylim(bottom=-0.02)
+        ax.grid(True, alpha=0.3)
+    axes[0, 0].legend(fontsize=7, loc="upper left")
+    plt.suptitle("V1 calibration: abstention risk-coverage "
+                 "(base stage; mean ± std over seeds)",
+                 fontsize=12, fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved risk-coverage plot to {save_path}")
+
+
+def plot_v1_calib_compute(panels: list, save_path: str):
+    """
+    Compute-allocation curves of the gated escalation ladder
+    (exp_v1_calibration). One panel per difficulty level: swept-threshold
+    accuracy-vs-cost curves (mean ± std band over seeds), the learned
+    operating point with error bars, always-small/always-full markers and
+    the Hopfield reference line.
+
+    Args:
+        panels: list of dicts {"title", "curves": {name: (cost_grid,
+            mean_acc, std_acc)}, "points": {label: (cost_mean, cost_std,
+            acc_mean, acc_std)}, "hopfield_acc": float}
+        save_path: output path
+    """
+    n = len(panels)
+    fig, axes = plt.subplots(1, n, figsize=(5 * n, 4), squeeze=False)
+    for i, panel in enumerate(panels):
+        ax = axes[0, i]
+        for name, (cost, mean, std) in panel["curves"].items():
+            color, ls, label = _V1_CALIB_STYLES.get(name, ("black", "-", name))
+            ax.plot(cost, mean, ls, color=color, label=label, alpha=0.9, lw=1.6)
+            if std is not None and np.any(std > 0):
+                ax.fill_between(cost, mean - std, mean + std, color=color,
+                                alpha=0.12, lw=0)
+        markers = {"learned gate (p_exit)": ("tab:blue", "o"),
+                   "always-small": ("tab:green", "s"),
+                   "always-full": ("black", "D")}
+        for label, (cm, cs, am, as_) in panel["points"].items():
+            color, mk = markers.get(label, ("black", "x"))
+            ax.errorbar([cm], [am], xerr=[cs], yerr=[as_], fmt=mk,
+                        color=color, capsize=3, ms=7, label=label, zorder=5)
+        ax.axhline(panel["hopfield_acc"], color="tab:red", linestyle=":",
+                   lw=1.2,
+                   label=f"Hopfield ({panel['hopfield_acc']:.3f}; ~1 matvec)")
+        ax.set_xlabel("mean Verlet steps per query", fontsize=10)
+        if i == 0:
+            ax.set_ylabel("retrieval accuracy", fontsize=10)
+        ax.set_title(panel["title"], fontsize=10)
+        ax.grid(True, alpha=0.3)
+    axes[0, 0].legend(fontsize=7, loc="best")
+    plt.suptitle("V1 calibration: gated compute allocation "
+                 "(mean ± std over seeds)", fontsize=12, fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved compute-allocation plot to {save_path}")
+
+
+def plot_v1_calib_reliability(rel: dict, save_path: str):
+    """
+    Reliability diagrams of the probability-valued confidence signals
+    (exp_v1_calibration): predicted P(correct) vs empirical accuracy in
+    quantile bins, pooled over all cells; ECE (mean ± std across seeds)
+    annotated per method.
+
+    Args:
+        rel: {method: {"bins": (conf_bin_means, acc_bin_means),
+              "ece": (mean, std)}}
+        save_path: output path
+    """
+    n = len(rel)
+    fig, axes = plt.subplots(1, n, figsize=(3.8 * n, 3.6), squeeze=False)
+    for i, (name, d) in enumerate(rel.items()):
+        ax = axes[0, i]
+        conf, acc = d["bins"]
+        ax.plot([0, 1], [0, 1], "k--", lw=1, alpha=0.6)
+        ax.plot(conf, acc, "o-", color=_V1_CALIB_STYLES.get(
+            name, ("tab:blue", "-", name))[0])
+        em, es = d["ece"]
+        _, _, label = _V1_CALIB_STYLES.get(name, (None, None, name))
+        ax.set_title(f"{label}\nECE = {em:.3f} ± {es:.3f}", fontsize=10)
+        ax.set_xlabel("predicted P(correct)", fontsize=10)
+        if i == 0:
+            ax.set_ylabel("empirical accuracy", fontsize=10)
+        ax.set_xlim(-0.02, 1.02)
+        ax.set_ylim(-0.02, 1.02)
+        ax.grid(True, alpha=0.3)
+    plt.suptitle("V1 calibration: reliability of confidence signals",
+                 fontsize=12, fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved reliability plot to {save_path}")
