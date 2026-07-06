@@ -196,6 +196,9 @@ class ExperimentDConfig:
     probe_gamma: float = 0.05
     probe_steps: int = 4000
     probe_kick: float = 0.1
+
+
+@dataclass
 class ExperimentV1GateConfig:
     """Configuration for the V1 L0 gate experiment: boost-retry cascade on MQAR.
 
