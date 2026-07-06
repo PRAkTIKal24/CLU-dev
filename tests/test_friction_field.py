@@ -546,9 +546,16 @@ def test_adaptive_k_no_spawn_below_threshold():
     weights = jnp.array([0.5])  # tiny accumulated weight
     state = init_adaptive_state(2)
     new_field, state, changed = maybe_adapt_holes(
-        field, q_hallu, weights, state,
-        spawn_threshold=5.0, spawn_min_dist=0.5, spawn_radius=0.5,
-        spawn_strength=0.15, prune_floor=0.02, max_holes=8,
+        field,
+        q_hallu,
+        weights,
+        state,
+        spawn_threshold=5.0,
+        spawn_min_dist=0.5,
+        spawn_radius=0.5,
+        spawn_strength=0.15,
+        prune_floor=0.02,
+        max_holes=8,
     )
     assert not changed and new_field.k == 1
     assert float(state.density) > 0.0  # but density is accumulating
@@ -576,9 +583,16 @@ def test_adaptive_k_prunes_decayed_hole():
     state = init_adaptive_state(2)
     # No spawn (zero weight); prune should still fire on the weak hole.
     new_field, state, changed = maybe_adapt_holes(
-        field, jnp.zeros((1, 2)), jnp.zeros(1), state,
-        spawn_threshold=1e9, spawn_min_dist=0.5, spawn_radius=0.5,
-        spawn_strength=0.15, prune_floor=0.02, max_holes=8,
+        field,
+        jnp.zeros((1, 2)),
+        jnp.zeros(1),
+        state,
+        spawn_threshold=1e9,
+        spawn_min_dist=0.5,
+        spawn_radius=0.5,
+        spawn_strength=0.15,
+        prune_floor=0.02,
+        max_holes=8,
     )
     assert changed and new_field.k == 1
     assert np.allclose(np.asarray(new_field.centers[0]), [0.0, 0.0], atol=1e-10)

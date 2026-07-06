@@ -411,9 +411,7 @@ def maybe_adapt_holes(
     ):
         centroid = pos_accum / (w_accum + 1e-12)
         centers, _, _ = field_out.hole_params()
-        dmin = float(
-            jnp.min(jnp.linalg.norm(centers - centroid[None, :], axis=-1))
-        )
+        dmin = float(jnp.min(jnp.linalg.norm(centers - centroid[None, :], axis=-1)))
         if dmin > spawn_min_dist:
             field_out = add_hole(field_out, centroid, spawn_radius, spawn_strength)
             changed = True
