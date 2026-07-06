@@ -331,7 +331,14 @@ def run_experiment_c(
                 # Use stochastic_rollout which now supports both constant and scheduled temperature
                 temp_to_use = temp_schedule if temp_schedule is not None else temp_val
                 trajectory = chlu.stochastic_rollout(
-                    q, p, dream_steps, dt, gamma_val, temp_to_use, subkey
+                    q,
+                    p,
+                    dream_steps,
+                    dt,
+                    gamma_val,
+                    temp_to_use,
+                    subkey,
+                    noise_mode=config.training.langevin_noise,
                 )
             else:
                 # Deterministic evolution
