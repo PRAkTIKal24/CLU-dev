@@ -387,6 +387,7 @@ def test_config_roundtrip(tmp_path):
     config.training.friction_field_protect_lambda = 2.5
     config.training.friction_field_c1_lambda = 0.01
     config.training.friction_field_hallu_gate = "all"
+    config.training.friction_field_lr = 0.02
     config.experiment_s1.learned_k_values = [2]
     config.experiment_s1.seeds = [7, 8]
     config.experiment_s1.noise_center = [0.9, -1.1]
@@ -405,6 +406,7 @@ def test_config_roundtrip(tmp_path):
     assert abs(t.friction_field_protect_lambda - 2.5) < 1e-12
     assert abs(t.friction_field_c1_lambda - 0.01) < 1e-12
     assert t.friction_field_hallu_gate == "all"
+    assert abs(t.friction_field_lr - 0.02) < 1e-12
     s1 = loaded.experiment_s1
     assert s1.learned_k_values == [2]
     assert s1.seeds == [7, 8]

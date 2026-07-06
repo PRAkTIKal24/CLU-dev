@@ -125,6 +125,7 @@ def train_chlu(
     ff_hallu_lambda = config.training.friction_field_hallu_lambda
     ff_c1_lambda = config.training.friction_field_c1_lambda
     ff_hallu_gate = config.training.friction_field_hallu_gate
+    ff_lr = config.training.friction_field_lr
     if sleep_temperature is None:
         sleep_temperature = config.training.sleep_temperature
     if langevin_noise is None:
@@ -143,9 +144,32 @@ def train_chlu(
     if window_size is None:
         window_size = T  # Use full trajectory if no window specified
 
-    # Initialize optimizer
-    optimizer = optax.adam(lr)
-    opt_state = optimizer.init(eqx.filter(model, eqx.is_array))
+    # Initialize optimizer. Two-timescale when the model carries a trainable
+    # friction field and friction_field_lr is set: hole centers live in
+    # q-space and must travel O(units), which Adam's ~lr/step parameter
+    # velocity cannot deliver at the base lr (see
+    # TrainingConfig.friction_field_lr).
+    params = eqx.filter(model, eqx.is_array)
+    if ff_lr is not None and getattr(model, "friction_field", None) is not None:
+        # NOTE: must be a label FUNCTION, not a labels pytree — a CHLU-shaped
+        # pytree of strings is itself callable (CHLU.__call__), so optax would
+        # mistake it for a label fn and call it on the params.
+        def _field_labels(tree):
+            lbl = jax.tree_util.tree_map(lambda _: "main", tree)
+            return eqx.tree_at(
+                lambda t: t.friction_field,
+                lbl,
+                replace=jax.tree_util.tree_map(
+                    lambda _: "field", tree.friction_field
+                ),
+            )
+
+        optimizer = optax.multi_transform(
+            {"main": optax.adam(lr), "field": optax.adam(ff_lr)}, _field_labels
+        )
+    else:
+        optimizer = optax.adam(lr)
+    opt_state = optimizer.init(params)
 
     # Initialize replay buffer
     k1, k2 = jax.random.split(key)

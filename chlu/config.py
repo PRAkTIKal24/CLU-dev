@@ -99,6 +99,11 @@ class TrainingConfig:
     # Optional C1 ablation (mo-deep-read §5): nudge gamma_k -> 2*dt*mu(c_k),
     # the critical-damping forgetting optimum. 0.0 = OFF (measure, don't force).
     friction_field_c1_lambda: float = 0.0
+    # Learning rate for the field's own parameters (two-timescale training):
+    # hole centers live in q-space and must travel O(units), but Adam caps
+    # parameter velocity at ~lr/step — at the base lr the placement cannot
+    # move at pilot scale (observed in the S1 smoke run). None = base lr.
+    friction_field_lr: Optional[float] = 1e-2
 
 
 @dataclass
@@ -307,7 +312,7 @@ class ExperimentS1Config:
     dt: float = 0.05
     n_train_cycles: int = 3
     window_size: int = 64
-    train_epochs: int = 300
+    train_epochs: int = 500
     hidden_dim: int = 64
     kinetic_energy_mode: str = "newtonian_identity"  # match Exp-A defaults
     use_pretrained: bool = False
@@ -347,7 +352,7 @@ class ExperimentS1Config:
     # so its horizon tail must not reach it.
     oracle_radius: float = 0.6
     oracle_strength: float = 0.3
-    oracle_width: float = 0.15
+    oracle_width: float = 0.1
 
 
 @dataclass
