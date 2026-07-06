@@ -22,6 +22,7 @@ or via the CLI: ``chlu exp-d [--project N] [--seed I] [--quick] ...``.
 """
 
 import os
+import warnings
 from typing import Optional
 
 import jax
@@ -267,16 +268,42 @@ def run_experiment_d(
         f"  Coset angle: theta_final = {theta[-1]:.6f} rad (last-half drift {theta_drift:.2e})"
     )
 
-    # Noether charge: tangential momentum kick on the channel
-    that = jnp.zeros(dim).at[0].set(-q_star[1] / r_star).at[1].set(q_star[0] / r_star)
-    p0_q = cfg.probe_kick * that
-    traj_q = rollout_from(
-        chlu, q_star, p0_q, steps=cfg.probe_steps, dt=dt, gamma=cfg.probe_gamma
-    )
-    Q = np.asarray(noether_charge(traj_q, dim))
-    n_arr = np.arange(len(Q))
-    Q_pred = (1.0 - cfg.probe_gamma) ** n_arr * Q[0]
-    noether_max_err = float(np.max(np.abs(Q - Q_pred)) / abs(Q[0]))
+    # Noether charge: tangential momentum kick on the channel.
+    # Guard against a collapsed vacuum (r*->0): the tangent direction that =
+    # (-q1, q0)/r* is undefined at the origin, and dividing by r*~0 silently
+    # NaN-poisons the whole Noether measurement (v2-full-runs Finding 0: at the
+    # eroded 1000-epoch defaults r*->0). Return NaN explicitly with a loud
+    # warning instead of propagating a silent NaN.
+    r_star_floor = 1e-6
+    if r_star < r_star_floor:
+        warnings.warn(
+            f"Noether metric skipped: settled radius r*={r_star:.3e} < "
+            f"{r_star_floor:.0e} (the SO(2) vacuum has collapsed — see "
+            "v2-full-runs Finding 0 / handover §7.14; try sleep_mode='off' or "
+            "fewer train_epochs). Noether outputs set to NaN.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        that = jnp.zeros(dim)
+        p0_q = cfg.probe_kick * that
+        traj_q = rollout_from(
+            chlu, q_star, p0_q, steps=cfg.probe_steps, dt=dt, gamma=cfg.probe_gamma
+        )
+        Q = np.full(cfg.probe_steps + 1, np.nan)
+        Q_pred = np.full_like(Q, np.nan)
+        noether_max_err = float("nan")
+    else:
+        that = (
+            jnp.zeros(dim).at[0].set(-q_star[1] / r_star).at[1].set(q_star[0] / r_star)
+        )
+        p0_q = cfg.probe_kick * that
+        traj_q = rollout_from(
+            chlu, q_star, p0_q, steps=cfg.probe_steps, dt=dt, gamma=cfg.probe_gamma
+        )
+        Q = np.asarray(noether_charge(traj_q, dim))
+        n_arr = np.arange(len(Q))
+        Q_pred = (1.0 - cfg.probe_gamma) ** n_arr * Q[0]
+        noether_max_err = float(np.max(np.abs(Q - Q_pred)) / abs(Q[0]))
     print(
         f"  Noether decay: max |Q_n - (1-gamma)^n Q_0| / |Q_0| = {noether_max_err:.3e}"
     )
