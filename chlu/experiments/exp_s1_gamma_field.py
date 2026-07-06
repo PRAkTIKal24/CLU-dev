@@ -405,7 +405,8 @@ def run_experiment_s1(
         oracle_field = FrictionField(
             dim,
             gamma_max=tcfg.friction_field_gamma_max,
-            width=tcfg.friction_field_width,
+            width=cfg.oracle_width,  # harder horizon: the frozen control's
+            # tail must not reach the curve (it cannot retreat like a learned hole)
             centers=noise_center[None, :],
             init_radius=cfg.oracle_radius,
             init_strength=cfg.oracle_strength,
@@ -483,6 +484,7 @@ def run_experiment_s1(
         gamma_max=tcfg.friction_field_gamma_max,
         protect_lambda=tcfg.friction_field_protect_lambda,
         hallu_lambda=tcfg.friction_field_hallu_lambda,
+        hallu_gate=tcfg.friction_field_hallu_gate,
         c1_lambda=tcfg.friction_field_c1_lambda,
     )
     print(f"  Saved metrics to {metrics_path}")

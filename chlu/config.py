@@ -89,6 +89,13 @@ class TrainingConfig:
     # Contrastive-training weights (only active when the model carries a field)
     friction_field_protect_lambda: float = 1.0  # wake: push gamma_phi(q_data) down
     friction_field_hallu_lambda: float = 1.0  # sleep: push gamma_phi(q_hallu) up
+    # Which negatives count as hallucinations (Thread-1 says "persistent"):
+    # "energy" (default) weights each evolved negative by how far its energy
+    # sits above the current wake window's band, sigmoid((H - max_H_data)/std)
+    # — CD negatives that converged into the data band get ~no friction vote
+    # (ungated, they drag friction onto the data manifold, fighting the
+    # protection term; observed in the S1 smoke run). "all" = ungated.
+    friction_field_hallu_gate: str = "energy"
     # Optional C1 ablation (mo-deep-read §5): nudge gamma_k -> 2*dt*mu(c_k),
     # the critical-damping forgetting optimum. 0.0 = OFF (measure, don't force).
     friction_field_c1_lambda: float = 0.0
@@ -308,8 +315,11 @@ class ExperimentS1Config:
     sleep_steps: int = 100  # shorter sleep evolution than the global default
 
     # Structured noise = the garbage source: a Gaussian cluster at a fixed
-    # off-attractor locus (known, so arm (iv) can place the oracle hole on it)
-    noise_center: List[float] = field(default_factory=lambda: [1.2, 1.2])
+    # off-attractor locus (known, so arm (iv) can place the oracle hole on it).
+    # Kept >~1.5 units off the lemniscate: sigmoid horizon tails leak friction
+    # onto the curve if the locus is closer (observed in the smoke run at
+    # [1.2, 1.2] — the oracle's own tail damped the signal orbit).
+    noise_center: List[float] = field(default_factory=lambda: [1.5, 1.5])
     noise_q_std: float = 0.15
     noise_p_std: float = 0.6
     # Fraction of the replay buffer seeded at the noise locus: the training
@@ -332,9 +342,12 @@ class ExperimentS1Config:
     # geometry (gamma_max, width, init_*) comes from training.friction_field_*
     # — single source of truth.
     learned_k_values: List[int] = field(default_factory=lambda: [1, 4])
-    # Arm (iv): oracle hole hand-placed at noise_center
+    # Arm (iv): oracle hole hand-placed at noise_center. Width is harder than
+    # the learned default: the frozen control cannot retreat from the curve,
+    # so its horizon tail must not reach it.
     oracle_radius: float = 0.6
     oracle_strength: float = 0.3
+    oracle_width: float = 0.15
 
 
 @dataclass

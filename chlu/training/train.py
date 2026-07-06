@@ -124,6 +124,7 @@ def train_chlu(
     ff_protect_lambda = config.training.friction_field_protect_lambda
     ff_hallu_lambda = config.training.friction_field_hallu_lambda
     ff_c1_lambda = config.training.friction_field_c1_lambda
+    ff_hallu_gate = config.training.friction_field_hallu_gate
     if sleep_temperature is None:
         sleep_temperature = config.training.sleep_temperature
     if langevin_noise is None:
@@ -206,7 +207,8 @@ def train_chlu(
 
     @eqx.filter_jit
     def sleep_step(
-        model, opt_state, q_batch, p_batch, key, sleep_friction=0.0, sleep_temperature=0.0
+        model, opt_state, q_batch, p_batch, key, sleep_friction=0.0, sleep_temperature=0.0,
+        e_ref=0.0, e_scale=1.0,
     ):
         """Sleep phase: energy maximization on buffer samples.
 
@@ -214,9 +216,29 @@ def train_chlu(
         evolved states back into the buffer doesn't force recompilation. Returns
         the evolved (q, p) states so the caller can update the replay buffer (PCD)
         when ``persistent_sleep_buffer`` is enabled.
+
+        e_ref/e_scale: the current wake window's energy band (max, std) — used
+        by the friction-field "energy" hallucination gate (see
+        TrainingConfig.friction_field_hallu_gate). Ignored without a field.
         """
 
         def loss_fn(model):
+            # Sleep evolution uses a friction field with STOPPED gradients:
+            # the energy-maximization term must not legislate friction (its
+            # gradient through the damped dynamics says "less friction keeps
+            # hallucinations hot" — exactly backwards vs Thread-1, and it
+            # overpowers the hallucination term for hot negatives). Field
+            # parameters are trained ONLY by the placement terms (wake
+            # protection, sleep hallucination, optional C1).
+            field = getattr(model, "friction_field", None)
+            if field is not None:
+                frozen_field = jax.tree_util.tree_map(jax.lax.stop_gradient, field)
+                model_evolve = eqx.tree_at(
+                    lambda m: m.friction_field, model, replace=frozen_field
+                )
+            else:
+                model_evolve = model
+
             # Evolve states for k steps using scan to avoid slow compilation
             if sleep_temperature > 0.0:
                 # Stochastic evolution with Langevin noise
@@ -230,7 +252,7 @@ def train_chlu(
                     def step_fn(carry, _):
                         state, key_state = carry
                         q_s, p_s = state
-                        q_next, p_next, new_key = model.stochastic_step(
+                        q_next, p_next, new_key = model_evolve.stochastic_step(
                             (q_s, p_s), dt=dt, gamma=sleep_friction,
                             temperature=sleep_temperature, key=key_state,
                             noise_mode=langevin_noise,
@@ -248,7 +270,7 @@ def train_chlu(
                 # Deterministic evolution
                 def evolve_single(q, p):
                     def step_fn(state, _):
-                        return model.step(state, dt, gamma=sleep_friction), None
+                        return model_evolve.step(state, dt, gamma=sleep_friction), None
 
                     state = (q, p)
                     final_state, _ = jax.lax.scan(step_fn, state, None, length=sleep_steps)
@@ -261,13 +283,25 @@ def train_chlu(
             loss = sleep_energy
 
             # Trash-region terms (Thread-1 sleep side): garbage attracts
-            # friction — push gamma_phi UP at the persistent negatives.
+            # friction — push gamma_phi UP at the PERSISTENT negatives.
             field = getattr(model, "friction_field", None)
             if field is not None:
                 # stop_gradient: the term places friction where the negatives
                 # ARE; it must not steer the negatives' dynamics themselves.
                 q_hallu = jax.lax.stop_gradient(q_evolved)
-                loss = loss - ff_hallu_lambda * jnp.mean(jax.vmap(field)(q_hallu))
+                gamma_h = jax.vmap(field)(q_hallu)
+                if ff_hallu_gate == "energy":
+                    # "Persistent" = still above the data energy band after
+                    # evolution. Ungated, CD negatives that converge onto the
+                    # data manifold drag friction onto it (fights protection;
+                    # observed in the S1 smoke run).
+                    H_h = jax.lax.stop_gradient(
+                        jax.vmap(model.H)(q_evolved, p_evolved)
+                    )
+                    w = jax.nn.sigmoid((H_h - e_ref) / e_scale)
+                else:  # "all": every negative votes
+                    w = jnp.ones_like(gamma_h)
+                loss = loss - ff_hallu_lambda * jnp.mean(w * gamma_h)
                 if ff_c1_lambda > 0.0:
                     # Optional C1 ablation: nudge hole strengths toward the
                     # critical-damping forgetting optimum 2*dt*mu(c_k)
@@ -318,6 +352,11 @@ def train_chlu(
             # Sample from the buffer outside the jit so that (optional) persistence
             # of evolved states doesn't retrigger compilation.
             q_batch, p_batch, indices = buffer.sample(k7, batch_size)
+            # Current wake window's energy band (top + spread) for the
+            # friction-field "energy" hallucination gate.
+            H_window = jax.vmap(model.H)(trajectory[:, :dim], trajectory[:, dim:])
+            e_ref = jnp.max(H_window)
+            e_scale = jnp.std(H_window) + 1e-6
             model, opt_state, sleep_loss, q_evolved, p_evolved = sleep_step(
                 model,
                 opt_state,
@@ -326,6 +365,8 @@ def train_chlu(
                 k6,
                 sleep_friction,
                 sleep_temperature,
+                e_ref,
+                e_scale,
             )
             # Persistent Contrastive Divergence: write evolved negatives back.
             if persistent_sleep_buffer:

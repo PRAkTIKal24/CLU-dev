@@ -242,7 +242,7 @@ def test_none_default_bit_compatible():
 # ---------------------------------------------------------------------------
 
 
-def _smoke_config(protect, hallu, sleep_frequency=10_000):
+def _smoke_config(protect, hallu, sleep_frequency=10_000, gate="energy"):
     config = get_default_config()
     config.training.epochs = 30
     config.training.sleep_steps = 1
@@ -253,6 +253,7 @@ def _smoke_config(protect, hallu, sleep_frequency=10_000):
     config.training.dt = DT
     config.training.friction_field_protect_lambda = protect
     config.training.friction_field_hallu_lambda = hallu
+    config.training.friction_field_hallu_gate = gate
     return config
 
 
@@ -276,9 +277,12 @@ def test_protection_lowers_gamma_at_data():
 
 
 def test_hallucination_raises_gamma_at_locus():
-    """Sleep term: gamma_phi must increase at the persistent negatives."""
+    """Sleep term (default "energy" gate): gamma_phi must increase at
+    persistent HIGH-energy negatives. The negatives carry large momentum so
+    their energy provably sits above the (resting) data band regardless of
+    the random potential's values."""
     locus = jnp.array([3.0, 3.0])
-    data = jnp.zeros((1, 20, 4))  # data far from the locus
+    data = jnp.zeros((1, 20, 4))  # resting data far from the locus
 
     # Weak hole near (not on) the locus; the sleep term must strengthen it
     field = _field_at([2.5, 2.5], radius=1.0, strength=0.05)
@@ -287,7 +291,7 @@ def test_hallucination_raises_gamma_at_locus():
 
     config = _smoke_config(protect=0.0, hallu=5.0, sleep_frequency=1)
     q_seed = jnp.tile(locus, (8, 1))
-    p_seed = jnp.zeros((8, 2))
+    p_seed = 3.0 * jnp.ones((8, 2))  # hot negatives: KE = 9 >> data band
     trained, _, _ = train_chlu(
         model,
         data,
@@ -300,6 +304,50 @@ def test_hallucination_raises_gamma_at_locus():
     assert gamma_after > gamma_before, (
         f"hallucination term failed: gamma at locus "
         f"{gamma_before:.4f} -> {gamma_after:.4f}"
+    )
+
+
+def test_energy_gate_blocks_in_band_negatives():
+    """The "energy" hallucination gate: negatives whose energy is BELOW the
+    data band must not attract friction (they are not "persistent"
+    hallucinations — ungated they would drag friction toward the data
+    manifold). Data moves fast (KE = 8, band top ~8+V(0)); negatives rest at
+    the locus (H = V(locus) ~ 6.4 with the 0.05||q||^2 confinement) — below
+    the band. The hole sits far from the wake path so the wake-through-
+    dynamics gradient underflows Adam's eps (no drift; see the comparative
+    note below)."""
+    locus = jnp.array([8.0, 8.0])
+    # Data at the origin with momentum (4, 0): window energy ~ 8 + V(0)
+    state = jnp.array([0.0, 0.0, 4.0, 0.0])
+    data = jnp.tile(state, (1, 20, 1))
+
+    def _run(gate):
+        field = _field_at([8.0, 8.0], radius=1.0, strength=0.05)
+        model = CHLU(dim=2, hidden=8, friction_field=field, key=jax.random.PRNGKey(8))
+        before = float(model.friction_field(locus))
+        config = _smoke_config(protect=0.0, hallu=5.0, sleep_frequency=1, gate=gate)
+        trained, _, _ = train_chlu(
+            model,
+            data,
+            key=jax.random.PRNGKey(9),
+            config=config,
+            window_size=10,
+            negative_seed_states=(jnp.tile(locus, (8, 1)), jnp.zeros((8, 2))),
+        )
+        return before, float(trained.friction_field(locus))
+
+    # Comparative check: the two runs are identical except the gate, so the
+    # difference isolates it. (An absolute no-rise assertion is too strict:
+    # Adam normalizes the epsilon-scale wake-MSE-through-dynamics gradient
+    # into lr-scale parameter drift of either sign, ~1e-3/epoch.)
+    before_e, after_e = _run("energy")
+    before_a, after_a = _run("all")
+    rise_e = after_e - before_e
+    rise_a = after_a - before_a
+    assert rise_a > 0.0, f"'all' gate must raise gamma at the negatives ({rise_a:.5f})"
+    assert rise_e < 0.25 * rise_a, (
+        f"energy gate leaked: in-band negatives raised gamma by {rise_e:.5f} "
+        f"vs {rise_a:.5f} ungated"
     )
 
 
@@ -338,9 +386,11 @@ def test_config_roundtrip(tmp_path):
     config.training.friction_field_fixed_centers = [[1.0, 2.0]]
     config.training.friction_field_protect_lambda = 2.5
     config.training.friction_field_c1_lambda = 0.01
+    config.training.friction_field_hallu_gate = "all"
     config.experiment_s1.learned_k_values = [2]
     config.experiment_s1.seeds = [7, 8]
     config.experiment_s1.noise_center = [0.9, -1.1]
+    config.experiment_s1.oracle_width = 0.07
 
     path = tmp_path / "config.yaml"
     save_config(config, path)
@@ -354,10 +404,12 @@ def test_config_roundtrip(tmp_path):
     assert t.friction_field_fixed_centers == [[1.0, 2.0]]
     assert abs(t.friction_field_protect_lambda - 2.5) < 1e-12
     assert abs(t.friction_field_c1_lambda - 0.01) < 1e-12
+    assert t.friction_field_hallu_gate == "all"
     s1 = loaded.experiment_s1
     assert s1.learned_k_values == [2]
     assert s1.seeds == [7, 8]
     assert s1.noise_center == [0.9, -1.1]
+    assert abs(s1.oracle_width - 0.07) < 1e-12
 
     # Guards the ExperimentV1GateConfig @dataclass fix: save_config crashes
     # on a non-dataclass section, and Field-object defaults would not survive.
