@@ -165,6 +165,40 @@ class ExperimentCConfig:
 
 
 @dataclass
+class ExperimentDConfig:
+    """Configuration for Experiment D: SO(2) Goldstone memory (V2).
+
+    Measures the F5 §3.3–§3.4 mode-budget predictions on a CLU with a
+    designed SO(2) channel over coordinates (0, 1): the latch, the half-life
+    law, Noether-charge decay, and kinetic isotropy. Nomenclature per F5
+    Def-2: inertial mass M vs spectral mass mu — never "mass" unqualified.
+    """
+
+    dim: int = 4  # 2 channel dims + (dim-2) curved spectator dims
+    hidden_dim: int = 64
+    train_epochs: int = 1000
+    use_pretrained: bool = False
+    kinetic_energy_mode: str = "newtonian_learned"  # learned M => isotropy falsifiable is live
+    potential_type: str = "so2_invariant"  # "so2_invariant" (designed) or "mlp" (emergent)
+    tie_channel_mass: bool = True  # kinetic isotropy (F5 §4.1); False = broken-isotropy switch
+    tilt_delta: float = 0.0  # explicit breaking delta*cos(n*theta) (GMOR probe, F5 §3.3c)
+    tilt_n: int = 1
+    dt: float = 0.05
+
+    # Dataset: constant trajectories on a circle of attractors (SO(2)-degenerate vacuum)
+    n_points: int = 256
+    seq_len: int = 65  # training window = seq_len - 1
+    circle_radius: float = 1.0
+
+    # Measurement harness defaults
+    settle_gamma: float = 0.1
+    settle_steps: int = 2000
+    probe_gamma: float = 0.05
+    probe_steps: int = 4000
+    probe_kick: float = 0.1
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -198,6 +232,7 @@ class CHLUConfig:
     experiment_a: ExperimentAConfig = field(default_factory=ExperimentAConfig)
     experiment_b: ExperimentBConfig = field(default_factory=ExperimentBConfig)
     experiment_c: ExperimentCConfig = field(default_factory=ExperimentCConfig)
+    experiment_d: ExperimentDConfig = field(default_factory=ExperimentDConfig)
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
@@ -257,6 +292,9 @@ def load_config(path: Path) -> CHLUConfig:
         experiment_c=ExperimentCConfig(
             **filter_valid_fields(ExperimentCConfig, data.get("experiment_c", {}))
         ),
+        experiment_d=ExperimentDConfig(
+            **filter_valid_fields(ExperimentDConfig, data.get("experiment_d", {}))
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -280,6 +318,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_a": asdict(config.experiment_a),
         "experiment_b": asdict(config.experiment_b),
         "experiment_c": asdict(config.experiment_c),
+        "experiment_d": asdict(config.experiment_d),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }

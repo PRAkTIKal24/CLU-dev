@@ -1678,3 +1678,92 @@ def plot_energy_conservation(
     plt.close()
 
     print(f"Saved energy conservation plot to {save_path}")
+
+
+def plot_goldstone_summary(
+    mu_sq,
+    retention_curves: dict,
+    noether: tuple,
+    theta,
+    save_path: str,
+    gamma: float = None,
+):
+    """
+    Four-panel summary for Experiment D (SO(2) Goldstone memory, V2).
+
+    Panels:
+        1. Spectral-mass spectrum mu_k^2 at the settled point (log-y stems).
+        2. Per-mode retention |amplitude(n)|/|amplitude(0)| vs steps (log-y).
+        3. Noether charge Q(n) vs the exact (1-gamma)^n * Q0 decay law.
+        4. Coset angle theta(n) (unwrapped) — the latch plateau.
+
+    Args:
+        mu_sq: (dim,) spectral masses squared (ascending).
+        retention_curves: dict label -> 1D retention series.
+        noether: (Q, Q_pred) 1D arrays (pass (None, None) to skip the panel).
+        theta: 1D unwrapped coset-angle series (or None to skip).
+        save_path: output PNG path.
+        gamma: probe friction (annotation only).
+    """
+    fig, axes = plt.subplots(2, 2, figsize=(13, 9))
+
+    # 1. Spectrum
+    mu_sq = np.asarray(mu_sq)
+    idx = np.arange(len(mu_sq))
+    axes[0, 0].bar(idx, np.abs(mu_sq), color=np.where(mu_sq < 0, "red", "steelblue"))
+    axes[0, 0].set_yscale("log")
+    axes[0, 0].set_xlabel("mode k", fontsize=12)
+    axes[0, 0].set_ylabel(r"$|\mu_k^2|$", fontsize=12)
+    axes[0, 0].set_title(
+        "Spectral-mass spectrum (red = negative / saddle)", fontsize=13, fontweight="bold"
+    )
+    axes[0, 0].grid(True, alpha=0.3)
+
+    # 2. Retention
+    for label, series in retention_curves.items():
+        s = np.asarray(series)
+        axes[0, 1].plot(np.clip(s, 1e-20, None), label=label)
+    axes[0, 1].axhline(0.5, color="gray", linestyle="--", alpha=0.7, label="half-life")
+    axes[0, 1].set_yscale("log")
+    axes[0, 1].set_xlabel("steps n", fontsize=12)
+    axes[0, 1].set_ylabel("retention a(n)/a(0)", fontsize=12)
+    title = "Per-mode retention"
+    if gamma is not None:
+        title += f" (gamma={gamma})"
+    axes[0, 1].set_title(title, fontsize=13, fontweight="bold")
+    axes[0, 1].legend(fontsize=9, loc="best")
+    axes[0, 1].grid(True, alpha=0.3)
+
+    # 3. Noether charge decay
+    Q, Q_pred = noether
+    if Q is not None:
+        axes[1, 0].plot(np.asarray(Q), label="measured Q(n)")
+        axes[1, 0].plot(
+            np.asarray(Q_pred), linestyle="--", label=r"$(1-\gamma)^n Q_0$ (exact law)"
+        )
+        axes[1, 0].legend(fontsize=10, loc="best")
+    axes[1, 0].set_xlabel("steps n", fontsize=12)
+    axes[1, 0].set_ylabel(r"$Q = q_0 p_1 - q_1 p_0$", fontsize=12)
+    axes[1, 0].set_title("Noether charge (write current)", fontsize=13, fontweight="bold")
+    axes[1, 0].grid(True, alpha=0.3)
+
+    # 4. Coset angle
+    if theta is not None:
+        axes[1, 1].plot(np.asarray(theta), color="darkgreen")
+    axes[1, 1].set_xlabel("steps n", fontsize=12)
+    axes[1, 1].set_ylabel(r"coset angle $\vartheta(n)$ [rad]", fontsize=12)
+    axes[1, 1].set_title(
+        "Coset coordinate (where the memory lives)", fontsize=13, fontweight="bold"
+    )
+    axes[1, 1].grid(True, alpha=0.3)
+
+    plt.suptitle(
+        "Experiment D: SO(2) Goldstone memory — spectrum, retention, charge, latch",
+        fontsize=14,
+        fontweight="bold",
+    )
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+
+    print(f"Saved Goldstone summary plot to {save_path}")

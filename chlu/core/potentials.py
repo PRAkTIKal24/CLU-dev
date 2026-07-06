@@ -171,3 +171,118 @@ class ConvPotential(eqx.Module):
         # Without this scaling, energy magnitudes explode (e.g., -8000)
         # and temperature/noise parameters become ineffective.
         return jnp.squeeze(E) / 100.0
+
+
+class SO2InvariantPotential(eqx.Module):
+    """
+    Exactly SO(2)-invariant potential over a designated channel pair (F5 §4).
+
+    V(q) = f_theta(r^2) + alpha * r^2 + g_theta(q_spec)
+
+    The channel is coordinates (0, 1) by convention; r^2 = q0^2 + q1^2 is the
+    generating polynomial invariant of SO(2) on the channel plane. The learned
+    radial profile f_theta is a small MLP fed r^2 rather than r: every smooth
+    SO(2)-invariant function of the channel is a smooth function of r^2,
+    whereas an MLP on r could express a conical cusp at the origin (breaking
+    the Hessian-based spectrum probes). Spectator coordinates (2..dim-1) are
+    governed by a standard ``PotentialMLP`` (which carries its own confinement
+    term), additively — so channel and spectators do not mix in V.
+
+    The alpha * r^2 confinement on the channel keeps the total potential
+    coercive (F5 Prop-10 assumption A1 holds architecturally) and is itself
+    SO(2)-invariant, so it cannot lift the angular flat direction: a flat
+    (Goldstone) direction along a vacuum circle is exact by construction and
+    protected under discretization (F5 Prop-8).
+
+    Explicit symmetry breaking is deliberately NOT part of this module —
+    compose with ``TiltedPotential`` (the F5 §3.3c GMOR probe).
+    """
+
+    radial_layers: list
+    spectator_net: PotentialMLP | None
+    dim: int = eqx.field(static=True)
+    confinement: float = eqx.field(static=True)
+
+    def __init__(
+        self,
+        dim: int,
+        hidden: int = 32,
+        confinement: float = 0.05,
+        key: jax.random.PRNGKey = None,
+    ):
+        """
+        Args:
+            dim: Total dimensionality (>= 2). Channel = coords (0, 1),
+                 spectators = coords (2..dim-1).
+            hidden: Hidden units for both the radial MLP and the spectator MLP.
+            confinement: alpha for the invariant alpha * r^2 channel
+                 confinement (default 0.05, matching PotentialMLP).
+            key: JAX random key.
+        """
+        if dim < 2:
+            raise ValueError(
+                f"SO2InvariantPotential requires dim >= 2 (one channel pair), got dim={dim}"
+            )
+        if key is None:
+            key = jax.random.PRNGKey(0)
+
+        k1, k2, k3, k4 = jax.random.split(key, 4)
+
+        self.dim = dim
+        self.confinement = confinement
+        # Learned radial profile f_theta(r^2): 1 -> hidden -> hidden -> 1 (tanh)
+        self.radial_layers = [
+            eqx.nn.Linear(1, hidden, key=k1),
+            eqx.nn.Linear(hidden, hidden, key=k2),
+            eqx.nn.Linear(hidden, 1, key=k3),
+        ]
+        # Non-symmetric spectator dims: standard MLP (has its own confinement)
+        self.spectator_net = (
+            PotentialMLP(dim - 2, hidden, key=k4) if dim > 2 else None
+        )
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        """Compute V(q). Exactly invariant under rotations of (q0, q1)."""
+        q_ch = q[:2]
+        r2 = jnp.sum(q_ch * q_ch)
+
+        x = jnp.tanh(self.radial_layers[0](r2[None]))
+        x = jnp.tanh(self.radial_layers[1](x))
+        v = jnp.squeeze(self.radial_layers[2](x))
+
+        # Invariant channel confinement (coercivity, F5 Prop-10 A1)
+        v = v + self.confinement * r2
+
+        if self.spectator_net is not None:
+            v = v + self.spectator_net(q[2:])
+
+        return v
+
+
+class TiltedPotential(eqx.Module):
+    """
+    Controlled explicit SO(2) breaking: V(q) + delta * cos(n * theta).
+
+    The F5 §3.3c GMOR probe — an additive tilt along the channel angle
+    theta = atan2(q1, q0), lifting an exact Goldstone mode to a
+    pseudo-Goldstone with spectral mass mu^2 = delta * n^2 / (M_eff * f^2)
+    on a vacuum circle of radius f. ``delta`` and ``n`` are fixed probe
+    parameters (static, not learned).
+
+    Composable over any base potential (learned or hand-built), so the same
+    trained checkpoint can be probed at several breaking strengths without
+    retraining.
+
+    Caveat: the gradient of atan2 is singular at the channel origin
+    (|grad| ~ delta*n/r). The probe is intended for dynamics on/near a vacuum
+    circle r = f > 0; do not train from states passing through the origin
+    with delta != 0.
+    """
+
+    base: eqx.Module
+    tilt_delta: float = eqx.field(static=True)
+    tilt_n: int = eqx.field(static=True)
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        theta = jnp.arctan2(q[1], q[0])
+        return self.base(q) + self.tilt_delta * jnp.cos(self.tilt_n * theta)
