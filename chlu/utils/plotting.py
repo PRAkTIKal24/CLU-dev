@@ -1930,3 +1930,170 @@ def plot_v1_gate_mass_scatter(scatter_pool: list, save_path: str):
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"Saved mass scatter to {save_path}")
+
+
+def plot_gamma_field_landscape(
+    chlu_model,
+    save_path: str,
+    trajectory: jnp.ndarray = None,
+    noise_center: np.ndarray = None,
+    grid_resolution: int = 120,
+    margin: float = 0.8,
+    title: str = None,
+):
+    """
+    Two-panel view of a CHLU with a friction field (trash regions, S1 pilot):
+    learned potential V(q) contours (left) and the friction field gamma_phi(q)
+    heatmap with hole horizons (right), with the data trajectory overlaid.
+
+    Args:
+        chlu_model: CHLU carrying a ``friction_field`` (2D position space).
+        save_path: Path to save figure.
+        trajectory: Optional (T, >=2) array; columns 0:2 = data positions.
+        noise_center: Optional (2,) known noise locus to mark (oracle target).
+        grid_resolution: Grid points per axis.
+        margin: Padding around the union of trajectory/holes/noise locus.
+        title: Optional figure title.
+    """
+    field = chlu_model.friction_field
+    centers, radii, strengths = field.hole_params()
+    centers = np.asarray(centers)
+
+    # Extent = union of trajectory, holes (center +/- radius), noise locus
+    pts = [centers - np.asarray(radii)[:, None], centers + np.asarray(radii)[:, None]]
+    if trajectory is not None:
+        pts.append(np.asarray(trajectory[:, :2]))
+    if noise_center is not None:
+        pts.append(np.asarray(noise_center)[None, :])
+    allpts = np.concatenate(pts, axis=0)
+    x_min, y_min = allpts.min(axis=0) - margin
+    x_max, y_max = allpts.max(axis=0) + margin
+
+    x = np.linspace(x_min, x_max, grid_resolution)
+    y = np.linspace(y_min, y_max, grid_resolution)
+    X, Y = np.meshgrid(x, y)
+    grid = jnp.asarray(np.stack([X.ravel(), Y.ravel()], axis=1))
+    V = np.asarray(jax.vmap(chlu_model.potential_net)(grid)).reshape(X.shape)
+    G = np.asarray(jax.vmap(field)(grid)).reshape(X.shape)
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+
+    cf0 = axes[0].contourf(X, Y, V, levels=25, cmap="viridis", alpha=0.85)
+    plt.colorbar(cf0, ax=axes[0], label="V(q)")
+    axes[0].set_title("Learned potential V(q)", fontsize=13, fontweight="bold")
+
+    cf1 = axes[1].contourf(X, Y, G, levels=25, cmap="inferno", alpha=0.9)
+    plt.colorbar(cf1, ax=axes[1], label=r"$\gamma_\varphi(q)$")
+    for k in range(centers.shape[0]):
+        circle = plt.Circle(
+            centers[k], float(radii[k]), fill=False, color="cyan",
+            linewidth=1.5, linestyle="--",
+        )
+        axes[1].add_patch(circle)
+        axes[1].annotate(
+            f"$\\gamma_{{{k}}}$={float(strengths[k]):.2f}",
+            centers[k], color="cyan", fontsize=9, fontweight="bold",
+        )
+    axes[1].set_title(
+        r"Friction field $\gamma_\varphi(q)$ (horizons dashed)",
+        fontsize=13, fontweight="bold",
+    )
+
+    for ax in axes:
+        if trajectory is not None:
+            ax.plot(
+                np.asarray(trajectory[:, 0]), np.asarray(trajectory[:, 1]),
+                "w-", linewidth=1.2, alpha=0.8, label="data attractor",
+            )
+        if noise_center is not None:
+            ax.scatter(
+                [noise_center[0]], [noise_center[1]], marker="*", s=220,
+                c="red", edgecolors="white", zorder=10, label="noise locus",
+            )
+        ax.set_xlabel("x", fontsize=12)
+        ax.set_ylabel("y", fontsize=12)
+        ax.set_aspect("equal")
+        ax.legend(fontsize=9, loc="upper left")
+
+    if title:
+        plt.suptitle(title, fontsize=14, fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved gamma-field landscape to {save_path}")
+
+
+def plot_s1_pareto(
+    arm_records: list,
+    save_path: str,
+    retention_key: str = "coverage",
+    rejection_key: str = "rejection_pos",
+):
+    """
+    S1 Pareto plot: signal retention (y) vs noise rejection (x).
+
+    The global-gamma arm is drawn as a trade-off curve (seed-averaged per
+    gamma, annotated); all other arms as per-seed scatter + seed-mean marker.
+
+    Args:
+        arm_records: list of dicts with keys "arm", "label", "seed",
+            retention_key, rejection_key (and "gamma" for the sweep arm).
+        save_path: output PNG path.
+        retention_key / rejection_key: which metric pair to plot.
+    """
+    fig, ax = plt.subplots(figsize=(8.5, 7))
+
+    # (i) global gamma: curve over the sweep, averaged across seeds
+    sweep = [r for r in arm_records if r["arm"] == "global_gamma"]
+    gammas = sorted({r["gamma"] for r in sweep})
+    xs, ys = [], []
+    for g in gammas:
+        pts = [r for r in sweep if r["gamma"] == g]
+        xs.append(np.nanmean([p[rejection_key] for p in pts]))
+        ys.append(np.nanmean([p[retention_key] for p in pts]))
+    if xs:
+        ax.plot(xs, ys, "o-", color="gray", linewidth=1.5, label="(i) global $\\gamma$ sweep")
+        for g, x_, y_ in zip(gammas, xs, ys, strict=True):
+            ax.annotate(f"{g:g}", (x_, y_), fontsize=8, color="gray",
+                        xytext=(4, 4), textcoords="offset points")
+
+    styles = {
+        "governor": dict(color="tab:blue", marker="s", label="(ii) governor"),
+        "oracle": dict(color="tab:green", marker="D", label="(iv) oracle hole"),
+    }
+    other_arms = sorted(
+        {r["arm"] for r in arm_records if r["arm"] != "global_gamma"}
+    )
+    palette = plt.cm.autumn(np.linspace(0.0, 0.6, max(1, len(other_arms))))
+    for i, arm in enumerate(other_arms):
+        pts = [r for r in arm_records if r["arm"] == arm]
+        style = styles.get(
+            arm,
+            dict(color=palette[i], marker="*",
+                 label=f"(iii) {pts[0]['label']}" if arm.startswith("learned") else arm),
+        )
+        x_ = [p[rejection_key] for p in pts]
+        y_ = [p[retention_key] for p in pts]
+        ax.scatter(x_, y_, s=60, alpha=0.45, color=style["color"], marker=style["marker"])
+        ax.scatter(
+            [np.nanmean(x_)], [np.nanmean(y_)], s=220, color=style["color"],
+            marker=style["marker"], edgecolors="black", linewidths=1.2,
+            label=style["label"] + " (mean)", zorder=10,
+        )
+
+    ax.set_xlabel(f"noise rejection ({rejection_key})", fontsize=12)
+    ax.set_ylabel(f"signal retention ({retention_key})", fontsize=12)
+    ax.set_xlim(-0.03, 1.03)
+    ax.set_ylim(-0.03, 1.03)
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=10, loc="lower left")
+    ax.set_title(
+        "S1: signal-retention vs noise-rejection Pareto\n"
+        "(up-right dominates; prediction: learned $\\gamma_\\varphi$ "
+        "dominates global $\\gamma$)",
+        fontsize=12, fontweight="bold",
+    )
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved S1 Pareto plot to {save_path}")
