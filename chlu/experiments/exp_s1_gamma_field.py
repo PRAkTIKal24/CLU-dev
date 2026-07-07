@@ -366,6 +366,7 @@ def run_experiment_s1(
                 init_radius=tcfg.friction_field_init_radius,
                 init_strength=tcfg.friction_field_init_strength,
                 init_center_scale=tcfg.friction_field_init_center_scale,
+                gate=tcfg.friction_field_gate,
                 trainable=True,
                 key=kf,
             )
@@ -410,6 +411,7 @@ def run_experiment_s1(
             centers=noise_center[None, :],
             init_radius=cfg.oracle_radius,
             init_strength=cfg.oracle_strength,
+            gate=tcfg.friction_field_gate,
             trainable=False,
         )
         oracle = eqx.tree_at(
