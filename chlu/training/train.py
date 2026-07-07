@@ -131,6 +131,9 @@ def train_chlu(
     ff_hallu_gate = config.training.friction_field_hallu_gate
     ff_lr = config.training.friction_field_lr
     ff_adaptive_k = config.training.friction_field_adaptive_k
+    # Mass-specific lr (critique P5/G4): run every unit's log_mass on its own
+    # Adam slot at learning_rate * mass_lr_mult. Default 1.0 = bit-compatible.
+    mass_lr_mult = config.training.mass_lr_mult
     if sleep_temperature is None:
         sleep_temperature = config.training.sleep_temperature
     if langevin_noise is None:
@@ -149,29 +152,46 @@ def train_chlu(
     if window_size is None:
         window_size = T  # Use full trajectory if no window specified
 
-    # Initialize optimizer. Two-timescale when the model carries a trainable
-    # friction field and friction_field_lr is set: hole centers live in
-    # q-space and must travel O(units), which Adam's ~lr/step parameter
-    # velocity cannot deliver at the base lr (see
-    # TrainingConfig.friction_field_lr).
+    # Initialize optimizer. A per-parameter-group Adam via optax.multi_transform
+    # is used when EITHER of two two-timescale mechanisms is active:
+    #   * friction field (friction_field_lr): hole centers live in q-space and
+    #     must travel O(units), which Adam's ~lr/step velocity cannot deliver at
+    #     the base lr (see TrainingConfig.friction_field_lr).
+    #   * mass-specific lr (mass_lr_mult != 1.0): the log_mass leaves run at
+    #     learning_rate * mass_lr_mult (critique P5/G4 — never tried before the
+    #     "hierarchy must be designed-in" doctrine shipped; same class of
+    #     parameter as gamma_phi centers).
+    # When neither is active the optimizer is exactly optax.adam(lr) so the
+    # historical path is bit-for-bit preserved (mass_lr_mult=1.0 default).
     params = eqx.filter(model, eqx.is_array)
-    if ff_lr is not None and getattr(model, "friction_field", None) is not None:
-        # NOTE: must be a label FUNCTION, not a labels pytree — a CHLU-shaped
-        # pytree of strings is itself callable (CHLU.__call__), so optax would
-        # mistake it for a label fn and call it on the params.
-        def _field_labels(tree):
-            lbl = jax.tree_util.tree_map(lambda _: "main", tree)
-            return eqx.tree_at(
-                lambda t: t.friction_field,
-                lbl,
-                replace=jax.tree_util.tree_map(
-                    lambda _: "field", tree.friction_field
-                ),
-            )
+    field_active = (
+        ff_lr is not None and getattr(model, "friction_field", None) is not None
+    )
+    mass_active = mass_lr_mult != 1.0
+    if mass_active or field_active:
+        # A leaf is labelled "mass" if any attribute key on its path is
+        # ``log_mass`` (matches a lone CHLU AND every unit of a CLULattice),
+        # "field" if under ``friction_field``, else "main". NOTE: this MUST be a
+        # label FUNCTION, not a labels pytree — a CHLU/lattice-shaped pytree of
+        # strings is itself callable, so optax would mistake it for the label fn
+        # and call it on the params (gamma-field-build lesson).
+        def _lr_group_labels(tree):
+            def _label(path, _leaf):
+                names = [getattr(k, "name", None) for k in path]
+                if mass_active and "log_mass" in names:
+                    return "mass"
+                if field_active and "friction_field" in names:
+                    return "field"
+                return "main"
 
-        optimizer = optax.multi_transform(
-            {"main": optax.adam(lr), "field": optax.adam(ff_lr)}, _field_labels
-        )
+            return jax.tree_util.tree_map_with_path(_label, tree)
+
+        transforms = {"main": optax.adam(lr)}
+        if mass_active:
+            transforms["mass"] = optax.adam(lr * mass_lr_mult)
+        if field_active:
+            transforms["field"] = optax.adam(ff_lr)
+        optimizer = optax.multi_transform(transforms, _lr_group_labels)
     else:
         optimizer = optax.adam(lr)
     opt_state = optimizer.init(params)

@@ -50,6 +50,18 @@ class TrainingConfig:
     # their sampled indices (true PCD, mirrors train_generative). Default False
     # preserves the current Exp A/B behavior: CD with fresh random negatives.
     persistent_sleep_buffer: bool = False
+    # Learning-rate multiplier for the inertial-mass parameters (log_mass leaves
+    # of every unit): the optimizer runs those leaves at learning_rate *
+    # mass_lr_mult on their own Adam slot (optax.multi_transform), the rest at
+    # learning_rate. Motivation (critique P5/G4): three corroborations report
+    # that learned M never differentiates into a hierarchy ("designed-in or
+    # induced" doctrine), but log_mass was never given its own lr — while the
+    # gamma_phi(q) two-timescale work proved this exact class of q-space-adjacent
+    # parameter cannot move at the base Adam lr. Default 1.0 = bit-compatible
+    # (log_mass shares the base slot, identical to plain optax.adam); a lattice
+    # of units shares one multiplier. Inert for kinetic_mode="newtonian_identity"
+    # (H never reads log_mass => zero gradient => zero Adam update at any lr).
+    mass_lr_mult: float = 1.0
 
     # Generative training (Experiment C)
     reinit_prob: float = 0.25  # Probability of resetting chains to noise
