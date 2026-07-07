@@ -47,6 +47,27 @@ def test_yaml_round_trip(tmp_path):
     assert loaded.experiment_v1_gate.zeta_grid == cfg.experiment_v1_gate.zeta_grid
 
 
+def test_wormhole_config_round_trip(tmp_path):
+    """The V1-wormhole group (deduped from an F811 double-definition, P9/V1.2)
+    survives a YAML round trip, including its nested List[List[float]]
+    ``workload_mixes`` and the new learned-router-MLP knobs."""
+    cfg = get_default_config()
+    wh = cfg.experiment_v1_wormhole
+    wh.workload_mixes = [[0.7, 0.3], [0.9, 0.1]]
+    wh.router_hidden_dim = 48
+    wh.router_lr = 5e-3
+    wh.flops_grad_factor = 8.0
+    path = tmp_path / "config.yaml"
+    save_config(cfg, path)
+    loaded = load_config(path).experiment_v1_wormhole
+    assert loaded.workload_mixes == [[0.7, 0.3], [0.9, 0.1]]
+    assert loaded.router_hidden_dim == 48
+    assert loaded.router_lr == 5e-3
+    assert loaded.flops_grad_factor == 8.0
+    # gate_route_threshold (the field the code reads) survived the dedup:
+    assert loaded.gate_route_threshold == wh.gate_route_threshold
+
+
 def test_default_config_full_round_trip(tmp_path):
     """Every field group must survive save->load unchanged (the w2/w3 merge
     artifact killer: a group dropped from save_config/load_config, or one that
