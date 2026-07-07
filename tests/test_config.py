@@ -83,3 +83,15 @@ def test_every_group_round_trips_mutated(tmp_path):
     save_config(cfg, path)
     loaded = load_config(path)
     assert dataclasses.asdict(loaded) == dataclasses.asdict(cfg)
+
+
+def test_mass_lr_mult_default_and_round_trip(tmp_path):
+    """training.mass_lr_mult (critique P5/G4) defaults to 1.0 (bit-compatible)
+    and survives the YAML round trip at a non-default value."""
+    cfg = get_default_config()
+    assert cfg.training.mass_lr_mult == 1.0
+    cfg.training.mass_lr_mult = 100.0
+    path = tmp_path / "config.yaml"
+    save_config(cfg, path)
+    loaded = load_config(path)
+    assert loaded.training.mass_lr_mult == 100.0
