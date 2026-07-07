@@ -450,6 +450,27 @@ def _fit_router_head(
     return head
 
 
+def _impostor_dicts(dicts, archive, policy):
+    """Compose the impostor (route=True) unit dicts for the calibrated head fit
+    per ``experiment_v1_wormhole.impostor_policy`` (fix-pack-4 item 3).
+
+      "all_others"     units 1..N-1 (legacy, bit-compatible with the shipped
+                       deployment set; archive listed first as before)
+      "archive_only"   just the archive (matches the deployment distant source;
+                       measured fix for the over-routing collapse, local FP
+                       53% -> 7%)
+      "neighbors_only" units 1..N-2 (everything EXCEPT the archive; worst-case
+                       mismatch control), falling back to the archive if empty.
+    """
+    N = len(dicts)
+    if policy == "archive_only":
+        return [dicts[archive]]
+    if policy == "neighbors_only":
+        return [dicts[k] for k in range(1, N - 1)] or [dicts[archive]]
+    # "all_others" (default): legacy order = archive first, then the rest.
+    return [dicts[archive]] + [dicts[k] for k in range(1, N - 1)]
+
+
 def _impostor_composition_study(
     cfg,
     unit0,
@@ -763,8 +784,13 @@ def run_experiment_v1_wormhole(
             # phase-1 residual gate + N-unit hop diffusion => cost SCALES with N.
             arm_flops["chain"] = f_phase1 + route_b * f_route_chain
 
-            # (e) calibrated tau-gate: learned head decides route via wormhole
-            other_dicts = [dicts[archive]] + [dicts[k] for k in range(1, N - 1)]
+            # (e) calibrated tau-gate: learned head decides route via wormhole.
+            # Impostor probe set selected by cfg.impostor_policy (default
+            # "all_others" = legacy; "archive_only" fixes the over-routing
+            # collapse — fix-pack-4 item 3 / v1-router-baseline finding 4).
+            other_dicts = _impostor_dicts(
+                dicts, archive, cfg.impostor_policy
+            )
             head = _fit_router_head(
                 cfg,
                 units[0],

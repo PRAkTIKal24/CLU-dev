@@ -25,6 +25,7 @@ from chlu.core.chlu_unit import CHLU  # noqa: E402
 from chlu.core.lattice import GatedCoupling, channel_spring_coupling  # noqa: E402
 from chlu.experiments.exp_v1_wormhole import (  # noqa: E402
     _fit_router_mlp,
+    _impostor_dicts,
     _joint_settle,
     _potential_grad_flops,
     _router_mlp_flops,
@@ -34,6 +35,43 @@ from chlu.experiments.exp_v1_wormhole import (  # noqa: E402
 )
 
 DT = 0.05
+
+
+# ---------------------------------------------------------------------------
+# impostor_policy (fix-pack-4 item 3): which units supply the route=True
+# probes when fitting the deployed calibrated head. Default "all_others" must
+# be bit-compatible with the legacy hardcoded set (archive first, then rest).
+# ---------------------------------------------------------------------------
+
+
+def test_impostor_policy_default_is_legacy():
+    """"all_others" reproduces the pre-fix deployment impostor list exactly:
+    [dicts[archive]] + [dicts[k] for k in range(1, N-1)]."""
+    dicts = ["u0", "u1", "u2", "u3", "u4"]  # N=5, archive = 4
+    archive = len(dicts) - 1
+    legacy = [dicts[archive]] + [dicts[k] for k in range(1, len(dicts) - 1)]
+    assert _impostor_dicts(dicts, archive, "all_others") == legacy
+
+
+def test_impostor_policy_archive_only():
+    """"archive_only" = just the archive (the deployment distant source)."""
+    dicts = ["u0", "u1", "u2", "u3", "u4"]
+    archive = len(dicts) - 1
+    assert _impostor_dicts(dicts, archive, "archive_only") == [dicts[archive]]
+
+
+def test_impostor_policy_neighbors_only():
+    """"neighbors_only" = units 1..N-2 (everything except the archive)."""
+    dicts = ["u0", "u1", "u2", "u3", "u4"]
+    archive = len(dicts) - 1
+    assert _impostor_dicts(dicts, archive, "neighbors_only") == ["u1", "u2", "u3"]
+
+
+def test_impostor_policy_neighbors_only_fallback():
+    """With N=2 there are no non-archive neighbors; fall back to the archive
+    rather than returning an empty impostor set (would crash the head fit)."""
+    dicts = ["u0", "u1"]  # N=2, archive = 1
+    assert _impostor_dicts(dicts, 1, "neighbors_only") == ["u1"]
 
 
 # ---------------------------------------------------------------------------
