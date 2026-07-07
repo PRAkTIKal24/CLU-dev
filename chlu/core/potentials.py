@@ -237,9 +237,7 @@ class SO2InvariantPotential(eqx.Module):
             eqx.nn.Linear(hidden, 1, key=k3),
         ]
         # Non-symmetric spectator dims: standard MLP (has its own confinement)
-        self.spectator_net = (
-            PotentialMLP(dim - 2, hidden, key=k4) if dim > 2 else None
-        )
+        self.spectator_net = PotentialMLP(dim - 2, hidden, key=k4) if dim > 2 else None
 
     def __call__(self, q: jnp.ndarray) -> float:
         """Compute V(q). Exactly invariant under rotations of (q0, q1)."""
@@ -286,3 +284,155 @@ class TiltedPotential(eqx.Module):
     def __call__(self, q: jnp.ndarray) -> float:
         theta = jnp.arctan2(q[1], q[0])
         return self.base(q) + self.tilt_delta * jnp.cos(self.tilt_n * theta)
+
+
+class IntraWormholePotential(eqx.Module):
+    """
+    Intra-unit wormhole, construction (b): a smooth *nonlocal throat* added
+    inside V (paid-access-theory Def-A8 / fit-gap-anatomy item 4).
+
+    V_wh(q) = V_base(q) - sum_k depth_k * gate_k(q),
+        gate_k(q) = exp(-||q - via_k||^2 / (2 * width_k^2))  in (0, 1].
+
+    Each ``via_k`` is a bridge point (typically the barrier top / saddle
+    between two loci) at which the potential is smoothly *lowered*, so the
+    Verlet flow can cross a barrier it would otherwise not climb. Because the
+    term is added **inside V** (position-only, C-infinity), Hamilton's
+    equations and the dissipative-Verlet map keep their exact form:
+    symplectic (gamma=0) / det J = (1 - gamma)^d (gamma>0), no energy jump to
+    ledger. This is the theorist's construction (b): it aids **escape**
+    (lowers a barrier *inside* the causal box) but does **not** beat the
+    causal box C_T (Prop-A2) — it is dominated on *reach* by the
+    constant-translation channel (``WormholeChannels`` below). It doubles as
+    the paper's "dense/nonlocal-V" discriminator arm: a nonlocal potential
+    coupling that still cannot cross the causal cone.
+
+    Certificates (F5 §7.4):
+      - symplecticity preserved (C-infinity in q through V);
+      - bounded energy: |sum_k depth_k * gate_k| <= sum_k |depth_k| (sup finite);
+      - exact closed-gate reduction: depths all 0 => reduces to ``base``
+        bit-exactly (no throat term evaluated to a nonzero value).
+
+    Fields (arrays are pytree leaves; place by construction / oracle for the
+    w7 battery — learned placement is explicitly out of scope):
+        via:    (K, d) bridge points
+        depth:  (K,)   throat depths (>= 0 lowers V)
+        width:  (K,)   throat widths (> 0)
+    """
+
+    base: eqx.Module
+    via: jnp.ndarray
+    depth: jnp.ndarray
+    width: jnp.ndarray
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        v_base = self.base(q)
+        # gate_k(q) = exp(-||q - via_k||^2 / (2 width_k^2)) in (0, 1]
+        d2 = jnp.sum((q[None, :] - self.via) ** 2, axis=1)  # (K,)
+        gate = jnp.exp(-d2 / (2.0 * self.width**2))
+        throat = jnp.sum(self.depth * gate)
+        return v_base - throat
+
+
+class WormholeChannels(eqx.Module):
+    """
+    Intra-unit wormhole, construction (a) — the RECOMMENDED reach mechanism
+    (paid-access-theory Def-A5/Prop-A6/A7). A set of ``K`` gated **canonical
+    translations** on phase space (q, p) in R^{2d}:
+
+        active channel k (hard gate frozen at capture, ||q - a_k|| < rho_k):
+            q -> q + Delta_k,   p -> p,     Delta_k = b_k - a_k.
+
+    The gate decides *which* (constant) translation to apply from the INCOMING
+    position, then a constant vector is added to q. As a map on (q, p) this is
+    a pure translation with Jacobian I_{2d} => det J = 1 EXACTLY, independent
+    of Delta magnitude/direction (Prop-A6). The only cost is the discrete
+    energy ledger
+
+        Delta H = V_theta(q + Delta_k) - V_theta(q)          (kinetic unchanged),
+
+    computed against the unit's own potential via ``ledger``. Because the gate
+    is frozen (evaluated once, on q, not modulating Delta during the jump) the
+    forbidden state-dependent-gate volume break det J = 1 + grad(g).Delta
+    (Prop-A6 design guard) never occurs; ``forbidden_state_dependent_jump``
+    exposes it for the test suite only.
+
+    This module is applied *between* Verlet relaxations at the experiment
+    level; it does NOT touch ``integrators.py``, ``CHLU.step``, or the lattice
+    (the wormhole is a phase-space map, not a potential augmentation).
+
+    Latch transport (Prop-A7): under q->q+Delta, a Goldstone charge
+    Q = p^T X q shifts by exactly p^T X Delta (0 iff X.Delta _|_ p) — see
+    ``latch_shift``.
+
+    Fields (place by construction / oracle for w7; learned entrance-steering
+    out of scope):
+        entrances: (K, d) capture centers a_k
+        exits:     (K, d) targets b_k
+        radii:     (K,)   capture radii rho_k
+    """
+
+    entrances: jnp.ndarray
+    exits: jnp.ndarray
+    radii: jnp.ndarray
+
+    def deltas(self) -> jnp.ndarray:
+        """Per-channel translation Delta_k = b_k - a_k, shape (K, d)."""
+        return self.exits - self.entrances
+
+    def gate_mask(self, q: jnp.ndarray) -> jnp.ndarray:
+        """Hard capture mask: ||q - a_k|| < rho_k, shape (K,) boolean."""
+        d2 = jnp.sum((q[None, :] - self.entrances) ** 2, axis=1)
+        return d2 < self.radii**2
+
+    def selected_delta(self, q: jnp.ndarray) -> tuple:
+        """
+        (delta, jumped): the frozen translation for the first active channel
+        (0 vector if none active). ``delta`` shape (d,); ``jumped`` bool.
+        Traceable (jnp.where / argmax), so this composes inside jit/scan.
+        """
+        mask = self.gate_mask(q)
+        jumped = jnp.any(mask)
+        k = jnp.argmax(mask)  # first active (argmax of boolean)
+        delta = jnp.where(jumped, self.deltas()[k], jnp.zeros_like(q))
+        return delta, jumped
+
+    def jump(self, q: jnp.ndarray, p: jnp.ndarray) -> tuple:
+        """
+        Apply the gated canonical translation. Returns (q_new, p_new, jumped).
+        det J = 1 exactly (constant translation, p unchanged).
+        """
+        delta, jumped = self.selected_delta(q)
+        return q + delta, p, jumped
+
+    def ledger(self, V_fn, q: jnp.ndarray) -> jnp.ndarray:
+        """
+        Per-jump energy ledger Delta H = V(q + Delta) - V(q) for the active
+        channel (0 if no jump). ``V_fn`` is the unit potential q -> scalar.
+        """
+        delta, jumped = self.selected_delta(q)
+        return jnp.where(jumped, V_fn(q + delta) - V_fn(q), 0.0)
+
+    def forbidden_state_dependent_jump(
+        self, q: jnp.ndarray, p: jnp.ndarray, g_fn
+    ) -> tuple:
+        """
+        The FORBIDDEN construction (design guard, Prop-A6): a smoothly
+        state-modulated jump q' = q + g(q) * Delta breaks volume by exactly
+        grad(g).Delta (det J = 1 + grad(g).Delta != 1). Provided ONLY so the
+        test suite can demonstrate the volume break the frozen gate avoids.
+        Not used in any dynamics path.
+        """
+        delta = self.deltas()[0]
+        return q + g_fn(q) * delta, p
+
+
+def so2_generator(dim: int, i: int = 0, j: int = 1) -> jnp.ndarray:
+    """
+    Antisymmetric SO(2) generator X on coords (i, j) of R^dim: the broken
+    generator whose Noether charge is Q = p^T X q (F5 §4). X q rotates
+    (q_i, q_j) by 90 deg; X is used for the latch-transit test (Prop-A7).
+    """
+    X = jnp.zeros((dim, dim))
+    X = X.at[i, j].set(-1.0).at[j, i].set(1.0)
+    return X

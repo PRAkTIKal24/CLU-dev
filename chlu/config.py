@@ -610,6 +610,79 @@ class ExperimentLatticeConfig:
 
 
 @dataclass
+class ExperimentPaidAccessConfig:
+    """Configuration for the w7 paid-access battery (V1 pillar-4 gate).
+
+    The discriminating end-to-end test of intra-unit *access* mechanisms
+    (paid-access-theory §7.1-7.3): does a relativistic CLU's causal box
+    C_T (Prop-A2, half-width L_i = T*eps*c/sqrt(M_i)) gate reach exactly as
+    predicted, and do the paid mechanisms (squeeze cures escape, wormhole
+    cures reach) hold their certificates?
+
+    §7.1 multi-basin REACH task: a K-basin analytic potential with basin
+    distances d_k spanning below AND above L; arms = plain relax, S^(M)
+    squeeze (line-searched zeta), intra-unit wormhole (matched channel),
+    Newtonian-squeeze control (energy DOES buy reach), no-physics router
+    (CM-7), dense/throat-V discriminator. §7.2 latch transit. §7.3
+    certificates on every arm.
+
+    Mass banding is a PREREQUISITE (theory §3.3 reason 2): all squeeze arms
+    run with a designed band so S^(M) is directional (else the l0-gate
+    uniform-M ambiguity repeats). ``mass_band`` states it.
+    """
+
+    # --- geometry / physics ---
+    dim: int = 2  # small (2-4); channel = coords (0, 1)
+    c: float = 1.0  # speed of causality (relativistic cap c/sqrt(M))
+    rest_mass: float = 1.0  # m0
+    dt: float = 0.05  # Verlet step
+    reach_steps: int = 100  # T: rollout horizon that sets the causal box L
+    # (default band [4.0,0.25] => M0=4 => L = T*dt*c/sqrt(M0) = 100*0.05/2 = 2.5,
+    #  which sits mid-list in basin_distances so some d<L, some d>L.)
+    # Designed inertial-mass band applied to log_mass (softplus). The reach
+    # direction is coord 0; a LIGHT coord-0 mass gives a wide box, heavy the
+    # opposite — band = [M_light_dir_scale, M_other...] via softplus target.
+    mass_band: List[float] = field(default_factory=lambda: [4.0, 0.25])
+
+    # --- K-basin potential (analytic double/triple well along coord 0) ---
+    barrier_height: float = 1.0  # Delta V_b between adjacent basins
+    basin_curvature: float = 4.0  # quadratic stiffness inside each basin
+    # basin center distances d_k from the start basin, along coord 0. The
+    # experiment places basins at 0, +d_1, +d_2, ... and reports L so some
+    # d_k < L (reach OK) and some d_k > L (reach FAILS).
+    basin_distances: List[float] = field(
+        default_factory=lambda: [0.8, 1.6, 2.4, 3.2, 4.0, 5.0]
+    )
+
+    # --- governor / relaxation (fixed so plain relax provably cannot escape) ---
+    gamma: float = 0.1  # dissipation for plain relaxation
+    relax_steps: int = 400  # relaxation length after any injection
+    init_momentum: float = 1.2  # p0 along coord 0 (KE0 < Delta V_b by design)
+
+    # --- squeeze (line search over rapidity) ---
+    zeta_grid: List[float] = field(
+        default_factory=lambda: [0.0, 0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0]
+    )
+
+    # --- wormhole channel (oracle placement; radii) ---
+    capture_radius: float = 0.35
+
+    # --- throat / dense-V discriminator ---
+    throat_depth: float = 1.5  # lowers the barrier between adjacent basins
+
+    # --- latch transit (§7.2) ---
+    latch_radius: float = 3.0  # vacuum-circle radius f for SO(2) sector
+    latch_momentum: float = 0.5  # p scale for the charge Q = p^T X q
+
+    # --- landing criterion / seeds ---
+    landing_tol: float = 0.4  # |q0 - basin_center| < tol counts as landed
+    n_seeds: int = 5
+    seed0: int = 0
+    quick_seeds: int = 2
+    quick_distances: int = 3  # first N basin_distances in --quick
+
+
+@dataclass
 class ExperimentS1Config:
     """Configuration for the S1 pilot: trash-region Pareto (gamma-field study).
 
@@ -752,6 +825,9 @@ class CHLUConfig:
         default_factory=ExperimentLatticeConfig
     )
     experiment_s1: ExperimentS1Config = field(default_factory=ExperimentS1Config)
+    experiment_paid_access: ExperimentPaidAccessConfig = field(
+        default_factory=ExperimentPaidAccessConfig
+    )
     experiment_minus_physics: ExperimentMinusPhysicsConfig = field(
         default_factory=ExperimentMinusPhysicsConfig
     )
@@ -834,6 +910,11 @@ def load_config(path: Path) -> CHLUConfig:
         ),
         experiment_s1=ExperimentS1Config(
             **filter_valid_fields(ExperimentS1Config, data.get("experiment_s1", {}))
+        ),
+        experiment_paid_access=ExperimentPaidAccessConfig(
+            **filter_valid_fields(
+                ExperimentPaidAccessConfig, data.get("experiment_paid_access", {})
+            )
         ),
         experiment_minus_physics=ExperimentMinusPhysicsConfig(
             **filter_valid_fields(
