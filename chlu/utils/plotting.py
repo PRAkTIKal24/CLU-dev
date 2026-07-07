@@ -2489,3 +2489,128 @@ def plot_v1_regime_map(regime: dict, save_path: str):
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"Saved regime map to {save_path}")
+def plot_v1_wormhole_cost_accuracy(summary: dict, arms: list, save_path: str):
+    """Cost-vs-accuracy for the V1 wormhole-routing arms (the headline plot).
+
+    One panel per lattice size N. x-axis = mean cost (unit-steps; a FLOP proxy =
+    Verlet steps x active units), y-axis = retrieval accuracy. Each arm is a
+    point (overall accuracy); the distant-only accuracy is shown as a lighter
+    marker at the same cost (the routing story lives in the distant split).
+
+    Args:
+        summary: run summary dict (summary["by_N"][str(N)]["arms"][arm]).
+        arms: ordered arm names.
+        save_path: output path.
+    """
+    Ns = sorted(int(k) for k in summary["by_N"].keys())
+    n = len(Ns)
+    fig, axes = plt.subplots(1, n, figsize=(5.2 * n, 4.2), squeeze=False)
+    colors = {
+        "local_only": "tab:gray",
+        "gated": "tab:blue",
+        "dense": "tab:red",
+        "chain": "tab:green",
+        "calibrated": "tab:purple",
+    }
+    for ci, N in enumerate(Ns):
+        ax = axes[0, ci]
+        ent = summary["by_N"][str(N)]["arms"]
+        for a in arms:
+            c = colors.get(a, "black")
+            cost = ent[a]["cost_mean"]
+            ax.errorbar(cost, ent[a]["acc_mean"], yerr=ent[a]["acc_std"],
+                        fmt="o", color=c, ms=10, capsize=3, label=a, zorder=3)
+            ax.scatter(cost, ent[a]["acc_distant_mean"], color=c, marker="x",
+                       s=60, alpha=0.7, zorder=2)
+            ax.annotate(a, (cost, ent[a]["acc_mean"]), fontsize=8,
+                        xytext=(4, 4), textcoords="offset points")
+        ax.set_xlabel("mean cost (unit-steps = Verlet steps x active units)",
+                      fontsize=10)
+        if ci == 0:
+            ax.set_ylabel("retrieval accuracy\n(o = overall, x = distant-only)",
+                          fontsize=10)
+        auc = summary["by_N"][str(N)]["auroc_R0_distant_mean"]
+        ax.set_title(f"N={N}  (AUROC R0->distant = {auc:.3f})", fontsize=11)
+        ax.set_ylim(-0.03, 1.03)
+        ax.grid(True, alpha=0.3)
+    axes[0, 0].legend(fontsize=8, loc="lower right")
+    plt.suptitle("V1 wormhole: cost vs accuracy — gated routing near dense "
+                 "accuracy at a fraction of dense cost", fontsize=12,
+                 fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved wormhole cost-accuracy plot to {save_path}")
+
+
+def plot_v1_wormhole_selectivity(runs: dict, summary: dict, n_units_values: list,
+                                 save_path: str):
+    """Gate-selectivity diagnostics for the V1 wormhole routing.
+
+    Three panels (pooled over seeds of the FIRST N): (1) gate-open/closed vs
+    answer distant/local confusion matrix; (2) residual R0 distribution split
+    by local vs distant queries (the routing signal); (3) smooth gate g vs the
+    z-normalized residual with the query type coloured (does the gate open
+    selectively for distant-answer queries?).
+
+    Args:
+        runs: runs[N] = list of per-seed record dicts.
+        summary: run summary (for the confusion matrix + AUROC).
+        n_units_values: list of N (first is plotted).
+        save_path: output path.
+    """
+    N = int(n_units_values[0])
+    recs = runs[N]
+    R0 = np.concatenate([r["R0"] for r in recs])
+    z = np.concatenate([r["z"] for r in recs])
+    g = np.concatenate([r["g_smooth"] for r in recs])
+    dist = np.concatenate([r["is_distant"] for r in recs])
+    cm = np.asarray(summary["by_N"][str(N)]["gate_confusion"])
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4.2))
+
+    ax = axes[0]
+    im = ax.imshow(cm, cmap="Blues")
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels(["distant", "local"])
+    ax.set_yticks([0, 1])
+    ax.set_yticklabels(["gate open", "gate closed"])
+    for (i, j), v in np.ndenumerate(cm):
+        ax.text(j, i, str(int(v)), ha="center", va="center",
+                color="black", fontsize=13)
+    prec = summary["by_N"][str(N)]["gate_precision_distant"]
+    rec = summary["by_N"][str(N)]["gate_recall_distant"]
+    ax.set_title(f"gate selectivity (g>0.5)\nprecision={prec:.2f} recall={rec:.2f}",
+                 fontsize=10)
+    fig.colorbar(im, ax=ax, fraction=0.046)
+
+    ax = axes[1]
+    bins = np.linspace(min(R0.min(), 0), R0.max(), 30)
+    ax.hist(R0[~dist], bins=bins, alpha=0.6, color="tab:gray", label="local")
+    ax.hist(R0[dist], bins=bins, alpha=0.6, color="tab:blue", label="distant")
+    ax.set_xlabel("local residual R0 = H0(settled) - floor0", fontsize=10)
+    ax.set_ylabel("count", fontsize=10)
+    auc = summary["by_N"][str(N)]["auroc_R0_distant_mean"]
+    ax.set_title(f"routing signal (AUROC R0->distant = {auc:.3f})", fontsize=10)
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3)
+
+    ax = axes[2]
+    ax.scatter(z[~dist], g[~dist], s=14, alpha=0.5, color="tab:gray",
+               label="local")
+    ax.scatter(z[dist], g[dist], s=14, alpha=0.5, color="tab:blue",
+               label="distant")
+    ax.axhline(0.5, color="k", ls=":", lw=1)
+    ax.set_xlabel("z-normalized residual", fontsize=10)
+    ax.set_ylabel("smooth gate g", fontsize=10)
+    ax.set_title("gate opening vs residual", fontsize=10)
+    ax.set_ylim(-0.03, 1.03)
+    ax.legend(fontsize=9)
+    ax.grid(True, alpha=0.3)
+
+    plt.suptitle(f"V1 wormhole selectivity (N={N})", fontsize=12,
+                 fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved wormhole selectivity plot to {save_path}")

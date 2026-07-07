@@ -12,6 +12,7 @@ from ..experiments.exp_v1_calibration import (
     run_v1_hopfield_regime_map,
 )
 from ..experiments.exp_v1_gate import run_experiment_v1_gate
+from ..experiments.exp_v1_wormhole import run_experiment_v1_wormhole
 from ..experiments.exp_lattice import run_experiment_lattice
 from ..experiments.exp_s1_gamma_field import run_experiment_s1
 
@@ -122,6 +123,18 @@ def setup_experiment_parsers(subparsers):
     exp_v1r_parser.add_argument('--quick', action='store_true',
                                 help='Quick mode (small grid, short training)')
     exp_v1r_parser.set_defaults(func=cmd_exp_v1_regime)
+
+    # exp-v1-wormhole
+    exp_v1w_parser = subparsers.add_parser(
+        'exp-v1-wormhole',
+        help='Run V1 pillar 3: energy-gated sparse non-local routing (wormholes)'
+    )
+    exp_v1w_parser.add_argument('--project', help='Project name to use')
+    exp_v1w_parser.add_argument('--seed', type=int,
+                                help='Base random seed (replicates = seed + i)')
+    exp_v1w_parser.add_argument('--quick', action='store_true',
+                                help='Quick mode (N=4, 1 seed, short training)')
+    exp_v1w_parser.set_defaults(func=cmd_exp_v1_wormhole)
 
     # exp-s1
     exp_s1_parser = subparsers.add_parser(
@@ -384,6 +397,33 @@ def cmd_exp_v1_regime(args):
             quick=bool(getattr(args, 'quick', False)),
         )
         console.print("✓ V1 regime map completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_v1_wormhole(args):
+    """Run the V1 wormhole-routing experiment."""
+    console.print(
+        "[bold cyan]Running V1 Wormhole: energy-gated sparse non-local routing"
+        "[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    try:
+        run_experiment_v1_wormhole(
+            config=config,
+            models_dir=str(paths['models']),
+            quick=bool(getattr(args, 'quick', False)),
+        )
+        console.print("✓ V1 wormhole experiment completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
