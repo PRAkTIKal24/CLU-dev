@@ -62,6 +62,20 @@ class TrainingConfig:
     # of units shares one multiplier. Inert for kinetic_mode="newtonian_identity"
     # (H never reads log_mass => zero gradient => zero Adam update at any lr).
     mass_lr_mult: float = 1.0
+    # V(data)-energy anchor (sleep-erosion cure; anchor-robustness P11). Adds a
+    # wake term lambda * (mean_i V(anchor_i) - target)^2 to the loss, where the
+    # anchor points are the data q's at the window start (data[:, 0, :dim]) and
+    # target = the epoch-0 mean V(anchor) captured from the initial model. This
+    # PINS the potential's value on the data manifold, preventing the wake-sleep
+    # CD sleep phase from inverting a DESIGNED degenerate vacuum along its flat
+    # (Goldstone) direction — the failure the wake MSE cannot see (handover
+    # §7.14 / anchor-robustness). Envelope (exp-d SO(2), CD, f5/s500, 3000 ep,
+    # 5 seeds): lambda=0 destroys the vacuum 5/5; lambda in {1,10,100} hold it;
+    # lambda=100 is seed-bulletproof (r*=0.911+-0.016) at ~35x wake-MSE cost,
+    # lambda~=10 gives the strongest noise rejection but 1/5 seeds can collapse.
+    # Default 0.0 = OFF = bit-compatible with all prior runs (term not added).
+    # Orthogonal to volume conservation: does NOT rescue a non-symplectic vacuum.
+    anchor_data_energy_lambda: float = 0.0
 
     # Generative training (Experiment C)
     reinit_prob: float = 0.25  # Probability of resetting chains to noise
@@ -488,6 +502,19 @@ class ExperimentV1WormholeConfig:
     calib_features: str = "r_margin"  # head input: "r" | "margin" | "r_margin"
     calib_l2: float = 1.0
     calib_p_route: float = 0.5  # route iff head.p_wrong(R0[,margin0]) > this
+    # Which units supply the impostor (route=True) probes when FITTING the
+    # deployed calibrated head (the impostor-composition study, item 4 of
+    # v1-router-baseline). At deployment the only DISTANT queries come from the
+    # archive (unit N-1), but the legacy head trains impostors from the whole
+    # non-local pool (units 1..N-1); as N grows that pool is dominated by
+    # non-archive units, shifting the route boundary and OVER-ROUTING local
+    # queries (measured local false-positive 53%). Options:
+    #   "all_others"    - units 1..N-1 (default; legacy, bit-compatible)
+    #   "archive_only"  - just the archive: matches the deployment distant source
+    #                     (the measured fix: local FP 53% -> 7%)
+    #   "neighbors_only"- units 1..N-2 (everything EXCEPT the archive; worst-case
+    #                     mismatch control)
+    impostor_policy: str = "all_others"
 
     # --- learned-router-MLP arm (P9/V1.2: the boring physics-free baseline) ---
     # A 2-layer MLP on the raw query CUE embedding (no energy, no relaxation) that

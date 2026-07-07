@@ -74,6 +74,11 @@ def setup_experiment_parsers(subparsers):
     exp_d_parser.add_argument('--sleep-mode', choices=['on', 'off'],
                               help='Sleep phase: "on" (wake-sleep) or "off" '
                                    '(wake-only, data-pinned, no vacuum erosion)')
+    exp_d_parser.add_argument('--anchor-lambda', type=float,
+                              help='V(data)-energy anchor weight (sleep-erosion '
+                                   'cure): pins mean V on the data manifold. '
+                                   '0=off (default); 10-100 hold the SO(2) '
+                                   'vacuum under wake-sleep CD.')
     exp_d_parser.set_defaults(func=cmd_exp_d)
 
     # exp-v1-gate
@@ -122,6 +127,11 @@ def setup_experiment_parsers(subparsers):
                                 help='Base random seed (replicates = seed + i)')
     exp_v1r_parser.add_argument('--quick', action='store_true',
                                 help='Quick mode (small grid, short training)')
+    exp_v1r_parser.add_argument('--train-epochs', type=int,
+                                help='Per-cell PCD write epochs (compute-parity '
+                                     'knob; anchor-robustness P14: 500->2000 '
+                                     'closes the Hopfield gap). Overrides '
+                                     'experiment_v1_gate.train_epochs.')
     exp_v1r_parser.set_defaults(func=cmd_exp_v1_regime)
 
     # exp-v1-wormhole
@@ -315,6 +325,8 @@ def cmd_exp_d(args):
         kwargs['tilt_n'] = args.tilt_n
     if getattr(args, 'sleep_mode', None) is not None:
         kwargs['sleep_mode'] = args.sleep_mode
+    if getattr(args, 'anchor_lambda', None) is not None:
+        kwargs['anchor_lambda'] = args.anchor_lambda
 
     try:
         run_experiment_d(**kwargs)
@@ -463,6 +475,8 @@ def cmd_exp_v1_regime(args):
         return 1
 
     config.project.save_dir = str(paths['plots'])
+    if getattr(args, 'train_epochs', None) is not None:
+        config.experiment_v1_gate.train_epochs = args.train_epochs
 
     try:
         run_v1_hopfield_regime_map(
