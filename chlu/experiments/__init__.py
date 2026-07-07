@@ -11,6 +11,8 @@ from chlu.experiments.exp_v1_calibration import (
 from chlu.experiments.exp_v1_gate import run_experiment_v1_gate
 from chlu.experiments.exp_v1_wormhole import run_experiment_v1_wormhole
 from chlu.experiments.exp_lattice import run_experiment_lattice
+from chlu.experiments.exp_minus_physics import run_experiment_minus_physics
+from chlu.experiments.exp_v1_hopfield_gate import run_experiment_v1_hopfield_gate
 
 __all__ = [
     "run_experiment_a",
@@ -22,4 +24,6 @@ __all__ = [
     "run_experiment_v1_gate",
     "run_experiment_v1_wormhole",
     "run_experiment_lattice",
+    "run_experiment_minus_physics",
+    "run_experiment_v1_hopfield_gate",
 ]
