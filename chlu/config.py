@@ -951,6 +951,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_lattice": asdict(config.experiment_lattice),
         "experiment_s1": asdict(config.experiment_s1),
         "experiment_minus_physics": asdict(config.experiment_minus_physics),
+        "experiment_paid_access": asdict(config.experiment_paid_access),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
