@@ -158,6 +158,17 @@ def setup_experiment_parsers(subparsers):
                                help='Quick mode (2 seeds, 60 epochs, short probes)')
     exp_mp_parser.set_defaults(func=cmd_exp_minus_physics)
 
+    # exp-paid-access
+    exp_pa_parser = subparsers.add_parser(
+        'exp-paid-access',
+        help='Run the w7 paid-access battery (reach/escape, wormhole vs squeeze)'
+    )
+    exp_pa_parser.add_argument('--project', help='Project name to use')
+    exp_pa_parser.add_argument('--seed', type=int, help='Base random seed')
+    exp_pa_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (2 seeds, distances straddling L)')
+    exp_pa_parser.set_defaults(func=cmd_exp_paid_access)
+
     # exp-v1-hopfield-gate
     exp_v1hg_parser = subparsers.add_parser(
         'exp-v1-hopfield-gate',
@@ -344,6 +355,31 @@ def cmd_exp_minus_physics(args):
             quick=bool(getattr(args, 'quick', False)),
         )
         console.print("✓ minus-the-physics completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+    return 0
+
+
+def cmd_exp_paid_access(args):
+    """Run the w7 paid-access battery (intra-unit wormhole vs squeeze reach)."""
+    console.print("[bold cyan]Running paid-access battery (reach/escape gate)[/bold cyan]")
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+    config.project.save_dir = str(paths['plots'])
+
+    from ..experiments.exp_paid_access import run_experiment_paid_access
+    try:
+        run_experiment_paid_access(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=int(getattr(args, 'seed', None) or 0),
+            quick=bool(getattr(args, 'quick', False)),
+        )
+        console.print("✓ paid-access battery completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
