@@ -365,6 +365,39 @@ class ExperimentV1GateConfig:
     calib_risk_targets: List[float] = field(default_factory=lambda: [0.05, 0.10])
     calib_ltt_delta: float = 0.1  # LTT confidence parameter
 
+    # --- v1-hopfield-stress: CLU-vs-Hopfield regime map (Head decision 1b) ---
+    # The v1-pivot run showed Hopfield is near-perfect (acc 0.983-1.0) on the
+    # vanilla MQAR at kv<=32, so the abstention head-to-head is unwinnable
+    # there. This block charts *where the trade actually lives* by stressing
+    # both systems and classifying each grid cell (Hopfield-dominant /
+    # comparable / CLU-gate-advantage). Two stress mechanics, both fair (CLU
+    # and Hopfield see the identical stressed cues/embeddings):
+    #   - eval_noise: Gaussian sigma added to the deployment query cue (memory
+    #     written from clean patterns; degrades retrieval, not storage).
+    #   - correlation: key/value embeddings pulled toward shared cluster
+    #     centroids (reduced separation = the classic Hopfield failure mode;
+    #     changes stored content -> the memory is retrained per correlation).
+    # Defaults are laptop-scale (pilot first; report runtimes).
+    # (N, kv) with N >= 3*kv (kv-block 2*kv + kv queries fit the sequence) AND
+    # kv < vocab_size/2 (distinct keys/values per half-vocab). To push kv past
+    # ~vocab_size/2 - 1 (127 at the default vocab), raise vocab_size too.
+    regime_capacity_levels: List[List[int]] = field(
+        default_factory=lambda: [[128, 32], [256, 64], [384, 96]]
+    )
+    regime_stress_axis: str = "correlation"  # "correlation" | "eval_noise"
+    regime_stress_grid: List[float] = field(
+        default_factory=lambda: [0.0, 0.3, 0.6, 0.9]
+    )
+    regime_n_seeds: int = 3
+    regime_episodes_per_cell: int = 1  # episodes per (capacity, stress, seed)
+    regime_n_clusters: int = 8  # centroids for the correlated-embedding stress
+    # applied deployment cue noise when the stress axis is NOT eval_noise
+    regime_base_eval_noise: float = 0.0
+    # applied key correlation when the stress axis is NOT correlation
+    regime_base_correlation: float = 0.0
+    # classification band: |delta| below this = "comparable" (acc & AURC units)
+    regime_comparable_margin: float = 0.03
+
 
 @dataclass
 class ExperimentV1WormholeConfig:

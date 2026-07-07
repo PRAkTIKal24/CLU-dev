@@ -2373,3 +2373,119 @@ def plot_s1_pareto(
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"Saved S1 Pareto plot to {save_path}")
+
+
+def plot_v1_regime_map(regime: dict, save_path: str):
+    """CLU-gate-vs-Hopfield regime map (exp_v1 hopfield-stress).
+
+    Four panels over the capacity (rows) x stress (cols) grid:
+      1. classification map (Hopfield-dominant / comparable / CLU-gate-advantage),
+         annotated with the accuracy delta (clu_gate - hopfield);
+      2. accuracy delta heatmap (diverging; >0 = CLU better);
+      3. abstention delta heatmap (hop_aurc - clu_aurc; >0 = CLU better);
+      4. accuracy vs stress line plot (CLU gate solid, Hopfield dashed) per
+         capacity, with compute-savings annotated.
+
+    Args:
+        regime: dict from run_v1_hopfield_regime_map (arrays shaped
+            (n_cap, n_stress)).
+        save_path: output path.
+    """
+    caps = regime["cap_labels"]
+    grid = regime["stress_grid"]
+    axis = regime["axis"]
+    cat = np.asarray(regime["cat"])
+    d_acc = np.asarray(regime["d_acc"])
+    d_aurc = np.asarray(regime["d_aurc"])
+    clu_acc = np.asarray(regime["clu_acc"])
+    hop_acc = np.asarray(regime["hop_acc"])
+    savings = np.asarray(regime["savings"])
+    n_cap, n_str = cat.shape
+
+    from matplotlib.colors import ListedColormap
+
+    cat_colors = ["#c44e52", "#dddddd", "#55a868"]  # dom / comparable / clu-adv
+    cat_labels = ["Hopfield-dominant", "comparable", "CLU-gate advantage"]
+    cmap_cat = ListedColormap(cat_colors)
+
+    fig, axes = plt.subplots(2, 2, figsize=(13, 10))
+    xt = [f"{g:g}" for g in grid]
+    yt = caps
+
+    # panel 1: classification map
+    ax = axes[0, 0]
+    ax.imshow(cat, cmap=cmap_cat, vmin=0, vmax=2, aspect="auto")
+    for i in range(n_cap):
+        for j in range(n_str):
+            ax.text(j, i, f"{d_acc[i, j]:+.2f}", ha="center", va="center",
+                    fontsize=9, color="black")
+    ax.set_xticks(range(n_str))
+    ax.set_xticklabels(xt)
+    ax.set_yticks(range(n_cap))
+    ax.set_yticklabels(yt)
+    ax.set_xlabel(f"stress: {axis}")
+    ax.set_ylabel("capacity (N/kv)")
+    ax.set_title("regime map (cell text = acc(CLU gate) - acc(Hopfield))")
+    handles = [plt.Rectangle((0, 0), 1, 1, color=c) for c in cat_colors]
+    ax.legend(handles, cat_labels, loc="upper center",
+              bbox_to_anchor=(0.5, -0.12), ncol=3, fontsize=8)
+
+    # panel 2: accuracy delta
+    ax = axes[0, 1]
+    vmax = float(np.nanmax(np.abs(d_acc))) or 1.0
+    im = ax.imshow(d_acc, cmap="RdBu", vmin=-vmax, vmax=vmax, aspect="auto")
+    for i in range(n_cap):
+        for j in range(n_str):
+            ax.text(j, i, f"{d_acc[i, j]:+.2f}", ha="center", va="center",
+                    fontsize=8)
+    ax.set_xticks(range(n_str))
+    ax.set_xticklabels(xt)
+    ax.set_yticks(range(n_cap))
+    ax.set_yticklabels(yt)
+    ax.set_xlabel(f"stress: {axis}")
+    ax.set_title("acc(CLU gate) - acc(Hopfield)")
+    fig.colorbar(im, ax=ax, fraction=0.046)
+
+    # panel 3: abstention delta (AURC)
+    ax = axes[1, 0]
+    vmax = float(np.nanmax(np.abs(d_aurc))) or 1.0
+    im = ax.imshow(d_aurc, cmap="RdBu", vmin=-vmax, vmax=vmax, aspect="auto")
+    for i in range(n_cap):
+        for j in range(n_str):
+            ax.text(j, i, f"{d_aurc[i, j]:+.2f}", ha="center", va="center",
+                    fontsize=8)
+    ax.set_xticks(range(n_str))
+    ax.set_xticklabels(xt)
+    ax.set_yticks(range(n_cap))
+    ax.set_yticklabels(yt)
+    ax.set_xlabel(f"stress: {axis}")
+    ax.set_ylabel("capacity (N/kv)")
+    ax.set_title("AURC(Hopfield) - AURC(CLU)  (>0 = CLU abstains better)")
+    fig.colorbar(im, ax=ax, fraction=0.046)
+
+    # panel 4: accuracy-vs-stress lines + savings
+    ax = axes[1, 1]
+    colors = plt.cm.viridis(np.linspace(0, 0.85, n_cap))
+    for i in range(n_cap):
+        ax.plot(grid, clu_acc[i], "o-", color=colors[i], label=f"{caps[i]} CLU gate")
+        ax.plot(grid, hop_acc[i], "s--", color=colors[i], alpha=0.6,
+                label=f"{caps[i]} Hopfield")
+        for j in range(n_str):
+            if np.isfinite(savings[i, j]):
+                ax.annotate(f"{savings[i, j]:.1f}x", (grid[j], clu_acc[i, j]),
+                            fontsize=7, color=colors[i],
+                            textcoords="offset points", xytext=(0, 6))
+    ax.set_xlabel(f"stress: {axis}")
+    ax.set_ylabel("accuracy")
+    ax.set_title("accuracy vs stress (annot = CLU compute savings)")
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=7, ncol=2, loc="lower left")
+
+    plt.suptitle(
+        f"V1: CLU-gate vs Hopfield regime map (stress axis: {axis})",
+        fontsize=13, fontweight="bold",
+    )
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved regime map to {save_path}")
