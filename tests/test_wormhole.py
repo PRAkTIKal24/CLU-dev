@@ -19,11 +19,17 @@ jax.config.update("jax_enable_x64", True)
 
 import jax.numpy as jnp  # noqa: E402
 import numpy as np  # noqa: E402
+import pytest  # noqa: E402
 
 from chlu.core.chlu_unit import CHLU  # noqa: E402
 from chlu.core.lattice import GatedCoupling, channel_spring_coupling  # noqa: E402
 from chlu.experiments.exp_v1_wormhole import (  # noqa: E402
+    _fit_router_mlp,
     _joint_settle,
+    _potential_grad_flops,
+    _router_mlp_flops,
+    _router_n_params,
+    _verlet_flops,
     smooth_gate,
 )
 
@@ -228,11 +234,15 @@ def test_wormhole_routing_smoke(tmp_path):
     summary = out["summary"]
     assert "by_N" in summary and len(summary["by_N"]) >= 1
     N0 = sorted(int(k) for k in summary["by_N"].keys())[0]
-    arms = summary["by_N"][str(N0)]["arms"]
-    # all arms produced finite accuracies in [0, 1]
+    entry = summary["by_N"][str(N0)]
+    arms = entry["arms"]
+    # the learned-router baseline arm is present and scored
+    assert "router_mlp" in arms
+    # all arms produced finite accuracies in [0, 1] + finite FLOPs
     for ent in arms.values():
         assert 0.0 <= ent["acc_mean"] <= 1.0
         assert np.isfinite(ent["cost_mean"])
+        assert np.isfinite(ent["flops_mean"]) and ent["flops_mean"] > 0
     # the mechanism claim: gated wormhole reaches >= local-only on DISTANT
     # queries (it opens a path local-only cannot use). Honest smoke bound only.
     assert (
@@ -240,4 +250,68 @@ def test_wormhole_routing_smoke(tmp_path):
         >= arms["local_only"]["acc_distant_mean"] - 1e-9
     )
     # energy injected through the open gate is finite/bounded
-    assert np.isfinite(summary["by_N"][str(N0)]["energy_injected_max"])
+    assert np.isfinite(entry["energy_injected_max"])
+    # workload-mix aggregation present for all requested mixes, arms scored
+    assert "mixes" in entry and len(entry["mixes"]) == len(
+        cfg.experiment_v1_wormhole.workload_mixes
+    )
+    for mx in entry["mixes"].values():
+        assert "router_mlp" in mx["arms"] and "gated" in mx["arms"]
+        for a in mx["arms"].values():
+            assert 0.0 <= a["acc_mean"] <= 1.0 and np.isfinite(a["flops_mean"])
+    # router ranking AUROC recorded
+    assert np.isfinite(entry["auroc_router_distant_mean"])
+
+
+# ---------------------------------------------------------------------------
+# (4) FLOPs cost model + learned-router-MLP baseline (P9/V1.2)
+# ---------------------------------------------------------------------------
+
+
+class _FlopsCfg:
+    flops_grad_factor = 6.0
+    flops_verlet_grads = 2.0
+
+
+def test_flops_model_scales_and_orders():
+    """The FLOPs model is positive, grows with hidden width, and the wormhole's
+    routed leg (2 units, fixed) is cheaper than the chain's (N units) for N>2 —
+    the '1-hop flat vs N-hop diffusion' claim, in FLOPs."""
+    cfg = _FlopsCfg()
+    f_small = _potential_grad_flops(24, 32, cfg)
+    f_big = _potential_grad_flops(24, 128, cfg)
+    assert f_small > 0 and f_big > f_small
+    steps = 250
+    wormhole = _verlet_flops(steps, 2, 24, 128, cfg)  # 2 active units, any N
+    for N in (4, 8):
+        chain = _verlet_flops(steps, N, 24, 128, cfg)
+        assert chain > wormhole
+    # chain FLOPs scale linearly in N; wormhole does not
+    assert _verlet_flops(steps, 8, 24, 128, cfg) == pytest.approx(
+        2.0 * _verlet_flops(steps, 4, 24, 128, cfg)
+    )
+    assert _router_n_params(12, 32) == 12 * 32 + 32 + 32 + 1
+    assert _router_mlp_flops(12, 32, cfg) > 0
+
+
+def test_router_mlp_separates_own_from_impostor():
+    """The physics-free router MLP, trained on own-key (route=False) vs impostor
+    (route=True) cues, ranks impostors above own keys on held-out jittered cues
+    — a real learned router, not a degenerate constant."""
+    rng = np.random.default_rng(0)
+    e = 8
+    own = rng.standard_normal(e)
+    imp = own + 5.0 * rng.standard_normal(e)  # a well-separated impostor key
+    cues, labels = [], []
+    for _ in range(40):
+        cues.append(own + 0.1 * rng.standard_normal(e))
+        labels.append(False)
+        cues.append(imp + 0.1 * rng.standard_normal(e))
+        labels.append(True)
+    model = _fit_router_mlp(
+        np.stack(cues), np.asarray(labels), e, hidden=16,
+        key=jax.random.PRNGKey(0), epochs=200, lr=5e-3, l2=1e-3,
+    )
+    s_own = float(jax.nn.sigmoid(model(jnp.asarray(own))))
+    s_imp = float(jax.nn.sigmoid(model(jnp.asarray(imp))))
+    assert s_imp > s_own, "router failed to rank impostor above own key"

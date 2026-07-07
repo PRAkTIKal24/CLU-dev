@@ -2511,6 +2511,7 @@ def plot_v1_wormhole_cost_accuracy(summary: dict, arms: list, save_path: str):
         "dense": "tab:red",
         "chain": "tab:green",
         "calibrated": "tab:purple",
+        "router_mlp": "tab:orange",
     }
     for ci, N in enumerate(Ns):
         ax = axes[0, ci]
@@ -2614,3 +2615,50 @@ def plot_v1_wormhole_selectivity(runs: dict, summary: dict, n_units_values: list
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"Saved wormhole selectivity plot to {save_path}")
+
+
+def plot_v1_wormhole_flops(summary: dict, arms: list, save_path: str):
+    """FLOPs-vs-accuracy by workload mix (P9/V1.2): the energy-gated wormhole vs
+    the parameter-matched learned router, priced in FLOPs (not unit-steps).
+
+    Grid of panels [N x workload-mix]; x-axis = mean FLOPs/query (log), y-axis =
+    accuracy. Each arm is a point with an accuracy error bar over seeds. The
+    router-MLP (physics-free) is the baseline the energy gate must beat.
+    """
+    Ns = sorted(int(k) for k in summary["by_N"].keys())
+    mix_labels = list(summary["by_N"][str(Ns[0])]["mixes"].keys())
+    nrow, ncol = len(Ns), len(mix_labels)
+    fig, axes = plt.subplots(nrow, ncol, figsize=(4.4 * ncol, 3.8 * nrow),
+                             squeeze=False)
+    colors = {
+        "local_only": "tab:gray", "gated": "tab:blue", "dense": "tab:red",
+        "chain": "tab:green", "calibrated": "tab:purple",
+        "router_mlp": "tab:orange",
+    }
+    for ri, N in enumerate(Ns):
+        for ciX, label in enumerate(mix_labels):
+            ax = axes[ri][ciX]
+            marms = summary["by_N"][str(N)]["mixes"][label]["arms"]
+            for a in arms:
+                c = colors.get(a, "black")
+                fl = marms[a]["flops_mean"]
+                ax.errorbar(fl, marms[a]["acc_mean"], yerr=marms[a]["acc_std"],
+                            fmt="o", color=c, ms=9, capsize=3, label=a, zorder=3)
+                ax.annotate(a, (fl, marms[a]["acc_mean"]), fontsize=7,
+                            xytext=(4, 3), textcoords="offset points")
+            ax.set_xscale("log")
+            ax.set_title(f"N={N}  workload {label} (local/distant)", fontsize=10)
+            ax.set_ylim(-0.03, 1.03)
+            ax.grid(True, alpha=0.3, which="both")
+            if ciX == 0:
+                ax.set_ylabel("accuracy", fontsize=10)
+            if ri == nrow - 1:
+                ax.set_xlabel("mean FLOPs / query (log)", fontsize=10)
+    axes[0][0].legend(fontsize=7, loc="lower right")
+    plt.suptitle("V1 wormhole: FLOPs vs accuracy — energy gate vs parameter-"
+                 "matched learned router, by workload mix", fontsize=12,
+                 fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved wormhole FLOPs-accuracy plot to {save_path}")

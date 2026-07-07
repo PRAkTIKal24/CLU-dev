@@ -53,6 +53,7 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
+import optax
 
 from chlu.config import CHLUConfig, get_default_config
 from chlu.core.chlu_unit import CHLU
@@ -65,6 +66,7 @@ from chlu.training.train_generative import train_generative
 from chlu.utils.checkpoints import save_checkpoint
 from chlu.utils.plotting import (
     plot_v1_wormhole_cost_accuracy,
+    plot_v1_wormhole_flops,
     plot_v1_wormhole_selectivity,
 )
 
@@ -92,6 +94,126 @@ def _zscore(x: np.ndarray) -> np.ndarray:
     q75, q25 = np.percentile(x, [75, 25])
     iqr = (q75 - q25) + 1e-8
     return (x - med) / iqr
+
+
+# ---------------------------------------------------------------------------
+# Honest cost accounting: a FLOPs model (P9/V1.2, replaces unit-steps)
+# ---------------------------------------------------------------------------
+
+
+def _potential_grad_flops(dim: int, hidden: int, cfg) -> float:
+    """FLOPs of ONE value-and-grad eval of a unit's PotentialMLP.
+
+    PotentialMLP = Linear(dim->hidden) -> tanh -> Linear(hidden->hidden) -> tanh
+    -> Linear(hidden->1). Forward MACs = dim*hidden + hidden*hidden + hidden.
+    A value-and-grad costs ~flops_grad_factor x that (fwd 2 FLOP/MAC + bwd ~4).
+    Activations/confinement/kinetic terms are O(dim) and folded into the
+    constant. This is the dominant cost of a Verlet step (the couplings are
+    O(channel) springs, negligible)."""
+    fwd_macs = dim * hidden + hidden * hidden + hidden
+    return cfg.flops_grad_factor * float(fwd_macs)
+
+
+def _verlet_flops(steps: int, n_active_units: int, dim: int, hidden: int, cfg) -> float:
+    """FLOPs of `steps` governed Verlet steps over `n_active_units` units.
+
+    Each velocity-Verlet step evaluates grad_q H `flops_verlet_grads` times; H's
+    potential grad is paid once per active unit per grad eval."""
+    per_step = (
+        cfg.flops_verlet_grads
+        * n_active_units
+        * _potential_grad_flops(dim, hidden, cfg)
+    )
+    return float(steps) * per_step
+
+
+def _router_mlp_flops(in_dim: int, hidden: int, cfg) -> float:
+    """FLOPs of ONE forward pass of the 2-layer router MLP (in->hidden->1).
+
+    Inference only (no grad at deploy); 2 FLOP/MAC. Tiny vs a relaxation, but
+    charged honestly as the router's own overhead."""
+    fwd_macs = in_dim * hidden + hidden * 1
+    return 2.0 * float(fwd_macs)
+
+
+def _router_n_params(in_dim: int, hidden: int) -> int:
+    """Parameter count of the router MLP (in->hidden->1, with biases)."""
+    return in_dim * hidden + hidden + hidden * 1 + 1
+
+
+# ---------------------------------------------------------------------------
+# Learned-router-MLP arm (the physics-free baseline; P9/V1.2)
+# ---------------------------------------------------------------------------
+
+
+class _RouterMLP(eqx.Module):
+    """2-layer MLP on the raw query cue embedding -> route logit. No physics:
+    it never runs the CHLU relaxation nor sees the energy residual."""
+
+    layers: list
+
+    def __init__(self, in_dim: int, hidden: int, key):
+        k1, k2 = jax.random.split(key)
+        self.layers = [
+            eqx.nn.Linear(in_dim, hidden, key=k1),
+            eqx.nn.Linear(hidden, 1, key=k2),
+        ]
+
+    def __call__(self, x):
+        x = jnp.tanh(self.layers[0](x))
+        return jnp.squeeze(self.layers[1](x))
+
+
+def _fit_router_mlp(cues, labels, in_dim, hidden, key, epochs, lr, l2):
+    """Write-time fit of the router MLP on the SAME probe set as the calibrated
+    head (own-key jittered cues -> route=False; impostor cues -> route=True),
+    but consuming the cue embedding rather than the energy residual. Full-batch
+    AdamW logistic regression."""
+    model = _RouterMLP(in_dim, hidden, key)
+    opt = optax.adamw(lr, weight_decay=l2)
+    opt_state = opt.init(eqx.filter(model, eqx.is_array))
+    X = jnp.asarray(cues, dtype=jnp.float32)
+    y = jnp.asarray(labels, dtype=jnp.float32)
+
+    @eqx.filter_jit
+    def step(model, opt_state):
+        def loss_fn(m):
+            logits = jax.vmap(m)(X)
+            return optax.sigmoid_binary_cross_entropy(logits, y).mean()
+
+        loss, grads = eqx.filter_value_and_grad(loss_fn)(model)
+        updates, opt_state = opt.update(
+            grads, opt_state, eqx.filter(model, eqx.is_array)
+        )
+        model = eqx.apply_updates(model, updates)
+        return model, opt_state, loss
+
+    for _ in range(int(epochs)):
+        model, opt_state, _loss = step(model, opt_state)
+    return model
+
+
+def _router_probes(cfg, dict_local, impostor_dicts, e):
+    """Own-key (route=False) + impostor-key (route=True) jittered cue probes.
+
+    Shared probe geometry with `_fit_router_head` so the router MLP and the
+    calibrated energy head are trained on an identical query distribution — the
+    only difference is the FEATURE (raw cue vs energy residual)."""
+    rng = np.random.default_rng(1)
+    scales = list(cfg.calib_cue_noise_scales)
+    cues, labels = [], []
+    for kemb in np.asarray(dict_local["key_emb"]):
+        for pi in range(cfg.calib_probes_per_key):
+            s = scales[pi % len(scales)]
+            cues.append(kemb + s * rng.standard_normal(e))
+            labels.append(False)
+    imp = np.concatenate([np.asarray(d["key_emb"]) for d in impostor_dicts], axis=0)
+    for kemb in imp:
+        for pi in range(cfg.calib_probes_per_key):
+            s = scales[pi % len(scales)]
+            cues.append(kemb + s * rng.standard_normal(e))
+            labels.append(True)
+    return np.stack(cues), np.asarray(labels, dtype=bool)
 
 
 # ---------------------------------------------------------------------------
@@ -328,6 +450,59 @@ def _fit_router_head(
     return head
 
 
+def _impostor_composition_study(
+    cfg,
+    unit0,
+    floor0,
+    dicts,
+    archive,
+    e,
+    val_embeds,
+    val_tokens,
+    dt,
+    sens,
+    R0_deploy,
+    margin0_deploy,
+    is_distant,
+):
+    """Why does the calibrated head over-route LOCAL queries as N grows?
+    (P9/V1.2 item 4.) The head is trained with impostor probes drawn from the
+    ENTIRE non-local pool (units 1..N-1), but at deployment the only *distant*
+    queries come from the archive (unit N-1). As N grows the impostor set is
+    dominated by non-archive units whose keys sit elsewhere in embedding space,
+    shifting the fitted route boundary and inflating local false positives.
+
+    We refit the head under three impostor compositions and score them on the
+    SAME deployment queries: local over-route (FP) rate, distant recall, overall
+    route rate, and AUROC(p_route -> distant)."""
+    N = len(dicts)
+    compositions = {
+        "all_others": [dicts[k] for k in range(1, N)],  # the shipped default
+        "archive_only": [dicts[archive]],  # matches the deployment distant source
+        "neighbors_only": (
+            [dicts[k] for k in range(1, N - 1)] or [dicts[archive]]
+        ),  # everything EXCEPT the archive (worst-case mismatch)
+    }
+    loc = ~is_distant
+    out = {}
+    for name, imp in compositions.items():
+        head = _fit_router_head(
+            cfg, unit0, floor0, dicts[0], imp, e, val_embeds, val_tokens, dt, sens
+        )
+        p_route = np.asarray(head.p_wrong(R=R0_deploy, margin=margin0_deploy))
+        route = p_route > cfg.calib_p_route
+        out[name] = {
+            "n_impostor_units": len(imp),
+            "local_overroute": float(route[loc].mean()) if loc.any() else float("nan"),
+            "distant_recall": float(route[is_distant].mean())
+            if is_distant.any()
+            else float("nan"),
+            "route_rate": float(route.mean()),
+            "auroc_p_route_distant": _auroc(is_distant.astype(int), p_route),
+        }
+    return out
+
+
 def run_experiment_v1_wormhole(
     config: Optional[CHLUConfig] = None,
     save_dir: Optional[str] = None,
@@ -379,9 +554,19 @@ def run_experiment_v1_wormhole(
         f"kv/unit={cfg.kv_per_unit} trials/type={cfg.trials_per_type}"
     )
 
-    arms = ["local_only", "gated", "dense", "chain", "calibrated"]
+    arms = ["local_only", "gated", "dense", "chain", "calibrated", "router_mlp"]
     # runs[N] = list of per-seed dict records
     runs = {}
+
+    # FLOPs of one governed Verlet step on ONE unit (the dominant cost); the
+    # router MLP's own forward cost and its parameter count (P9/V1.2 §3).
+    fps_step = _verlet_flops(1, 1, dim, cfg.hidden_dim, cfg)  # per step, per unit
+    router_fwd_flops = _router_mlp_flops(e, cfg.router_hidden_dim, cfg)
+    router_nparams = _router_n_params(e, cfg.router_hidden_dim)
+    print(
+        f"FLOPs model: {fps_step:.3g} FLOP/step/unit | "
+        f"router MLP: {router_nparams} params, {router_fwd_flops:.3g} FLOP/query"
+    )
 
     for N in cfg.n_units_values:
         runs[N] = []
@@ -510,15 +695,23 @@ def run_experiment_v1_wormhole(
                 return np.asarray(pred), qf
 
             arm_pred = {}
-            arm_cost = {}  # unit-steps (FLOP proxy: steps * active units)
+            arm_cost = {}  # legacy unit-steps proxy (steps * active units)
             arm_verlet = {}  # raw Verlet steps
+            arm_flops = {}  # honest FLOPs (P9/V1.2 §3)
+
+            # per-query FLOPs of phase 1 (settle unit 0) and phase 2 legs.
+            f_phase1 = cfg.relax_steps * fps_step  # 1 active unit
+            f_route_wh = cfg.route_steps * 2.0 * fps_step  # wormhole: 2 active units
+            f_route_chain = cfg.route_steps * float(N) * fps_step  # chain: N units
 
             # (a) local-only: no route, read unit 0
             arm_pred["local_only"] = pred_local
             arm_cost["local_only"] = np.full(Q, cfg.relax_steps * 1.0)
             arm_verlet["local_only"] = np.full(Q, float(cfg.relax_steps))
+            arm_flops["local_only"] = np.full(Q, f_phase1)
 
-            # (b) gated wormhole: route iff g > threshold, then read the archive
+            # (b) gated wormhole: route iff g > threshold, then read the archive.
+            # The RESIDUAL is the routing signal => phase 1 is paid on EVERY query.
             route_b = g_smooth > route_thr
             pred_arch_b, qf_b = route_wormhole(g_smooth, cfg.route_steps)
             arm_pred["gated"] = np.where(route_b, pred_arch_b, pred_local)
@@ -526,12 +719,15 @@ def run_experiment_v1_wormhole(
             arm_verlet["gated"] = (cfg.relax_steps + route_b * cfg.route_steps).astype(
                 float
             )
+            arm_flops["gated"] = f_phase1 + route_b * f_route_wh
 
-            # (c) dense always-open (g = 1): always route + read archive, no gate
+            # (c) dense always-open (g = 1): always route + read archive, no gate.
+            # No routing decision => no phase-1 residual needed (only phase 2).
             pred_arch_c, _qf_c = route_wormhole(np.ones(Q), cfg.route_steps)
             arm_pred["dense"] = pred_arch_c
             arm_cost["dense"] = np.full(Q, cfg.route_steps * 2.0)
             arm_verlet["dense"] = np.full(Q, float(cfg.route_steps))
+            arm_flops["dense"] = np.full(Q, f_route_wh)
 
             # (d) chain multi-hop: same gate, but route THROUGH the chain (the
             # query key must diffuse hop-by-hop to reach the archive). Read
@@ -564,6 +760,8 @@ def run_experiment_v1_wormhole(
             arm_verlet["chain"] = (cfg.relax_steps + route_b * cfg.route_steps).astype(
                 float
             )
+            # phase-1 residual gate + N-unit hop diffusion => cost SCALES with N.
+            arm_flops["chain"] = f_phase1 + route_b * f_route_chain
 
             # (e) calibrated tau-gate: learned head decides route via wormhole
             other_dicts = [dicts[archive]] + [dicts[k] for k in range(1, N - 1)]
@@ -589,6 +787,44 @@ def run_experiment_v1_wormhole(
             arm_verlet["calibrated"] = (
                 cfg.relax_steps + route_e * cfg.route_steps
             ).astype(float)
+            # residual-driven head => phase 1 paid on every query.
+            arm_flops["calibrated"] = f_phase1 + route_e * f_route_wh
+
+            # (f) learned-router-MLP: the PHYSICS-FREE baseline (P9/V1.2). A
+            # 2-layer MLP on the raw cue decides route-or-not with NO relaxation
+            # and NO energy. Trained write-time on the same own/impostor probe
+            # set as the calibrated head. Because its decision needs no settle, a
+            # routed query can SKIP phase 1 (read the archive directly); a
+            # non-routed query pays phase 1 for the local answer. This is the
+            # baseline's honest FLOPs advantage the energy gate must overcome.
+            r_cues, r_labels = _router_probes(cfg, dicts[0], other_dicts, e)
+            k_router = jax.random.fold_in(k_query, 777)
+            router = _fit_router_mlp(
+                r_cues,
+                r_labels,
+                e,
+                cfg.router_hidden_dim,
+                k_router,
+                cfg.router_epochs,
+                cfg.router_lr,
+                cfg.router_l2,
+            )
+            router_score = np.asarray(
+                jax.nn.sigmoid(jax.vmap(router)(jnp.asarray(cue)))
+            )
+            route_f = router_score > cfg.router_p_route
+            # routed queries read the archive (reuse pred_arch_c = always-open
+            # route); non-routed read the local answer.
+            arm_pred["router_mlp"] = np.where(route_f, pred_arch_c, pred_local)
+            arm_cost["router_mlp"] = np.where(
+                route_f, cfg.route_steps * 2.0, cfg.relax_steps * 1.0
+            )
+            arm_verlet["router_mlp"] = np.where(
+                route_f, float(cfg.route_steps), float(cfg.relax_steps)
+            )
+            arm_flops["router_mlp"] = router_fwd_flops + np.where(
+                route_f, f_route_wh, f_phase1
+            )
 
             # ---- energy injected through the OPEN gate (arm b, routed) ----
             # E_wh = g * V_c(q0_key, q_arch_key) at the settled routed state.
@@ -610,37 +846,61 @@ def run_experiment_v1_wormhole(
                 "g_smooth": np.asarray(g_smooth),
                 "route_b": np.asarray(route_b),
                 "route_e": np.asarray(route_e),
+                "route_f": np.asarray(route_f),
+                "router_score": router_score,
                 "e_inj": e_inj,
                 "arms": {},
                 "auroc_R0_distant": _auroc(is_distant.astype(int), R0),
                 "auroc_p_route_distant": _auroc(is_distant.astype(int), p_route),
+                "auroc_router_distant": _auroc(is_distant.astype(int), router_score),
                 "floors": floors,
                 "n_local": int((~is_distant).sum()),
                 "n_distant": int(is_distant.sum()),
             }
+            # impostor-composition study (P9/V1.2 item 4) at the largest N only.
+            if N == max(cfg.n_units_values):
+                rec["impostor_study"] = _impostor_composition_study(
+                    cfg,
+                    units[0],
+                    floors[0],
+                    dicts,
+                    archive,
+                    e,
+                    val_embeds,
+                    val_tokens,
+                    dt,
+                    sens,
+                    R0,
+                    margin0,
+                    is_distant,
+                )
             for a in arms:
                 corr = arm_pred[a] == true_tok
                 rec["arms"][a] = {
                     "correct": corr,
                     "cost": np.asarray(arm_cost[a], dtype=float),
                     "verlet": np.asarray(arm_verlet[a], dtype=float),
+                    "flops": np.asarray(arm_flops[a], dtype=float),
                     "acc": float(corr.mean()),
                     "acc_local": float(corr[~is_distant].mean()),
                     "acc_distant": float(corr[is_distant].mean()),
                     "mean_cost": float(np.mean(arm_cost[a])),
                     "mean_verlet": float(np.mean(arm_verlet[a])),
+                    "mean_flops": float(np.mean(arm_flops[a])),
                 }
             runs[N].append(rec)
             print(
                 f"  Q={Q} (local {rec['n_local']}, distant {rec['n_distant']}) "
-                f"AUROC(R0->distant)={rec['auroc_R0_distant']:.3f}"
+                f"AUROC->distant: R0={rec['auroc_R0_distant']:.3f} "
+                f"calib={rec['auroc_p_route_distant']:.3f} "
+                f"router={rec['auroc_router_distant']:.3f}"
             )
             for a in arms:
                 ar = rec["arms"][a]
                 print(
                     f"    {a:12s} acc={ar['acc']:.3f} "
                     f"(local {ar['acc_local']:.3f} / distant {ar['acc_distant']:.3f}) "
-                    f"cost={ar['mean_cost']:.0f} unit-steps"
+                    f"flops={ar['mean_flops']:.3g} (cost={ar['mean_cost']:.0f} u-steps)"
                 )
 
     # -----------------------------------------------------------------
@@ -655,12 +915,15 @@ def run_experiment_v1_wormhole(
             accs_l = np.array([r["arms"][a]["acc_local"] for r in recs])
             accs_d = np.array([r["arms"][a]["acc_distant"] for r in recs])
             costs = np.array([r["arms"][a]["mean_cost"] for r in recs])
+            flops = np.array([r["arms"][a]["mean_flops"] for r in recs])
             entry["arms"][a] = {
                 "acc_mean": float(accs.mean()),
                 "acc_std": float(accs.std()),
                 "acc_local_mean": float(accs_l.mean()),
                 "acc_distant_mean": float(accs_d.mean()),
                 "cost_mean": float(costs.mean()),
+                "flops_mean": float(flops.mean()),
+                "flops_std": float(flops.std()),
             }
         entry["auroc_R0_distant_mean"] = float(
             np.nanmean([r["auroc_R0_distant"] for r in recs])
@@ -668,6 +931,60 @@ def run_experiment_v1_wormhole(
         entry["auroc_p_route_distant_mean"] = float(
             np.nanmean([r["auroc_p_route_distant"] for r in recs])
         )
+        entry["auroc_router_distant_mean"] = float(
+            np.nanmean([r["auroc_router_distant"] for r in recs])
+        )
+        entry["router_n_params"] = int(router_nparams)
+
+        # ---- per-workload-mix accuracy + FLOPs (P9/V1.2 item 2) ----
+        # Each query is scored independently against a FIXED calibration pool,
+        # so a {w_local, w_distant} deployment mix is an exact reweighting of the
+        # balanced per-query outcomes (no re-run needed).
+        mixes = {}
+        for mix in cfg.workload_mixes:
+            w_l, w_d = float(mix[0]), float(mix[1])
+            label = f"{int(round(w_l * 100))}/{int(round(w_d * 100))}"
+            m_arms = {}
+            for a in arms:
+                accs_mix, flops_mix = [], []
+                for r in recs:
+                    ar = r["arms"][a]
+                    corr = ar["correct"]
+                    fl = ar["flops"]
+                    dist = r["is_distant"]
+                    accs_mix.append(w_l * corr[~dist].mean() + w_d * corr[dist].mean())
+                    flops_mix.append(w_l * fl[~dist].mean() + w_d * fl[dist].mean())
+                accs_mix = np.array(accs_mix)
+                flops_mix = np.array(flops_mix)
+                m_arms[a] = {
+                    "acc_mean": float(accs_mix.mean()),
+                    "acc_std": float(accs_mix.std()),
+                    "flops_mean": float(flops_mix.mean()),
+                    "flops_std": float(flops_mix.std()),
+                }
+            mixes[label] = {"w_local": w_l, "w_distant": w_d, "arms": m_arms}
+        entry["mixes"] = mixes
+
+        # ---- impostor-composition study (P9/V1.2 item 4), largest N only ----
+        if recs and "impostor_study" in recs[0]:
+            names = list(recs[0]["impostor_study"].keys())
+            imp_agg = {}
+            for nm in names:
+                for metric in (
+                    "local_overroute",
+                    "distant_recall",
+                    "route_rate",
+                    "auroc_p_route_distant",
+                ):
+                    vals = np.array([r["impostor_study"][nm][metric] for r in recs])
+                    imp_agg.setdefault(nm, {})[metric + "_mean"] = float(
+                        np.nanmean(vals)
+                    )
+                    imp_agg[nm][metric + "_std"] = float(np.nanstd(vals))
+                imp_agg[nm]["n_impostor_units"] = int(
+                    recs[0]["impostor_study"][nm]["n_impostor_units"]
+                )
+            entry["impostor_study"] = imp_agg
         # gate-selectivity confusion matrix (arm b): open=g>0.5 vs is_distant
         cm = np.zeros((2, 2), dtype=int)  # [open/closed, distant/local]
         e_inj_all = []
@@ -705,10 +1022,12 @@ def run_experiment_v1_wormhole(
             npz[pre + "R0"] = r["R0"]
             npz[pre + "z"] = r["z"]
             npz[pre + "g_smooth"] = r["g_smooth"]
+            npz[pre + "router_score"] = r["router_score"]
             npz[pre + "e_inj"] = r["e_inj"]
             for a in arms:
                 npz[pre + a + "_correct"] = r["arms"][a]["correct"]
                 npz[pre + a + "_cost"] = r["arms"][a]["cost"]
+                npz[pre + a + "_flops"] = r["arms"][a]["flops"]
     metrics_path = os.path.join(results_dir, "exp_v1_wormhole_metrics.npz")
     np.savez(metrics_path, **npz)
     summary_path = os.path.join(results_dir, "exp_v1_wormhole_summary.json")
@@ -738,6 +1057,11 @@ def run_experiment_v1_wormhole(
         arms,
         os.path.join(save_dir, "exp_v1_wormhole_cost_accuracy.png"),
     )
+    plot_v1_wormhole_flops(
+        summary,
+        arms,
+        os.path.join(save_dir, "exp_v1_wormhole_flops_accuracy.png"),
+    )
     plot_v1_wormhole_selectivity(
         runs,
         summary,
@@ -754,21 +1078,43 @@ def run_experiment_v1_wormhole(
     for N in cfg.n_units_values:
         ent = summary["by_N"][str(N)]
         print(
-            f"\n N={N} (AUROC R0->distant={ent['auroc_R0_distant_mean']:.3f}, "
-            f"gate precision/recall for distant = "
-            f"{ent['gate_precision_distant']:.2f}/{ent['gate_recall_distant']:.2f})"
+            f"\n N={N} | AUROC->distant: R0={ent['auroc_R0_distant_mean']:.3f} "
+            f"calib={ent['auroc_p_route_distant_mean']:.3f} "
+            f"router-MLP={ent['auroc_router_distant_mean']:.3f} "
+            f"({ent['router_n_params']} params) | "
+            f"gate P/R={ent['gate_precision_distant']:.2f}/"
+            f"{ent['gate_recall_distant']:.2f}"
         )
         for a in arms:
             ar = ent["arms"][a]
             print(
                 f"   {a:12s} acc={ar['acc_mean']:.3f}±{ar['acc_std']:.3f} "
                 f"(local {ar['acc_local_mean']:.3f} / distant "
-                f"{ar['acc_distant_mean']:.3f}) cost={ar['cost_mean']:.0f}"
+                f"{ar['acc_distant_mean']:.3f}) flops={ar['flops_mean']:.3g}"
             )
         print(
             f"   energy injected (open gate): mean={ent['energy_injected_mean']:.3f} "
             f"max={ent['energy_injected_max']:.3f} (bounded)"
         )
+        # per-workload-mix accuracy + FLOPs: gated wormhole vs learned router
+        print("   -- accuracy / FLOPs by workload mix (local/distant %): --")
+        for label, mx in ent["mixes"].items():
+            g = mx["arms"]["gated"]
+            rt = mx["arms"]["router_mlp"]
+            print(
+                f"     mix {label:>6s}  gated acc={g['acc_mean']:.3f} "
+                f"flops={g['flops_mean']:.3g}  |  router acc={rt['acc_mean']:.3f} "
+                f"flops={rt['flops_mean']:.3g}"
+            )
+        if "impostor_study" in ent:
+            print("   -- impostor-composition study (calibrated head): --")
+            for nm, st in ent["impostor_study"].items():
+                print(
+                    f"     {nm:14s} (impostor units={st['n_impostor_units']}) "
+                    f"local-overroute={st['local_overroute_mean']:.3f} "
+                    f"distant-recall={st['distant_recall_mean']:.3f} "
+                    f"AUROC={st['auroc_p_route_distant_mean']:.3f}"
+                )
     print("=" * 64 + "\n")
 
     return {"runs": runs, "summary": summary}
