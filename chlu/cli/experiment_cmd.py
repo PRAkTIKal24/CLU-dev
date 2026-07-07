@@ -158,6 +158,18 @@ def setup_experiment_parsers(subparsers):
                                help='Quick mode (2 seeds, 60 epochs, short probes)')
     exp_mp_parser.set_defaults(func=cmd_exp_minus_physics)
 
+    # exp-v1-hopfield-gate
+    exp_v1hg_parser = subparsers.add_parser(
+        'exp-v1-hopfield-gate',
+        help='Run the V1.1 gate stack on a Hopfield memory (memory-agnostic check)'
+    )
+    exp_v1hg_parser.add_argument('--project', help='Project name to use')
+    exp_v1hg_parser.add_argument('--seed', type=int, help='Base random seed')
+    exp_v1hg_parser.add_argument('--quick', action='store_true', help='Quick mode')
+    exp_v1hg_parser.add_argument('--rho', type=float, help='embedding correlation stress')
+    exp_v1hg_parser.add_argument('--noise', type=float, help='cue eval-noise stress')
+    exp_v1hg_parser.set_defaults(func=cmd_exp_v1_hopfield_gate)
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -332,6 +344,33 @@ def cmd_exp_minus_physics(args):
             quick=bool(getattr(args, 'quick', False)),
         )
         console.print("✓ minus-the-physics completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+    return 0
+
+
+def cmd_exp_v1_hopfield_gate(args):
+    """Run the V1.1 gate stack on a Hopfield memory."""
+    console.print("[bold cyan]Running V1.1: gate stack on a Hopfield memory[/bold cyan]")
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+    config.project.save_dir = str(paths['plots'])
+    if getattr(args, 'rho', None) is not None:
+        config.experiment_v1_gate.hopfield_gate_correlation = args.rho
+    if getattr(args, 'noise', None) is not None:
+        config.experiment_v1_gate.hopfield_gate_eval_noise = args.noise
+
+    from ..experiments.exp_v1_hopfield_gate import run_experiment_v1_hopfield_gate
+    try:
+        run_experiment_v1_hopfield_gate(
+            config=config, save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            quick=bool(getattr(args, 'quick', False)),
+        )
+        console.print("✓ V1.1 hopfield-gate completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1

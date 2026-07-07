@@ -398,6 +398,16 @@ class ExperimentV1GateConfig:
     # classification band: |delta| below this = "comparable" (acc & AURC units)
     regime_comparable_margin: float = 0.03
 
+    # --- v1.1: gate stack on a Hopfield memory (exp_v1_hopfield_gate) ---
+    # The Hopfield memory is near-perfect on vanilla MQAR (v1-pivot), so the
+    # gate has nothing to rank; these apply a stress so it errs and the
+    # calibration-transfer / allocation / LTT metrics carry signal. Default 0
+    # = vanilla (degenerate, near-perfect). Correlation reuses the regime-map
+    # clustered-embedding stress; eval_noise adds Gaussian sigma to BOTH the
+    # self-test probe cues and the deployment cues (matched difficulty).
+    hopfield_gate_correlation: float = 0.0
+    hopfield_gate_eval_noise: float = 0.0
+
 
 @dataclass
 class ExperimentV1WormholeConfig:
