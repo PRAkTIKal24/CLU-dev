@@ -62,6 +62,7 @@ def run_experiment_d(
     tilt_delta: Optional[float] = None,
     tilt_n: Optional[int] = None,
     sleep_mode: Optional[str] = None,
+    anchor_lambda: Optional[float] = None,
 ) -> dict:
     """
     Experiment D: SO(2) Goldstone memory.
@@ -103,6 +104,8 @@ def run_experiment_d(
         config.experiment_d.tilt_n = tilt_n
     if sleep_mode is not None:
         config.experiment_d.sleep_mode = sleep_mode
+    if anchor_lambda is not None:
+        config.training.anchor_data_energy_lambda = anchor_lambda
 
     # sleep_mode="off" => wake-only training (sleep_frequency -> inf), the
     # data-pinned regime that does NOT erode the designed vacuum (v2-full-runs
@@ -110,6 +113,30 @@ def run_experiment_d(
     # epoch-0 sleep event can fire — matches the validated wake-only run.
     if config.experiment_d.sleep_mode == "off":
         config.training.sleep_frequency = 10**9
+
+    # Erosion guard (fix-pack-4 item 4): a designed degenerate vacuum trained
+    # with an active sleep phase for many epochs and NO anchor is the exact
+    # sleep-erosion regime (handover §7.14 / anchor-robustness): the wake–sleep
+    # CD sleep phase inverts the SO(2) ring into a local maximum (r*->0). Warn
+    # loudly, citing the cure, but do not change behavior (UX guard only).
+    if (
+        config.experiment_d.sleep_mode != "off"
+        and config.experiment_d.train_epochs > 300
+        and config.experiment_d.potential_type == "so2_invariant"
+        and config.training.anchor_data_energy_lambda == 0.0
+    ):
+        warnings.warn(
+            f"exp-d: sleep_mode='on', train_epochs="
+            f"{config.experiment_d.train_epochs} (>300) on a DESIGNED SO(2) "
+            "vacuum with NO V(data) anchor (training.anchor_data_energy_lambda"
+            "=0.0). This is the sleep-erosion regime: wake–sleep CD inverts the "
+            "degenerate ring into a local maximum (r*->0) beyond ~300–600 ep "
+            "(handover §7.14 / anchor-robustness P11). Set "
+            "anchor_data_energy_lambda>0 (e.g. 10–100), or sleep_mode='off', or "
+            "train_epochs<=300 to keep the vacuum intact.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
 
     save_dir = config.project.save_dir or "results/"
     models_dir = models_dir or os.path.join(save_dir, "../models")

@@ -134,6 +134,12 @@ def train_chlu(
     # Mass-specific lr (critique P5/G4): run every unit's log_mass on its own
     # Adam slot at learning_rate * mass_lr_mult. Default 1.0 = bit-compatible.
     mass_lr_mult = config.training.mass_lr_mult
+    # V(data)-energy anchor (anchor-robustness P11; TrainingConfig docstring):
+    # add lambda*(mean_i V(anchor_i) - target)^2 to the wake loss. Default 0.0
+    # = OFF = bit-compatible (term never touched). Set > 0 to pin the potential
+    # on the data manifold and stop the sleep phase inverting a designed
+    # degenerate vacuum along its flat direction (handover §7.14).
+    anchor_lambda = config.training.anchor_data_energy_lambda
     if sleep_temperature is None:
         sleep_temperature = config.training.sleep_temperature
     if langevin_noise is None:
@@ -207,6 +213,17 @@ def train_chlu(
 
     losses = []
 
+    # Precompute the V(data) anchor ONCE, from the INITIAL model = the epoch-0
+    # target (anchor-robustness P11). anchor_data = each trajectory's window
+    # start q; anchor_target = mean V there before any training. Skipped (both
+    # None) when the anchor is off, so the historical path is untouched.
+    if anchor_lambda > 0.0:
+        anchor_data = data[:, 0, :dim]
+        anchor_target = jnp.mean(jax.vmap(model.potential_net)(anchor_data))
+    else:
+        anchor_data = None
+        anchor_target = None
+
     # Adaptive-K spawning accumulator (only used when the model carries a
     # trainable field and friction_field_adaptive_k is set).
     adapt_active = ff_adaptive_k and getattr(model, "friction_field", None) is not None
@@ -267,6 +284,16 @@ def train_chlu(
             # (gamma_phi >= 0, so this term drives friction at data to 0.)
             if field is not None:
                 loss = loss + ff_protect_lambda * jnp.mean(jax.vmap(field)(q_true))
+
+            # V(data)-energy anchor (anchor-robustness P11): pin the mean
+            # potential value on the data manifold to its epoch-0 level so the
+            # sleep phase cannot invert a designed flat (Goldstone) direction
+            # the wake MSE is blind to. Static branch on a Python float =>
+            # OFF at lambda=0 is bit-compatible. Uses the live (differentiable)
+            # potential so the gradient flows to V's parameters.
+            if anchor_lambda > 0.0:
+                v_anchor = jax.vmap(model.potential_net)(anchor_data)
+                loss = loss + anchor_lambda * (jnp.mean(v_anchor) - anchor_target) ** 2
 
             return loss
 
