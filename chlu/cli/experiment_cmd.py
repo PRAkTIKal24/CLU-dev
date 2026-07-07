@@ -147,6 +147,17 @@ def setup_experiment_parsers(subparsers):
                                help='Quick mode (1 seed, 60 epochs, short eval)')
     exp_s1_parser.set_defaults(func=cmd_exp_s1)
 
+    # exp-minus-physics
+    exp_mp_parser = subparsers.add_parser(
+        'exp-minus-physics',
+        help='Run the CLU-minus-the-physics G2 controls (non-symplectic twins)'
+    )
+    exp_mp_parser.add_argument('--project', help='Project name to use')
+    exp_mp_parser.add_argument('--seed', type=int, help='Base random seed')
+    exp_mp_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (2 seeds, 60 epochs, short probes)')
+    exp_mp_parser.set_defaults(func=cmd_exp_minus_physics)
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -300,6 +311,30 @@ def cmd_exp_d(args):
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
 
+    return 0
+
+
+def cmd_exp_minus_physics(args):
+    """Run the CLU-minus-the-physics G2 controls."""
+    console.print("[bold cyan]Running CLU minus the physics (G2 controls)[/bold cyan]")
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+    config.project.save_dir = str(paths['plots'])
+
+    from ..experiments.exp_minus_physics import run_experiment_minus_physics
+    try:
+        run_experiment_minus_physics(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            quick=bool(getattr(args, 'quick', False)),
+        )
+        console.print("✓ minus-the-physics completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
     return 0
 
 

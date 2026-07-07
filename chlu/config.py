@@ -661,6 +661,46 @@ class ExperimentS1Config:
 
 
 @dataclass
+class ExperimentMinusPhysicsConfig:
+    """Configuration for the 'CLU minus the physics' controls (G2 / P6).
+
+    Three identical-capacity arms — CHLU (symplectic), BrokenVolumeCHLU
+    (det J != 1), UnconstrainedTwin (free residual recurrence) — run through
+    ONE measurement protocol on the SO(2)-degenerate circle-vacuum task,
+    isolating what symplecticity (integrator structure | volume conservation)
+    functionally buys. See chlu/experiments/exp_minus_physics.py.
+    """
+
+    dim: int = 4
+    hidden_dim: int = 64
+    # "mlp" keeps the potential architecture IDENTICAL between CHLU and the
+    # broken-volume arm, so the ablation isolates symplecticity (not a designed
+    # SO(2) potential). Emergent flat direction, if any, comes from the data.
+    potential_type: str = "mlp"
+    kinetic_energy_mode: str = "newtonian_learned"
+    dt: float = 0.05
+    train_epochs: int = 150
+    n_seeds: int = 3
+    measure_erosion: bool = True
+
+    # Dataset (circle-vacuum, shared with Experiment D)
+    n_points: int = 256
+    seq_len: int = 65
+    circle_radius: float = 1.0
+
+    # Measurement harness
+    settle_gamma: float = 0.1
+    settle_steps: int = 2000
+    # BIBO diagnostic: settled radius above settle_bound * R counts as diverged
+    # (the volume-breaking arms lose the bounded attractor; F5 Prop-10 / §7.7).
+    settle_bound: float = 20.0
+    probe_gamma: float = 0.05
+    probe_steps: int = 4000
+    probe_kick: float = 0.1
+    eval_steps: int = 400
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -705,6 +745,9 @@ class CHLUConfig:
         default_factory=ExperimentLatticeConfig
     )
     experiment_s1: ExperimentS1Config = field(default_factory=ExperimentS1Config)
+    experiment_minus_physics: ExperimentMinusPhysicsConfig = field(
+        default_factory=ExperimentMinusPhysicsConfig
+    )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
@@ -785,6 +828,12 @@ def load_config(path: Path) -> CHLUConfig:
         experiment_s1=ExperimentS1Config(
             **filter_valid_fields(ExperimentS1Config, data.get("experiment_s1", {}))
         ),
+        experiment_minus_physics=ExperimentMinusPhysicsConfig(
+            **filter_valid_fields(
+                ExperimentMinusPhysicsConfig,
+                data.get("experiment_minus_physics", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -813,6 +862,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_v1_wormhole": asdict(config.experiment_v1_wormhole),
         "experiment_lattice": asdict(config.experiment_lattice),
         "experiment_s1": asdict(config.experiment_s1),
+        "experiment_minus_physics": asdict(config.experiment_minus_physics),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
