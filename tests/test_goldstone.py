@@ -23,7 +23,12 @@ import jax.numpy as jnp  # noqa: E402
 import numpy as np  # noqa: E402
 
 from chlu.core.chlu_unit import CHLU  # noqa: E402
-from chlu.core.potentials import SO2InvariantPotential, TiltedPotential  # noqa: E402
+from chlu.core.potentials import (  # noqa: E402
+    LinearSpurionPotential,
+    SO2InvariantPotential,
+    TiltedPotential,
+    channel_spurion_direction,
+)
 from chlu.data.circle_vacuum import generate_circle_vacuum  # noqa: E402
 from chlu.experiments.goldstone_harness import (  # noqa: E402
     MexicanHatPotential,
@@ -296,6 +301,136 @@ def test_spectrum_probe_gmor_tilt():
     q_s, _ = settle(model0, jnp.array([1.5, 0.4]), dt=DT, gamma=0.1, steps=3000)
     r_s = float(jnp.sqrt(q_s[0] ** 2 + q_s[1] ** 2))
     assert abs(r_s - f) < 1e-6
+
+
+# ---------------------------------------------------------------------------
+# Linear ambient spurion: GMOR proper, mu^2 F^2 = delta * Sigma exactly
+# (condensate-resolving probe; F-1). The angular tilt above cannot see Sigma.
+# ---------------------------------------------------------------------------
+
+
+def _hat_spurion_vacuum(lam: float, f: float, delta: float) -> float:
+    """Newton solve of the tilted vacuum radius r*: 4*lam*r*(r^2-f^2) = delta."""
+    r = f
+    for _ in range(100):
+        g = 4.0 * lam * r * (r * r - f * f) - delta
+        dg = 4.0 * lam * (3.0 * r * r - f * f)
+        step = g / dg
+        r -= step
+        if abs(step) <= 1e-17 * max(1.0, abs(r)):
+            break
+    return r
+
+
+def test_linear_spurion_zero_delta_is_bit_exact():
+    """delta = 0 reduces to the base potential bit-exactly (closed-spurion)."""
+    pot = SO2InvariantPotential(dim=4, hidden=16, key=jax.random.PRNGKey(3))
+    spur = LinearSpurionPotential(pot, 0.0, channel_spurion_direction(4, 0.6))
+    qs = jax.random.normal(jax.random.PRNGKey(4), (32, 4))
+    for q in qs:
+        assert float(spur(q)) == float(pot(q))  # bit-exact, not just close
+
+    # and CHLU adds no wrapper at all when spurion_delta == 0.0
+    model = CHLU(dim=4, hidden=8, potential_type="so2_invariant", spurion_delta=0.0)
+    assert not isinstance(model.potential_net, LinearSpurionPotential)
+    model_s = CHLU(dim=4, hidden=8, potential_type="so2_invariant", spurion_delta=0.02)
+    assert isinstance(model_s.potential_net, LinearSpurionPotential)
+
+
+def test_linear_spurion_gmor_exact():
+    """mu^2 * F^2 = delta * Sigma for every delta, to machine precision.
+
+    Precision note: the angular curvature at the vacuum is K_ang = delta/r*,
+    which the autodiff Hessian reconstructs as a difference of O(||K||) terms
+    (the hat evaluates r^2 - f^2 explicitly). So the ABSOLUTE deviation sits at
+    the roundoff floor eps*||K||*F^2 for every delta, while the RELATIVE
+    deviation is floored at ~eps/delta. Both are asserted below; the law itself
+    is exact (a cancellation-free Hessian gives 2.2e-16 relative at all delta).
+    """
+    lam, f, inertia = 0.7, 1.2, 1.3
+    hat = MexicanHatPotential(lam=lam, f=f, k_spec=None)
+    eps = float(np.finfo(np.float64).eps)
+    k_scale = 8.0 * lam * f**2  # radial curvature ~ ||Hess V|| at the vacuum
+
+    for delta in (1e-6, 1e-3, 1e-2, 0.1, 0.3):
+        u = channel_spurion_direction(2, 0.0)
+        spur = LinearSpurionPotential(hat, delta, u)
+        model = clu_with_potential(
+            spur, dim=2, kinetic_mode="newtonian_learned", inertia=(inertia, inertia)
+        )
+        r_star = _hat_spurion_vacuum(lam, f, delta)
+        q_star = jnp.asarray(r_star * np.asarray(u))
+        probe = spectrum_probe(model, q_star)
+        assert float(probe.grad_norm) < 1e-12, f"not a vacuum: {probe.grad_norm}"
+
+        # The three GMOR objects, measured independently
+        mu_sq = float(probe.mu_sq[0])  # angular (pseudo-Goldstone) mode
+        F_sq = inertia * r_star**2  # decay constant^2 = coset inertia
+        sigma = r_star  # condensate = vacuum radius
+
+        abs_dev = abs(mu_sq * F_sq - delta * sigma)
+        assert abs_dev < 8.0 * eps * k_scale * F_sq, (
+            f"GMOR violated at delta={delta}: mu^2 F^2 = {mu_sq * F_sq!r} "
+            f"vs delta*Sigma = {delta * sigma!r} (abs dev {abs_dev:.3e})"
+        )
+        if delta >= 1e-2:  # cancellation harmless => relative exactness visible
+            assert abs(mu_sq * F_sq / (delta * sigma) - 1.0) < 1e-12
+
+    # The condensate is what the ANGULAR tilt cannot see: it runs with delta.
+    r_lo = _hat_spurion_vacuum(lam, f, 1e-6)
+    r_hi = _hat_spurion_vacuum(lam, f, 0.3)
+    assert r_hi - r_lo > 1e-3, "vacuum radius must run with the linear spurion"
+
+    # Contrast: the shipped angular tilt leaves the vacuum radius EXACTLY at f,
+    # so it measures only the product mu^2 F^2 = delta*n^2 -- Sigma is invisible.
+    tilted = clu_with_potential(
+        TiltedPotential(hat, tilt_delta=0.3, tilt_n=1),
+        dim=2,
+        kinetic_mode="newtonian_learned",
+        inertia=(inertia, inertia),
+    )
+    q_tilt = jnp.array([-f, 0.0])  # tilted vacuum: theta = pi, radius unchanged
+    assert float(spectrum_probe(tilted, q_tilt).grad_norm) < 1e-12
+
+
+def test_linear_spurion_direction_independence():
+    """V_base is channel-invariant => mu^2 is independent of the spurion angle."""
+    lam, f, inertia, delta = 0.7, 1.2, 1.3, 0.05
+    hat = MexicanHatPotential(lam=lam, f=f, k_spec=None)
+    r_star = _hat_spurion_vacuum(lam, f, delta)
+
+    mus = []
+    for angle in (0.0, 0.9, -2.3):
+        u = channel_spurion_direction(2, angle)
+        model = clu_with_potential(
+            LinearSpurionPotential(hat, delta, u),
+            dim=2,
+            kinetic_mode="newtonian_learned",
+            inertia=(inertia, inertia),
+        )
+        q_star = jnp.asarray(r_star * np.asarray(u))
+        probe = spectrum_probe(model, q_star)
+        assert float(probe.grad_norm) < 1e-12
+        mus.append(float(probe.mu_sq[0]))
+    assert np.allclose(mus, mus[0], rtol=1e-12), f"angle-dependent mu^2: {mus}"
+
+
+def test_linear_spurion_nlo_lec_resonance_saturation():
+    """LO-GMOR relative error = delta / (M * mu_rad^2 * f): the leading LEC is
+    saturated by the radial (sigma/Higgs) resonance."""
+    lam, f, inertia, delta = 0.7, 1.2, 1.3, 1e-4
+    mu_rad_sq_0 = 8.0 * lam * f**2 / inertia  # radial spectral mass^2 at delta=0
+
+    r_star = _hat_spurion_vacuum(lam, f, delta)
+    mu_sq = delta / (inertia * r_star)  # exact (verified by the test above)
+    mu_sq_lo = delta * f / (inertia * f**2)  # LO: Sigma(0) = f, F^2(0) = M f^2
+
+    measured = (mu_sq_lo - mu_sq) / mu_sq
+    predicted = delta / (inertia * mu_rad_sq_0 * f)
+    assert abs(measured / predicted - 1.0) < 1e-3, (
+        f"LEC not resonance-saturated: measured {measured:.6e} "
+        f"vs predicted {predicted:.6e} (ratio {measured / predicted:.6f})"
+    )
 
 
 # ---------------------------------------------------------------------------
