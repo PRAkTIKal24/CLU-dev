@@ -297,34 +297,31 @@ class CHLU(eqx.Module):
         """
         Per-coordinate *inertial* mass M_eff at p ≈ 0 (F5 Def-2 / §2.1 table).
 
+        Exact alias of ``effective_inertia`` — the inertia the dynamics
+        actually invert. Kept as a separate name because the discrete-FDT
+        Langevin noise scale is documented against it (F5 Prop-9):
+
+            sigma_i* = sqrt(M_eff_i * T * gamma * (2 - gamma)).
+
         This is the kinetic-term inertia (velocity = p / M_eff near rest) —
         not to be confused with the *spectral* mass mu of a potential mode.
-        Per kinetic mode:
-            - "newtonian_identity": M_eff = 1        (identity inertia)
-            - "newtonian_learned":  M_eff = M        (learned diagonal mass)
-            - "relativistic":       M_eff = m0 * M   (rest mass × learned mass)
-        where M = softplus(log_mass).
 
-        Used e.g. for the discrete-FDT Langevin noise scale
-        sigma_i* = sqrt(M_eff_i * T * gamma * (2 - gamma)) (F5 Prop-9).
+        HISTORY (bug fix, 2026-07-09): this method used to return the raw
+        ``softplus(log_mass)``, which (a) ignored ``tie_channel_mass`` — while
+        ``mass_vector``, and hence ``H``/``T``, applies it — and (b) omitted the
+        ``+1e-6`` that ``H`` inverts. ``stochastic_step`` builds the
+        ``noise_mode="fdt"`` scale from here, so on a ``tie_channel_mass=True``
+        checkpoint the noise was injected with a *different* inertia than the
+        dynamics invert: each channel coordinate then equilibrated at its own
+        temperature ``T_eff,i = T * M_noise,i / M_dyn,i`` and the stationary law
+        was **not** ``exp(-H/T)`` — no Gibbs invariant (measured: channel
+        temperature ratio off by up to 8.4%). Delegating here restores
+        Maxwell-Boltzmann ``Var(p_i) = effective_inertia()_i * T``.
 
         Returns:
             Effective inertial mass vector of shape (dim,)
         """
-        M = jax.nn.softplus(self.log_mass)
-
-        if self.kinetic_mode == "newtonian_identity":
-            return jnp.ones(self.dim)
-        elif self.kinetic_mode == "newtonian_learned":
-            return M
-        elif self.kinetic_mode == "relativistic":
-            # T = c*sqrt(p^T M^-1 p + (m0 c)^2)  =>  grad_p T ≈ p/(m0 M) at p≈0
-            return self.rest_mass * M
-        else:
-            raise ValueError(
-                f"Unknown kinetic mode: {self.kinetic_mode}. "
-                f"Must be 'newtonian_identity', 'newtonian_learned', or 'relativistic'."
-            )
+        return self.effective_inertia()
 
     def step(self, state: tuple, dt: float, gamma: float = 0.0) -> tuple:
         """
