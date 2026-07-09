@@ -286,6 +286,59 @@ class TiltedPotential(eqx.Module):
         return self.base(q) + self.tilt_delta * jnp.cos(self.tilt_n * theta)
 
 
+class LinearSpurionPotential(eqx.Module):
+    """
+    Controlled explicit SO(2) breaking, ChPT-style: V(q) - delta * (u . q).
+
+    A *linear ambient* spurion along a fixed unit direction ``u`` — the exact
+    analogue of the quark-mass term ``m_q * q̄q`` of chiral perturbation theory,
+    which is linear in the ambient (sigma-model) field rather than a function
+    of the coset angle alone.
+
+    Why this and not ``TiltedPotential``: the shipped tilt
+    ``delta * cos(n * theta)`` is *radius-independent*, so it normalizes the
+    condensate away and can only ever measure the product ``mu^2 F^2 = delta *
+    n^2``. The linear spurion resolves the three GMOR objects independently:
+
+        mu^2 = delta / (M_ch * r*)        angular (pseudo-Goldstone) curvature
+        F^2  = M_ch * r*^2                decay constant (coset inertia)
+        Sigma = r*(delta)                 condensate / order parameter,
+                                          equivalently -dE_vac/d delta
+
+    whence **GMOR is exact, not asymptotic**, for every delta:
+
+        mu^2 * F^2 = delta * Sigma
+
+    (Stationarity along u gives V_base'(r*) = delta; the angular curvature at
+    the vacuum is then K_theta_theta / r*^2 = delta / r* exactly.) Unlike the
+    angular tilt, ``r*`` *runs* with delta — which is precisely the measurable
+    content: LO-GMOR (evaluated at the unbroken condensate Sigma(0) = f) carries
+    a predicted relative error ``delta / (M_ch * mu_rad^2 * r*)``, i.e. the
+    leading low-energy constant is **saturated by the radial (sigma/Higgs)
+    resonance** ``mu_rad``.
+
+    ``delta`` is a fixed probe parameter (static, not learned); ``direction`` is
+    an array leaf so the same wrapper composes under ``eqx.tree_at`` on any
+    trained checkpoint, at any breaking strength, without retraining. Use
+    ``channel_spurion_direction`` to build ``u`` inside the SO(2) channel plane
+    (coords (0, 1)) — a spurion with support on spectator coordinates would
+    shift the spectator vacuum and spoil the channel/spectator decoupling.
+
+    Certificate: ``delta = 0`` reduces to ``base`` bit-exactly (the spurion term
+    is an exact zero and ``v - 0.0 == v`` in IEEE-754 for every finite ``v``).
+
+    Unlike ``TiltedPotential`` the gradient is globally smooth (no atan2), so
+    this probe is safe on states passing through the channel origin.
+    """
+
+    base: eqx.Module
+    spurion_delta: float = eqx.field(static=True)
+    direction: jnp.ndarray  # (dim,) unit vector u
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        return self.base(q) - self.spurion_delta * jnp.dot(self.direction, q)
+
+
 class IntraWormholePotential(eqx.Module):
     """
     Intra-unit wormhole, construction (b): a smooth *nonlocal throat* added
@@ -425,6 +478,24 @@ class WormholeChannels(eqx.Module):
         """
         delta = self.deltas()[0]
         return q + g_fn(q) * delta, p
+
+
+def channel_spurion_direction(dim: int, angle: float = 0.0) -> jnp.ndarray:
+    """
+    Unit vector u = (cos angle, sin angle, 0, ..., 0) in R^dim: a spurion
+    direction lying entirely inside the SO(2) channel plane (coords (0, 1)),
+    for ``LinearSpurionPotential``. Zero support on the spectator coordinates,
+    so the spectator vacuum (and hence the channel/spectator decoupling of
+    ``SO2InvariantPotential``) is untouched by the breaking.
+
+    Because V_base is exactly channel-invariant, every ``angle`` is physically
+    equivalent (it merely selects where on the vacuum circle the tilted vacuum
+    sits) — a free consistency check for the GMOR probe.
+    """
+    if dim < 2:
+        raise ValueError(f"channel_spurion_direction requires dim >= 2, got dim={dim}")
+    u = jnp.zeros((dim,))
+    return u.at[0].set(jnp.cos(angle)).at[1].set(jnp.sin(angle))
 
 
 def so2_generator(dim: int, i: int = 0, j: int = 1) -> jnp.ndarray:
