@@ -674,6 +674,32 @@ class ExperimentPaidAccessConfig:
     latch_radius: float = 3.0  # vacuum-circle radius f for SO(2) sector
     latch_momentum: float = 0.5  # p scale for the charge Q = p^T X q
 
+    # --- certificate payoff A: router latch erasure (§7.2b, referee F3.1) ---
+    # A cloud of incoming states inside the capture ball is pushed through each
+    # arm. The wormhole (canonical translation, det J = 1) is injective: it
+    # TRANSPORTS the spread of Q by the exact constant p^T X Delta. The
+    # no-physics router (q := exit, det J = 0) is non-injective: every incoming
+    # state exits with the same Q => the latch is ERASED (Var(Q_out) = 0).
+    payoff_latch_samples: int = 16  # incoming states drawn in the capture ball
+    payoff_capture_jitter: float = 0.3  # <= capture_radius; spread of incoming q
+
+    # --- certificate payoff B: coercive-exit BIBO (§7.4, theory issue 7) ---
+    # V(q) = 0.5*k*q0^2 - eps*q0^4 (+ transverse confinement): coercive only
+    # inside the component |q0| < x_b = sqrt(k/(4 eps)); barrier V_b =
+    # k^2/(16 eps). Exits are requested BOTH inside and outside that component.
+    # NOTE (why an energy-only test is not enough): V(4.0) < V_b even though
+    # 4.0 > x_b -- the receipt must test COMPONENT MEMBERSHIP, not just energy.
+    bibo_k: float = 1.0  # coercive curvature near the origin
+    bibo_quartic: float = 0.02  # -eps*q0^4 non-coercive tail => x_b = 3.536
+    bibo_exit_distances: List[float] = field(
+        default_factory=lambda: [1.0, 2.0, 3.0, 3.6, 4.0, 5.0]
+    )
+    bibo_init_momentum: float = 0.3  # p0 along coord 0 at the entrance
+    bibo_steps: int = 2000  # T; r* measured at T and 2T (growth test)
+    bibo_gamma: float = 0.02  # dissipation: bounded arms must settle
+    bibo_escape_radius: float = 20.0  # ||q|| beyond this counts as escaped
+    bibo_margin: float = 1e-3  # receipt safety margin on both tests
+
     # --- landing criterion / seeds ---
     landing_tol: float = 0.4  # |q0 - basin_center| < tol counts as landed
     n_seeds: int = 5
