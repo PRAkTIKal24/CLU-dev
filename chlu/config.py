@@ -284,6 +284,13 @@ class ExperimentDConfig:
         0.0  # explicit breaking delta*cos(n*theta) (GMOR probe, F5 §3.3c)
     )
     tilt_n: int = 1
+    # Linear AMBIENT spurion -delta*(u.q) along the channel direction u (the
+    # ChPT quark-mass term). Unlike the angular tilt above it lets the vacuum
+    # radius r* run with delta, resolving mu^2, F^2 = M_ch*r*^2 and the
+    # condensate Sigma = r* independently => GMOR proper (mu^2 F^2 = delta*Sigma
+    # exactly). 0.0 (default) = no spurion, behavior unchanged.
+    spurion_delta: float = 0.0
+    spurion_angle: float = 0.0  # angle (rad) of u in the channel plane
     dt: float = 0.05
 
     # Dataset: constant trajectories on a circle of attractors (SO(2)-degenerate vacuum)

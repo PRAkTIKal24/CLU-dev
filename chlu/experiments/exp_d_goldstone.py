@@ -172,7 +172,8 @@ def run_experiment_d(
     print(
         f"  CLU: dim={dim}, potential={cfg.potential_type}, "
         f"kinetic={cfg.kinetic_energy_mode}, tie_channel_mass={cfg.tie_channel_mass}, "
-        f"tilt=(delta={cfg.tilt_delta}, n={cfg.tilt_n})"
+        f"tilt=(delta={cfg.tilt_delta}, n={cfg.tilt_n}), "
+        f"spurion=(delta={cfg.spurion_delta}, angle={cfg.spurion_angle})"
     )
     chlu = CHLU(
         dim=dim,
@@ -184,6 +185,8 @@ def run_experiment_d(
         tie_channel_mass=cfg.tie_channel_mass,
         tilt_delta=cfg.tilt_delta,
         tilt_n=cfg.tilt_n,
+        spurion_delta=cfg.spurion_delta,
+        spurion_angle=cfg.spurion_angle,
         key=k2,
     )
 
@@ -383,6 +386,8 @@ def run_experiment_d(
         tie_channel_mass=cfg.tie_channel_mass,
         tilt_delta=cfg.tilt_delta,
         tilt_n=cfg.tilt_n,
+        spurion_delta=cfg.spurion_delta,
+        spurion_angle=cfg.spurion_angle,
         target_energy=np.asarray(
             target_energy if target_energy is not None else np.nan
         ),

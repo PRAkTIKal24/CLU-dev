@@ -11,8 +11,10 @@ from chlu.core.potentials import (
     PotentialMLP,
     DeepPotentialMLP,
     ConvPotential,
+    LinearSpurionPotential,
     SO2InvariantPotential,
     TiltedPotential,
+    channel_spurion_direction,
 )
 
 
@@ -63,6 +65,8 @@ class CHLU(eqx.Module):
         tie_channel_mass: bool = False,
         tilt_delta: float = 0.0,
         tilt_n: int = 1,
+        spurion_delta: float = 0.0,
+        spurion_angle: float = 0.0,
         friction_field: Optional[eqx.Module] = None,
         key: jax.random.PRNGKey = None,
     ):
@@ -88,6 +92,17 @@ class CHLU(eqx.Module):
                            delta*cos(n*theta) tilt on the channel (F5 §3.3c GMOR
                            probe). 0.0 (default) = no tilt (no wrapper added).
             tilt_n: Harmonic n of the tilt (default 1). Ignored if tilt_delta == 0.
+            spurion_delta: Explicit SO(2)-breaking amplitude delta for a LINEAR
+                           AMBIENT spurion -delta*(u.q) along the channel
+                           direction u (the ChPT quark-mass term; condensate-
+                           resolving GMOR probe). 0.0 (default) = no spurion
+                           (no wrapper added). Unlike ``tilt_delta`` the vacuum
+                           radius r* runs with delta, so mu^2, F^2 = M_ch*r*^2
+                           and Sigma = r* are resolved independently and
+                           mu^2 F^2 = delta*Sigma holds exactly.
+            spurion_angle: Angle (rad) of u inside the channel plane
+                           (u = (cos, sin, 0...)). Ignored if spurion_delta == 0.
+                           Physically irrelevant for a channel-invariant V_base.
             friction_field: Optional position-gated friction field gamma_phi(q)
                            (``chlu.core.friction_field.FrictionField``; trash
                            regions, F5 Def-5). None (default) = scalar-gamma
@@ -137,6 +152,19 @@ class CHLU(eqx.Module):
         # compose the potential with an additive delta*cos(n*theta) tilt.
         if tilt_delta != 0.0:
             self.potential_net = TiltedPotential(self.potential_net, tilt_delta, tilt_n)
+
+        # Condensate-resolving explicit breaking (GMOR proper): compose with a
+        # linear ambient spurion -delta*(u.q) along the channel direction u.
+        if spurion_delta != 0.0:
+            if dim < 2:
+                raise ValueError(
+                    f"spurion_delta requires dim >= 2 (channel = coords (0, 1)), got dim={dim}"
+                )
+            self.potential_net = LinearSpurionPotential(
+                self.potential_net,
+                spurion_delta,
+                channel_spurion_direction(dim, spurion_angle),
+            )
 
         # Initialize log mass (use log for positive-definiteness via softplus)
         self.log_mass = jax.random.normal(k2, (dim,)) * 0.1
