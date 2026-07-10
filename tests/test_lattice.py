@@ -25,6 +25,7 @@ jax.config.update("jax_enable_x64", True)
 import equinox as eqx  # noqa: E402
 import jax.numpy as jnp  # noqa: E402
 import numpy as np  # noqa: E402
+import pytest  # noqa: E402
 
 from chlu.core.chlu_unit import CHLU  # noqa: E402
 from chlu.core.lattice import (  # noqa: E402
@@ -515,3 +516,142 @@ def test_lattice_validation_errors():
         except ValueError:
             raised = True
         assert raised, f"no error for edges={bad_edges}"
+
+
+# ---------------------------------------------------------------------------
+# (6) the annealed-Ising gate: FORCE, not just energy (xy-lattice-theory §6.2)
+#
+# v3-lattice-build asserted only that the gate SUPPRESSES ENERGY at distance.
+# That is exactly why the legacy `<sigma> * v` form's sign-reversing force went
+# unnoticed. These tests assert the force.
+# ---------------------------------------------------------------------------
+
+
+def _gate_force_vs_v(gate: GatedCoupling, vs):
+    """dV_wh/dv along the channel-0 separation ray (v = kappa * s^2)."""
+
+    def V_of_v(v):
+        s = jnp.sqrt(v)
+        return gate(jnp.zeros(2), jnp.array([s, 0.0]))
+
+    dV = jax.jit(jax.grad(V_of_v))
+    return np.array([float(dV(v)) for v in vs])
+
+
+def test_gate_free_energy_force_monotone_and_bounded():
+    """The DEFAULT (free-energy) gate: V_wh is monotone increasing in v, its
+    force dV/dv equals the annealed occupancy <sigma> and is bounded in [0, 1]
+    (always attractive, never stronger than the ungated coupling), and V_wh is
+    bounded below by -w*ln(1 + e^{t/w})."""
+    t, w = 1.0, 0.25
+    base = channel_spring_coupling(2, 2, kappa=1.0, channel=(0, 1))
+    gate = GatedCoupling(base=base, threshold=t, width=w)  # default mode
+    assert gate.energy_mode == "free_energy"
+
+    vs = np.linspace(1e-9, 5.0, 501)
+    force = _gate_force_vs_v(gate, vs)
+
+    # (a) force is the transmitted fraction: bounded in [0, 1], never negative
+    assert force.min() >= 0.0, f"gate force went negative: {force.min():.6f}"
+    assert force.max() <= 1.0 + 1e-12, f"gate force exceeds 1: {force.max():.6f}"
+
+    # (b) force == <sigma> exactly (the annealed mean force)
+    occ = np.array(
+        [float(gate.occupancy(jnp.zeros(2), jnp.array([np.sqrt(v), 0.0]))) for v in vs]
+    )
+    assert np.max(np.abs(force - occ)) < 1e-12
+
+    # (c) V_wh monotone increasing in v (attraction: energy grows with
+    #     separation) and bounded in [-w*ln(1+e^{t/w}), 0)
+    V = np.array([float(gate(jnp.zeros(2), jnp.array([np.sqrt(v), 0.0]))) for v in vs])
+    assert np.all(np.diff(V) > 0), "free-energy gate potential is not monotone"
+    lower = -w * math.log1p(math.exp(t / w))
+    assert V.min() >= lower - 1e-12 and V.max() < 0.0
+    assert abs(float(gate(jnp.zeros(2), jnp.zeros(2))) - lower) < 1e-12
+
+
+def test_gate_mean_energy_legacy_force_reverses_sign():
+    """The LEGACY mode is retained (nothing silently deleted) — and it is
+    retained BROKEN, on purpose. Pin the defect so nobody re-defaults to it:
+    its force reverses sign at v = 0.8020 (inside the nominally-open region
+    v < t = 1.0), reaching -0.7181."""
+    gate = GatedCoupling(
+        base=channel_spring_coupling(2, 2, kappa=1.0, channel=(0, 1)),
+        threshold=1.0,
+        width=0.25,
+        energy_mode="mean_energy",
+    )
+    vs = np.linspace(1e-9, 3.0, 3001)
+    force = _gate_force_vs_v(gate, vs)
+    assert force.min() < 0.0, "legacy gate force should (still) reverse sign"
+    assert abs(force.min() - (-0.718078)) < 1e-4, force.min()
+    # first sign change strictly inside the open region v < threshold
+    first_neg = vs[np.argmax(force < 0.0)]
+    assert 0.79 < first_neg < 0.81, first_neg
+    assert first_neg < gate.threshold
+
+    # legacy expression is preserved bit-for-bit
+    for v in (0.1, 0.802, 2.5):
+        q = jnp.array([np.sqrt(v), 0.0])
+        expect = jax.nn.sigmoid((1.0 - v) / 0.25) * v
+        assert abs(float(gate(jnp.zeros(2), q)) - float(expect)) < 1e-12
+
+
+def test_gate_on_xy_bond_stays_ferromagnetic():
+    """On an XY bond v(dtheta) = J(1 - cos dtheta) with (J, t, w) =
+    (0.1, 0.05, 0.02): the free-energy gate keeps the exchange FERROMAGNETIC
+    (J1 = +0.0223); the legacy gate flips it ANTIFERROMAGNETIC (J1 = -0.0072),
+    i.e. a wormhole array on the legacy gate frustrates itself
+    (xy-lattice-theory §6.2)."""
+    kappa = 0.05  # J = 2 kappa r*^2 = 0.1 at r* = 1
+    base = channel_spring_coupling(2, 2, kappa=kappa, channel=(0, 1))
+    n_grid = 2048
+    th = np.linspace(0.0, 2.0 * np.pi, n_grid, endpoint=False)
+
+    def harmonics(fn):
+        V = np.array(
+            [
+                float(fn(jnp.array([1.0, 0.0]), jnp.array([np.cos(a), np.sin(a)])))
+                for a in th
+            ]
+        )
+        # V = const - sum_n J_n cos(n dtheta)  =>  J_n = -(2/N) sum_k V_k cos(n th_k)
+        return [-(2.0 / n_grid) * float(np.sum(V * np.cos(n * th))) for n in (1, 2, 3)]
+
+    j_ungated = harmonics(base)
+    assert abs(j_ungated[0] - 0.1) < 1e-12  # pure first harmonic, J = 2*kappa
+    assert max(abs(j_ungated[1]), abs(j_ungated[2])) < 1e-12
+
+    kw = dict(base=base, threshold=0.05, width=0.02)
+    j_free = harmonics(GatedCoupling(**kw, energy_mode="free_energy"))
+    j_legacy = harmonics(GatedCoupling(**kw, energy_mode="mean_energy"))
+
+    assert j_free[0] > 0.0, f"free-energy gate is antiferromagnetic: {j_free[0]}"
+    assert abs(j_free[0] - 0.0223) < 5e-4, j_free[0]
+    assert j_legacy[0] < 0.0, "legacy gate should (still) be antiferromagnetic"
+    assert abs(j_legacy[0] - (-0.0072)) < 5e-4, j_legacy[0]
+
+
+def test_build_lattice_gate_energy_mode_flag():
+    """build_lattice defaults to the free-energy gate and can still construct
+    the legacy one; unknown modes fail loudly."""
+
+    def build(**kw):
+        return build_lattice(
+            jax.random.PRNGKey(1),
+            unit_dims=[2] * 4,
+            hidden=8,
+            potential_type="mlp",
+            kinetic_mode="newtonian_learned",
+            edges=chain_edges(4),
+            kappa_c=0.05,
+            wormhole_edges=((0, 3),),
+            **kw,
+        )
+
+    assert build().couplings[-1].energy_mode == "free_energy"
+    assert build(gate_energy_mode="mean_energy").couplings[-1].energy_mode == (
+        "mean_energy"
+    )
+    with pytest.raises(ValueError):
+        build(gate_energy_mode="mean")

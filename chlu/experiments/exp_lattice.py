@@ -299,7 +299,12 @@ def scaling_smoke(cfg, key: jax.random.PRNGKey) -> list:
 def wormhole_smoke(cfg, key: jax.random.PRNGKey) -> dict:
     """A gated non-adjacent edge (0, N-1) on a 4-chain: the distant pair
     couples when aligned (force transmitted through the smooth gate) and
-    decouples when far (gate closed)."""
+    decouples when far (gate closed).
+
+    Reports the gate OCCUPANCY <sigma> = dV_wh/dv (the transmitted force
+    fraction) alongside the energy: v3-lattice-build checked only the energy
+    suppression, which is exactly why the legacy gate's sign-reversing force
+    stayed invisible (xy-lattice-theory §6.2)."""
     n = 4
     lattice = build_lattice(
         key,
@@ -315,6 +320,7 @@ def wormhole_smoke(cfg, key: jax.random.PRNGKey) -> dict:
         wormhole_edges=((0, n - 1),),
         wormhole_gate_threshold=cfg.wormhole_gate_threshold,
         wormhole_gate_width=cfg.wormhole_gate_width,
+        gate_energy_mode=cfg.gate_energy_mode,
     )
     D = lattice.dim
     gate = lattice.couplings[-1]  # the GatedCoupling on (0, 3)
@@ -349,6 +355,8 @@ def wormhole_smoke(cfg, key: jax.random.PRNGKey) -> dict:
         "coupled_dforce_on_unit3": dforce_3,
         "wormhole_energy_aligned": gate_v_aligned,
         "wormhole_energy_far": gate_v_far,
+        "gate_occupancy_aligned": float(gate.occupancy(q_aligned[s0], q_aligned[s3])),
+        "gate_occupancy_far": float(gate.occupancy(q_far[s0], q_far[s3])),
     }
 
 
@@ -577,8 +585,10 @@ def run_experiment_lattice(
     wh = wormhole_smoke(cfg, k_wormhole)
     print(
         f"  aligned: dF on unit 3 from moving unit 0 = "
-        f"{wh['coupled_dforce_on_unit3']:.3e} (V_wh = {wh['wormhole_energy_aligned']:.3e}); "
-        f"far: V_wh = {wh['wormhole_energy_far']:.3e} (gate closed)"
+        f"{wh['coupled_dforce_on_unit3']:.3e} (V_wh = {wh['wormhole_energy_aligned']:.3e}, "
+        f"<sigma> = {wh['gate_occupancy_aligned']:.3f}); "
+        f"far: V_wh = {wh['wormhole_energy_far']:.3e}, "
+        f"<sigma> = {wh['gate_occupancy_far']:.3e} (gate closed)"
     )
 
     # --------------------------------------------------------- 4. training smoke
@@ -633,6 +643,9 @@ def run_experiment_lattice(
         "wormhole_dforce": wh["coupled_dforce_on_unit3"],
         "wormhole_energy_aligned": wh["wormhole_energy_aligned"],
         "wormhole_energy_far": wh["wormhole_energy_far"],
+        "wormhole_gate_energy_mode": cfg.gate_energy_mode,
+        "wormhole_occupancy_aligned": wh["gate_occupancy_aligned"],
+        "wormhole_occupancy_far": wh["gate_occupancy_far"],
     }
     if training is not None:
         for label in ("banded", "uniform"):

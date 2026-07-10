@@ -135,22 +135,45 @@ class MLPCoupling(eqx.Module):
 class GatedCoupling(eqx.Module):
     """
     Wormhole slot (skeleton): a base coupling wrapped in a SMOOTH energy gate
-    (F5 §7.4, smooth-gate variant — everything in §7.2 keeps holding):
+    (F5 §7.4, smooth-gate variant — everything in §7.2 keeps holding).
 
-        V_wh(q_i, q_j) = sigmoid((threshold - v) / width) * v,
-        v = base(q_i, q_j).
+    **The gate is the annealed average of a discrete Ising bond variable**
+    (``xy-lattice-theory`` §6.1). Put sigma in {0, 1} on the edge with edge
+    Hamiltonian H_e = sigma * (v - t) at gate-temperature w, v = base(q_i, q_j).
+    Summing sigma out exactly gives
+
+        <sigma> = sigmoid((t - v) / w)                 <- the gate
+        F(v)    = -w * softplus((t - v) / w)           <- its FREE ENERGY
+        dF/dv   = <sigma>                              <- the annealed mean force
+
+    ``energy_mode`` selects what ``__call__`` contributes to the joint V:
+
+    - ``"free_energy"`` (**default**) returns ``F(v)``. Its gradient is exactly
+      the annealed mean force ``<sigma> * grad v``: always attractive, force
+      fraction bounded in [0, 1], ``F`` monotone increasing in ``v`` and
+      bounded in ``[-w*ln(1 + e^{t/w}), 0)``. This is the physically-correct
+      annealed potential of the Ising gate.
+    - ``"mean_energy"`` (**legacy**, the pre-2026-07-10 shipped behavior)
+      returns the mean ENERGY ``<sigma> * v``. ⚠ That is NOT a free energy: its
+      force ``<sigma> - (v/w) <sigma> (1 - <sigma>)`` **changes sign** at finite
+      ``v`` *inside* the nominally-open region (v = 0.8020 for the defaults
+      t=1.0, w=0.25, reaching -0.718), so ``V_wh`` is non-monotone and the
+      wormhole **repels its own endpoints** over a finite range of separations;
+      on an XY bond it can flip the effective exchange antiferromagnetic.
+      Retained for backwards-compatibility only (nothing is silently deleted) —
+      do not use it for new physics.
 
     The gate value is a smooth function of state *through the potential*, so
     H stays C^1 and exactly (conformally) symplectic — no piecewise-defined
     Hamiltonian, no energy jumps to ledger (those appear only with hard top-k
     selection, which is deliberately NOT implemented here).
 
-    Behavior: when the endpoint states are close in the base's coupling space
-    (v << threshold) the gate is open (≈1) and the wormhole transmits force;
-    at large separation (v >> threshold) the gate closes exponentially and
-    the distant pair decouples. The wormhole energy is bounded:
-    sup_v>=0 [v * sigmoid((t - v)/w)] < infinity — the "energy cost" of the
-    non-local edge is capped by construction.
+    Behavior (both modes): when the endpoint states are close in the base's
+    coupling space (v << threshold) the gate is open (≈1) and the wormhole
+    transmits force; at large separation (v >> threshold) the gate closes
+    exponentially and the distant pair decouples. The wormhole energy is
+    bounded — the "energy cost" of the non-local edge is capped by
+    construction.
 
     No top-k / selection logic here (task scope guard) — the edge list just
     accepts non-adjacent pairs.
@@ -159,11 +182,29 @@ class GatedCoupling(eqx.Module):
     base: eqx.Module
     threshold: float = eqx.field(static=True)
     width: float = eqx.field(static=True)
+    energy_mode: str = eqx.field(static=True, default="free_energy")
 
     def __call__(self, q_i: jnp.ndarray, q_j: jnp.ndarray) -> jnp.ndarray:
         v = self.base(q_i, q_j)
-        gate = jax.nn.sigmoid((self.threshold - v) / self.width)
-        return gate * v
+        drive = (self.threshold - v) / self.width
+        if self.energy_mode == "free_energy":
+            return -self.width * jax.nn.softplus(drive)
+        elif self.energy_mode == "mean_energy":
+            return jax.nn.sigmoid(drive) * v
+        raise ValueError(
+            f"Unknown gate energy_mode: {self.energy_mode!r}. Must be "
+            "'free_energy' (annealed free energy, default) or 'mean_energy' "
+            "(legacy; non-monotone force)."
+        )
+
+    def occupancy(self, q_i: jnp.ndarray, q_j: jnp.ndarray) -> jnp.ndarray:
+        """The annealed Ising occupancy <sigma> = sigmoid((t - v)/w) in (0, 1).
+
+        In ``free_energy`` mode this is exactly ``dV_wh/dv`` — the fraction of
+        the ungated force the wormhole transmits.
+        """
+        v = self.base(q_i, q_j)
+        return jax.nn.sigmoid((self.threshold - v) / self.width)
 
 
 def spring_coupling(
@@ -488,6 +529,7 @@ def build_lattice(
     wormhole_edges: Sequence[tuple] = (),
     wormhole_gate_threshold: float = 1.0,
     wormhole_gate_width: float = 0.25,
+    gate_energy_mode: str = "free_energy",
     rest_mass: float = 1.0,
     c: float = 1.0,
     tie_channel_mass: bool = False,
@@ -514,6 +556,8 @@ def build_lattice(
         coupling_dim / coupling_hidden / proj_init_scale: coupling shapes.
         wormhole_edges: distant (i, j) pairs to couple through a smooth
             energy gate (skeleton — no top-k selection logic).
+        gate_energy_mode: ``"free_energy"`` (default, correct annealed
+            potential) or ``"mean_energy"`` (legacy) — see ``GatedCoupling``.
         rest_mass, c, tie_channel_mass: forwarded to each CHLU unit.
 
     Returns:
@@ -528,6 +572,11 @@ def build_lattice(
 
     if mass_scales is not None and len(mass_scales) != n:
         raise ValueError(f"mass_scales has {len(mass_scales)} entries for {n} units")
+    if gate_energy_mode not in ("free_energy", "mean_energy"):
+        raise ValueError(
+            f"Unknown gate_energy_mode: {gate_energy_mode!r}. "
+            "Must be 'free_energy' or 'mean_energy'."
+        )
 
     n_couplings = len(edges) + len(wormhole_edges)
     keys = jax.random.split(key, n + max(n_couplings, 1))
@@ -578,6 +627,7 @@ def build_lattice(
                 base=base,
                 threshold=float(wormhole_gate_threshold),
                 width=float(wormhole_gate_width),
+                energy_mode=gate_energy_mode,
             )
         )
 
