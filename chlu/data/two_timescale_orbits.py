@@ -20,6 +20,26 @@ deflation": constant M is a gauge choice at linear order).
 
 Nomenclature (F5 Def-2): inertial mass M (kinetic), spectral mass mu
 (here mu_i = omega_i = sqrt(k_i / M_i)).
+
+⚠ **SCOPE LIMIT — this generator cannot identify the coupling V_c, and it has
+no vacuum ring** (``xy-lattice-theory`` §2.8, verified over 3 seeds; a data-
+design fact, NOT a bug — do not "fix" the generator, the banded-vs-uniform
+results depend on it):
+
+1. Per-unit phase offsets ``phi`` are drawn **independently and uniformly** and
+   the units run at different ``omega``, so the data carries **zero inter-unit
+   phase correlation**. The coupling potential ``V_c`` is therefore
+   *unidentifiable* from it — nothing in the objective constrains the learned
+   coupling's exchange, anisotropy, or U(1) structure.
+2. A circular orbit at fixed radius is fit by an **isotropic harmonic well**,
+   so a trained ``so2_invariant`` unit puts its potential minimum at the
+   **origin** (measured ``r* < 1e-3``, 3/3 seeds) — there is **no vacuum ring,
+   no coset, no Goldstone mode** on trained lattices of this data.
+
+Consequently ``exp-lattice``'s banded-vs-uniform training smoke measures the
+inertial-mass banding prior and nothing else: it says **nothing** about coupling
+physics, XY/Goldstone structure, or symmetry breaking. Any such claim needs data
+with inter-unit phase correlation and a radius-selecting (Mexican-hat) potential.
 """
 
 from typing import Sequence

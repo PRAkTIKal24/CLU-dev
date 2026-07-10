@@ -26,16 +26,20 @@ import equinox as eqx  # noqa: E402
 import jax.numpy as jnp  # noqa: E402
 import numpy as np  # noqa: E402
 
+import pytest  # noqa: E402
+
 from chlu.core.chlu_unit import CHLU  # noqa: E402
 from chlu.core.lattice import (  # noqa: E402
     CLULattice,
     GatedCoupling,
     MLPCoupling,
+    SpringCoupling,
     build_lattice,
     chain_edges,
     channel_spring_coupling,
     scale_inertial_mass,
     spring_coupling,
+    torus_edges,
 )
 from chlu.data.two_timescale_orbits import generate_two_timescale_orbits  # noqa: E402
 from chlu.experiments.goldstone_harness import (  # noqa: E402
@@ -515,3 +519,359 @@ def test_lattice_validation_errors():
         except ValueError:
             raised = True
         assert raised, f"no error for edges={bad_edges}"
+
+
+# ---------------------------------------------------------------------------
+# (6) the annealed-Ising gate: FORCE, not just energy (xy-lattice-theory §6.2)
+#
+# v3-lattice-build asserted only that the gate SUPPRESSES ENERGY at distance.
+# That is exactly why the legacy `<sigma> * v` form's sign-reversing force went
+# unnoticed. These tests assert the force.
+# ---------------------------------------------------------------------------
+
+
+def _gate_force_vs_v(gate: GatedCoupling, vs):
+    """dV_wh/dv along the channel-0 separation ray (v = kappa * s^2)."""
+
+    def V_of_v(v):
+        s = jnp.sqrt(v)
+        return gate(jnp.zeros(2), jnp.array([s, 0.0]))
+
+    dV = jax.jit(jax.grad(V_of_v))
+    return np.array([float(dV(v)) for v in vs])
+
+
+def test_gate_free_energy_force_monotone_and_bounded():
+    """The DEFAULT (free-energy) gate: V_wh is monotone increasing in v, its
+    force dV/dv equals the annealed occupancy <sigma> and is bounded in [0, 1]
+    (always attractive, never stronger than the ungated coupling), and V_wh is
+    bounded below by -w*ln(1 + e^{t/w})."""
+    t, w = 1.0, 0.25
+    base = channel_spring_coupling(2, 2, kappa=1.0, channel=(0, 1))
+    gate = GatedCoupling(base=base, threshold=t, width=w)  # default mode
+    assert gate.energy_mode == "free_energy"
+
+    vs = np.linspace(1e-9, 5.0, 501)
+    force = _gate_force_vs_v(gate, vs)
+
+    # (a) force is the transmitted fraction: bounded in [0, 1], never negative
+    assert force.min() >= 0.0, f"gate force went negative: {force.min():.6f}"
+    assert force.max() <= 1.0 + 1e-12, f"gate force exceeds 1: {force.max():.6f}"
+
+    # (b) force == <sigma> exactly (the annealed mean force)
+    occ = np.array(
+        [float(gate.occupancy(jnp.zeros(2), jnp.array([np.sqrt(v), 0.0]))) for v in vs]
+    )
+    assert np.max(np.abs(force - occ)) < 1e-12
+
+    # (c) V_wh monotone increasing in v (attraction: energy grows with
+    #     separation) and bounded in [-w*ln(1+e^{t/w}), 0)
+    V = np.array([float(gate(jnp.zeros(2), jnp.array([np.sqrt(v), 0.0]))) for v in vs])
+    assert np.all(np.diff(V) > 0), "free-energy gate potential is not monotone"
+    lower = -w * math.log1p(math.exp(t / w))
+    assert V.min() >= lower - 1e-12 and V.max() < 0.0
+    assert abs(float(gate(jnp.zeros(2), jnp.zeros(2))) - lower) < 1e-12
+
+
+def test_gate_mean_energy_legacy_force_reverses_sign():
+    """The LEGACY mode is retained (nothing silently deleted) — and it is
+    retained BROKEN, on purpose. Pin the defect so nobody re-defaults to it:
+    its force reverses sign at v = 0.8020 (inside the nominally-open region
+    v < t = 1.0), reaching -0.7181."""
+    gate = GatedCoupling(
+        base=channel_spring_coupling(2, 2, kappa=1.0, channel=(0, 1)),
+        threshold=1.0,
+        width=0.25,
+        energy_mode="mean_energy",
+    )
+    vs = np.linspace(1e-9, 3.0, 3001)
+    force = _gate_force_vs_v(gate, vs)
+    assert force.min() < 0.0, "legacy gate force should (still) reverse sign"
+    assert abs(force.min() - (-0.718078)) < 1e-4, force.min()
+    # first sign change strictly inside the open region v < threshold
+    first_neg = vs[np.argmax(force < 0.0)]
+    assert 0.79 < first_neg < 0.81, first_neg
+    assert first_neg < gate.threshold
+
+    # legacy expression is preserved bit-for-bit
+    for v in (0.1, 0.802, 2.5):
+        q = jnp.array([np.sqrt(v), 0.0])
+        expect = jax.nn.sigmoid((1.0 - v) / 0.25) * v
+        assert abs(float(gate(jnp.zeros(2), q)) - float(expect)) < 1e-12
+
+
+def test_gate_on_xy_bond_stays_ferromagnetic():
+    """On an XY bond v(dtheta) = J(1 - cos dtheta) with (J, t, w) =
+    (0.1, 0.05, 0.02): the free-energy gate keeps the exchange FERROMAGNETIC
+    (J1 = +0.0223); the legacy gate flips it ANTIFERROMAGNETIC (J1 = -0.0072),
+    i.e. a wormhole array on the legacy gate frustrates itself
+    (xy-lattice-theory §6.2)."""
+    kappa = 0.05  # J = 2 kappa r*^2 = 0.1 at r* = 1
+    base = channel_spring_coupling(2, 2, kappa=kappa, channel=(0, 1))
+    n_grid = 2048
+    th = np.linspace(0.0, 2.0 * np.pi, n_grid, endpoint=False)
+
+    def harmonics(fn):
+        V = np.array(
+            [
+                float(fn(jnp.array([1.0, 0.0]), jnp.array([np.cos(a), np.sin(a)])))
+                for a in th
+            ]
+        )
+        # V = const - sum_n J_n cos(n dtheta)  =>  J_n = -(2/N) sum_k V_k cos(n th_k)
+        return [-(2.0 / n_grid) * float(np.sum(V * np.cos(n * th))) for n in (1, 2, 3)]
+
+    j_ungated = harmonics(base)
+    assert abs(j_ungated[0] - 0.1) < 1e-12  # pure first harmonic, J = 2*kappa
+    assert max(abs(j_ungated[1]), abs(j_ungated[2])) < 1e-12
+
+    kw = dict(base=base, threshold=0.05, width=0.02)
+    j_free = harmonics(GatedCoupling(**kw, energy_mode="free_energy"))
+    j_legacy = harmonics(GatedCoupling(**kw, energy_mode="mean_energy"))
+
+    assert j_free[0] > 0.0, f"free-energy gate is antiferromagnetic: {j_free[0]}"
+    assert abs(j_free[0] - 0.0223) < 5e-4, j_free[0]
+    assert j_legacy[0] < 0.0, "legacy gate should (still) be antiferromagnetic"
+    assert abs(j_legacy[0] - (-0.0072)) < 5e-4, j_legacy[0]
+
+
+def test_build_lattice_gate_energy_mode_flag():
+    """build_lattice defaults to the free-energy gate and can still construct
+    the legacy one; unknown modes fail loudly."""
+
+    def build(**kw):
+        return build_lattice(
+            jax.random.PRNGKey(1),
+            unit_dims=[2] * 4,
+            hidden=8,
+            potential_type="mlp",
+            kinetic_mode="newtonian_learned",
+            edges=chain_edges(4),
+            kappa_c=0.05,
+            wormhole_edges=((0, 3),),
+            **kw,
+        )
+
+    assert build().couplings[-1].energy_mode == "free_energy"
+    assert build(gate_energy_mode="mean_energy").couplings[-1].energy_mode == (
+        "mean_energy"
+    )
+    with pytest.raises(ValueError):
+        build(gate_energy_mode="mean")
+
+
+# ---------------------------------------------------------------------------
+# (7) U(1)-preserving coupling (xy-lattice-theory P5)
+# ---------------------------------------------------------------------------
+
+
+def test_conformal_init_equals_channel_spring_and_is_trainable():
+    """`spring_coupling(init_mode="conformal")` starts at W = 1_k — exactly the
+    channel_spring geometry (so the reduction is exactly XY at init) — but its
+    W are still LEARNABLE leaves that receive gradient."""
+    conf = spring_coupling(2, 2, kappa=0.05, coupling_dim=2, init_mode="conformal")
+    chan = channel_spring_coupling(2, 2, kappa=0.05, channel=(0, 1))
+    assert np.array_equal(np.asarray(conf.W_i), np.asarray(chan.W_i))
+    assert np.array_equal(np.asarray(conf.W_j), np.asarray(chan.W_j))
+
+    # identical energies on random states
+    k = jax.random.PRNGKey(0)
+    for _ in range(5):
+        k, k1, k2 = jax.random.split(k, 3)
+        qi, qj = jax.random.normal(k1, (2,)), jax.random.normal(k2, (2,))
+        assert abs(float(conf(qi, qj)) - float(chan(qi, qj))) < 1e-15
+
+    # spectator coords: conformal embeds the CHANNEL only (eye(k, d))
+    conf4 = spring_coupling(4, 4, kappa=0.05, coupling_dim=2, init_mode="conformal")
+    assert np.allclose(np.asarray(conf4.W_i), np.eye(2, 4))
+
+    # still trainable: W receives gradient
+    def loss(c):
+        return c(jnp.array([0.3, -0.2]), jnp.array([0.9, 0.4])) ** 2
+
+    g = eqx.filter_grad(loss)(conf)
+    assert jnp.any(g.W_i != 0) and jnp.any(g.W_j != 0)
+
+    # too-wide coupling_dim fails loudly; bad mode fails loudly
+    with pytest.raises(ValueError):
+        spring_coupling(2, 2, 0.05, coupling_dim=3, init_mode="conformal")
+    with pytest.raises(ValueError):
+        spring_coupling(2, 2, 0.05, init_mode="identity")
+
+
+def test_coupling_type_auto_defaults_by_potential_type():
+    """ "auto" = channel_spring for so2_invariant (U(1)-preserving design rule),
+    spring otherwise. The non-so2 path must be BIT-IDENTICAL to the old
+    default (`coupling_type="spring"`, random W) — no shipped lattice moves."""
+    kw = dict(
+        unit_dims=[2, 2], hidden=8, kinetic_mode="newtonian_learned", kappa_c=0.05
+    )
+
+    # so2_invariant + auto -> fixed identity-on-channel projections
+    so2 = build_lattice(jax.random.PRNGKey(4), potential_type="so2_invariant", **kw)
+    c = so2.couplings[0]
+    assert isinstance(c, SpringCoupling)
+    assert np.array_equal(np.asarray(c.W_i), np.eye(2, 2))
+    assert np.array_equal(np.asarray(c.W_j), np.eye(2, 2))
+
+    # mlp + auto == mlp + explicit "spring", bit-for-bit (legacy default)
+    auto = build_lattice(jax.random.PRNGKey(4), potential_type="mlp", **kw)
+    legacy = build_lattice(
+        jax.random.PRNGKey(4), potential_type="mlp", coupling_type="spring", **kw
+    )
+    assert np.array_equal(
+        np.asarray(auto.couplings[0].W_i), np.asarray(legacy.couplings[0].W_i)
+    )
+    assert np.array_equal(
+        np.asarray(auto.couplings[0].W_j), np.asarray(legacy.couplings[0].W_j)
+    )
+    q = jnp.array([0.4, -0.1, 0.2, 0.7])
+    p = jnp.array([0.1, 0.0, -0.3, 0.2])
+    assert float(auto.H(q, p)) == float(legacy.H(q, p))
+
+    with pytest.raises(ValueError):
+        build_lattice(
+            jax.random.PRNGKey(4), potential_type="mlp", coupling_type="bogus", **kw
+        )
+
+
+def test_channel_spring_lattice_is_exactly_xy_on_the_vacuum_torus():
+    """coupling_type="channel_spring" gives V_c = 2 kappa r*^2 (1 - cos dtheta):
+    a PURE first harmonic with J = 2 kappa r*^2 — no p=2 anisotropy, no
+    U(1)-breaking cos(theta_i + theta_j) term (xy-lattice-theory Prop-1)."""
+    kappa, r = 0.05, 1.0
+    lat = build_lattice(
+        jax.random.PRNGKey(11),
+        unit_dims=[2, 2],
+        hidden=8,
+        potential_type="so2_invariant",
+        kinetic_mode="newtonian_learned",
+        kappa_c=kappa,
+    )
+    coupling = lat.couplings[0]
+
+    n_grid = 64
+    th = np.linspace(0.0, 2.0 * np.pi, n_grid, endpoint=False)
+    Vc = np.array(
+        [
+            [
+                float(
+                    coupling(
+                        jnp.array([r * np.cos(a), r * np.sin(a)]),
+                        jnp.array([r * np.cos(b), r * np.sin(b)]),
+                    )
+                )
+                for b in th
+            ]
+            for a in th
+        ]
+    )
+    F = np.fft.fft2(Vc) / n_grid**2
+    # exchange J from the (1, -1) mode: V_c = const - J cos(th_i - th_j)
+    J = -2.0 * float(np.real(F[1, -1]))
+    assert abs(J - 2.0 * kappa * r**2) < 1e-12, J
+    # p=2 single-site anisotropy and the U(1)-breaking (1, 1) mode are ZERO
+    assert abs(F[2, 0]) < 1e-14 and abs(F[0, 2]) < 1e-14  # h_2
+    assert abs(F[1, 1]) < 1e-14  # cos(th_i + th_j)
+
+
+def test_so2_with_random_spring_warns_about_u1_breaking():
+    with pytest.warns(UserWarning, match="break"):
+        build_lattice(
+            jax.random.PRNGKey(6),
+            unit_dims=[2, 2],
+            hidden=8,
+            potential_type="so2_invariant",
+            kinetic_mode="newtonian_learned",
+            coupling_type="spring",  # random W on an SO(2) lattice
+            kappa_c=0.05,
+        )
+    # conformal init, channel_spring, and auto are all silent
+    import warnings as _warnings
+
+    for kw in (
+        dict(coupling_type="spring", proj_init_mode="conformal"),
+        dict(coupling_type="channel_spring"),
+        dict(coupling_type="auto"),
+    ):
+        with _warnings.catch_warnings():
+            _warnings.simplefilter("error")
+            build_lattice(
+                jax.random.PRNGKey(6),
+                unit_dims=[2, 2],
+                hidden=8,
+                potential_type="so2_invariant",
+                kinetic_mode="newtonian_learned",
+                kappa_c=0.05,
+                **kw,
+            )
+    # non-so2 lattices keep the old default silently
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("error")
+        build_lattice(
+            jax.random.PRNGKey(6),
+            unit_dims=[2, 2],
+            hidden=8,
+            potential_type="mlp",
+            kinetic_mode="newtonian_learned",
+            coupling_type="spring",
+            kappa_c=0.05,
+        )
+
+
+# ---------------------------------------------------------------------------
+# (8) 2-D torus edge list (xy-lattice-theory §7.2)
+# ---------------------------------------------------------------------------
+
+
+def test_torus_edges_degree_four_no_duplicates():
+    for L in (3, 4, 8):
+        edges = torus_edges(L)
+        n = L * L
+        assert len(edges) == 2 * n, f"L={L}: {len(edges)} edges, want {2 * n}"
+        assert all(i != j for i, j in edges), f"L={L}: self-loop"
+        undirected = {frozenset(e) for e in edges}
+        assert len(undirected) == 2 * n, f"L={L}: duplicate bonds"
+        deg = [0] * n
+        for i, j in edges:
+            deg[i] += 1
+            deg[j] += 1
+        assert set(deg) == {4}, f"L={L}: degrees {sorted(set(deg))} != {{4}}"
+        assert all(0 <= i < n and 0 <= j < n for i, j in edges)
+
+    # L = 2 is a genuine MULTIgraph (the +x and -x neighbour coincide): the
+    # honest periodic lattice has 8 bonds over 4 distinct pairs. Raise unless
+    # the caller opts in, so nobody silently builds a degree-2 "torus".
+    with pytest.raises(ValueError, match="degenerate"):
+        torus_edges(2)
+    doubled = torus_edges(2, allow_double_bonds=True)
+    assert len(doubled) == 8
+    assert len({frozenset(e) for e in doubled}) == 4
+    assert all(i != j for i, j in doubled)
+    with pytest.raises(ValueError):
+        torus_edges(1)
+
+
+def test_torus_lattice_builds_and_steps():
+    """The torus edge list drops straight into build_lattice (no new lattice
+    code): an L=3 (N=9) SO(2) torus builds, is finite, and steps."""
+    L = 3
+    lat = build_lattice(
+        jax.random.PRNGKey(9),
+        unit_dims=[2] * (L * L),
+        hidden=8,
+        potential_type="so2_invariant",
+        kinetic_mode="newtonian_learned",
+        edges=torus_edges(L),
+        kappa_c=0.05,
+    )
+    assert lat.n_units == L * L and lat.dim == 2 * L * L
+    assert len(lat.edges) == 2 * L * L
+    # auto -> channel_spring on so2 units (no U(1) breaking anywhere)
+    assert all(np.array_equal(np.asarray(c.W_i), np.eye(2, 2)) for c in lat.couplings)
+    kq, kp = jax.random.split(jax.random.PRNGKey(0))
+    q0 = 0.5 * jax.random.normal(kq, (lat.dim,))
+    p0 = 0.5 * jax.random.normal(kp, (lat.dim,))
+    assert jnp.isfinite(lat.H(q0, p0))
+    traj = lat(q0, p0, steps=5, dt=DT)
+    assert traj.shape == (5, 2 * lat.dim) and bool(jnp.all(jnp.isfinite(traj)))
