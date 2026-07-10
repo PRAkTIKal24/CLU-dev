@@ -25,6 +25,7 @@ jax.config.update("jax_enable_x64", True)
 import equinox as eqx  # noqa: E402
 import jax.numpy as jnp  # noqa: E402
 import numpy as np  # noqa: E402
+
 import pytest  # noqa: E402
 
 from chlu.core.chlu_unit import CHLU  # noqa: E402
@@ -32,6 +33,7 @@ from chlu.core.lattice import (  # noqa: E402
     CLULattice,
     GatedCoupling,
     MLPCoupling,
+    SpringCoupling,
     build_lattice,
     chain_edges,
     channel_spring_coupling,
@@ -655,3 +657,162 @@ def test_build_lattice_gate_energy_mode_flag():
     )
     with pytest.raises(ValueError):
         build(gate_energy_mode="mean")
+
+
+# ---------------------------------------------------------------------------
+# (7) U(1)-preserving coupling (xy-lattice-theory P5)
+# ---------------------------------------------------------------------------
+
+
+def test_conformal_init_equals_channel_spring_and_is_trainable():
+    """`spring_coupling(init_mode="conformal")` starts at W = 1_k — exactly the
+    channel_spring geometry (so the reduction is exactly XY at init) — but its
+    W are still LEARNABLE leaves that receive gradient."""
+    conf = spring_coupling(2, 2, kappa=0.05, coupling_dim=2, init_mode="conformal")
+    chan = channel_spring_coupling(2, 2, kappa=0.05, channel=(0, 1))
+    assert np.array_equal(np.asarray(conf.W_i), np.asarray(chan.W_i))
+    assert np.array_equal(np.asarray(conf.W_j), np.asarray(chan.W_j))
+
+    # identical energies on random states
+    k = jax.random.PRNGKey(0)
+    for _ in range(5):
+        k, k1, k2 = jax.random.split(k, 3)
+        qi, qj = jax.random.normal(k1, (2,)), jax.random.normal(k2, (2,))
+        assert abs(float(conf(qi, qj)) - float(chan(qi, qj))) < 1e-15
+
+    # spectator coords: conformal embeds the CHANNEL only (eye(k, d))
+    conf4 = spring_coupling(4, 4, kappa=0.05, coupling_dim=2, init_mode="conformal")
+    assert np.allclose(np.asarray(conf4.W_i), np.eye(2, 4))
+
+    # still trainable: W receives gradient
+    def loss(c):
+        return c(jnp.array([0.3, -0.2]), jnp.array([0.9, 0.4])) ** 2
+
+    g = eqx.filter_grad(loss)(conf)
+    assert jnp.any(g.W_i != 0) and jnp.any(g.W_j != 0)
+
+    # too-wide coupling_dim fails loudly; bad mode fails loudly
+    with pytest.raises(ValueError):
+        spring_coupling(2, 2, 0.05, coupling_dim=3, init_mode="conformal")
+    with pytest.raises(ValueError):
+        spring_coupling(2, 2, 0.05, init_mode="identity")
+
+
+def test_coupling_type_auto_defaults_by_potential_type():
+    """ "auto" = channel_spring for so2_invariant (U(1)-preserving design rule),
+    spring otherwise. The non-so2 path must be BIT-IDENTICAL to the old
+    default (`coupling_type="spring"`, random W) — no shipped lattice moves."""
+    kw = dict(
+        unit_dims=[2, 2], hidden=8, kinetic_mode="newtonian_learned", kappa_c=0.05
+    )
+
+    # so2_invariant + auto -> fixed identity-on-channel projections
+    so2 = build_lattice(jax.random.PRNGKey(4), potential_type="so2_invariant", **kw)
+    c = so2.couplings[0]
+    assert isinstance(c, SpringCoupling)
+    assert np.array_equal(np.asarray(c.W_i), np.eye(2, 2))
+    assert np.array_equal(np.asarray(c.W_j), np.eye(2, 2))
+
+    # mlp + auto == mlp + explicit "spring", bit-for-bit (legacy default)
+    auto = build_lattice(jax.random.PRNGKey(4), potential_type="mlp", **kw)
+    legacy = build_lattice(
+        jax.random.PRNGKey(4), potential_type="mlp", coupling_type="spring", **kw
+    )
+    assert np.array_equal(
+        np.asarray(auto.couplings[0].W_i), np.asarray(legacy.couplings[0].W_i)
+    )
+    assert np.array_equal(
+        np.asarray(auto.couplings[0].W_j), np.asarray(legacy.couplings[0].W_j)
+    )
+    q = jnp.array([0.4, -0.1, 0.2, 0.7])
+    p = jnp.array([0.1, 0.0, -0.3, 0.2])
+    assert float(auto.H(q, p)) == float(legacy.H(q, p))
+
+    with pytest.raises(ValueError):
+        build_lattice(
+            jax.random.PRNGKey(4), potential_type="mlp", coupling_type="bogus", **kw
+        )
+
+
+def test_channel_spring_lattice_is_exactly_xy_on_the_vacuum_torus():
+    """coupling_type="channel_spring" gives V_c = 2 kappa r*^2 (1 - cos dtheta):
+    a PURE first harmonic with J = 2 kappa r*^2 — no p=2 anisotropy, no
+    U(1)-breaking cos(theta_i + theta_j) term (xy-lattice-theory Prop-1)."""
+    kappa, r = 0.05, 1.0
+    lat = build_lattice(
+        jax.random.PRNGKey(11),
+        unit_dims=[2, 2],
+        hidden=8,
+        potential_type="so2_invariant",
+        kinetic_mode="newtonian_learned",
+        kappa_c=kappa,
+    )
+    coupling = lat.couplings[0]
+
+    n_grid = 64
+    th = np.linspace(0.0, 2.0 * np.pi, n_grid, endpoint=False)
+    Vc = np.array(
+        [
+            [
+                float(
+                    coupling(
+                        jnp.array([r * np.cos(a), r * np.sin(a)]),
+                        jnp.array([r * np.cos(b), r * np.sin(b)]),
+                    )
+                )
+                for b in th
+            ]
+            for a in th
+        ]
+    )
+    F = np.fft.fft2(Vc) / n_grid**2
+    # exchange J from the (1, -1) mode: V_c = const - J cos(th_i - th_j)
+    J = -2.0 * float(np.real(F[1, -1]))
+    assert abs(J - 2.0 * kappa * r**2) < 1e-12, J
+    # p=2 single-site anisotropy and the U(1)-breaking (1, 1) mode are ZERO
+    assert abs(F[2, 0]) < 1e-14 and abs(F[0, 2]) < 1e-14  # h_2
+    assert abs(F[1, 1]) < 1e-14  # cos(th_i + th_j)
+
+
+def test_so2_with_random_spring_warns_about_u1_breaking():
+    with pytest.warns(UserWarning, match="break"):
+        build_lattice(
+            jax.random.PRNGKey(6),
+            unit_dims=[2, 2],
+            hidden=8,
+            potential_type="so2_invariant",
+            kinetic_mode="newtonian_learned",
+            coupling_type="spring",  # random W on an SO(2) lattice
+            kappa_c=0.05,
+        )
+    # conformal init, channel_spring, and auto are all silent
+    import warnings as _warnings
+
+    for kw in (
+        dict(coupling_type="spring", proj_init_mode="conformal"),
+        dict(coupling_type="channel_spring"),
+        dict(coupling_type="auto"),
+    ):
+        with _warnings.catch_warnings():
+            _warnings.simplefilter("error")
+            build_lattice(
+                jax.random.PRNGKey(6),
+                unit_dims=[2, 2],
+                hidden=8,
+                potential_type="so2_invariant",
+                kinetic_mode="newtonian_learned",
+                kappa_c=0.05,
+                **kw,
+            )
+    # non-so2 lattices keep the old default silently
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("error")
+        build_lattice(
+            jax.random.PRNGKey(6),
+            unit_dims=[2, 2],
+            hidden=8,
+            potential_type="mlp",
+            kinetic_mode="newtonian_learned",
+            coupling_type="spring",
+            kappa_c=0.05,
+        )

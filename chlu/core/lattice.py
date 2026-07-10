@@ -51,6 +51,7 @@ sqrt(eigenvalue of M_eff^{-1} Hess V) (larger mu = faster, shorter memory).
 Never "mass" unqualified.
 """
 
+import warnings
 from typing import Optional, Sequence
 
 import equinox as eqx
@@ -214,8 +215,49 @@ def spring_coupling(
     coupling_dim: int = 2,
     init_scale: float = 0.1,
     key: Optional[jax.random.PRNGKey] = None,
+    init_mode: str = "random",
 ) -> SpringCoupling:
-    """Spring coupling with small random learnable projections W ~ N(0, init_scale^2)."""
+    """
+    Spring coupling with LEARNABLE projections W.
+
+    ``init_mode``:
+
+    - ``"random"`` (default, legacy): ``W ~ N(0, init_scale^2)``. ⚠ A generic
+      random ``W`` **breaks the lattice's global U(1)** (``xy-lattice-theory``
+      §2.5, Prop-2/Cor): writing ``A = W[:, :2]``, the reduced bond potential
+      carries a ``p=2`` single-site anisotropy ``h_2``, a Dzyaloshinskii–Moriya
+      phase, and a ``cos(theta_i + theta_j)`` term. Measured at init:
+      ``P(J < 0) = 0.52`` (the exchange is antiferromagnetic half the time),
+      median ``h_2/|J| = 1.00``, median U(1)-breaking/``|J| = 1.48``. Since a
+      ``p=2`` anisotropy has scaling dimension ``x_2 = 1/2 < 2`` at the KT
+      fixed point it is a **relevant** perturbation [José–Kadanoff–Kirkpatrick–
+      Nelson 1977] and destroys any 2-D memory phase.
+    - ``"conformal"``: ``W_i = W_j = 1_k`` (identity on the first
+      ``coupling_dim`` coordinates) at init, **still fully trainable**. Exactly
+      the ``channel_spring_coupling`` geometry at step 0, so the reduction is
+      exactly XY there (``h_2 = U(1)-break = 0``). Training on U(1)-symmetric
+      data keeps it there (``h_2/|J| <= 0.017`` after 400 epochs) and recovers
+      ``J/J_true = 1.03–1.07`` at equal-or-better wake loss — **the symmetry is
+      free**; the objective never wanted it broken.
+
+    ``init_scale`` is ignored in ``"conformal"`` mode.
+    """
+    if init_mode not in ("random", "conformal"):
+        raise ValueError(
+            f"Unknown spring init_mode: {init_mode!r}. Must be 'random' or 'conformal'."
+        )
+    if init_mode == "conformal":
+        if coupling_dim > min(d_i, d_j):
+            raise ValueError(
+                f"conformal init needs coupling_dim ({coupling_dim}) <= "
+                f"min(d_i, d_j) = {min(d_i, d_j)}"
+            )
+        # eye(k, d) = identity embedding of the first k coords (the channel)
+        return SpringCoupling(
+            W_i=jnp.eye(coupling_dim, d_i),
+            W_j=jnp.eye(coupling_dim, d_j),
+            kappa=float(kappa),
+        )
     if key is None:
         key = jax.random.PRNGKey(0)
     k1, k2 = jax.random.split(key)
@@ -239,6 +281,17 @@ def channel_spring_coupling(
     measurement (F5 §7.2). At a synchronized vacuum with channel inertial
     mass M per unit, the joint channel spectrum is exactly
     {0 (shared latch), 4*kappa/M (relative), radial, radial + 4*kappa/M}.
+
+    **This is the U(1)-preserving coupling** (``xy-lattice-theory`` Prop-1,
+    prerequisite P5). With ``so2_invariant`` units, restricting the joint V to
+    the product of vacuum rings (radius r*) gives EXACTLY
+
+        V = sum_<ij> 2 kappa r*^2 (1 - cos(theta_i - theta_j)),   J = 2 kappa r*^2
+
+    a pure first harmonic — no ``cos 2 dtheta``, no anisotropy, no U(1)
+    breaking (verified to 2.2e-16; all other harmonics <= 7.4e-18). Prefer this
+    (or ``spring_coupling(..., init_mode="conformal")``) over the random-W
+    ``spring_coupling`` for any SO(2) lattice.
     """
     rows = []
     for c in channel:
@@ -521,11 +574,12 @@ def build_lattice(
     kinetic_mode: str = "newtonian_learned",
     mass_scales: Optional[Sequence[float]] = None,
     edges: Optional[Sequence[tuple]] = None,
-    coupling_type: str = "spring",
+    coupling_type: str = "auto",
     kappa_c: float = 0.05,
     coupling_dim: int = 2,
     coupling_hidden: int = 16,
     proj_init_scale: float = 0.1,
+    proj_init_mode: str = "random",
     wormhole_edges: Sequence[tuple] = (),
     wormhole_gate_threshold: float = 1.0,
     wormhole_gate_width: float = 0.25,
@@ -550,10 +604,27 @@ def build_lattice(
         edges: coupling edge list; default = chain. Non-adjacent pairs are
             legal here too (ungated); ``wormhole_edges`` adds GATED non-local
             pairs (F5 §7.4 smooth gate).
-        coupling_type: "spring" (quadratic, learnable W) or "mlp".
+        coupling_type: one of
+
+            - ``"auto"`` (default) — ``"channel_spring"`` for ``so2_invariant``
+              units, ``"spring"`` for every other potential type. This is the
+              theorist's design rule (``xy-lattice-theory`` P5): an SO(2)
+              lattice must be coupled U(1)-symmetrically or its ``p=2``
+              anisotropy (a RELEVANT perturbation) destroys the KT phase.
+            - ``"spring"`` — quadratic, learnable W (see ``proj_init_mode``).
+            - ``"channel_spring"`` — quadratic, FIXED identity-on-channel W.
+              Exact XY reduction ``V = sum 2 kappa r*^2 (1 - cos dtheta)``,
+              ``J = 2 kappa r*^2``. Not trainable (no coupling parameters).
+            - ``"mlp"`` — learned nonlinear position-only coupling.
+
         kappa_c: coupling strength (static knob; kappa_c = 0 with spring
             coupling reduces the dynamics exactly to independent units).
         coupling_dim / coupling_hidden / proj_init_scale: coupling shapes.
+            ``coupling_dim`` also selects the channel ``(0, ..., coupling_dim-1)``
+            for ``"channel_spring"``.
+        proj_init_mode: ``"random"`` (legacy, U(1)-breaking) or ``"conformal"``
+            (``W = 1_k`` at init, still trainable) — see ``spring_coupling``.
+            Only used by ``coupling_type="spring"``.
         wormhole_edges: distant (i, j) pairs to couple through a smooth
             energy gate (skeleton — no top-k selection logic).
         gate_energy_mode: ``"free_energy"`` (default, correct annealed
@@ -576,6 +647,30 @@ def build_lattice(
         raise ValueError(
             f"Unknown gate_energy_mode: {gate_energy_mode!r}. "
             "Must be 'free_energy' or 'mean_energy'."
+        )
+
+    # Design rule (xy-lattice-theory P5): U(1)-preserving coupling for SO(2)
+    # units. "auto" preserves today's behavior for every non-so2 potential.
+    if coupling_type == "auto":
+        coupling_type = (
+            "channel_spring" if potential_type == "so2_invariant" else "spring"
+        )
+    elif (
+        coupling_type == "spring"
+        and potential_type == "so2_invariant"
+        and proj_init_mode == "random"
+    ):
+        warnings.warn(
+            "Building an so2_invariant lattice with a random-W spring_coupling: "
+            "the learnable projections break the lattice's global U(1). At init "
+            "P(J < 0) = 0.52 and median h_2/|J| = 1.00; after 400 epochs on "
+            "U(1)-symmetric data J/J_true ~ 0.02 while h_2/|J| = 0.6-2.1. The "
+            "p=2 anisotropy is a RELEVANT perturbation at the KT fixed point "
+            "(x_2 = 1/2) and destroys any 2-D memory phase. Use "
+            "coupling_type='channel_spring' (or 'auto'), or "
+            "proj_init_mode='conformal'.",
+            UserWarning,
+            stacklevel=2,
         )
 
     n_couplings = len(edges) + len(wormhole_edges)
@@ -607,6 +702,14 @@ def build_lattice(
                 coupling_dim=coupling_dim,
                 init_scale=proj_init_scale,
                 key=k,
+                init_mode=proj_init_mode,
+            )
+        elif coupling_type == "channel_spring":
+            return channel_spring_coupling(
+                unit_dims[i],
+                unit_dims[j],
+                kappa_c,
+                channel=tuple(range(coupling_dim)),
             )
         elif coupling_type == "mlp":
             return MLPCoupling(
@@ -614,7 +717,8 @@ def build_lattice(
             )
         else:
             raise ValueError(
-                f"Unknown coupling_type: {coupling_type}. Must be 'spring' or 'mlp'."
+                f"Unknown coupling_type: {coupling_type}. Must be 'auto', "
+                "'spring', 'channel_spring' or 'mlp'."
             )
 
     couplings = [

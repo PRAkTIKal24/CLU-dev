@@ -572,10 +572,20 @@ class ExperimentLatticeConfig:
     """
 
     # --- lattice / coupling knobs (build_lattice) ---
-    coupling_type: str = "spring"  # "spring" (kappa*||W_i q_i - W_j q_j||^2) or "mlp"
+    # "auto" = channel_spring for so2_invariant units (U(1)-preserving; the
+    # xy-lattice-theory P5 design rule), "spring" for every other potential
+    # type — so this default is behavior-identical to the old "spring" for
+    # every lattice this experiment builds (all use potential_type="mlp").
+    # Explicit: "spring" (kappa*||W_i q_i - W_j q_j||^2, learnable W),
+    # "channel_spring" (fixed identity-on-channel W: exact XY, J = 2 kappa r*^2),
+    # or "mlp".
+    coupling_type: str = "auto"
     coupling_dim: int = 2
     kappa_c: float = 0.05  # coupling strength for trained/smoke lattices
     proj_init_scale: float = 0.1  # init scale of learnable spring projections W
+    # "random" (legacy; a generic W breaks the lattice's global U(1)) or
+    # "conformal" (W = 1_k at init, still trainable). Only used by "spring".
+    proj_init_mode: str = "random"
     kinetic_energy_mode: str = "newtonian_learned"  # banding needs log_mass read
     hidden_dim: int = 32
     dt: float = 0.05

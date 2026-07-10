@@ -261,6 +261,7 @@ def scaling_smoke(cfg, key: jax.random.PRNGKey) -> list:
             kappa_c=cfg.kappa_c,
             coupling_dim=cfg.coupling_dim,
             proj_init_scale=cfg.proj_init_scale,
+            proj_init_mode=cfg.proj_init_mode,
         )
         D = lattice.dim
         kq, kp = jax.random.split(k_state)
@@ -317,6 +318,7 @@ def wormhole_smoke(cfg, key: jax.random.PRNGKey) -> dict:
         kappa_c=cfg.kappa_c,
         coupling_dim=cfg.coupling_dim,
         proj_init_scale=cfg.proj_init_scale,
+        proj_init_mode=cfg.proj_init_mode,
         wormhole_edges=((0, n - 1),),
         wormhole_gate_threshold=cfg.wormhole_gate_threshold,
         wormhole_gate_width=cfg.wormhole_gate_width,
@@ -378,6 +380,7 @@ def _build_training_lattice(cfg, key, banded: bool) -> CLULattice:
         kappa_c=cfg.train_kappa_c,
         coupling_dim=cfg.coupling_dim,
         proj_init_scale=cfg.proj_init_scale,
+        proj_init_mode=cfg.proj_init_mode,
     )
 
 
