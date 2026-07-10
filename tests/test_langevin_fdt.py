@@ -569,7 +569,8 @@ def test_relativistic_fdt_warns_from_stochastic_rollout():
         dim=2, hidden=4, kinetic_mode="relativistic", key=jax.random.PRNGKey(0)
     )
     schedule = jnp.linspace(1.0, 0.01, 5)
-    with pytest.warns(RelativisticGibbsWarning, match=r"T/\(m0\*c\^2\) = 1"):
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
         traj = model.stochastic_rollout(
             jnp.zeros(2),
             jnp.zeros(2),
@@ -580,7 +581,52 @@ def test_relativistic_fdt_warns_from_stochastic_rollout():
             key=jax.random.PRNGKey(1),
             noise_mode="fdt",
         )
+    hits = [w for w in caught if issubclass(w.category, RelativisticGibbsWarning)]
+    # exactly once: up front on the hottest T. The per-step temperature scanned
+    # inside is a tracer, so stochastic_step's probe skips it (no duplicates).
+    assert len(hits) == 1, f"expected 1 warning, got {len(hits)}"
+    assert "T/(m0*c^2) = 1" in str(hits[0].message)
     assert jnp.all(jnp.isfinite(traj))
+
+
+def test_relativistic_fdt_warns_under_filter_jit():
+    """The guard-rail must survive tracing -- this is the path training uses.
+
+    Regression: a jnp-based concreteness probe (float(jnp.max(jnp.asarray(T))))
+    raises ConcretizationTypeError inside a jit trace even for a genuine Python
+    float, which silently swallowed the warning on exactly the paths that
+    matter (train_chlu / train_generative close over a concrete
+    sleep_temperature and call stochastic_step under eqx.filter_jit).
+    """
+    model = CHLU(
+        dim=2,
+        hidden=8,
+        kinetic_mode="relativistic",
+        rest_mass=1.0,
+        c=1.0,
+        key=jax.random.PRNGKey(0),
+    )
+
+    @eqx.filter_jit
+    def sleep(m, q, p, key, temperature=0.5):
+        def step_fn(carry, _):
+            (qs, ps), k = carry
+            qn, pn, kn = m.stochastic_step(
+                (qs, ps),
+                dt=0.05,
+                gamma=0.0,
+                temperature=temperature,
+                key=k,
+                noise_mode="fdt",
+            )
+            return ((qn, pn), kn), None
+
+        ((qf, pf), _), _ = jax.lax.scan(step_fn, ((q, p), key), None, length=5)
+        return qf, pf
+
+    with pytest.warns(RelativisticGibbsWarning, match=r"T/\(m0\*c\^2\) = 0.5"):
+        qf, pf = sleep(model, jnp.zeros(2), jnp.zeros(2), jax.random.PRNGKey(1))
+    assert jnp.all(jnp.isfinite(pf))
 
 
 @pytest.mark.parametrize(
