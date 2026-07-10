@@ -171,9 +171,29 @@ def langevin_step(
                 "noise_mode='fdt' requires m_eff (per-coordinate inertial "
                 "mass at p≈0; see CHLU.effective_mass)."
             )
-        noise_scale = jnp.sqrt(
-            jnp.maximum(0.0, m_eff * temperature * gamma * (2.0 - gamma))
-        )
+        # DESIGN NOTE (do not "fix"): the scale uses the *scalar* gamma only,
+        # never gamma_field(q_next). The shipped FrictionField is deliberately
+        # ABSORB-ONLY (a pure sink), so a friction hole is simultaneously a
+        # brake and a *refrigerator* (T_local = 1.26e-4 vs 1e-3 outside).
+        # v5-gate §R3 measured this: absorb-only makes a hole a 107.77 ± 4.78x
+        # memory vault, where the "correct-looking" locally-thermalized
+        # (coupled-bath) form gives only 13.28 ± 0.12x — the coupled-bath
+        # hypothesis was REJECTED by a factor 8.11 ± 0.37 against its own
+        # dedicated control. Coupling the noise to gamma_field would destroy
+        # the effect. The S2 "Hawking re-emission" study is the place to
+        # explore the coupled bath, behind its own flag.
+        #
+        # Safe sqrt (double-where): the naive sqrt(max(0, arg)) has an
+        # infinite derivative at arg == 0, and m_eff carries the LEARNABLE
+        # log_mass — so at gamma == 0 (the repo default sleep_friction) the
+        # gradient d sigma / d log_mass is inf * 0 = NaN, which poisons every
+        # parameter on the first sleep step. "legacy" is immune only because
+        # its sqrt argument (2*gamma*T*dt) contains no parameter. The
+        # double-where is bit-identical for arg > 0 and gives exactly 0 value
+        # AND 0 gradient at arg == 0. (xy-lattice-theory §5(i-b).)
+        arg = m_eff * temperature * gamma * (2.0 - gamma)
+        safe_arg = jnp.where(arg > 0.0, arg, 1.0)
+        noise_scale = jnp.where(arg > 0.0, jnp.sqrt(safe_arg), 0.0)
     else:
         raise ValueError(
             f"Unknown noise_mode: {noise_mode!r}. Must be 'legacy' or 'fdt'."
