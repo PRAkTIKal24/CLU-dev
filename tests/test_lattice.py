@@ -39,6 +39,7 @@ from chlu.core.lattice import (  # noqa: E402
     channel_spring_coupling,
     scale_inertial_mass,
     spring_coupling,
+    torus_edges,
 )
 from chlu.data.two_timescale_orbits import generate_two_timescale_orbits  # noqa: E402
 from chlu.experiments.goldstone_harness import (  # noqa: E402
@@ -816,3 +817,61 @@ def test_so2_with_random_spring_warns_about_u1_breaking():
             coupling_type="spring",
             kappa_c=0.05,
         )
+
+
+# ---------------------------------------------------------------------------
+# (8) 2-D torus edge list (xy-lattice-theory §7.2)
+# ---------------------------------------------------------------------------
+
+
+def test_torus_edges_degree_four_no_duplicates():
+    for L in (3, 4, 8):
+        edges = torus_edges(L)
+        n = L * L
+        assert len(edges) == 2 * n, f"L={L}: {len(edges)} edges, want {2 * n}"
+        assert all(i != j for i, j in edges), f"L={L}: self-loop"
+        undirected = {frozenset(e) for e in edges}
+        assert len(undirected) == 2 * n, f"L={L}: duplicate bonds"
+        deg = [0] * n
+        for i, j in edges:
+            deg[i] += 1
+            deg[j] += 1
+        assert set(deg) == {4}, f"L={L}: degrees {sorted(set(deg))} != {{4}}"
+        assert all(0 <= i < n and 0 <= j < n for i, j in edges)
+
+    # L = 2 is a genuine MULTIgraph (the +x and -x neighbour coincide): the
+    # honest periodic lattice has 8 bonds over 4 distinct pairs. Raise unless
+    # the caller opts in, so nobody silently builds a degree-2 "torus".
+    with pytest.raises(ValueError, match="degenerate"):
+        torus_edges(2)
+    doubled = torus_edges(2, allow_double_bonds=True)
+    assert len(doubled) == 8
+    assert len({frozenset(e) for e in doubled}) == 4
+    assert all(i != j for i, j in doubled)
+    with pytest.raises(ValueError):
+        torus_edges(1)
+
+
+def test_torus_lattice_builds_and_steps():
+    """The torus edge list drops straight into build_lattice (no new lattice
+    code): an L=3 (N=9) SO(2) torus builds, is finite, and steps."""
+    L = 3
+    lat = build_lattice(
+        jax.random.PRNGKey(9),
+        unit_dims=[2] * (L * L),
+        hidden=8,
+        potential_type="so2_invariant",
+        kinetic_mode="newtonian_learned",
+        edges=torus_edges(L),
+        kappa_c=0.05,
+    )
+    assert lat.n_units == L * L and lat.dim == 2 * L * L
+    assert len(lat.edges) == 2 * L * L
+    # auto -> channel_spring on so2 units (no U(1) breaking anywhere)
+    assert all(np.array_equal(np.asarray(c.W_i), np.eye(2, 2)) for c in lat.couplings)
+    kq, kp = jax.random.split(jax.random.PRNGKey(0))
+    q0 = 0.5 * jax.random.normal(kq, (lat.dim,))
+    p0 = 0.5 * jax.random.normal(kp, (lat.dim,))
+    assert jnp.isfinite(lat.H(q0, p0))
+    traj = lat(q0, p0, steps=5, dt=DT)
+    assert traj.shape == (5, 2 * lat.dim) and bool(jnp.all(jnp.isfinite(traj)))

@@ -566,6 +566,57 @@ def chain_edges(n_units: int) -> tuple:
     return tuple((i, i + 1) for i in range(n_units - 1))
 
 
+def torus_edges(L: int, allow_double_bonds: bool = False) -> tuple:
+    """
+    Periodic L x L square-lattice nearest-neighbour edge list (degree 4).
+
+    Unit index i = x + L*y for x, y in [0, L); edges are the +x and +y bonds of
+    every site, wrapped periodically. Returns 2*L^2 pairs, every site has
+    degree exactly 4, no self-loops, no duplicates (for L >= 3).
+
+    The 2-D topology for the KT / memory-phase experiment
+    (``xy-lattice-theory`` §7.2). ``build_lattice`` already accepts arbitrary
+    edge lists, so this is the only new lattice code the experiment needs.
+
+    ⚠ **L = 2 is degenerate.** On a 2x2 torus the +x and -x neighbours of a
+    site are the SAME site, so the periodic lattice has DOUBLE bonds: 2*L^2 = 8
+    bonds counting multiplicity, but only 4 distinct pairs, and the simple
+    graph has degree 2, not 4. There is no simple degree-4 2-torus at L = 2.
+    ``torus_edges(2)`` therefore raises; pass ``allow_double_bonds=True`` to
+    get the 8-bond multigraph (each pair twice ⇒ effective coupling 2*kappa on
+    that pair), which is the physically-honest L=2 periodic lattice.
+
+    Args:
+        L: linear size (N = L^2 units).
+        allow_double_bonds: permit the L = 2 multigraph (default False).
+
+    Returns:
+        tuple of (i, j) unit-index pairs, length 2*L^2.
+    """
+    L = int(L)
+    if L < 2:
+        raise ValueError(f"torus_edges needs L >= 2, got {L}")
+    if L == 2 and not allow_double_bonds:
+        raise ValueError(
+            "torus_edges(2) is degenerate: on a 2x2 torus the +x and -x "
+            "neighbours coincide, so the periodic lattice is a MULTIgraph "
+            "(8 bonds, 4 distinct pairs, simple-graph degree 2). Use L >= 3, "
+            "or pass allow_double_bonds=True to get the honest 8-bond L=2 "
+            "lattice (each pair coupled twice)."
+        )
+
+    def idx(x: int, y: int) -> int:
+        return (x % L) + L * (y % L)
+
+    edges = []
+    for y in range(L):
+        for x in range(L):
+            i = idx(x, y)
+            edges.append((i, idx(x + 1, y)))  # +x bond
+            edges.append((i, idx(x, y + 1)))  # +y bond
+    return tuple(edges)
+
+
 def build_lattice(
     key: jax.random.PRNGKey,
     unit_dims: Sequence[int],
