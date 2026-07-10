@@ -28,7 +28,6 @@ Nomenclature (F5 Def-2): M_eff here is the *inertial* mass (kinetic term),
 not the spectral mass mu.
 """
 
-import jax
 import jax.numpy as jnp
 
 
@@ -36,30 +35,37 @@ def effective_mass(model) -> jnp.ndarray:
     """
     Per-coordinate effective inertial mass M_eff of a CHLU at rest (p ~ 0).
 
-    Mirrors the kinematics actually coded in ``CHLU.H`` (which uses
-    ``M_inv = 1 / (softplus(log_mass) + 1e-6)``), so that the squeeze's
-    position response ``dq/dzeta = p / M_eff`` matches the unit's true
-    velocity response ``dq/dt = grad_p T`` at small p:
+    Thin delegate to ``model.effective_inertia()`` — the inertia the dynamics
+    actually invert — so that the squeeze's position response
+    ``dq/dzeta = p / M_eff`` matches the unit's true velocity response
+    ``dq/dt = grad_p T`` at small p:
 
     - ``newtonian_identity``: M_eff = 1
-    - ``newtonian_learned``:  M_eff = softplus(log_mass) + 1e-6
-    - ``relativistic``:       M_eff = rest_mass * (softplus(log_mass) + 1e-6)
+    - ``newtonian_learned``:  M_eff = mass_vector() + 1e-6
+    - ``relativistic``:       M_eff = rest_mass * (mass_vector() + 1e-6)
+
+    where ``mass_vector() = softplus(log_mass)`` **with ``tie_channel_mass``
+    applied** (channel coords (0, 1) share their log-space mean).
+
+    HISTORY (bug fix, 2026-07-10): this free function used to inline
+    ``softplus(model.log_mass) + 1e-6``, which ignored ``tie_channel_mass`` —
+    while ``mass_vector``, hence ``H``/``T``, applies it. Its promise to match
+    the unit's true velocity response was therefore **false on a tied model**,
+    and ``mass_weighted_squeeze`` would reframe a tied checkpoint with the
+    wrong inertia (a live trap for V1 boost/squeeze work). This is the
+    free-function twin of the ``CHLU.effective_mass`` bug fixed in fix-pack-5.
+    No shipped result was contaminated (both consumers — ``exp_v1_gate``,
+    ``exp_paid_access`` — build untied models), and delegation is
+    **bit-identical for untied models**: both spellings already carried +1e-6.
 
     Args:
-        model: CHLU instance (uses .kinetic_mode, .log_mass, .rest_mass, .dim)
+        model: CHLU instance — or anything exposing ``effective_inertia()``
+            (CLULattice, the twins).
 
     Returns:
         Array of shape (dim,) with strictly positive effective masses.
     """
-    if model.kinetic_mode == "newtonian_identity":
-        return jnp.ones(model.dim)
-    mass = jax.nn.softplus(model.log_mass) + 1e-6
-    if model.kinetic_mode == "newtonian_learned":
-        return mass
-    elif model.kinetic_mode == "relativistic":
-        return model.rest_mass * mass
-    else:
-        raise ValueError(f"Unknown kinetic mode: {model.kinetic_mode}")
+    return model.effective_inertia()
 
 
 def squeeze(q: jnp.ndarray, p: jnp.ndarray, zeta) -> tuple:
