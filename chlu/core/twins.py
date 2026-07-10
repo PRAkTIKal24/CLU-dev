@@ -99,6 +99,12 @@ class BrokenVolumeCHLU(eqx.Module):
         return self.base.effective_inertia()
 
     def effective_mass(self):
+        # Delegates to CHLU.effective_mass, which fix-pack-5 made an exact alias
+        # of effective_inertia() (tie-aware, +1e-6 consistent). So this twin's
+        # fdt noise scale inherits the Gibbs fix for free -- as does
+        # CLULattice.effective_mass(), which concatenates per-unit
+        # CHLU.effective_mass(). (UnconstrainedTwin has no wrapped CHLU: its
+        # inertia is identically 1.) Pinned by tests/test_langevin_fdt.py.
         return self.base.effective_mass()
 
     # ------------------------------- dynamics --------------------------------
