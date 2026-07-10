@@ -1,5 +1,6 @@
 """Causal Hamiltonian Learning Unit (CHLU) - Core Implementation."""
 
+import warnings
 from typing import Optional
 
 import equinox as eqx
@@ -16,6 +17,17 @@ from chlu.core.potentials import (
     TiltedPotential,
     channel_spurion_direction,
 )
+
+
+class RelativisticGibbsWarning(UserWarning):
+    """Emitted when ``noise_mode="fdt"`` is used with ``relativistic`` kinetics.
+
+    The coded O-step is a linear OU recursion (Gaussian stationary law) while
+    the relativistic Gibbs momentum marginal is Maxwell-Juttner: **no sigma
+    gives the coded relativistic Langevin a Gibbs invariant** (CM-17;
+    v2-symmetry-deepdive §7bis R8). Warn, never raise — Exp-C runs in exactly
+    this cell by design, and quantifying the defect there is an open task.
+    """
 
 
 class CHLU(eqx.Module):
@@ -323,6 +335,82 @@ class CHLU(eqx.Module):
         """
         return self.effective_inertia()
 
+    def thermal_causal_ratio(self, temperature):
+        """
+        The dimensionless ratio ``T / (m0 c^2)`` — thermal energy over rest
+        energy — which **alone** governs the relativistic Gibbs defect (CM-17).
+
+        In ``relativistic`` mode the exact Gibbs momentum marginal is
+        Maxwell-Juttner while the coded Langevin O-step
+        ``p <- (1-gamma) p + sigma xi`` is a linear OU recursion with a
+        Gaussian stationary law. No sigma reconciles them
+        (v2-symmetry-deepdive §7bis R8). The size of the mismatch depends on
+        ``T``, ``rest_mass`` and ``c`` only through this ratio — verified
+        exactly: ``(c=1, T=8)`` and ``(c=0.5, T=2)`` give bit-identical
+        observables (-0.7290074).
+
+        Reference scale (theorist's tables):
+
+        =================  ======================  ==================
+        T / (m0 c^2)       Var_MJ / (M_eff * T)    KL(MJ || Gauss)
+        =================  ======================  ==================
+        0.01               1.015                   7.4e-5 nats
+        0.1                1.153                   6.8e-3 nats
+        1.0                2.70                    0.384 nats
+        8.0                16.28                   6.31 nats
+        =================  ======================  ==================
+
+        The non-relativistic limit is ``T << m0 c^2`` (ratio -> 0), where the
+        Maxwell-Juttner law tends to the Gaussian and ``fdt`` becomes exact.
+        The free mitigation is to raise ``c`` or ``rest_mass``. Note
+        ``experiment_c`` (the published Exp III) runs at ratio 1.0; the
+        paper-run project `finalA` used ``c=5`` => ratio 0.04, benign.
+
+        This number is meaningful for *any* kinetic mode (rest_mass and c are
+        always defined), but only *governs* anything in ``relativistic`` mode:
+        the Newtonian modes have no m0 c^2 scale in their kinetic term and
+        ``fdt`` is exactly Gibbs there.
+
+        Args:
+            temperature: Temperature T in energy units (scalar or array).
+
+        Returns:
+            T / (rest_mass * c**2), same shape as ``temperature``.
+        """
+        return temperature / (self.rest_mass * self.c**2)
+
+    def _warn_if_relativistic_fdt(self, temperature, noise_mode: str) -> None:
+        """Guard-rail for CM-17: warn (never raise) on relativistic + fdt.
+
+        Fires only when noise is actually injected (T > 0) — at T=0 there is no
+        sampler and hence no Gibbs claim to violate. Silently skips when
+        ``temperature`` is a JAX tracer (e.g. a scanned annealing schedule):
+        the concrete value is unavailable, and ``stochastic_rollout`` already
+        warns up front with the concrete schedule.
+        """
+        if noise_mode != "fdt" or self.kinetic_mode != "relativistic":
+            return
+        try:
+            t_max = float(jnp.max(jnp.asarray(temperature)))
+        except Exception:  # traced temperature: no concrete value to report
+            return
+        if t_max <= 0.0:
+            return
+        ratio = t_max / (self.rest_mass * self.c**2)
+        warnings.warn(
+            f"noise_mode='fdt' with kinetic_mode='relativistic' does NOT sample "
+            f"Gibbs: the coded O-step p<-(1-gamma)p+sigma*xi is a linear OU "
+            f"recursion (Gaussian stationary law), while the relativistic Gibbs "
+            f"momentum marginal is Maxwell-Juttner. No sigma fixes this "
+            f"(CM-17 / v2-symmetry-deepdive R8). This call has "
+            f"T/(m0*c^2) = {ratio:.4g} (T={t_max:.4g}, rest_mass="
+            f"{self.rest_mass:.4g}, c={self.c:.4g}); the defect vanishes as this "
+            f"ratio -> 0. Free mitigation: raise c or rest_mass until "
+            f"T << m0*c^2. See CHLU.thermal_causal_ratio.",
+            RelativisticGibbsWarning,
+            stacklevel=3,
+        )
+
     def step(self, state: tuple, dt: float, gamma: float = 0.0) -> tuple:
         """
         Single time step using Velocity Verlet integrator.
@@ -369,13 +457,20 @@ class CHLU(eqx.Module):
             temperature: Temperature parameter (0 = deterministic, >0 = stochastic)
             key: JAX random key for reproducible noise generation
             noise_mode: "legacy" (historical sqrt(2*gamma*T*dt) scale, default)
-                        or "fdt" (exact discrete-FDT per-mode scale using this
-                        unit's inertial mass M_eff; see F5 Prop-9)
+                        or "fdt" (per-mode scale sigma_i* using this unit's
+                        inertial mass M_eff; F5 Prop-9). "fdt" is the exact
+                        discrete-FDT noise — i.e. temperatures in energy units,
+                        stationary law exp(-H/T) — **only in the Newtonian
+                        kinetic modes.** In ``relativistic`` mode no sigma
+                        yields a Gibbs invariant (CM-17); a
+                        ``RelativisticGibbsWarning`` is emitted, naming this
+                        call's ``T/(m0 c^2)``. See ``thermal_causal_ratio``.
 
         Returns:
             (q_next, p_next, new_key): Updated state and split key
         """
         q, p = state
+        self._warn_if_relativistic_fdt(temperature, noise_mode)
         m_eff = self.effective_mass() if noise_mode == "fdt" else None
         return langevin_step(
             self.H, q, p, dt, gamma, temperature, key,
@@ -502,11 +597,19 @@ class CHLU(eqx.Module):
                         Can be scalar (constant) or array of shape (steps,) for annealing.
             key: JAX random key for reproducible stochastic evolution
             noise_mode: "legacy" (historical scale, default) or "fdt"
-                        (exact discrete-FDT per-mode scale; see F5 Prop-9)
+                        (per-mode discrete-FDT scale; see F5 Prop-9). "fdt" is
+                        exactly Gibbs **only in the Newtonian kinetic modes**;
+                        in ``relativistic`` mode it is not, for any sigma
+                        (CM-17) — a ``RelativisticGibbsWarning`` is emitted,
+                        naming the hottest ``T/(m0 c^2)`` of the schedule.
 
         Returns:
             Trajectory of shape (steps, 2*dim) where each row is [q, p]
         """
+        # CM-17 guard-rail, raised here (not only in stochastic_step) because
+        # the per-step temperature is a tracer inside the scan below.
+        self._warn_if_relativistic_fdt(temperature, noise_mode)
+
         # Convert temperature to array schedule
         # If scalar, broadcast to constant schedule
         temp_schedule = jnp.atleast_1d(temperature)

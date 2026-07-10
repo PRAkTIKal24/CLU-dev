@@ -71,7 +71,15 @@ def train_generative(
         sleep_temperature: Temperature for Langevin noise during sleep phase (overrides config)
         input_noise_sigma: Gaussian noise std for real data (denoising EBM, overrides config)
         langevin_noise: Langevin noise scale, "legacy" or "fdt" (overrides config;
-            see F5 Prop-9 / TrainingConfig.langevin_noise)
+            see F5 Prop-9 / TrainingConfig.langevin_noise). "fdt" is the exact
+            discrete-FDT noise — temperatures in energy units, stationary law
+            exp(-H/T) — **only in the Newtonian kinetic modes**; in
+            ``relativistic`` mode no sigma gives a Gibbs invariant (CM-17), and
+            ``stochastic_step`` warns, naming this run's T/(m0*c^2). Exp-C's
+            default kinetic mode IS relativistic (at T/(m0*c^2) = 1.0), so this
+            warning is expected there; the free mitigation is to raise
+            ``model.speed_of_causality`` or ``model.rest_mass``. Under "legacy",
+            T is not in energy units in any mode.
 
     Returns:
         (trained_model, losses): Trained model and loss history dict

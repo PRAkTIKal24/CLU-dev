@@ -106,13 +106,39 @@ def langevin_step(
           learned non-uniform inertial mass M, each mode equilibrates at its
           own temperature (no Gibbs invariant). Default, for backward
           compatibility with existing checkpoints/annealing schedules.
-        - "fdt": exact discrete-FDT noise. The damping+noise sub-step
-          p' = (1-gamma)*p + sigma*xi has stationary variance
+        - "fdt": exact discrete-FDT noise **in the Newtonian kinetic modes
+          only** (CM-17; see the kinetic-mode caveat below). The damping+noise
+          sub-step p' = (1-gamma)*p + sigma*xi has stationary variance
           sigma^2 / (gamma*(2-gamma)); matching Maxwell-Boltzmann
           Var(p_i) = M_eff_i * T requires the per-mode scale
               sigma_i* = sqrt(M_eff_i * T * gamma * (2 - gamma)).
           Requires ``m_eff`` (per-coordinate *inertial* mass at p≈0; see
           ``CHLU.effective_mass`` — not the spectral mass of a potential mode).
+          Then temperatures ARE in energy units and the stationary law is the
+          Gibbs measure exp(-H/T).
+
+    ⚠ Kinetic-mode caveat (CM-17; v2-symmetry-deepdive §7bis R8, proven):
+        "fdt" gives a Gibbs invariant **only for kinetic_mode in
+        {newtonian_identity, newtonian_learned}**. The O-step coded above,
+        p <- (1-gamma)*p + sigma*xi, is an autonomous *linear* OU recursion,
+        so its stationary momentum law is exactly *Gaussian*. In
+        ``relativistic`` mode the Gibbs momentum marginal is Maxwell-Juttner,
+        which is not Gaussian — hence **no sigma whatsoever makes the coded
+        relativistic Langevin sample Gibbs.** Root cause: the Gibbs-preserving
+        underdamped Langevin damps the *velocity* grad_p T; this code damps
+        *p*. For Newtonian T these coincide (Gamma = gamma*M); for
+        T(p) = c*sqrt(p^T M^-1 p + (m0 c)^2), grad_p T ∝ p / T(p) and they do
+        not. The defect is governed by the single ratio
+
+            T / (m0 c^2)        (see ``CHLU.thermal_causal_ratio``)
+
+        with Var_MJ/(M_eff*T) = 1.015 / 1.153 / 2.70 / 16.28 and
+        KL(MJ||Gauss) = 7.4e-5 / 6.8e-3 / 0.384 / 6.31 nats at
+        T/(m0 c^2) = 0.01 / 0.1 / 1.0 / 8.0. **Free mitigation: raise ``c`` or
+        ``rest_mass`` until T << m0 c^2** (one config line; the paper-run
+        project `finalA` used c=5 => 0.04, benign). Costlier exact fixes:
+        Metropolis-adjust, or an exact Maxwell-Juttner momentum refresh.
+        ``CHLU.stochastic_step`` warns (does not raise) on relativistic+fdt.
 
     Args:
         H_fn: Hamiltonian function H(q, p) -> scalar

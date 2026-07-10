@@ -76,7 +76,12 @@ def train_chlu(
         window_size: Window size for sub-sequence sampling (overrides config)
         sleep_temperature: Temperature for Langevin noise during sleep phase (overrides config)
         langevin_noise: Langevin noise scale, "legacy" or "fdt" (overrides config;
-            see F5 Prop-9 / TrainingConfig.langevin_noise)
+            see F5 Prop-9 / TrainingConfig.langevin_noise). "fdt" is the exact
+            discrete-FDT noise — temperatures in energy units, stationary law
+            exp(-H/T) — **only in the Newtonian kinetic modes**; in
+            ``relativistic`` mode no sigma gives a Gibbs invariant (CM-17), and
+            ``stochastic_step`` warns, naming this run's T/(m0*c^2). Under
+            "legacy", T is not in energy units in any mode.
         negative_seed_states: Optional (q, p) arrays of shape (n, dim) written
             into the replay buffer after random init — lets an experiment
             expose a structured "garbage source" to the sleep phase (e.g. the

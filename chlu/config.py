@@ -91,9 +91,25 @@ class TrainingConfig:
     sleep_temperature: float = 0.5  # Temperature for sleep phase (0.0 = deterministic)
     # Langevin noise scale: "legacy" = sqrt(2*gamma*T*dt) (historical; violates
     # the discrete FDT — per-mode effective temperature 2*dt*T/((2-gamma)*M_eff),
-    # F5 Prop-9) or "fdt" = per-mode sigma_i* = sqrt(M_eff_i*T*gamma*(2-gamma))
-    # (exact discrete fluctuation-dissipation; temperatures in energy units).
+    # F5 Prop-9) or "fdt" = per-mode sigma_i* = sqrt(M_eff_i*T*gamma*(2-gamma)).
+    #
+    # "fdt" is the exact discrete fluctuation-dissipation noise — temperatures
+    # in energy units, stationary law exp(-H/T) — **only for the Newtonian
+    # kinetic modes** (newtonian_identity / newtonian_learned). In
+    # kinetic_mode="relativistic" NO sigma gives a Gibbs invariant (CM-17):
+    # the coded O-step p<-(1-gamma)p+sigma*xi is a linear OU recursion whose
+    # stationary momentum law is Gaussian, while relativistic Gibbs demands
+    # Maxwell-Juttner. Root cause: the Gibbs-preserving underdamped Langevin
+    # damps the *velocity* grad_p T, this code damps *p* — the same thing iff
+    # T is Newtonian (Gamma = gamma*M). The defect is governed solely by the
+    # ratio T/(m0*c^2) (see CHLU.thermal_causal_ratio); the free mitigation is
+    # to raise speed_of_causality c or rest_mass until T << m0*c^2.
+    # CHLU.stochastic_step warns (does not raise) in that cell.
+    #
     # Default "legacy" preserves behavior for existing checkpoints/schedules.
+    # NOTE: under "legacy" T is NOT in energy units (dt and M_eff are absorbed)
+    # and there is no Gibbs invariant in any kinetic mode — any temperature
+    # claim must state this flag.
     langevin_noise: str = "legacy"
 
     # --- Friction field gamma_phi(q) (trash regions; F5 Def-5/Prop-11) ---
