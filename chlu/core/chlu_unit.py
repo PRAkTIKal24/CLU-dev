@@ -6,6 +6,7 @@ from typing import Optional
 import equinox as eqx
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from chlu.core.integrators import velocity_verlet_step, langevin_step
 from chlu.core.potentials import (
@@ -384,14 +385,24 @@ class CHLU(eqx.Module):
 
         Fires only when noise is actually injected (T > 0) — at T=0 there is no
         sampler and hence no Gibbs claim to violate. Silently skips when
-        ``temperature`` is a JAX tracer (e.g. a scanned annealing schedule):
-        the concrete value is unavailable, and ``stochastic_rollout`` already
-        warns up front with the concrete schedule.
+        ``temperature`` is a JAX tracer (e.g. the per-step temperature scanned
+        inside ``stochastic_rollout``): the concrete value is unavailable, and
+        the rollout already warns up front with the concrete schedule.
+
+        NOTE: the concreteness probe goes through **numpy**, not ``jnp``.
+        Inside a ``jit``/``filter_jit`` trace ``float(jnp.max(jnp.asarray(x)))``
+        raises ``ConcretizationTypeError`` even for a genuine Python float, so a
+        jnp-based probe would silently swallow the warning on exactly the paths
+        that matter (``train_chlu``/``train_generative`` close over a concrete
+        ``sleep_temperature`` and call ``stochastic_step`` under
+        ``eqx.filter_jit``). ``np.asarray`` keeps concrete values concrete and
+        raises ``TracerArrayConversionError`` on true tracers — the semantics we
+        want. Warnings are emitted at trace time, so once per compilation.
         """
         if noise_mode != "fdt" or self.kinetic_mode != "relativistic":
             return
         try:
-            t_max = float(jnp.max(jnp.asarray(temperature)))
+            t_max = float(np.max(np.asarray(temperature)))
         except Exception:  # traced temperature: no concrete value to report
             return
         if t_max <= 0.0:
