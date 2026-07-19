@@ -13,6 +13,7 @@ from rich.console import Console
 from . import __version__
 from .cli import (
     setup_data_parser,
+    setup_eval_parser,
     setup_experiment_parsers,
     setup_project_parser,
     setup_train_parser,
@@ -49,6 +50,7 @@ Examples:
     setup_experiment_parsers(subparsers)
     setup_train_parser(subparsers)
     setup_data_parser(subparsers)
+    setup_eval_parser(subparsers)
     setup_utils_parsers(subparsers)
 
     # Parse arguments
