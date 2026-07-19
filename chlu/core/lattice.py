@@ -518,9 +518,26 @@ class CLULattice(eqx.Module):
         key: jax.random.PRNGKey,
         noise_mode: str = "legacy",
     ) -> tuple:
-        """One joint Langevin step (scalar gamma only; mirrors CHLU.stochastic_step)."""
+        """One joint Langevin step (scalar gamma only; mirrors CHLU.stochastic_step).
+
+        For ``noise_mode="fdt_relativistic"`` the per-unit rest_mass and c are
+        assembled into per-coordinate arrays and ``group_sizes=unit_dims`` is
+        passed, so each relativistic unit gets its OWN latent scale s (the joint
+        H is kinetic-separable, so Maxwell-Juttner factorizes per unit).
+        """
         q, p = state
-        m_eff = self.effective_mass() if noise_mode == "fdt" else None
+        m_eff = (
+            self.effective_mass()
+            if noise_mode in ("fdt", "fdt_relativistic")
+            else None
+        )
+        rest_mass = c = group_sizes = None
+        if noise_mode == "fdt_relativistic":
+            rest_mass = jnp.concatenate(
+                [jnp.full(u.dim, u.rest_mass) for u in self.units]
+            )
+            c = jnp.concatenate([jnp.full(u.dim, u.c) for u in self.units])
+            group_sizes = self.unit_dims
         return langevin_step(
             self.H,
             q,
@@ -531,6 +548,9 @@ class CLULattice(eqx.Module):
             key,
             noise_mode=noise_mode,
             m_eff=m_eff,
+            rest_mass=rest_mass,
+            c=c,
+            group_sizes=group_sizes,
         )
 
     def __call__(

@@ -338,22 +338,27 @@ class CHLU(eqx.Module):
 
     def thermal_causal_ratio(self, temperature):
         """
-        The dimensionless ratio ``T / (m0 c^2)`` — thermal energy over rest
-        energy — which **alone** governs the relativistic Gibbs defect (CM-17).
+        The dimensionless ratio ``Theta := T / (m0 c^2)`` — thermal energy over
+        rest energy.
+
+        ⚠ **Theta ALONE does NOT govern the relativistic Gibbs defect** — the
+        control parameter is ``d*Theta`` (see ``gibbs_defect_parameter``). This
+        method is kept because ``Theta`` is the natural per-mode scale and the
+        ``d=1`` reference table below is stated in it; but at ``d>1`` the defect
+        is ``d`` times larger, and Exp-C runs at ``d=784`` (CM-17 v1.9).
 
         In ``relativistic`` mode the exact Gibbs momentum marginal is
         Maxwell-Juttner while the coded Langevin O-step
         ``p <- (1-gamma) p + sigma xi`` is a linear OU recursion with a
-        Gaussian stationary law. No sigma reconciles them
-        (v2-symmetry-deepdive §7bis R8). The size of the mismatch depends on
-        ``T``, ``rest_mass`` and ``c`` only through this ratio — verified
-        exactly: ``(c=1, T=8)`` and ``(c=0.5, T=2)`` give bit-identical
-        observables (-0.7290074).
+        Gaussian stationary law. No sigma reconciles them (f5-corrigendum-2
+        Prop-9'). At FIXED d the mismatch depends on ``T``, ``rest_mass`` and
+        ``c`` only through ``Theta`` — verified exactly: ``(c=1, T=8)`` and
+        ``(c=0.5, T=2)`` give bit-identical observables.
 
-        Reference scale (theorist's tables):
+        Reference scale (**d=1 ONLY** — do NOT quote against a d>1 experiment):
 
         =================  ======================  ==================
-        T / (m0 c^2)       Var_MJ / (M_eff * T)    KL(MJ || Gauss)
+        Theta = T/(m0 c^2) Var_MJ / (M_eff * T)    KL(MJ || Gauss)
         =================  ======================  ==================
         0.01               1.015                   7.4e-5 nats
         0.1                1.153                   6.8e-3 nats
@@ -361,16 +366,15 @@ class CHLU(eqx.Module):
         8.0                16.28                   6.31 nats
         =================  ======================  ==================
 
-        The non-relativistic limit is ``T << m0 c^2`` (ratio -> 0), where the
-        Maxwell-Juttner law tends to the Gaussian and ``fdt`` becomes exact.
-        The free mitigation is to raise ``c`` or ``rest_mass``. Note
-        ``experiment_c`` (the published Exp III) runs at ratio 1.0; the
-        paper-run project `finalA` used ``c=5`` => ratio 0.04, benign.
+        The non-relativistic limit is ``d*Theta << 1`` (NOT ``Theta << 1``),
+        where Maxwell-Juttner tends to the Gaussian and ``fdt`` becomes exact.
+        Exp-C runs at ``Theta = 1.0`` but ``d*Theta = 784``; the paper-run
+        project `finalA` used ``c=5`` => ``Theta = 0.04`` but ``d*Theta = 31.4``
+        — still ultra-relativistic, **NOT benign**. The exact fix is
+        ``noise_mode="fdt_relativistic"`` (see ``gibbs_defect_parameter``).
 
         This number is meaningful for *any* kinetic mode (rest_mass and c are
-        always defined), but only *governs* anything in ``relativistic`` mode:
-        the Newtonian modes have no m0 c^2 scale in their kinetic term and
-        ``fdt`` is exactly Gibbs there.
+        always defined), but only *governs* anything in ``relativistic`` mode.
 
         Args:
             temperature: Temperature T in energy units (scalar or array).
@@ -379,6 +383,37 @@ class CHLU(eqx.Module):
             T / (rest_mass * c**2), same shape as ``temperature``.
         """
         return temperature / (self.rest_mass * self.c**2)
+
+    def gibbs_defect_parameter(self, temperature):
+        """
+        ``d*Theta`` — the quantity that **actually governs** the relativistic
+        Gibbs defect (``Theta`` alone does NOT; CM-17 v1.9, f5-corrigendum-2
+        §2).
+
+        The coded relativistic kinetic term shares a SINGLE square root over
+        all ``d`` coordinates (``T(p) = c*sqrt(sum p^2/M + (m0 c)^2)``), so the
+        equilibrium's "relativistic-ness" is set by the TOTAL kinetic energy:
+        ``<T_kin>/(m0 c^2) ~= d*Theta/2``. The system is non-relativistic (and
+        ``fdt`` is exactly Gibbs) iff ``d*Theta << 1`` — **not** ``Theta << 1``.
+
+        The momentum-variance defect grows with d:
+            Var_MJ/(M_eff*T) = 1 + (d+2)*Theta/2 + O((d*Theta)^2)
+                             -> (d+1)*Theta        (ultra-relativistic)
+
+        So a ``d=1`` reference table (``thermal_causal_ratio``) badly
+        under-states the defect at large d. At Exp-C (``d=784``, ``Theta=1``):
+        ``d*Theta = 784`` and ``Var_MJ/(M_eff*T) = 785x`` (KL ~ 3.24e6 nats).
+        To reach ``d*Theta < 1`` at ``T=1`` needs ``c >~ sqrt(d*T/m0) ~= 28``,
+        NOT ``c=5``. The exact fix that works at any d is the latent-mass
+        thermostat, ``noise_mode="fdt_relativistic"``.
+
+        Args:
+            temperature: Temperature T in energy units (scalar or array).
+
+        Returns:
+            ``dim * T / (rest_mass * c**2)`` (= ``dim * thermal_causal_ratio``).
+        """
+        return self.dim * self.thermal_causal_ratio(temperature)
 
     def _warn_if_relativistic_fdt(self, temperature, noise_mode: str) -> None:
         """Guard-rail for CM-17: warn (never raise) on relativistic + fdt.
@@ -407,17 +442,24 @@ class CHLU(eqx.Module):
             return
         if t_max <= 0.0:
             return
-        ratio = t_max / (self.rest_mass * self.c**2)
+        ratio = t_max / (self.rest_mass * self.c**2)  # Theta
+        d_theta = self.dim * ratio  # the actual control parameter
+        c_needed = float(np.sqrt(self.dim * t_max / self.rest_mass))
         warnings.warn(
             f"noise_mode='fdt' with kinetic_mode='relativistic' does NOT sample "
             f"Gibbs: the coded O-step p<-(1-gamma)p+sigma*xi is a linear OU "
             f"recursion (Gaussian stationary law), while the relativistic Gibbs "
             f"momentum marginal is Maxwell-Juttner. No sigma fixes this "
-            f"(CM-17 / v2-symmetry-deepdive R8). This call has "
-            f"T/(m0*c^2) = {ratio:.4g} (T={t_max:.4g}, rest_mass="
-            f"{self.rest_mass:.4g}, c={self.c:.4g}); the defect vanishes as this "
-            f"ratio -> 0. Free mitigation: raise c or rest_mass until "
-            f"T << m0*c^2. See CHLU.thermal_causal_ratio.",
+            f"(CM-17 v1.9 / f5-corrigendum-2 Prop-9'). The defect is governed by "
+            f"d*Theta = {d_theta:.4g} (d={self.dim}, "
+            f"Theta = T/(m0*c^2) = {ratio:.4g}, "
+            f"T={t_max:.4g}, rest_mass={self.rest_mass:.4g}, c={self.c:.4g}); "
+            f"Theta ALONE does not govern it, and Var_MJ/(M_eff*T) ~ (d+1)*Theta "
+            f"ultra-relativistically. The EXACT fix is "
+            f"noise_mode='fdt_relativistic' (latent-mass thermostat). Raising c "
+            f"is NOT free at large d: reaching d*Theta<1 needs "
+            f"c >~ sqrt(d*T/m0) = {c_needed:.4g} (NOT c=5). See "
+            f"CHLU.gibbs_defect_parameter (d*Theta) / thermal_causal_ratio.",
             RelativisticGibbsWarning,
             stacklevel=3,
         )
@@ -467,25 +509,35 @@ class CHLU(eqx.Module):
             gamma: Friction coefficient (required for temperature to have effect)
             temperature: Temperature parameter (0 = deterministic, >0 = stochastic)
             key: JAX random key for reproducible noise generation
-            noise_mode: "legacy" (historical sqrt(2*gamma*T*dt) scale, default)
-                        or "fdt" (per-mode scale sigma_i* using this unit's
-                        inertial mass M_eff; F5 Prop-9). "fdt" is the exact
-                        discrete-FDT noise — i.e. temperatures in energy units,
+            noise_mode: "legacy" (historical sqrt(2*gamma*T*dt) scale, default),
+                        "fdt" (per-mode scale sigma_i* using this unit's
+                        inertial mass M_eff; F5 Prop-9), or "fdt_relativistic"
+                        (the exact latent-mass thermostat). "fdt" is the exact
+                        discrete-FDT noise — temperatures in energy units,
                         stationary law exp(-H/T) — **only in the Newtonian
                         kinetic modes.** In ``relativistic`` mode no sigma
-                        yields a Gibbs invariant (CM-17); a
-                        ``RelativisticGibbsWarning`` is emitted, naming this
-                        call's ``T/(m0 c^2)``. See ``thermal_causal_ratio``.
+                        yields a Gibbs invariant (CM-17), governed by
+                        ``d*Theta`` (see ``gibbs_defect_parameter``); a
+                        ``RelativisticGibbsWarning`` is emitted naming it.
+                        "fdt_relativistic" preserves the Maxwell-Juttner
+                        momentum marginal EXACTLY (one InvGauss draw/step) and
+                        does NOT warn.
 
         Returns:
             (q_next, p_next, new_key): Updated state and split key
         """
         q, p = state
         self._warn_if_relativistic_fdt(temperature, noise_mode)
-        m_eff = self.effective_mass() if noise_mode == "fdt" else None
+        m_eff = (
+            self.effective_mass()
+            if noise_mode in ("fdt", "fdt_relativistic")
+            else None
+        )
+        rest_mass = self.rest_mass if noise_mode == "fdt_relativistic" else None
+        c = self.c if noise_mode == "fdt_relativistic" else None
         return langevin_step(
             self.H, q, p, dt, gamma, temperature, key,
-            noise_mode=noise_mode, m_eff=m_eff,
+            noise_mode=noise_mode, m_eff=m_eff, rest_mass=rest_mass, c=c,
             gamma_field=getattr(self, "friction_field", None),
         )
 

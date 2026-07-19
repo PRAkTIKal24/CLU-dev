@@ -101,10 +101,12 @@ class TrainingConfig:
     # stationary momentum law is Gaussian, while relativistic Gibbs demands
     # Maxwell-Juttner. Root cause: the Gibbs-preserving underdamped Langevin
     # damps the *velocity* grad_p T, this code damps *p* — the same thing iff
-    # T is Newtonian (Gamma = gamma*M). The defect is governed solely by the
-    # ratio T/(m0*c^2) (see CHLU.thermal_causal_ratio); the free mitigation is
-    # to raise speed_of_causality c or rest_mass until T << m0*c^2.
-    # CHLU.stochastic_step warns (does not raise) in that cell.
+    # T is Newtonian (Gamma = gamma*M). The defect is governed by d*Theta
+    # (Theta = T/(m0*c^2)), NOT Theta alone (see CHLU.gibbs_defect_parameter);
+    # Exp-C runs at d=784, Theta=1 => d*Theta=784. Raising c/rest_mass is NOT a
+    # free fix at that d; the exact fix is langevin_noise="fdt_relativistic"
+    # (latent-mass thermostat). CHLU.stochastic_step warns (does not raise) on
+    # relativistic+fdt.
     #
     # Default "legacy" preserves behavior for existing checkpoints/schedules.
     # NOTE: under "legacy" T is NOT in energy units (dt and M_eff are absorbed)

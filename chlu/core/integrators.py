@@ -4,6 +4,27 @@ import jax
 import jax.numpy as jnp
 
 
+def _sample_inverse_gaussian(key, mean, shape_lambda):
+    """Draw one scalar from InverseGaussian(mean=``mean``, shape=``shape_lambda``).
+
+    Michael, Schucany & Haas (1976) exact transform — closed-form, jax-able,
+    two uniforms/normals per draw. Used by the ``fdt_relativistic`` thermostat
+    to sample the latent scale ``s|p`` of the Maxwell–Juttner Gaussian scale
+    mixture (f5-corrigendum-2 §3). ``mean`` and ``shape_lambda`` are positive
+    scalars.
+    """
+    k1, k2 = jax.random.split(key)
+    mu = mean
+    lam = shape_lambda
+    nu = jax.random.normal(k1)
+    y = nu * nu
+    x = mu + (mu * mu * y) / (2.0 * lam) - (mu / (2.0 * lam)) * jnp.sqrt(
+        4.0 * mu * lam * y + mu * mu * y * y
+    )
+    u = jax.random.uniform(k2)
+    return jnp.where(u <= mu / (mu + x), x, (mu * mu) / x)
+
+
 def velocity_verlet_step(
     H_fn, q: jnp.ndarray, p: jnp.ndarray, dt: float, gamma: float = 0.0,
     gamma_field=None,
@@ -76,6 +97,9 @@ def langevin_step(
     key: jax.random.PRNGKey,
     noise_mode: str = "legacy",
     m_eff: jnp.ndarray = None,
+    rest_mass=None,
+    c=None,
+    group_sizes=None,
     gamma_field=None,
 ) -> tuple:
     """
@@ -117,7 +141,7 @@ def langevin_step(
           Then temperatures ARE in energy units and the stationary law is the
           Gibbs measure exp(-H/T).
 
-    ⚠ Kinetic-mode caveat (CM-17; v2-symmetry-deepdive §7bis R8, proven):
+    ⚠ Kinetic-mode caveat (CM-17 v1.9; f5-corrigendum-2 Prop-9', proven):
         "fdt" gives a Gibbs invariant **only for kinetic_mode in
         {newtonian_identity, newtonian_learned}**. The O-step coded above,
         p <- (1-gamma)*p + sigma*xi, is an autonomous *linear* OU recursion,
@@ -128,17 +152,49 @@ def langevin_step(
         underdamped Langevin damps the *velocity* grad_p T; this code damps
         *p*. For Newtonian T these coincide (Gamma = gamma*M); for
         T(p) = c*sqrt(p^T M^-1 p + (m0 c)^2), grad_p T ∝ p / T(p) and they do
-        not. The defect is governed by the single ratio
+        not.
 
-            T / (m0 c^2)        (see ``CHLU.thermal_causal_ratio``)
+        **CONTROL PARAMETER IS d*Theta, NOT Theta** (f5-corrigendum-2 §2).
+        T(p) shares ONE square root over all d coordinates, so the defect is
+        set by the TOTAL kinetic energy: Var_MJ/(M_eff*T) = 1 + (d+2)Theta/2
+        -> (d+1)*Theta ultra-relativistically, with Theta := T/(m0 c^2).
+        The d=1 table (Var_MJ/(M_eff*T) = 1.015 / 1.153 / 2.70 / 16.28,
+        KL = 7.4e-5 / 6.8e-3 / 0.384 / 6.31 nats at Theta = 0.01/0.1/1/8) is
+        **d=1 ONLY** — do NOT quote it against Exp-C, which runs at d=784,
+        where Theta=1 gives d*Theta=784 and Var_MJ/(M_eff*T)=785x
+        (KL ~ 3.24e6 nats). See ``CHLU.gibbs_defect_parameter`` (d*Theta) and
+        ``CHLU.thermal_causal_ratio`` (Theta).
 
-        with Var_MJ/(M_eff*T) = 1.015 / 1.153 / 2.70 / 16.28 and
-        KL(MJ||Gauss) = 7.4e-5 / 6.8e-3 / 0.384 / 6.31 nats at
-        T/(m0 c^2) = 0.01 / 0.1 / 1.0 / 8.0. **Free mitigation: raise ``c`` or
-        ``rest_mass`` until T << m0 c^2** (one config line; the paper-run
-        project `finalA` used c=5 => 0.04, benign). Costlier exact fixes:
-        Metropolis-adjust, or an exact Maxwell-Juttner momentum refresh.
-        ``CHLU.stochastic_step`` warns (does not raise) on relativistic+fdt.
+        **Mitigations (fix ranking, replaces the refuted "raise c is free"):**
+        - The EXACT cheap fix is ``noise_mode="fdt_relativistic"`` below (the
+          latent-mass thermostat) — preserves MJ exactly, one InvGauss draw
+          per step.
+        - Raising ``c``/``rest_mass`` only shrinks d*Theta approximately and is
+          NOT free at large d: to reach d*Theta < 1 at Exp-C (T=1) needs
+          c >~ sqrt(d*T/m0) ~= 28, NOT c=5 (c=5 leaves d*Theta = 31.4). It also
+          moves the chain off the velocity-saturation plateau (making the
+          residual error dynamically visible) and empirically degrades Exp-C
+          generation — so it is NOT a paper fix (CM-17 v1.9). `finalA` (c=5)
+          is at d*Theta = 31.4, i.e. still ultra-relativistic — NOT "benign".
+        - Metropolis adjustment is the only route to exact Gibbs in H.
+        ``CHLU.stochastic_step`` warns (does not raise) on relativistic+fdt,
+        naming d*Theta.
+
+    "fdt_relativistic" — the exact relativistic thermostat (f5-corrigendum-2
+        §3, F2). Maxwell-Juttner is a Gaussian scale mixture:
+            p | s ~ N(0, M/(2s)),
+            s | p ~ InvGauss(mean = c^2/(2 T T(p)), shape = c^2/(2 T^2)).
+        Draw ONE scalar s|p per relativistic unit (H is kinetic-separable, so
+        MJ factorizes per unit) and run the *same* linear Gaussian O-step with
+        variance M/(2s) — this preserves the MJ momentum marginal **exactly**
+        (Prop-9's sigma* is its d*Theta -> 0 limit). Physically: the exact
+        relativistic FDT noise is the coded Gaussian noise with a *randomized
+        inertia* equal to the relativistic mass m0*gamma_Lorentz. Requires
+        ``m_eff``, ``rest_mass`` and ``c``; ``group_sizes`` (per-unit dims) is
+        used by the lattice so each relativistic unit gets its own s. Because
+        it keeps momentum persistence it **dominates** an exact Maxwell-Juttner
+        momentum refresh (which decorrelates p every step and slows q-mixing).
+        No ``RelativisticGibbsWarning`` is emitted for this mode.
 
     Args:
         H_fn: Hamiltonian function H(q, p) -> scalar
@@ -148,9 +204,20 @@ def langevin_step(
         gamma: Friction coefficient (must be > 0 for temperature to have effect)
         temperature: Temperature parameter (0 = deterministic, >0 = stochastic)
         key: JAX random key for noise generation
-        noise_mode: "legacy" (historical scale) or "fdt" (exact discrete FDT)
+        noise_mode: "legacy" (historical scale), "fdt" (exact discrete FDT,
+               Newtonian only), or "fdt_relativistic" (exact latent-mass
+               thermostat for relativistic mode; see the caveat above).
         m_eff: Per-coordinate inertial mass M_eff, shape (dim,) or scalar.
-               Required for noise_mode="fdt"; ignored for "legacy".
+               Required for noise_mode="fdt" and "fdt_relativistic"; ignored
+               for "legacy".
+        rest_mass: Rest mass m0 (scalar, or per-coordinate array for a lattice
+               of heterogeneous units). Required for "fdt_relativistic".
+        c: Speed of causality (scalar, or per-coordinate array). Required for
+               "fdt_relativistic".
+        group_sizes: Optional static tuple of per-unit dims (sum == dim). For
+               "fdt_relativistic" each group gets its own latent scale s (H is
+               kinetic-separable, so MJ factorizes per unit). None (default) =
+               one group over the whole vector (the single-CHLU case).
         gamma_field: Optional position-gated friction field gamma_phi(q)
                (F5 Def-5; see velocity_verlet_step). Applied at q_next after
                the scalar friction and BEFORE the thermal noise. NOTE: the
@@ -173,6 +240,10 @@ def langevin_step(
 
     # Half-step momentum update to complete the step
     p_next = p_half - 0.5 * dt * grad_H_q(q_next, p_half)
+
+    # Momentum ENTERING the O-step (post-Verlet, PRE-friction): the latent
+    # scale s|p of the fdt_relativistic thermostat is drawn from this p.
+    p_verlet = p_next
 
     # Apply friction
     p_next = (1.0 - gamma) * p_next
@@ -220,9 +291,58 @@ def langevin_step(
         arg = m_eff * temperature * gamma * (2.0 - gamma)
         safe_arg = jnp.where(arg > 0.0, arg, 1.0)
         noise_scale = jnp.where(arg > 0.0, jnp.sqrt(safe_arg), 0.0)
+    elif noise_mode == "fdt_relativistic":
+        # Exact latent-mass thermostat for relativistic mode (f5-corrigendum-2
+        # §3). MJ is a Gaussian scale mixture: p|s ~ N(0, M/(2s)),
+        # s|p ~ InvGauss(mean = c/(2 T sqrt(u+(m0 c)^2)), shape = c^2/(2 T^2)),
+        # u = p^T M^-1 p. Drawing s|p and running the same OU O-step with
+        # stationary variance M/(2s) preserves the MJ momentum marginal exactly.
+        if m_eff is None or rest_mass is None or c is None:
+            raise ValueError(
+                "noise_mode='fdt_relativistic' requires m_eff, rest_mass and c "
+                "(see CHLU.stochastic_step / CLULattice.stochastic_step)."
+            )
+        # Per-coordinate BARE inertia the dynamics invert: M+1e-6 = m_eff/m0.
+        rm_arr = jnp.broadcast_to(jnp.asarray(rest_mass, p.dtype), p.shape)
+        c_arr = jnp.broadcast_to(jnp.asarray(c, p.dtype), p.shape)
+        m_inertia = m_eff / rm_arr
+        # T=0 is masked out at the very end; keep beta finite so no NaN leaks
+        # into the gradient (double-where discipline, cf. the "fdt" branch).
+        t_safe = jnp.where(temperature > 0.0, temperature, 1.0)
+        # Group structure: one shared latent scale s per relativistic unit.
+        if group_sizes is None:
+            bounds = ((0, p.shape[0]),)
+        else:
+            bounds = []
+            _start = 0
+            for _g in group_sizes:
+                bounds.append((_start, _start + int(_g)))
+                _start += int(_g)
+            bounds = tuple(bounds)
+        arg = jnp.zeros_like(p)
+        for a, b in bounds:
+            m_g = m_inertia[a:b]
+            p_g = p_verlet[a:b]
+            u_g = jnp.sum(p_g * p_g / m_g)  # p^T M^-1 p over this unit
+            rm_g = rm_arr[a]
+            c_g = c_arr[a]
+            beta_g = c_g / t_safe
+            tp_over_c = jnp.sqrt(u_g + (rm_g * c_g) ** 2)  # = T(p)/c
+            mean_s = beta_g / (2.0 * tp_over_c)
+            lam_s = beta_g * beta_g / 2.0
+            key, s_key = jax.random.split(key)
+            s_g = _sample_inverse_gaussian(s_key, mean_s, lam_s)  # scalar
+            # OU noise variance targeting N(0, M/(2s)):
+            #   sigma^2 = (1-(1-gamma)^2) * M/(2s) = gamma(2-gamma) * M/(2s)
+            arg = arg.at[a:b].set(gamma * (2.0 - gamma) * m_g / (2.0 * s_g))
+        # Safe sqrt (double-where): 0 value AND 0 gradient at gamma == 0, where
+        # m_g carries the learnable log_mass (cf. the "fdt" branch NaN note).
+        safe_arg = jnp.where(arg > 0.0, arg, 1.0)
+        noise_scale = jnp.where(arg > 0.0, jnp.sqrt(safe_arg), 0.0)
     else:
         raise ValueError(
-            f"Unknown noise_mode: {noise_mode!r}. Must be 'legacy' or 'fdt'."
+            f"Unknown noise_mode: {noise_mode!r}. Must be 'legacy', 'fdt' or "
+            f"'fdt_relativistic'."
         )
     # Always split key and compute noise, but use jnp.where to conditionally apply.
     # This ensures the function is traceable in JAX (no Python conditionals on traced values)
