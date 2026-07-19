@@ -761,3 +761,251 @@ def test_twin_effective_mass_is_effective_inertia():
 
     twin = UnconstrainedTwin(4, hidden=16, key=jax.random.PRNGKey(3))
     assert jnp.array_equal(twin.effective_mass(), twin.effective_inertia())
+
+
+# ---------------------------------------------------------------------------
+# fix-pack-7 item 1: d*Theta (not Theta) is the control parameter
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "dim,rest_mass,c,temperature,expected",
+    [
+        (784, 1.0, 1.0, 1.0, 784.0),  # Exp-C: Theta=1 looks benign, d*Theta=784 is not
+        (1, 1.0, 1.0, 1.0, 1.0),  # d=1: d*Theta == Theta
+        (784, 1.0, 5.0, 1.0, 784.0 / 25.0),  # finalA (c=5): 31.4, still ultra-rel
+        (16, 1.0, 1.0, 0.5, 8.0),
+    ],
+)
+def test_gibbs_defect_parameter(dim, rest_mass, c, temperature, expected):
+    """d*Theta = dim * T/(m0 c^2) -- the quantity that governs the defect."""
+    model = CHLU(
+        dim=dim,
+        hidden=4,
+        kinetic_mode="newtonian_learned",  # method is defined for any mode
+        rest_mass=rest_mass,
+        c=c,
+        key=jax.random.PRNGKey(0),
+    )
+    assert float(model.gibbs_defect_parameter(temperature)) == pytest.approx(expected)
+    # and it is exactly dim * thermal_causal_ratio
+    assert float(model.gibbs_defect_parameter(temperature)) == pytest.approx(
+        dim * float(model.thermal_causal_ratio(temperature))
+    )
+
+
+def test_relativistic_fdt_warning_names_d_theta_at_expc_scale():
+    """Item 1.3: at d=784, m0=c=1, T=1 the warning reports d*Theta = 784."""
+    model = CHLU(
+        dim=784,
+        hidden=4,
+        potential_type="mlp",
+        kinetic_mode="relativistic",
+        rest_mass=1.0,
+        c=1.0,
+        key=jax.random.PRNGKey(0),
+    )
+    q, p, key = jnp.zeros(784), jnp.zeros(784), jax.random.PRNGKey(0)
+    with pytest.warns(RelativisticGibbsWarning, match=r"d\*Theta = 784"):
+        model.stochastic_step(
+            (q, p), dt=0.05, gamma=0.1, temperature=1.0, key=key, noise_mode="fdt"
+        )
+    # the old substring is preserved for backward-compatible matching
+    with pytest.warns(RelativisticGibbsWarning, match=r"Theta = T/\(m0\*c\^2\) = 1"):
+        model.stochastic_step(
+            (q, p), dt=0.05, gamma=0.1, temperature=1.0, key=key, noise_mode="fdt"
+        )
+
+
+# ---------------------------------------------------------------------------
+# fix-pack-7 item 3: the exact relativistic thermostat "fdt_relativistic"
+# ---------------------------------------------------------------------------
+
+
+def _relativistic_free_H(mass, rest_mass, c):
+    """Free-particle relativistic H (no potential) as a plain callable."""
+
+    def H_fn(q, p):
+        return c * jnp.sqrt(jnp.sum(p * p / mass) + (rest_mass * c) ** 2)
+
+    return H_fn
+
+
+def test_fdt_relativistic_validates_arguments():
+    H_fn = _relativistic_free_H(jnp.ones(1), 1.0, 1.0)
+    q = p = jnp.zeros(1)
+    key = jax.random.PRNGKey(0)
+    with pytest.raises(ValueError, match="requires m_eff, rest_mass and c"):
+        langevin_step(H_fn, q, p, 0.05, 0.2, 1.0, key, noise_mode="fdt_relativistic")
+    with pytest.raises(ValueError, match="requires m_eff, rest_mass and c"):
+        langevin_step(
+            H_fn, q, p, 0.05, 0.2, 1.0, key,
+            noise_mode="fdt_relativistic", m_eff=jnp.ones(1),
+        )
+
+
+def test_inverse_gaussian_sampler_mean():
+    """The InvGauss draw hits its target mean (pins the sampler)."""
+    from chlu.core.integrators import _sample_inverse_gaussian
+
+    keys = jax.random.split(jax.random.PRNGKey(0), 40000)
+    samples = jax.vmap(lambda k: _sample_inverse_gaussian(k, 0.7, 2.3))(keys)
+    assert jnp.all(samples > 0.0)
+    assert float(jnp.mean(samples)) == pytest.approx(0.7, abs=0.02)
+
+
+def test_fdt_relativistic_recovers_maxwell_juttner_variance():
+    """The thermostat's momentum marginal is Maxwell-Juttner, not Gaussian.
+
+    Free relativistic particle, d=1, m0=c=M=1, T=8 (Theta=8): the coded "fdt"
+    O-step has a Gaussian stationary law Var(p)=M_eff*T; "fdt_relativistic"
+    has the MJ marginal, Var_MJ/(M_eff*T)=16.28 (f5-corrigendum-2 §2 table).
+    We assert the heavy-tail signature robustly (>3x, well below 16.28).
+    """
+    M = jnp.ones(1)
+    rest_mass, c, T, gamma = 1.0, 1.0, 8.0, 0.3
+    m_eff = rest_mass * M  # relativistic effective inertia
+    H_fn = _relativistic_free_H(M, rest_mass, c)
+
+    def stationary_var_p(noise_mode, seed):
+        n_walkers, n_steps, burn = 2000, 2500, 800
+        keys = jax.random.split(jax.random.PRNGKey(seed), n_walkers)
+
+        def one_walker(wkey):
+            q0 = jnp.zeros(1)
+            p0 = jax.random.normal(jax.random.fold_in(wkey, 7), (1,)) * jnp.sqrt(T)
+
+            def step_fn(carry, _):
+                q, p, k = carry
+                qn, pn, kn = langevin_step(
+                    H_fn, q, p, 0.05, gamma, T, k,
+                    noise_mode=noise_mode, m_eff=m_eff,
+                    rest_mass=rest_mass, c=c,
+                )
+                return (qn, pn, kn), pn[0]
+
+            (_, _, _), ps = jax.lax.scan(step_fn, (q0, p0, wkey), None, length=n_steps)
+            return ps[burn:]
+
+        all_ps = jax.vmap(one_walker)(keys)  # (n_walkers, n_steps-burn)
+        return float(jnp.var(all_ps))
+
+    var_gauss = stationary_var_p("fdt", 1)
+    var_mj = stationary_var_p("fdt_relativistic", 1)
+    target = float(m_eff[0]) * T  # M_eff * T
+
+    assert var_gauss == pytest.approx(target, rel=0.25), var_gauss  # ~ M_eff*T
+    assert var_mj > 3.0 * target, (var_mj, target)  # heavy MJ tails (true 16.28x)
+    assert var_mj > 2.0 * var_gauss
+
+
+@pytest.mark.parametrize("gamma", [0.0, 1e-12, 0.05, 0.3])
+def test_fdt_relativistic_gradient_finite_wrt_log_mass(gamma):
+    """No NaN gradient at gamma==0 (the fdt double-where discipline carries)."""
+    model = CHLU(dim=3, hidden=8, kinetic_mode="relativistic", key=jax.random.PRNGKey(0))
+    q0 = jnp.array([0.3, -0.2, 0.1])
+    p0 = jnp.array([0.1, 0.2, -0.3])
+    key = jax.random.PRNGKey(1)
+
+    def loss(m):
+        q, p, _ = m.stochastic_step(
+            (q0, p0), dt=0.05, gamma=gamma, temperature=0.5, key=key,
+            noise_mode="fdt_relativistic",
+        )
+        return jnp.sum(p**2) + jnp.sum(q**2)
+
+    grads = eqx.filter_grad(loss)(model)
+    assert jnp.all(jnp.isfinite(grads.log_mass)), grads.log_mass
+
+
+def test_fdt_relativistic_does_not_warn():
+    """Item 3 guard: the exact thermostat must NOT emit RelativisticGibbsWarning."""
+    model = CHLU(
+        dim=2, hidden=4, kinetic_mode="relativistic", key=jax.random.PRNGKey(0)
+    )
+    q, p, key = jnp.zeros(2), jnp.zeros(2), jax.random.PRNGKey(0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RelativisticGibbsWarning)
+        model.stochastic_step(
+            (q, p), dt=0.05, gamma=0.3, temperature=1.0, key=key,
+            noise_mode="fdt_relativistic",
+        )
+
+
+# ---------------------------------------------------------------------------
+# fix-pack-7 item 4: CLULattice routes fdt_relativistic correctly
+# ---------------------------------------------------------------------------
+
+
+def test_lattice_fdt_relativistic_matches_single_unit():
+    """A 1-unit lattice under fdt_relativistic == the bare CHLU step (routing)."""
+    from chlu.core.lattice import CLULattice
+
+    unit = CHLU(
+        dim=2, hidden=4, kinetic_mode="relativistic", rest_mass=1.3, c=0.9,
+        key=jax.random.PRNGKey(0),
+    )
+    lattice = CLULattice(units=(unit,))
+    q, p, key = jnp.array([0.2, -0.1]), jnp.array([0.3, 0.4]), jax.random.PRNGKey(5)
+
+    q_u, p_u, _ = unit.stochastic_step(
+        (q, p), dt=0.05, gamma=0.2, temperature=1.5, key=key,
+        noise_mode="fdt_relativistic",
+    )
+    q_l, p_l, _ = lattice.stochastic_step(
+        (q, p), dt=0.05, gamma=0.2, temperature=1.5, key=key,
+        noise_mode="fdt_relativistic",
+    )
+    assert jnp.array_equal(q_u, q_l)
+    assert jnp.array_equal(p_u, p_l)
+
+
+def test_lattice_fdt_relativistic_multi_unit_finite_and_per_unit_scale():
+    """Two heterogeneous relativistic units evolve finitely; the InvGauss draw
+    is per-unit (separable MJ), so distinct (rest_mass, c) are honoured."""
+    from chlu.core.lattice import CLULattice
+
+    u0 = CHLU(dim=2, hidden=4, kinetic_mode="relativistic", rest_mass=1.0, c=1.0,
+              key=jax.random.PRNGKey(0))
+    u1 = CHLU(dim=3, hidden=4, kinetic_mode="relativistic", rest_mass=4.0, c=2.0,
+              key=jax.random.PRNGKey(1))
+    lattice = CLULattice(units=(u0, u1))
+    q = jnp.array([0.1, -0.2, 0.3, 0.0, -0.1])
+    p = jnp.array([0.2, 0.1, -0.3, 0.4, 0.0])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RelativisticGibbsWarning)  # must not warn
+        qn, pn, _ = lattice.stochastic_step(
+            (q, p), dt=0.05, gamma=0.3, temperature=1.0, key=jax.random.PRNGKey(9),
+            noise_mode="fdt_relativistic",
+        )
+    assert qn.shape == (5,) and pn.shape == (5,)
+    assert jnp.all(jnp.isfinite(qn)) and jnp.all(jnp.isfinite(pn))
+
+
+# ---------------------------------------------------------------------------
+# fix-pack-7 item 2: training.sleep_friction no longer a silent no-op
+# ---------------------------------------------------------------------------
+
+
+def test_generative_sleep_friction_default_is_bit_identical():
+    """Default path resolves to experiment_c.friction, byte-for-byte (history)."""
+    from chlu.config import get_default_config
+    from chlu.training.train_generative import _resolve_generative_sleep_friction
+
+    cfg = get_default_config()
+    assert cfg.training.sleep_friction == 0.0  # dataclass default (unchanged)
+    gamma, source = _resolve_generative_sleep_friction(cfg)
+    assert gamma == cfg.experiment_c.friction  # == 0.3, the historical gamma
+    assert source == "experiment_c.friction"
+
+
+def test_generative_sleep_friction_honoured_when_set():
+    """A non-default training.sleep_friction is now honoured (no longer silent)."""
+    from chlu.config import get_default_config
+    from chlu.training.train_generative import _resolve_generative_sleep_friction
+
+    cfg = get_default_config()
+    cfg.training.sleep_friction = 0.05  # explicitly moved off the 0.0 default
+    gamma, source = _resolve_generative_sleep_friction(cfg)
+    assert gamma == 0.05
+    assert source == "training.sleep_friction"
