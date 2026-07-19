@@ -156,6 +156,163 @@ def test_lattice_hook_requires_exact_tiling():
 
 
 # ---------------------------------------------------------------------------
+# literal joint-angle -> so2-coset torus map (G7b flagship)
+# ---------------------------------------------------------------------------
+
+# voraus-like: 6 joints -> 12 cos/sin channels + 15 aux = 27 (NOT a clean tile)
+LIT_C, LIT_NSO2 = 27, 6
+
+
+def _literal_cfg(topology="ring", shuffle=False, **kw):
+    base = dict(
+        hidden=8, epochs=2, batch_size=8, max_fit_windows=32,
+        predict_horizon=3, relax_steps=2, residual_anchors=2, seed=0,
+    )
+    base.update(kw)
+    return CLUScorerConfig(
+        lattice=CLULatticeConfig(
+            layout="literal", n_so2_units=LIT_NSO2, aux_unit_dim=4,
+            topology=topology, shuffle_angles=shuffle, shuffle_seed=1,
+        ),
+        **base,
+    )
+
+
+def test_literal_lattice_so2_plus_aux_no_padding():
+    shared = _SharedCLUFit(_literal_cfg(topology="chain"), window_size=SIZE)
+    shared.ensure_fit(_windows(24, SIZE, LIT_C, seed=11))
+    m = shared.model
+    assert isinstance(m, CLULattice)
+    assert m.dim == LIT_C  # total dim == C: nothing padded, nothing dropped
+    # 6 so2 units (dim 2) + aux tiling of 15 -> [4, 4, 7] (last absorbs remainder)
+    assert m.unit_dims == (2, 2, 2, 2, 2, 2, 4, 4, 7)
+    assert m.n_units == 9
+
+
+def test_literal_ring_closes_the_chain():
+    chain = _SharedCLUFit(_literal_cfg(topology="chain"), window_size=SIZE)
+    chain.ensure_fit(_windows(24, SIZE, LIT_C, seed=12))
+    ring = _SharedCLUFit(_literal_cfg(topology="ring"), window_size=SIZE)
+    ring.ensure_fit(_windows(24, SIZE, LIT_C, seed=12))
+    # ring = chain + the closing (n-1, 0) bond
+    assert len(ring.model.edges) == len(chain.model.edges) + 1
+    assert (LIT_NSO2 - 1, 0) in ring.model.edges
+
+
+def test_literal_shuffle_control_changes_topology():
+    ordered = _SharedCLUFit(_literal_cfg(shuffle=False), window_size=SIZE)
+    ordered.ensure_fit(_windows(24, SIZE, LIT_C, seed=13))
+    shuffled = _SharedCLUFit(_literal_cfg(shuffle=True), window_size=SIZE)
+    shuffled.ensure_fit(_windows(24, SIZE, LIT_C, seed=13))
+    # same number of bonds, but connecting different (permuted) cosets
+    assert len(ordered.model.edges) == len(shuffled.model.edges)
+    assert set(ordered.model.edges) != set(shuffled.model.edges)
+
+
+@pytest.mark.parametrize("mode", ["energy", "residual", "predict"])
+def test_literal_arms_finite(mode):
+    shared = _SharedCLUFit(_literal_cfg(), window_size=SIZE)
+    train = _windows(32, SIZE, LIT_C, seed=14)
+    scorer = CHLUScorer(mode, shared)
+    scorer.fit(train)
+    s = scorer.score(_windows(10, SIZE, LIT_C, seed=15))
+    assert s.shape == (10,)
+    assert np.all(np.isfinite(s))
+
+
+def test_literal_torus_needs_perfect_square():
+    # 6 joints is not a perfect square -> 2-D torus is impossible; must guide to ring
+    shared = _SharedCLUFit(_literal_cfg(topology="torus"), window_size=SIZE)
+    with pytest.raises(ValueError, match="perfect square"):
+        shared.ensure_fit(_windows(16, SIZE, LIT_C, seed=16))
+
+
+def test_literal_rejects_too_many_so2():
+    cfg = _literal_cfg()
+    shared = _SharedCLUFit(cfg, window_size=SIZE)
+    with pytest.raises(ValueError, match="exceeds C"):
+        shared.ensure_fit(_windows(8, SIZE, 4, seed=17))  # C=4 < 2*6
+
+
+def test_embed_joint_angles_layout():
+    from chlu.data.industrial.voraus_ad import embed_joint_angles
+
+    T = 5
+    channels = ("robot_voltage", "joint_position_1", "motor_torque_1",
+                "joint_position_2")
+    data = np.zeros((T, 4), np.float32)
+    data[:, 1] = 0.0  # theta_1 = 0 -> (cos,sin)=(1,0)
+    data[:, 3] = np.pi / 2  # theta_2 = pi/2 -> (cos,sin)=(0,1)
+    data[:, 0] = 7.0
+    data[:, 2] = -3.0
+    out, names, n_so2 = embed_joint_angles(data, channels)
+    assert n_so2 == 2
+    assert names == ("cos_joint_1", "sin_joint_1", "cos_joint_2", "sin_joint_2",
+                     "robot_voltage", "motor_torque_1")
+    np.testing.assert_allclose(out[0, :4], [1.0, 0.0, 0.0, 1.0], atol=1e-6)
+    assert out[0, 4] == 7.0 and out[0, 5] == -3.0
+
+
+# ---------------------------------------------------------------------------
+# episode-labelled datasets report AUC-ROC primary (voraus protocol; Blocker 2)
+# ---------------------------------------------------------------------------
+
+
+class _ToyEpisodeDataset(IndustrialDataset):
+    name = "toy_episode"
+    label_kind = "episode"
+    protocol = "cross_unit"
+
+    def __init__(self):
+        self.root = None
+
+    def is_available(self):
+        return True
+
+    def unit_ids(self):
+        return tuple(f"tr{i}" for i in range(4)) + tuple(f"te{i}" for i in range(6))
+
+    def train_ids(self):
+        return tuple(f"tr{i}" for i in range(4))  # all normal
+
+    def test_ids(self):
+        return tuple(f"te{i}" for i in range(6))
+
+    def load_unit(self, uid):
+        i = int(uid[2:])
+        anomalous = uid.startswith("te") and i % 2 == 0
+        rng = np.random.default_rng(hash(uid) % 10_000)
+        t = np.arange(160, dtype=np.float32)
+        data = np.stack([np.sin(0.2 * t + p) for p in (0.0, 1.0, 2.0)], axis=1)
+        data = data + 0.05 * rng.normal(size=data.shape).astype(np.float32)
+        if anomalous:
+            data += 3.0
+        return UnitRecord(
+            uid, data.astype(np.float32), ("c1", "c2", "c3"),
+            episode_label=int(anomalous),
+        )
+
+
+def test_episode_dataset_reports_aucroc_primary_not_vuspr():
+    eval_cfg = EvalConfig(window=WindowConfig(size=SIZE), metrics_mode="fast", seed=0)
+    res = evaluate_dataset(
+        _ToyEpisodeDataset(),
+        config=eval_cfg,
+        scorer_factory=lambda: make_clu_scorers(eval_cfg, TINY),
+        verbose=False,
+    )
+    # Blocker 2: episode-labelled -> AUC-ROC is primary, VUS-PR is NOT computed
+    assert res.primary_metric == "AUC-ROC"
+    assert "VUS-PR" not in res.metric_names
+    assert res.metric_names[0] == "AUC-ROC"
+    # markdown puts the primary (AUC-ROC) first + bold
+    md = res.to_markdown()
+    assert "**AUC-ROC**" in md
+    # episode reduce == mean (matches the voraus baseline-floors protocol)
+    assert eval_cfg.episode_reduce == "mean"
+
+
+# ---------------------------------------------------------------------------
 # harness end-to-end + raw-score collection
 # ---------------------------------------------------------------------------
 
