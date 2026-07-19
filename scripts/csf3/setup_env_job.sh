@@ -50,12 +50,17 @@ if [ -f uv.lock ]; then
         echo "[setup] uv.lock lacks the cuda extra — running additive uv lock"
         uv lock
     fi
-    echo "[setup] uv sync --frozen from uv.lock"
-    uv sync --frozen --extra cuda --python 3.11
+    echo "[setup] uv sync --frozen from uv.lock (cuda + eval extras)"
+    # --extra eval carries the industrial-loader deps (pandas/pyarrow/pyreadr);
+    # without it voraus/TEP cannot even read their data on a compute node
+    # (voraus-baseline-floors blocker 1). The eval extra pulls pure-Python /
+    # already-pinned wheels only — it does NOT bump jax off the 0.9.0 pin
+    # (verify with the sanity check below).
+    uv sync --frozen --extra cuda --extra eval --python 3.11
 else
     echo "[setup] WARNING: no uv.lock found — resolving fresh (env may drift"
     echo "[setup] from the laptop). Prefer push_repo.sh which carries the lock."
-    uv sync --extra cuda --python 3.11
+    uv sync --extra cuda --extra eval --python 3.11
 fi
 
 # --- 3. CPU-side sanity check (this is a non-GPU node: force cpu backend; ---
@@ -67,6 +72,17 @@ import importlib.metadata as md
 import jax, chlu  # noqa: F401  (import = editable install works)
 print("python OK; jax", jax.__version__, "| chlu", md.version("chlu"))
 print("cpu devices:", jax.devices())
+# The eval extra must NOT bump jax off the CSF3 pin (0.9.0). Fail loudly if it did.
+assert jax.__version__.startswith("0.9."), (
+    f"jax pin drifted to {jax.__version__} (expected 0.9.x) — the eval extra "
+    "must not upgrade jax; check uv.lock resolution."
+)
+# The industrial loaders need the eval extra (pandas/pyarrow; pyreadr for TEP).
+for pkg in ("pandas", "pyarrow", "pyreadr"):
+    try:
+        print(f"{pkg}=={md.version(pkg)}")
+    except md.PackageNotFoundError:
+        print(f"{pkg} MISSING — eval extra did not install (voraus/TEP will not load)!")
 for pkg in ("jax-cuda12-plugin", "jax-cuda12-pjrt", "equinox", "optax", "diffrax"):
     try:
         print(f"{pkg}=={md.version(pkg)}")
