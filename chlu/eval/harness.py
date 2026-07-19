@@ -193,6 +193,7 @@ def evaluate_dataset(
     scorer_factory=None,
     out_dir: str | Path | None = None,
     verbose: bool = True,
+    raw_scores: dict | None = None,
 ) -> EvalRunResult:
     """Run the mandatory baselines + metric suite on one dataset.
 
@@ -208,6 +209,11 @@ def evaluate_dataset(
             them (enforced).
         out_dir: If given, results are written to ``out_dir/eval_<name>.npz``.
         verbose: Print progress.
+        raw_scores: Optional dict; if given it is populated in place with
+            ``{method: {"scores": (N,) float64, "labels": (N,) int}}`` — the
+            pooled raw score/label arrays per method, so ROC/PR curves can be
+            re-plotted without re-running. Default ``None`` = collect nothing
+            (no behavioural change).
 
     Returns:
         ``EvalRunResult`` (per-unit metric tensor + aggregation/markdown/npz).
@@ -233,11 +239,12 @@ def evaluate_dataset(
 
     if dataset.protocol == "per_unit_prefix":
         result = _run_per_unit_prefix(
-            dataset, config, factory, methods, metric_names, log
+            dataset, config, factory, methods, metric_names, log, raw_scores
         )
     else:
         result = _run_cross_unit(
-            dataset, config, factory, methods, metric_names, train_ids, test_ids, log
+            dataset, config, factory, methods, metric_names,
+            train_ids, test_ids, log, raw_scores,
         )
 
     if out_dir is not None:
@@ -246,8 +253,31 @@ def evaluate_dataset(
     return result
 
 
+def _init_raw(raw_scores, methods):
+    """Prepare per-method accumulators in an optional raw-score collector."""
+    if raw_scores is None:
+        return None
+    acc = {m: {"scores": [], "labels": []} for m in methods}
+    raw_scores["__acc__"] = acc
+    return acc
+
+
+def _finalize_raw(raw_scores):
+    """Concatenate the per-method accumulators into flat arrays in place."""
+    if raw_scores is None:
+        return
+    acc = raw_scores.pop("__acc__", {})
+    for method, parts in acc.items():
+        if parts["scores"]:
+            raw_scores[method] = {
+                "scores": np.concatenate([np.ravel(s) for s in parts["scores"]]),
+                "labels": np.concatenate([np.ravel(v) for v in parts["labels"]]),
+            }
+
+
 def _run_cross_unit(
-    dataset, config, factory, methods, metric_names, train_ids, test_ids, log
+    dataset, config, factory, methods, metric_names, train_ids, test_ids, log,
+    raw_scores=None,
 ):
     size, stride = config.window.size, config.window.stride
     train_ids = tuple(train_ids) if train_ids is not None else dataset.train_ids()
@@ -278,6 +308,8 @@ def _run_cross_unit(
         scorer.fit(train)
         timings[name] = {"fit_s": round(time.perf_counter() - t0, 3)}
 
+    raw_acc = _init_raw(raw_scores, methods)
+
     if dataset.label_kind == "point":
         unit_axis = tuple(test_ids)
         values = np.full((len(methods), len(unit_axis), len(metric_names)), np.nan)
@@ -306,6 +338,9 @@ def _run_cross_unit(
                 timings[name]["score_s"] = round(
                     timings[name].get("score_s", 0.0) + time.perf_counter() - t0, 3
                 )
+                if raw_acc is not None:
+                    raw_acc[name]["scores"].append(point_scores)
+                    raw_acc[name]["labels"].append(labels)
             log(f"[harness]   scored unit {rec.unit_id}")
     else:  # episode labels
         unit_axis = (EPISODE_AXIS,)
@@ -333,11 +368,15 @@ def _run_cross_unit(
                 np.asarray(episode_scores[name]), np.asarray(episode_labels)
             )
             values[i, 0] = [m[k] for k in metric_names]
+            if raw_acc is not None:
+                raw_acc[name]["scores"].append(np.asarray(episode_scores[name]))
+                raw_acc[name]["labels"].append(np.asarray(episode_labels))
         notes.append(
             f"episode scores pooled with '{config.episode_reduce}' over "
             f"{len(episode_labels)} test episodes"
         )
 
+    _finalize_raw(raw_scores)
     return EvalRunResult(
         dataset=dataset.name,
         label_kind=dataset.label_kind,
@@ -353,12 +392,15 @@ def _run_cross_unit(
     )
 
 
-def _run_per_unit_prefix(dataset, config, factory, methods, metric_names, log):
+def _run_per_unit_prefix(
+    dataset, config, factory, methods, metric_names, log, raw_scores=None
+):
     """TSB-AD-style protocol: each series carries its own normal prefix."""
     size, stride = config.window.size, config.window.stride
     unit_axis = dataset.test_ids()
     values = np.full((len(methods), len(unit_axis), len(metric_names)), np.nan)
     notes, timings, n_train_total = [], {m: {} for m in methods}, 0
+    raw_acc = _init_raw(raw_scores, methods)
 
     for j, rec in enumerate(dataset.iter_units(unit_axis)):
         train_len = int(rec.meta.get("train_len", 0))
@@ -396,8 +438,12 @@ def _run_per_unit_prefix(dataset, config, factory, methods, metric_names, log):
             timings[name]["total_s"] = round(
                 timings[name].get("total_s", 0.0) + time.perf_counter() - t0, 3
             )
+            if raw_acc is not None:
+                raw_acc[name]["scores"].append(point_scores)
+                raw_acc[name]["labels"].append(eval_labels)
         log(f"[harness]   scored unit {rec.unit_id} (train prefix {train_len})")
 
+    _finalize_raw(raw_scores)
     notes.append(
         "per-unit-prefix protocol: baselines fit per series on its "
         "normal training prefix (TSB-AD convention)"
