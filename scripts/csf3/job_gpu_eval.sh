@@ -12,6 +12,23 @@
 #   sbatch --export=ALL,DATASET=voraus,SCORE_MODE=default,SEED=42,EXTRA_ARGS='--download' \
 #          -t 1-0 scripts/csf3/job_gpu_eval.sh                            # full voraus run
 #
+# G7b FLAGSHIP — literal joint-angle->so2-coset torus map (voraus T^6=U(1)^6):
+#   the 6 joint angles are cos/sin-embedded (VorausTorusAD) and each feeds one
+#   so2_invariant coset unit coupled on the arm's kinematic chain (ring=1-D
+#   torus, channel_spring, U(1)-preserving). Both score arms, 3 seeds:
+#   for S in 42 43 44; do
+#     sbatch --export=ALL,DATASET=voraus,SCORE_MODE=default,SEED=$S,\
+# OUT=$HOME/scratch/clu_eval/voraus_torus_s$S,\
+# EXTRA_ARGS='--download --lattice --lattice-layout literal --lattice-topology ring --window 100 --train-stride 10 --stride 5 --metrics-mode fast --max-train-windows 100000' \
+#            -t 12:00:00 scripts/csf3/job_gpu_eval.sh
+#   done
+#   TOPOLOGY-MATCH CONTROL (pre-registered falsifier): identical, add
+#   --lattice-shuffle-angles --lattice-shuffle-seed $S, OUT=..._shuf_s$S.
+#   Size (voraus-baseline-floors): ~2.5GB data (torus-embed nets +6 ch),
+#   train_stride=10 avoids the ~49GB OOM; KNN/LOF scoring is the wall driver
+#   (test_stride=5, ~near-lossless for episode mean-reduce). gpuA -n8 has
+#   ~83GB RAM — ample. Episode AUC-ROC is primary (voraus is episode-labelled).
+#
 # Seed sweeps: mirror job_gpu_array_seeds.sh (#SBATCH -a 0-4, SEED from the
 # task id); aggregate with a dependent `sbatch --dependency=afterany:<jobid>`
 # collector, following the Head's sample_script_csf3.sh array+afterany pattern

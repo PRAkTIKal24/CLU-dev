@@ -90,9 +90,23 @@ def setup_eval_parser(subparsers):
     # G7b torus-coset lattice hook (flag, not default)
     p.add_argument("--lattice", action="store_true",
                    help="Fit a CLULattice (torus-coset hook) instead of a single CHLU")
-    p.add_argument("--lattice-topology", default="chain", choices=["chain", "torus"])
+    p.add_argument("--lattice-topology", default="chain",
+                   choices=["chain", "ring", "torus"],
+                   help="Coupling topology among coset units (ring = the serial "
+                        "arm's kinematic chain closed into a 1-D torus)")
     p.add_argument("--lattice-unit-dim", type=int, default=2,
-                   help="Channels per lattice unit (2 = one SO(2) coset)")
+                   help="(tile layout) channels per lattice unit (2 = one SO(2) coset)")
+    p.add_argument("--lattice-layout", default="tile", choices=["tile", "literal"],
+                   help="'tile' = w15 hook (uniform unit_dim); 'literal' = the G7b "
+                        "joint-angle->so2-coset map (voraus: cos/sin-embedded joints)")
+    p.add_argument("--lattice-aux-dim", type=int, default=4,
+                   help="(literal layout) channels per auxiliary mlp unit")
+    p.add_argument("--lattice-shuffle-angles", action="store_true",
+                   help="TOPOLOGY-MATCH CONTROL: permute which coset each edge "
+                        "connects, destroying kinematic adjacency (pre-registered "
+                        "falsifier — should do WORSE if the topology match matters)")
+    p.add_argument("--lattice-shuffle-seed", type=int, default=0,
+                   help="Seed for --lattice-shuffle-angles")
     p.set_defaults(func=cmd_eval)
 
 
@@ -100,6 +114,10 @@ def _make_dataset(args):
     import importlib
 
     mod_path, cls_name = _DATASETS[args.dataset]
+    # Literal G7b map on voraus: swap in the joint-angle->torus-coset loader
+    # (cos/sin-embedded joints laid out first) so the lattice can route them.
+    if args.dataset == "voraus" and args.lattice and args.lattice_layout == "literal":
+        cls_name = "VorausTorusAD"
     cls = getattr(importlib.import_module(mod_path), cls_name)
     kwargs = {"download": args.download}
     if args.root is not None:
@@ -117,7 +135,7 @@ def _resolve_modes(score_mode: str) -> tuple:
     return (score_mode,)
 
 
-def _clu_config(args) -> CLUScorerConfig:
+def _clu_config(args, dataset=None) -> CLUScorerConfig:
     kw = {"seed": args.seed}
     if args.kinetic_mode is not None:
         kw["kinetic_mode"] = args.kinetic_mode
@@ -129,9 +147,26 @@ def _clu_config(args) -> CLUScorerConfig:
         kw.setdefault("epochs", 20)
         kw.setdefault("max_fit_windows", 800)
     if args.lattice:
-        kw["lattice"] = CLULatticeConfig(
-            unit_dim=args.lattice_unit_dim, topology=args.lattice_topology
-        )
+        if args.lattice_layout == "literal":
+            # n_so2 = number of joint-angle coset units the loader emits.
+            n_so2 = getattr(dataset, "n_so2_units", 0)
+            if not n_so2:
+                raise ValueError(
+                    "--lattice-layout literal needs a loader exposing joint-angle "
+                    "channels (e.g. --dataset voraus); got n_so2_units=0"
+                )
+            kw["lattice"] = CLULatticeConfig(
+                layout="literal",
+                n_so2_units=int(n_so2),
+                aux_unit_dim=args.lattice_aux_dim,
+                topology=args.lattice_topology,
+                shuffle_angles=args.lattice_shuffle_angles,
+                shuffle_seed=args.lattice_shuffle_seed,
+            )
+        else:
+            kw["lattice"] = CLULatticeConfig(
+                unit_dim=args.lattice_unit_dim, topology=args.lattice_topology
+            )
     return CLUScorerConfig(**kw)
 
 
@@ -175,12 +210,16 @@ def cmd_eval(args) -> int:
         seed=args.seed,
         max_train_windows=max_train,
     )
-    clu_cfg = _clu_config(args)
     modes = _resolve_modes(args.score_mode)
 
     console.print(f"[bold cyan]chlu eval[/bold cyan] dataset={args.dataset} "
                   f"modes={modes} window={window} seed={args.seed}")
     dataset = _make_dataset(args)
+    clu_cfg = _clu_config(args, dataset)
+    if args.lattice and args.lattice_layout == "literal":
+        console.print(f"[dim]literal torus map: {clu_cfg.lattice.n_so2_units} "
+                      f"joint-angle so2 cosets, topology={args.lattice_topology}, "
+                      f"shuffle={args.lattice_shuffle_angles}[/dim]")
 
     train_ids = test_ids = None
     if args.limit is not None:
