@@ -177,3 +177,91 @@ class VorausAD(IndustrialDataset):
             sampling_rate_hz=SAMPLING_RATE_HZ[self.variant],
             meta={"setting": int(row["setting"]), "category": category},
         )
+
+
+#: The 6 robot-axis JOINT ANGLES θ_j (the literal T^n = U(1)^n coordinates).
+#: These are the physical joint positions (not the gear-reduced ``motor_position``
+#: nor the commanded ``target_position``); each is one U(1) register.
+JOINT_ANGLE_COLUMNS = tuple(f"joint_position_{j}" for j in range(1, 7))
+
+
+def embed_joint_angles(data: np.ndarray, channels) -> tuple:
+    """Embed the joint-angle channels of ``data`` as ``(cos θ, sin θ)`` pairs.
+
+    Returns ``(new_data, new_channels, n_so2)``: the ``(cos, sin)`` pairs for
+    every present ``joint_position_j`` come FIRST (axis order), then all other
+    channels raw. ``n_so2`` = number of joint-angle columns found. Pure/JAX-free
+    so it is unit-testable without loading the parquet.
+    """
+    chans = list(channels)
+    angle_idx = [chans.index(c) for c in JOINT_ANGLE_COLUMNS if c in chans]
+    aux_idx = [i for i in range(len(chans)) if i not in set(angle_idx)]
+    cols, names = [], []
+    for k, ci in enumerate(angle_idx, start=1):
+        theta = data[:, ci]
+        cols.append(np.cos(theta))
+        cols.append(np.sin(theta))
+        names.extend([f"cos_joint_{k}", f"sin_joint_{k}"])
+    for ci in aux_idx:
+        cols.append(data[:, ci])
+        names.append(chans[ci])
+    new_data = np.stack(cols, axis=1).astype(np.float32)
+    return new_data, tuple(names), len(angle_idx)
+
+
+class VorausTorusAD(VorausAD):
+    """voraus-AD with the LITERAL joint-angle -> torus-coset embedding (G7b).
+
+    The theory's falsifiable prediction: match the CLU's coset to the data's own
+    topology. voraus joint space is ``T^6 = U(1)^6``; this loader embeds each
+    joint angle ``θ_j`` on its ring as ``(cos θ_j, sin θ_j)`` and lays the six
+    ``(cos, sin)`` pairs FIRST, so each pair feeds one dim-2 ``so2_invariant``
+    unit whose ``T^1`` coset *is* that joint's ``U(1)`` (see
+    ``CLULatticeConfig(layout="literal")`` + ``_build_literal_lattice``). Every
+    other machine signal (velocities, torques, currents, ...) is kept raw and
+    appended as auxiliary channels — "angles-on-the-torus, everything else
+    auxiliary" (the clean first pass; Head 2026-07-19).
+
+    ``n_so2_units`` (= number of joint-angle columns actually present, ≤ 6) is
+    what the CLI forwards into the lattice config so the model routes the first
+    ``2 * n_so2_units`` channels to coset units. Angles are assumed to be in
+    radians (robotics convention); ``(cos, sin)`` lives on the unit circle for
+    any real θ regardless, so the ring embedding is well-defined even for the
+    limited-range sweeps of a pick-and-place cycle.
+
+    NOTE (scaling caveat, honest): the harness fits a per-channel
+    ``StandardScaler`` on the flattened windows, so the CLU (like the
+    baselines, on the IDENTICAL scaled data — the fair protocol) sees an affine
+    map of each ``(cos, sin)`` circle to an off-origin ellipse; the per-unit
+    SO(2) invariance is therefore only approximate on scaled data. The
+    LATTICE-level U(1) coupling structure and the pre-registered topology-match
+    control (``shuffle_angles``) are scaling-invariant and carry the
+    falsification lever.
+    """
+
+    name = "voraus_ad"  # same underlying data/split/labels as VorausAD
+
+    @property
+    def n_so2_units(self) -> int:
+        """Number of joint-angle (so2 coset) units this loader will emit."""
+        chans = self._resolve_channels()
+        return sum(1 for c in JOINT_ANGLE_COLUMNS if c in chans)
+
+    def _resolve_channels(self) -> tuple:
+        """Machine-signal channel names in load order (triggers one lazy scan)."""
+        if self._channels is None:
+            self._load_frames()
+        return self._channels
+
+    def load_unit(self, unit_id: str):
+        rec = super().load_unit(unit_id)
+        new_data, names, n_so2 = embed_joint_angles(rec.data, rec.channels)
+
+        from dataclasses import replace
+
+        return replace(
+            rec,
+            data=new_data,
+            channels=names,
+            meta={**rec.meta, "n_so2_units": n_so2},
+        )

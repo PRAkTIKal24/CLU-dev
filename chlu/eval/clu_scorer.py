@@ -48,7 +48,13 @@ import numpy as np
 import optax
 
 from chlu.core.chlu_unit import CHLU
-from chlu.core.lattice import build_lattice, torus_edges
+from chlu.core.lattice import (
+    CLULattice,
+    build_lattice,
+    chain_edges,
+    channel_spring_coupling,
+    torus_edges,
+)
 from chlu.eval.baselines import BaselineScorer, make_default_baselines
 from chlu.eval.config import (
     CLU_DEFAULT_SCORE_MODES,
@@ -91,6 +97,9 @@ def _build_model(cfg: CLUScorerConfig, n_channels: int, key):
         )
 
     lc = cfg.lattice
+    if lc.layout == "literal":
+        return _build_literal_lattice(cfg, n_channels, key)
+
     if n_channels % lc.unit_dim != 0:
         raise ValueError(
             f"lattice hook: C={n_channels} channels not divisible by "
@@ -123,6 +132,93 @@ def _build_model(cfg: CLUScorerConfig, n_channels: int, key):
         c=cfg.c,
         tie_channel_mass=lc.tie_channel_mass,
     )
+
+
+def _literal_edges(n_so2: int, topology: str, shuffle: bool, seed: int):
+    """Coupling edges among the ``n_so2`` angle (so2) units.
+
+    ``chain`` = serial kinematic chain (0-1-...-n-1); ``ring`` = that chain
+    closed into a 1-D torus (the honest topology for a 6-axis SERIAL arm);
+    ``torus`` = the 2-D periodic lattice (needs n_so2 = L^2). ``shuffle`` is the
+    pre-registered TOPOLOGY-MATCH CONTROL: relabel the units by a random
+    permutation so the SAME number of bonds now connect physically NON-adjacent
+    joints — if the topology match carries the signal, this must do worse.
+    """
+    if topology == "torus":
+        side = int(round(n_so2**0.5))
+        if side * side != n_so2:
+            raise ValueError(
+                f"literal torus topology needs n_so2_units (={n_so2}) to be a "
+                f"perfect square; voraus has 6 joints -> use topology='ring' "
+                f"(the serial-arm kinematic chain closed into a 1-D torus)."
+            )
+        edges = list(torus_edges(side))
+    elif topology == "ring":
+        edges = list(chain_edges(n_so2))
+        if n_so2 >= 3:
+            edges.append((n_so2 - 1, 0))  # close the chain (1-D torus)
+    else:  # chain
+        edges = list(chain_edges(n_so2))
+    if shuffle:
+        import numpy as _np
+
+        perm = _np.random.default_rng(seed).permutation(n_so2)
+        edges = [(int(perm[i]), int(perm[j])) for (i, j) in edges]
+    return tuple(edges)
+
+
+def _build_literal_lattice(cfg: CLUScorerConfig, n_channels: int, key):
+    """LITERAL joint-angle -> so2-coset lattice (G7b flagship).
+
+    Channel layout (produced by ``VorausTorusAD``): the first ``2 * n_so2``
+    channels are ``(cos θ_j, sin θ_j)`` pairs, one per robot axis; each pair
+    feeds one dim-2 ``so2_invariant`` unit whose ``T^1`` coset *is* that joint's
+    ``U(1)``. The remaining ``C - 2*n_so2`` auxiliary channels (velocities,
+    torques, currents, temperatures) are tiled into plain-``mlp`` units of
+    ``aux_unit_dim`` channels; the LAST aux unit absorbs the non-divisible
+    remainder (voraus's fixed column set is not a clean multiple — we do NOT
+    pad). Only the angle units carry the coupling topology (channel_spring on
+    coords (0,1), U(1)-preserving — CM-9); aux units are isolated.
+    """
+    lc = cfg.lattice
+    n_so2 = int(lc.n_so2_units)
+    if 2 * n_so2 > n_channels:
+        raise ValueError(
+            f"literal layout: 2*n_so2_units ({2 * n_so2}) exceeds C ({n_channels}); "
+            "the loader must emit the (cos, sin) angle pairs first."
+        )
+    n_aux_ch = n_channels - 2 * n_so2
+    # aux unit dims: tile at aux_unit_dim, last absorbs the remainder (no pad).
+    aux_dims = []
+    remaining = n_aux_ch
+    while remaining > 0:
+        take = lc.aux_unit_dim if remaining >= 2 * lc.aux_unit_dim else remaining
+        aux_dims.append(int(take))
+        remaining -= take
+    unit_dims = [2] * n_so2 + aux_dims
+    keys = jax.random.split(key, len(unit_dims))
+
+    units = []
+    for i, d in enumerate(unit_dims):
+        is_angle = i < n_so2
+        units.append(
+            CHLU(
+                dim=d,
+                hidden=cfg.hidden,
+                rest_mass=cfg.rest_mass,
+                c=cfg.c,
+                kinetic_mode=cfg.kinetic_mode,
+                potential_type="so2_invariant" if is_angle else "mlp",
+                tie_channel_mass=lc.tie_channel_mass if is_angle else False,
+                key=keys[i],
+            )
+        )
+
+    edges = _literal_edges(n_so2, lc.topology, lc.shuffle_angles, lc.shuffle_seed)
+    couplings = [
+        channel_spring_coupling(2, 2, lc.kappa_c, channel=(0, 1)) for _ in edges
+    ]
+    return CLULattice(units=units, edges=edges, couplings=couplings)
 
 
 class _SharedCLUFit:

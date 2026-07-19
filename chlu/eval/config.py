@@ -122,15 +122,43 @@ class CLULatticeConfig:
     dissipation-proof registers" prediction) is the next task
     (``g7b-torus-voraus``); here we only guarantee the config is expressible.
 
+    Two layouts (``layout``):
+
+    - ``"tile"`` (default, the w15 hook): tile the C data channels into units of
+      ``unit_dim`` channels each; requires an exact tiling (C % unit_dim == 0).
+    - ``"literal"`` (G7b flagship): the LITERAL joint-angle -> so2 coset map.
+      The first ``2 * n_so2_units`` channels are ``(cos θ_j, sin θ_j)`` pairs,
+      each fed to one ``so2_invariant`` unit whose ``T^1`` coset *is* that
+      joint's ``U(1)`` (produce them with ``VorausTorusAD``). The remaining
+      ``C - 2 * n_so2_units`` channels are auxiliary (velocities, torques,
+      temperatures) and are governed by plain-``mlp`` units tiled at
+      ``aux_unit_dim`` (the LAST aux unit absorbs the non-divisible remainder —
+      voraus's fixed column set will not be a clean multiple, and we do NOT
+      pad). Only the so2 (angle) units sit on the coupling topology; aux units
+      are isolated ("angles-on-the-torus, everything else auxiliary").
+
     Attributes:
-        unit_dim: channels handled per unit (2 = one SO(2) coset per unit —
-            the literal torus mapping's atom). C must be divisible by this.
-        topology: ``"chain"`` (default) or ``"torus"`` (needs n_units = L^2).
-        coupling_type: forwarded to ``build_lattice`` ("auto" picks
-            channel_spring for so2_invariant units — the U(1)-preserving choice).
+        layout: ``"tile"`` or ``"literal"`` (see above).
+        n_so2_units: (literal only) number of leading (cos, sin) angle pairs
+            = number of ``so2_invariant`` coset units (6 for voraus's 6 axes).
+        aux_unit_dim: (literal only) channels per auxiliary ``mlp`` unit; the
+            final aux unit takes the remainder (no padding).
+        unit_dim: (tile only) channels handled per unit (2 = one SO(2) coset).
+            C must be divisible by this in tile layout.
+        topology: ``"chain"`` (default), ``"ring"`` (chain closed into a 1-D
+            torus — the honest topology for the 6-axis SERIAL robot's
+            kinematic chain), or ``"torus"`` (2-D, needs n_units = L^2).
+        shuffle_angles: (literal only) TOPOLOGY-MATCH CONTROL — randomly
+            permute which coset each edge connects, destroying the
+            kinematic-chain adjacency. If the topology match matters, this
+            must do WORSE (pre-registered falsifier). ``shuffle_seed`` seeds it.
+        coupling_type: forwarded to the coupling builder ("auto"/"channel_spring"
+            keep U(1) intact; the random-W ``spring`` breaks it — CM-9).
         kappa_c: coupling strength.
         coupling_dim: coupling channel width (2 for the SO(2) coset).
-        potential_type: per-unit potential ("mlp" or "so2_invariant").
+        potential_type: per-unit potential in tile layout ("mlp" or
+            "so2_invariant"). In literal layout the angle units are always
+            ``so2_invariant`` and the aux units always ``mlp``.
         tie_channel_mass: kinetic isotropy on each unit's SO(2) channel.
     """
 
@@ -141,12 +169,24 @@ class CLULatticeConfig:
     coupling_dim: int = 2
     potential_type: str = "so2_invariant"
     tie_channel_mass: bool = True
+    layout: str = "tile"
+    n_so2_units: int = 0
+    aux_unit_dim: int = 4
+    shuffle_angles: bool = False
+    shuffle_seed: int = 0
 
     def __post_init__(self) -> None:
         if self.unit_dim < 1:
             raise ValueError(f"unit_dim must be >= 1, got {self.unit_dim}")
-        if self.topology not in ("chain", "torus"):
-            raise ValueError(f"topology must be chain|torus, got {self.topology}")
+        if self.topology not in ("chain", "ring", "torus"):
+            raise ValueError(f"topology must be chain|ring|torus, got {self.topology}")
+        if self.layout not in ("tile", "literal"):
+            raise ValueError(f"layout must be tile|literal, got {self.layout}")
+        if self.layout == "literal":
+            if self.n_so2_units < 1:
+                raise ValueError("literal layout needs n_so2_units >= 1")
+            if self.aux_unit_dim < 1:
+                raise ValueError("aux_unit_dim must be >= 1")
 
 
 @dataclass(frozen=True)
