@@ -20,8 +20,35 @@ import jax.numpy as jnp
 import optax
 from tqdm import tqdm
 
-from chlu.config import CHLUConfig, get_default_config
+from chlu.config import CHLUConfig, TrainingConfig, get_default_config
 from chlu.training.replay_buffer import ReplayBuffer
+
+
+def _resolve_generative_sleep_friction(config: CHLUConfig) -> tuple:
+    """Resolve the Exp-C / generative sleep-phase friction (gamma), NON-silently.
+
+    ⚠ HISTORY (fix-pack-7 item 2): the generative path historically read
+    ``config.experiment_c.friction`` here — NOT ``config.training.sleep_friction``
+    — so ``training.sleep_friction`` was a *silent no-op* on this path
+    (relativistic-gibbs-expc §6). Every ``mnist*`` checkpoint was trained with
+    ``gamma = experiment_c.friction`` (0.3), ``T = sleep_temperature`` (0.5),
+    ``langevin_noise = legacy`` — i.e. the Exp-C sleep phase IS stochastic.
+
+    We now honour ``training.sleep_friction``, but ONLY when it has been moved
+    OFF its ``TrainingConfig`` default (0.0). Because every historical config
+    sets ``training.sleep_friction: 0.0`` (== the default), all of them still
+    resolve to ``experiment_c.friction`` **byte-for-byte** — so no checkpoint's
+    training dynamics change. To route the generative sleep friction through
+    ``training.sleep_friction``, set it to a non-zero value (or set
+    ``experiment_c.friction`` for an explicit 0.0), or pass ``sleep_friction=``
+    to ``train_generative`` to override either.
+
+    Returns:
+        (gamma, source_str)
+    """
+    if config.training.sleep_friction != TrainingConfig.sleep_friction:
+        return config.training.sleep_friction, "training.sleep_friction"
+    return config.experiment_c.friction, "experiment_c.friction"
 
 
 def train_generative(
@@ -67,19 +94,27 @@ def train_generative(
         k_steps: Number of negative phase evolution steps (overrides config)
         clamp_outputs: Enable pixel clamping to [-1, 1] (overrides config)
         energy_weight: Weight for contrastive energy loss (overrides config)
-        sleep_friction: Friction during negative phase (overrides config)
+        sleep_friction: Friction (gamma) during the negative/sleep phase
+            (overrides config). If None, resolved by
+            ``_resolve_generative_sleep_friction``: honours
+            ``config.training.sleep_friction`` when it is non-default (!= 0.0),
+            else falls back to ``config.experiment_c.friction`` — the byte-for-
+            byte historical default (fix-pack-7 item 2; was a silent no-op).
         sleep_temperature: Temperature for Langevin noise during sleep phase (overrides config)
         input_noise_sigma: Gaussian noise std for real data (denoising EBM, overrides config)
         langevin_noise: Langevin noise scale, "legacy" or "fdt" (overrides config;
             see F5 Prop-9 / TrainingConfig.langevin_noise). "fdt" is the exact
             discrete-FDT noise — temperatures in energy units, stationary law
             exp(-H/T) — **only in the Newtonian kinetic modes**; in
-            ``relativistic`` mode no sigma gives a Gibbs invariant (CM-17), and
-            ``stochastic_step`` warns, naming this run's T/(m0*c^2). Exp-C's
-            default kinetic mode IS relativistic (at T/(m0*c^2) = 1.0), so this
-            warning is expected there; the free mitigation is to raise
-            ``model.speed_of_causality`` or ``model.rest_mass``. Under "legacy",
-            T is not in energy units in any mode.
+            ``relativistic`` mode no sigma gives a Gibbs invariant (CM-17 v1.9),
+            governed by ``d*Theta`` (see ``CHLU.gibbs_defect_parameter``), and
+            ``stochastic_step`` warns. Exp-C's default kinetic mode IS
+            relativistic at ``d=784, Theta=1.0``, i.e. ``d*Theta=784`` — deeply
+            ultra-relativistic, so this warning is expected there. Raising ``c``
+            is NOT a free fix at this ``d`` (reaching ``d*Theta<1`` needs
+            ``c >~ 28``, and it degrades Exp-C generation); the EXACT fix is
+            ``langevin_noise="fdt_relativistic"`` (latent-mass thermostat).
+            Under "legacy", T is not in energy units in any mode.
 
     Returns:
         (trained_model, losses): Trained model and loss history dict
@@ -108,7 +143,9 @@ def train_generative(
     if energy_weight is None:
         energy_weight = config.training.energy_weight
     if sleep_friction is None:
-        sleep_friction = config.experiment_c.friction
+        sleep_friction, _friction_source = _resolve_generative_sleep_friction(config)
+    else:
+        _friction_source = "explicit override"
     if sleep_temperature is None:
         sleep_temperature = config.training.sleep_temperature
     if input_noise_sigma is None:
@@ -266,7 +303,9 @@ def train_generative(
     print(f"Training generative model for {epochs} epochs...")
     print(f"Buffer capacity: {buffer_capacity}, Batch size: {batch_size}")
     print(
-        f"Re-init prob: {reinit_prob}, K-steps: {k_steps}, Friction: {sleep_friction}, Temperature: {sleep_temperature}"
+        f"Re-init prob: {reinit_prob}, K-steps: {k_steps}, "
+        f"Friction: {sleep_friction} (from {_friction_source}), "
+        f"Temperature: {sleep_temperature}"
     )
     print(f"Input noise sigma: {input_noise_sigma} (denoising EBM)")
 
