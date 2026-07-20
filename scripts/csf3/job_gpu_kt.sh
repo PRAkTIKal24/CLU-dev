@@ -41,22 +41,27 @@
 #     A100. Submit it to `serial` (1 core/task, 7-day limit, no 4-GPU cap):
 #
 #       cd ~/scratch/CHLU && mkdir -p logs
-#       export MODE=winding2d
-#       export SEED_BASE=700
-#       export OUT=$HOME/scratch/clu_kt/w2d
+#       unset MODE SEED_BASE OUT EXTRA_ARGS      # clear stale values from a prior attempt
 #       export EXTRA_ARGS="--l-values 16 24 32 48 64 --tj-values 0.60 0.70 1.00 1.10 1.20 1.30 --nwalk-2d 96"
 #       sbatch -p serial -G 0 -c 1 -t 8:00:00 -a 0-2 --mail-user=$CLU_MAIL \
-#              --export=ALL scripts/csf3/job_gpu_kt.sh
+#              --export=ALL,MODE=winding2d,SEED_BASE=700,OUT=$HOME/scratch/clu_kt/w2d \
+#              scripts/csf3/job_gpu_kt.sh
 #
-#     ⚠ EXPORT THE VARS IN THE SHELL, THEN `--export=ALL`. Do NOT inline them as
-#     `--export=ALL,MODE=...,EXTRA_ARGS='--l-values 16 24 ...'`: sbatch splits
-#     --export on COMMAS and cannot carry a value containing SPACES, and the
-#     multi-line backslash continuation mangles on copy-paste (observed 2026-07-20:
-#     `-bash: syntax error near unexpected token 'newline'`). --export=ALL passes
-#     the whole environment, so the recipe below is quote-safe. This applies to
-#     every recipe in this header. ONE export PER LINE: a two-on-one-line
-#     `export MODE=winding2d SEED_BASE=700` collapsed to `export MODE=700` on
-#     paste (2026-07-20) and three tasks ran with a garbage MODE.
+#     ⚠ THE SPLIT RULE (learned the hard way, 2026-07-20 — three failed launches):
+#       * Variables WITHOUT spaces (MODE, SEED_BASE, OUT) go INLINE in --export.
+#         Inline assignments OVERRIDE the inherited environment, so a stale value
+#         from a previous attempt cannot leak in. `--export=ALL` alone does NOT
+#         protect you: it inherits whatever is still exported in your shell, which
+#         is how MODE=700 survived a *corrected* relaunch and tripped the guard.
+#       * Variables WITH spaces (EXTRA_ARGS) CANNOT go inline: sbatch splits
+#         --export on COMMAS and cannot carry an embedded space. Export those in
+#         the shell; --export=ALL then carries them through.
+#       * `unset` first. Belt and braces against stale state.
+#       * Do NOT use multi-line backslash continuations inside the --export value:
+#         they mangle on copy-paste (`-bash: syntax error near unexpected token
+#         'newline'`), and two-vars-on-one-line collapsed `export MODE=winding2d
+#         SEED_BASE=700` into `export MODE=700`.
+#     Applies to every recipe in this header.
 #
 #     Sizing (measured, nwalk=4 probe scaled to nwalk=96): above-T_KT cells are
 #     ~free (tau_med 85-97 sweeps at L=32/48/64, seconds/cell); the cost is the
@@ -88,12 +93,11 @@
 #     still << 1 after 5e4 steps. So IF the Hub wants (b), run it there, with a
 #     diffusive-window fit and many more walkers, and treat it as EXPLORATORY:
 #
-#       export MODE=winding1d
-#       export SEED_BASE=31
-#       export OUT=$HOME/scratch/clu_kt/w1d
+#       unset MODE SEED_BASE OUT EXTRA_ARGS
 #       export EXTRA_ARGS="--tj 0.2 --n-values 8 16 32 64 --walkers 2048 --chunks 2000 --chunk-steps 100 --msd-fit-max 0.3"
 #       sbatch -t 12:00:00 -a 0-2 --mail-user=$CLU_MAIL \
-#              --export=ALL scripts/csf3/job_gpu_kt.sh
+#              --export=ALL,MODE=winding1d,SEED_BASE=31,OUT=$HOME/scratch/clu_kt/w1d \
+#              scripts/csf3/job_gpu_kt.sh
 #
 #     (2e5 steps x 2048 walkers x 4 ring sizes; the A100 vmaps the walkers, so
 #     walker count is nearly free and is what buys the MSD resolution.)
@@ -103,19 +107,20 @@
 #     arm, so the 1-D-vs-2-D contrast becomes apples-to-apples).
 #
 # (c) L=16 CLU<->reduced bridge (hardens the kill criterion beyond L=8) — GPU:
-#       export MODE=bridge
-#       export OUT=$HOME/scratch/clu_kt/bridge
+#       unset MODE SEED_BASE OUT EXTRA_ARGS
 #       export EXTRA_ARGS="--tj-values 0.70 0.85 1.00"
 #       sbatch -t 8:00:00 --mail-user=$CLU_MAIL \
-#              --export=ALL scripts/csf3/job_gpu_kt.sh
+#              --export=ALL,MODE=bridge,OUT=$HOME/scratch/clu_kt/bridge \
+#              scripts/csf3/job_gpu_kt.sh
 #     (L=8 x 3 temperatures took 145 s on laptop CPU; L=16 is ~4x the sites and
 #     the reduced-XY warm start is the serial part. 8 h is ample.)
 #
 # (d) COLLECT: merge array shards + write summary.json/figures (cheap, CPU):
-#       export MODE=postproc
-#       export OUT=$HOME/scratch/clu_kt/w2d
+#       unset MODE SEED_BASE OUT EXTRA_ARGS
 #       sbatch -p serial -G 0 -c 1 -t 0:30:00 --dependency=afterany:<JOBID> \
-#              --mail-user=$CLU_MAIL --export=ALL scripts/csf3/job_gpu_kt.sh
+#              --mail-user=$CLU_MAIL \
+#              --export=ALL,MODE=postproc,OUT=$HOME/scratch/clu_kt/w2d \
+#              scripts/csf3/job_gpu_kt.sh
 #
 # Partition facts (CSF3 gpu-jobs page, mod. 2026-06-11): gpuA = A100 80GB, free
 # at point of use, <=4 GPUs concurrently per user, <=12 host cores/GPU, batch
