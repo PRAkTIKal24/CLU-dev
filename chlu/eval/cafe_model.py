@@ -41,6 +41,8 @@ under its own key so the two are never conflated.
 
 from __future__ import annotations
 
+import warnings
+
 import equinox as eqx
 import jax
 import jax.numpy as jnp
@@ -160,6 +162,9 @@ class CLUCafeMixin:
         self._shared: _SharedCLUFit | None = None
         self._scaler: tuple[np.ndarray, np.ndarray] | None = None
         self._fitted = False
+        #: Fraction of rows zero-filled by the last :meth:`encode` call. A
+        #: spread of 0 with this above 0 is an overflow, not a basin collapse.
+        self.last_nonfinite_fraction = 0.0
 
     # ── internals ────────────────────────────────────────────────────────
     def _prepare(self, X: np.ndarray) -> np.ndarray:
@@ -220,11 +225,33 @@ class CLUCafeMixin:
         return self
 
     def encode(self, X: np.ndarray) -> np.ndarray:
-        """Map (N, T, C) windows to (N, D) CLU physics embeddings."""
+        """Map (N, T, C) windows to (N, D) CLU physics embeddings.
+
+        ⚠ The non-finite guard below is NOT cosmetic, and it must be LOUD.
+        Zero-filling an overflowed rollout turns a numerical blow-up into a
+        perfectly well-formed constant embedding: the cross-sample std becomes
+        EXACTLY 0.000 and the downstream probe goes singular — which reads
+        exactly like a physical "every window settles onto one point" basin
+        collapse. That misreading was published once (a `relax_gamma` above ~2
+        makes ``p <- (1 - gamma) * p`` amplify by ``|1 - gamma|`` per step, so
+        the rollout overflows within ~50 steps). Always check
+        ``last_nonfinite_fraction`` before interpreting a spread of 0.
+        """
         Xs = self._prepare(X)
         self._ensure_fit(Xs)
         Z = self._features(Xs)
-        # A non-finite embedding silently poisons every downstream probe.
+        bad = ~np.isfinite(Z)
+        self.last_nonfinite_fraction = float(bad.any(axis=1).mean())
+        if self.last_nonfinite_fraction > 0:
+            warnings.warn(
+                f"{self.last_nonfinite_fraction:.1%} of CLU embeddings contain "
+                "non-finite values and are being zero-filled; the resulting "
+                "cross-sample spread is a NUMERICAL artifact, not a basin "
+                f"collapse. Check relax_gamma (={self.enc.relax_gamma}): the "
+                "dissipative step diverges for gamma > 2.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
         return np.nan_to_num(Z, nan=0.0, posinf=0.0, neginf=0.0)
 
     # ── provenance ───────────────────────────────────────────────────────

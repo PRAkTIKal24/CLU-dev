@@ -157,3 +157,60 @@ def test_config_to_json_roundtrips():
 
     cfg = RolloutDiagConfig(horizon=8, gammas=(0.0, 0.5))
     assert json.loads(cfg.to_json())["horizon"] == 8
+
+
+# ── the overflow-masquerading-as-collapse guard ──────────────────────────
+
+
+def test_encode_warns_when_zero_filling_nonfinite():
+    """A zero-filled overflow must not pass silently as a basin collapse.
+
+    `relax_gamma > 2` makes the dissipative step p <- (1-gamma)p amplify, the
+    rollout overflows, and `encode` zero-fills -- producing a cross-sample
+    spread of exactly 0.000 and a singular probe, which reads exactly like
+    "every window settled onto one point". That misreading was published once;
+    this pins the warning that prevents it.
+    """
+    from chlu.eval.cafe_model import CLUCafeMixin
+    from chlu.eval.config import CLUCafeEncodeConfig, CLUScorerConfig
+
+    cfg = CLUScorerConfig(
+        hidden=8, epochs=1, batch_size=8, max_fit_windows=16,
+        predict_horizon=2, relax_steps=3, residual_anchors=2, seed=0,
+    )
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(12, 10, 3)).astype(np.float32)
+
+    model = type("M", (CLUCafeMixin,), {})(
+        clu_config=cfg,
+        encode_config=CLUCafeEncodeConfig(
+            feature_groups=("basin_coords",), relax_gamma=50.0, relax_steps=64
+        ),
+    )
+    with pytest.warns(RuntimeWarning, match="non-finite"):
+        z = model.encode(x)
+
+    assert model.last_nonfinite_fraction > 0.0
+    assert np.isfinite(z).all()          # still safe to hand downstream
+    assert np.std(z, axis=0).mean() == 0.0   # the deceptive "collapse" signature
+
+
+def test_encode_reports_zero_nonfinite_on_a_healthy_config():
+    from chlu.eval.cafe_model import CLUCafeMixin
+    from chlu.eval.config import CLUCafeEncodeConfig, CLUScorerConfig
+
+    cfg = CLUScorerConfig(
+        hidden=8, epochs=1, batch_size=8, max_fit_windows=16,
+        predict_horizon=2, relax_steps=3, residual_anchors=2, seed=0,
+    )
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(12, 10, 3)).astype(np.float32)
+    model = type("M", (CLUCafeMixin,), {})(
+        clu_config=cfg,
+        encode_config=CLUCafeEncodeConfig(
+            feature_groups=("basin_coords",), relax_gamma=0.5, relax_steps=16
+        ),
+    )
+    z = model.encode(x)
+    assert model.last_nonfinite_fraction == 0.0
+    assert np.isfinite(z).all()

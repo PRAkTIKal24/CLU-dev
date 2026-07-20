@@ -258,19 +258,33 @@ class CLUCafeEncodeConfig:
             a different job and are shared with the voraus path — changing them
             there would move published anomaly numbers.
 
-            ⚠ THE RELAXATION BUDGET IS THE KNOB THAT MATTERS. What controls
-            settling is the dimensionless product ``gamma * steps * dt``
-            (:meth:`relax_budget`), not either factor alone:
-              * budget ~ 0.16 (the inherited default) damps only 15% of the
-                initial velocity — q* is a free-streaming continuation, NOT a
-                settled point, and every basin feature is near-chance.
-              * budget ~ 1.6 is the useful regime (measured best on C-MAPSS
-                FD001).
-              * budget >~ 60 collapses EVERY window onto one settled point
-                (measured: q* cross-sample std -> 0.000, and the linear probe
-                then goes singular). The learned potential has effectively one
-                basin, so complete relaxation is information-destroying. This
-                is the anti-collapse failure mode, made quantitative.
+            ⚠ CORRECTED 2026-07-20 (`cmapss-fd002-004-fetch`). An earlier note
+            here claimed "the relaxation BUDGET ``gamma * steps * dt`` is the
+            knob that matters, not either factor alone". **That is false, and a
+            2-D (gamma, steps) grid falsifies it directly:**
+
+              * ISO-GAMMA, 400x budget range (gamma=0.5, steps 6 -> 2560,
+                budget 0.15 -> 64): h-AUROC **0.7230 at every point**, identical
+                to 4 decimals on FD001 (0.6537/0.6537/0.6536/0.6534 on FD002).
+              * ISO-BUDGET (budget=1.6, gamma 0.05/0.1/0.2/0.5): h-AUROC
+                **0.6109 / 0.6744 / 0.7132 / 0.7230** on FD001 — a 0.11 spread.
+
+            ⇒ **gamma alone controls the result; steps is very nearly inert.**
+            Performance is monotone increasing in gamma over the tested range,
+            because larger gamma freezes the state faster, so q* stays closer to
+            the window's last observation (corr(q*, q_last) rises 0.56 -> 0.92
+            as gamma goes 0.05 -> 0.5, and h-AUROC rises with it). The best
+            setting is the one that does the LEAST dynamics; plain ``q_last``
+            with no CLU at all scores 0.7203 vs CLU's best 0.7230.
+
+            ⚠ ``relax_gamma > 2`` DIVERGES. The dissipative step is
+            ``p <- (1 - gamma) * p``, so |1 - gamma| > 1 amplifies momentum
+            every step and the rollout overflows within ~50 steps. Because
+            :meth:`CLUCafeMixin.encode` zero-fills non-finite rows, this
+            presents as a cross-sample spread of EXACTLY 0.000 plus a singular
+            probe — indistinguishable from a physical basin collapse, and
+            previously misreported as one. Measured: gamma >= 5 gives 100%
+            non-finite rows; gamma = 0.5 and 2.0 give 0%.
     """
 
     feature_groups: tuple = CAFE_FEATURE_GROUPS
