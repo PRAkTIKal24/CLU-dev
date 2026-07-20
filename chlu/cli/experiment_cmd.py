@@ -15,6 +15,7 @@ from ..experiments.exp_v1_gate import run_experiment_v1_gate
 from ..experiments.exp_v1_wormhole import run_experiment_v1_wormhole
 from ..experiments.exp_lattice import run_experiment_lattice
 from ..experiments.exp_s1_gamma_field import run_experiment_s1
+from ..experiments.kt import KT_MODES
 
 console = Console()
 
@@ -190,6 +191,61 @@ def setup_experiment_parsers(subparsers):
     exp_v1hg_parser.add_argument('--rho', type=float, help='embedding correlation stress')
     exp_v1hg_parser.add_argument('--noise', type=float, help='cue eval-noise stress')
     exp_v1hg_parser.set_defaults(func=cmd_exp_v1_hopfield_gate)
+
+    # exp-kt
+    exp_kt_parser = subparsers.add_parser(
+        'exp-kt',
+        help='Run the Kosterlitz-Thouless memory-phase suite (Thread-10)'
+    )
+    exp_kt_parser.add_argument('--mode', choices=list(KT_MODES), default='winding1d',
+                               help='winding1d (1-D CLU ring, GPU) | winding2d '
+                                    '(2-D survival, CPU) | bridge (kill criterion, '
+                                    'GPU) | reduced (phase diagram, CPU) | postproc')
+    exp_kt_parser.add_argument('--project', help='Project name to use')
+    exp_kt_parser.add_argument('--seed', type=int, help='Random seed (overrides the '
+                                                        "mode's configured seed)")
+    exp_kt_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (tiny L/N, few steps; same code path)')
+    exp_kt_parser.add_argument('--out', help='Output directory for JSON/figures '
+                                             '(default: <project>/results/kt)')
+    exp_kt_parser.add_argument('--task-id', type=int,
+                               help='Run ONE cell of the mode sweep grid '
+                                    '(= $SLURM_ARRAY_TASK_ID); omit to run all')
+    exp_kt_parser.add_argument('--no-figures', action='store_true',
+                               help='postproc: write summary.json only')
+    # Tranche overrides (the two soft exponents). None = keep config value.
+    exp_kt_parser.add_argument('--tj', type=float,
+                               help='winding1d: T/J for the 1-D ring run. Use '
+                                    '<=0.2 (NOT the 0.5 originally scoped): at '
+                                    'T/J>=0.5 the winding is barely metastable '
+                                    '(E_wind/T~2-5) so the MSD saturates and the '
+                                    'fitted exponent is an artifact. Pair with '
+                                    '--msd-fit-max.')
+    exp_kt_parser.add_argument('--n-values', type=int, nargs='+',
+                               help='winding1d: ring sizes N')
+    exp_kt_parser.add_argument('--l-values', type=int, nargs='+',
+                               help='winding2d/reduced: linear sizes L (>=32 resolves '
+                                    'the above-T_KT sign change)')
+    exp_kt_parser.add_argument('--tj-values', type=float, nargs='+',
+                               help='winding2d/bridge: T/J grid')
+    exp_kt_parser.add_argument('--walkers', type=int,
+                               help='winding1d/bridge: vmapped Langevin walkers')
+    exp_kt_parser.add_argument('--chunks', type=int,
+                               help='winding1d: measurement chunks (all N)')
+    exp_kt_parser.add_argument('--chunk-steps', type=int,
+                               help='winding1d: Langevin steps per chunk')
+    exp_kt_parser.add_argument('--nwalk-2d', type=int,
+                               help='winding2d: first-passage walkers per cell')
+    exp_kt_parser.add_argument('--msd-fit-max', type=float,
+                               help='winding1d: fit the MSD only over the '
+                                    'DIFFUSIVE window MSD <= this (e.g. 0.3). '
+                                    'Without it the full-range fit is '
+                                    'saturation-dominated and the exponent is '
+                                    'an artifact. Required for exponent runs.')
+    exp_kt_parser.add_argument('--nmax-2d', type=int,
+                               help='winding2d: first-passage censor (sweeps), '
+                                    'applied to BOTH below/above T_KT')
+    exp_kt_parser.set_defaults(func=cmd_exp_kt)
 
     # all-experiments
     all_parser = subparsers.add_parser(
@@ -576,6 +632,65 @@ def cmd_exp_s1(args):
     try:
         run_experiment_s1(config=config, models_dir=str(paths['models']))
         console.print("✓ Experiment S1 completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_kt(args):
+    """Run one mode of the Kosterlitz-Thouless memory-phase suite."""
+    console.print(
+        f"[bold cyan]Running KT suite: mode={args.mode}[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    kt = config.experiment_kt
+    # CLI overrides (None = keep config value)
+    if getattr(args, 'tj', None) is not None:
+        kt.winding1d_tj = args.tj
+    if getattr(args, 'n_values', None):
+        kt.winding1d_n_values = list(args.n_values)
+    if getattr(args, 'l_values', None):
+        kt.winding2d_l_values = list(args.l_values)
+        kt.reduced_l_values = list(args.l_values)
+    if getattr(args, 'tj_values', None):
+        kt.winding2d_tj_values = list(args.tj_values)
+        kt.bridge_tj_values = list(args.tj_values)
+    if getattr(args, 'walkers', None) is not None:
+        kt.n_walkers = args.walkers
+    if getattr(args, 'chunks', None) is not None:
+        kt.winding1d_chunks = args.chunks
+        kt.winding1d_chunks_large = args.chunks
+    if getattr(args, 'chunk_steps', None) is not None:
+        kt.winding1d_chunk_steps = args.chunk_steps
+    if getattr(args, 'msd_fit_max', None) is not None:
+        kt.winding1d_msd_fit_max = args.msd_fit_max
+    if getattr(args, 'nwalk_2d', None) is not None:
+        kt.winding2d_nwalk = args.nwalk_2d
+    if getattr(args, 'nmax_2d', None) is not None:
+        kt.winding2d_nmax_below = args.nmax_2d
+        kt.winding2d_nmax_above = args.nmax_2d
+
+    out_dir = args.out or str(Path(paths['results']) / 'kt')
+
+    from ..experiments.kt import run_kt
+    try:
+        run_kt(
+            config=config,
+            mode=args.mode,
+            out_dir=out_dir,
+            seed=getattr(args, 'seed', None),
+            quick=bool(getattr(args, 'quick', False)),
+            task_id=getattr(args, 'task_id', None),
+            make_figures=not bool(getattr(args, 'no_figures', False)),
+            log=console.print,
+        )
+        console.print(f"✓ KT {args.mode} completed -> {out_dir}", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
