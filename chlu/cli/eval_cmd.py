@@ -67,6 +67,12 @@ def setup_eval_parser(subparsers):
     p.add_argument("--out", default="results", help="Output directory")
     p.add_argument("--root", default=None, help="Dataset data root (else default cache)")
     p.add_argument("--download", action="store_true", help="Download the dataset if missing")
+    p.add_argument(
+        "--fetch-only", action="store_true",
+        help="Download + verify the dataset into the cache, then exit (no "
+             "scoring). Run this ONCE serially before launching parallel eval "
+             "jobs so N workers don't each re-download ~1 GB (or race the cache)",
+    )
     p.add_argument("--variant", default="100hz", help="voraus variant (100hz|500hz)")
     p.add_argument("--window", type=int, default=100, help="Sliding window size")
     p.add_argument("--stride", type=int, default=1, help="Test-window stride")
@@ -196,6 +202,17 @@ def _compute_roc(raw_scores: dict) -> dict:
 
 def cmd_eval(args) -> int:
     from ..eval.clu_scorer import make_clu_scorers
+
+    # fetch-only: populate + verify the cache serially, then exit (no scoring).
+    if getattr(args, "fetch_only", False):
+        args.download = True
+        dataset = _make_dataset(args)
+        root = getattr(dataset, "parquet_path", dataset.root)
+        console.print(
+            f"[green]fetched + verified {args.dataset} -> {root}[/green]\n"
+            "[dim]now launch the eval jobs WITHOUT --download.[/dim]"
+        )
+        return 0
 
     window = args.window
     max_train = args.max_train_windows
