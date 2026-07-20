@@ -58,6 +58,14 @@ def _parse_args(argv=None):
     p.add_argument("--encode-batch-size", type=int, default=None)
     p.add_argument("--anomaly-mode", default=None)
     p.add_argument("--no-standardize", action="store_true")
+    p.add_argument("--relax-gamma", type=float, default=None,
+                   help="Override the encode-side relaxation dissipation. The "
+                        "damping BUDGET gamma*steps*dt is the strongest measured "
+                        "lever: the inherited default is ~0.16 (barely damped, "
+                        "q* free-streams); ~1.6 measured best on C-MAPSS FD001; "
+                        ">~60 collapses every window onto one settled point.")
+    p.add_argument("--relax-steps-encode", type=int, default=None,
+                   help="Override the encode-side relaxation rollout length.")
     # --- smoke ---
     p.add_argument("--subsample", type=int, default=None,
                    help="QUICK/SMOKE ONLY: cap train+test windows (seeded, "
@@ -159,6 +167,10 @@ def main(argv=None) -> int:
         enc_kw["anomaly_mode"] = args.anomaly_mode
     if args.no_standardize:
         enc_kw["standardize"] = False
+    if args.relax_gamma is not None:
+        enc_kw["relax_gamma"] = args.relax_gamma
+    if args.relax_steps_encode is not None:
+        enc_kw["relax_steps"] = args.relax_steps_encode
     enc_cfg = CLUCafeEncodeConfig(**enc_kw)
 
     model = registered[args.model](clu_config=clu_cfg, encode_config=enc_cfg)
@@ -175,6 +187,7 @@ def main(argv=None) -> int:
     print(f"subsample    : {n_cap}")
     print(f"clu_config   : {clu_cfg.to_json()}")
     print(f"encode_config: {enc_cfg.to_json()}")
+    print(f"relax_budget : {enc_cfg.relax_budget(clu_cfg):.3f}  (gamma*steps*dt)")
     print("─────────────────────────────────────────────────────────────")
 
     from cafe_bench.pipeline import run as _run
