@@ -6,23 +6,25 @@
 #   cd ~/scratch/CHLU
 #   sbatch --export=ALL,EXP=exp-b,PROJECT_PREFIX=csf3_b,SEED_BASE=0,EXTRA_ARGS= \
 #          -t 1-0 scripts/csf3/job_gpu_array_seeds.sh
-# Change the sweep width with:  sbatch -a 0-9 ... (task ids feed the seeds).
+# Change the sweep width / throttle with:  sbatch -a 0-9%4 ... (overrides the
+# directive below; task ids feed the seeds, %N caps concurrency).
 #
 # Free-at-point-of-use limit is 4 concurrent A100s (docs, 2026-02-20 update):
-# wider arrays simply queue — submit as many tasks as you like.
-# Array syntax per official job-arrays page: #SBATCH -a, ${SLURM_ARRAY_TASK_ID}.
+# the `%4` throttle below keeps the array within that cap (override with
+# `sbatch -a 0-N%M`). Array syntax per the official job-arrays page.
 #
 #SBATCH -p gpuA              # A100 (80GB) partition
 #SBATCH -G 1                 # 1 GPU per array task
-#SBATCH -n 1                 # 1 task per array element
-#SBATCH -c 8                 # ...with 8 cores (<=12/GPU on CSF3)
+#SBATCH -n 1                 # 1 task ...
+#SBATCH -c 8                 # ... with 8 cores per array task (<=12/GPU)
 #SBATCH -t 4:00:00           # OVERRIDE PER RUN. Max 4-0.
-#SBATCH -a 0-4%4             # <=4 concurrent (CSF3 <=4 GPU/user cap)
+#SBATCH -a 0-4%4             # tasks 0..4 -> seeds SEED_BASE+0..4; %4 = <=4 concurrent
+#                            #   (CSF3 4-GPU/user cap; override: sbatch -a 0-N%M)
 #SBATCH --job-name=clu-sweep
-#SBATCH -o logs/%x-%A_%a.out      # stdout -> logs/ (dir must exist)
-#SBATCH -e logs/%x-%A_%a.err      # stderr -> logs/
-#SBATCH --mail-type=END,FAIL      # email per array task end/fail
-#SBATCH --mail-user=pratik.jawahar@postgrad.manchester.ac.uk   # (identifier - strip for anon submissions)
+#SBATCH -o logs/%x-%A_%a.out      # per-task stdout -> logs/ (dir must exist)
+#SBATCH -e logs/%x-%A_%a.err      # per-task stderr -> logs/ (separate stream)
+#SBATCH --mail-type=END,FAIL      # mail on end/fail; set the address at submit:
+#                                 #   sbatch --mail-user=$CLU_MAIL ... (no addr in-repo)
 
 module purge
 set -eo pipefail

@@ -8,13 +8,13 @@
 #
 # SUBMIT:  cd ~/scratch/CHLU && sbatch scripts/csf3/job_cpu_smoke.sh
 #
-#SBATCH -p serial            # 1-core Intel CPU partition
+#SBATCH -p serial            # 1-core Intel CPU partition (no -n/-c/-G: serial=1 core)
 #SBATCH -t 1:00:00           # generous buffer for a cold XLA cache
 #SBATCH --job-name=clu-smoke-cpu
 #SBATCH -o logs/%x-%j.out         # stdout -> logs/ (dir must exist)
-#SBATCH -e logs/%x-%j.err         # stderr -> logs/
-#SBATCH --mail-type=END,FAIL      # email on job end/failure
-#SBATCH --mail-user=pratik.jawahar@postgrad.manchester.ac.uk   # (identifier - strip for anon submissions)
+#SBATCH -e logs/%x-%j.err         # stderr -> logs/ (separate stream)
+#SBATCH --mail-type=END,FAIL      # mail on end/fail; set the address at submit:
+#                                 #   sbatch --mail-user=$CLU_MAIL ... (no addr in-repo)
 
 module purge
 set -eo pipefail
