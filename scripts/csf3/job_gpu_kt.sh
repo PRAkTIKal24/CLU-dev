@@ -40,12 +40,16 @@
 #     this mode is reduced-XY Model-A Metropolis in numpy and would idle an
 #     A100. Submit it to `serial` (1 core/task, 7-day limit, no 4-GPU cap):
 #
-#       cd ~/scratch/CHLU && mkdir -p logs
-#       unset MODE SEED_BASE OUT EXTRA_ARGS      # clear stale values from a prior attempt
+#     NO line continuations, one command per line, MODE passed positionally:
+#
+#       cd ~/scratch/CHLU
+#       git pull
+#       mkdir -p logs
+#       unset MODE SEED_BASE OUT EXTRA_ARGS
+#       export SEED_BASE=700
+#       export OUT=$HOME/scratch/clu_kt/w2d
 #       export EXTRA_ARGS="--l-values 16 24 32 48 64 --tj-values 0.60 0.70 1.00 1.10 1.20 1.30 --nwalk-2d 96"
-#       sbatch -p serial -G 0 -c 1 -t 8:00:00 -a 0-2 --mail-user=$CLU_MAIL \
-#              --export=ALL,MODE=winding2d,SEED_BASE=700,OUT=$HOME/scratch/clu_kt/w2d \
-#              scripts/csf3/job_gpu_kt.sh
+#       sbatch -p serial -G 0 -c 1 -t 8:00:00 -a 0-2 --mail-user=$CLU_MAIL --export=ALL scripts/csf3/job_gpu_kt.sh winding2d
 #
 #     ⚠ THE SPLIT RULE (learned the hard way, 2026-07-20 — three failed launches):
 #       * Variables WITHOUT spaces (MODE, SEED_BASE, OUT) go INLINE in --export.
@@ -143,7 +147,12 @@ module purge                 # no CUDA module: jax[cuda12] pip wheels bundle it
 set -eo pipefail
 
 # ---- knobs (override with sbatch --export=ALL,VAR=...) ---------------------
-MODE="${MODE:-winding2d}"                 # winding1d|winding2d|bridge|reduced|postproc
+# MODE resolution order: positional arg $1 > $MODE env > default.
+# The positional form is the ROBUST one — it cannot be mangled by sbatch's
+# --export comma parsing and cannot be inherited stale from the submitting
+# shell (both of which happened on 2026-07-20):
+#     sbatch ... scripts/csf3/job_gpu_kt.sh winding2d
+MODE="${1:-${MODE:-winding2d}}"           # winding1d|winding2d|bridge|reduced|postproc
 # Fail LOUDLY on a bad MODE. Without this the `*)` fallthrough below silently
 # treats any garbage as a CPU mode, burns the env setup + preflight, and only
 # dies later in argparse. Observed 2026-07-20: a mangled paste of
