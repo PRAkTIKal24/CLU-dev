@@ -807,6 +807,109 @@ class ExperimentS1Config:
 
 
 @dataclass
+class ExperimentKTConfig:
+    """Configuration for the Kosterlitz-Thouless memory-phase suite (Thread-10).
+
+    An ``L x L`` torus of designed SO(2) CLU registers (``channel_spring(kappa)``
+    + ``MexicanHatPotential``, ``newtonian_learned``, no governor) reduces on its
+    vacuum ring to the 2-D XY model with ``J = 2 kappa r*^2``, giving the
+    Nelson-Kosterlitz universal jump at
+
+        T_KT = 1.786 kappa r*^2 = **0.0893** CLU units at kappa=0.05 (= 0.8929 J)
+
+    ⚠ NOT "0.1786" — that value is wrong by a factor 2 and is retracted.
+
+    Defaults reproduce the validated ``kt-2d-csf3`` laptop run exactly (that is
+    the round-trip acceptance gate, ``tests/test_kt.py``). The CSF3/A100 tranche
+    overrides them explicitly on the sbatch command line — see
+    ``scripts/csf3/job_gpu_kt.sh`` — so every scaled run carries its own
+    provenance. See chlu/experiments/kt/.
+    """
+
+    # ---- designed-register physics (the XY dictionary J = 2 kappa r*^2) ----
+    lam: float = 1.0  # Mexican-hat quartic; k_r = 8 lam f^2 = 8
+    f: float = 1.0  # vacuum radius parameter (r* = f = 1)
+    kappa: float = 0.05  # channel spring; kappa/k_r = 0.00625 (Born-Oppenheimer safe)
+    rstar: float = 1.0
+    dt: float = 0.02  # Langevin step
+    gamma: float = 0.10  # Langevin friction
+    n_walkers: int = 256  # vmapped walkers (the A100 knob: 1024+ is cheap)
+    kinetic_mode: str = "newtonian_learned"
+    # ⚠ handover §7.22: the repo default is "legacy", under which T is NOT in
+    # energy units and NONE of this physics holds. clu_path.assert_kt_settings
+    # raises if this is not "fdt".
+    langevin_noise: str = "fdt"
+
+    # ---- mode winding1d: 1-D CLU ring, bias-free winding MSD (exponent (b)) ----
+    # Laptop: T/J=1.0 gave slope -0.7 because xi~1.2 there (slips not
+    # independent). The clean tau ~ 1/N slope -1 needs T/J=0.5 (xi~2.8) + long
+    # runs: that is the CSF3 override.
+    winding1d_n_values: List[int] = field(default_factory=lambda: [8, 16, 32, 64])
+    winding1d_tj: float = 1.0
+    winding1d_chunks: int = 300  # N <= 16
+    winding1d_chunks_large: int = 200  # N > 16
+    winding1d_chunk_steps: int = 100
+    winding1d_seed: int = 31
+    # Fit the MSD only over the diffusive window MSD <= this value. None keeps
+    # the original full-range fit (bit-exact round-trip vs the laptop JSONs) —
+    # but see clu_path.run_winding_msd: the full-range fit is SATURATION-
+    # DOMINATED at T/J=1.0, which is very likely why the laptop slope came out
+    # -0.7. Set ~0.3 for any run whose purpose is the exponent.
+    winding1d_msd_fit_max: Optional[float] = None
+
+    # ---- mode winding2d: 2-D winding survival tau(L) (exponent (a)) ----
+    # Laptop reached L<=16 only, where vortex-diffusion traversal (~L^2) masks
+    # the negative Arrhenius exponent above T_KT. L>=32 is the CSF3 override.
+    winding2d_l_values: List[int] = field(default_factory=lambda: [8, 12, 16])
+    winding2d_tj_values: List[float] = field(
+        default_factory=lambda: [0.60, 0.70, 1.10, 1.30]
+    )
+    winding2d_nwalk: int = 24
+    winding2d_nmax_below: int = 20000  # first-passage censor below T_KT
+    winding2d_nmax_above: int = 6000  # ... and above
+    winding2d_tkt_over_j: float = 0.9  # which censor applies (measured T_KT/J = 0.898)
+    winding2d_seed: int = 700
+
+    # ---- mode bridge: CLU-Langevin vs reduced-XY rho_s (kill criterion) ----
+    bridge_l: int = 8
+    bridge_tj_values: List[float] = field(default_factory=lambda: [0.70, 0.85, 1.00])
+    bridge_chunks: int = 40
+    bridge_burn_chunks: int = 10
+    bridge_chunk_steps: int = 200
+    bridge_seed: int = 7
+    bridge_equil_seed: int = 1234
+    bridge_equil_sweeps: int = 1500
+
+    # ---- mode reduced: reduced-XY phase diagram (sections B, C, F) ----
+    reduced_l_values: List[int] = field(default_factory=lambda: [8, 16, 32])
+    reduced_tj_values: List[float] = field(
+        default_factory=lambda: [
+            0.50, 0.60, 0.70, 0.80, 0.85, 0.90, 0.95, 1.00, 1.10, 1.20
+        ]
+    )
+    reduced_seeds: List[int] = field(default_factory=lambda: [100, 101, 102])
+    reduced_nwalk_small: int = 4  # L <= 16
+    reduced_nwalk_large: int = 2  # L > 16
+    reduced_therm_small: int = 1500
+    reduced_therm_large: int = 3000
+    reduced_meas_small: int = 4000
+    reduced_meas_large: int = 6000
+    reduced_meas_every: int = 5
+    # section C: twist-response route B (⚠ leaks the w=0 sector at L>=16 near T_KT)
+    reduced_twist_l_values: List[int] = field(default_factory=lambda: [8, 16])
+    reduced_twist_tj_values: List[float] = field(
+        default_factory=lambda: [0.60, 0.80, 0.90, 1.00, 1.10]
+    )
+    reduced_twist_a: float = 0.2
+    # section F: broken-symmetry null (the random-W p=2 anisotropy) -> no KT jump
+    reduced_broken_l: int = 16
+    reduced_broken_h2: float = 1.0
+    reduced_broken_tj_values: List[float] = field(
+        default_factory=lambda: [0.60, 0.80, 0.90, 1.00, 1.20]
+    )
+
+
+@dataclass
 class ExperimentMinusPhysicsConfig:
     """Configuration for the 'CLU minus the physics' controls (G2 / P6).
 
@@ -897,6 +1000,7 @@ class CHLUConfig:
     experiment_minus_physics: ExperimentMinusPhysicsConfig = field(
         default_factory=ExperimentMinusPhysicsConfig
     )
+    experiment_kt: ExperimentKTConfig = field(default_factory=ExperimentKTConfig)
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
@@ -988,6 +1092,9 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_minus_physics", {}),
             )
         ),
+        experiment_kt=ExperimentKTConfig(
+            **filter_valid_fields(ExperimentKTConfig, data.get("experiment_kt", {}))
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -1018,6 +1125,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_s1": asdict(config.experiment_s1),
         "experiment_minus_physics": asdict(config.experiment_minus_physics),
         "experiment_paid_access": asdict(config.experiment_paid_access),
+        "experiment_kt": asdict(config.experiment_kt),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
