@@ -189,6 +189,128 @@ class CLULatticeConfig:
                 raise ValueError("aux_unit_dim must be >= 1")
 
 
+#: Feature groups the CAFE encoder can emit (see :class:`CLUCafeEncodeConfig`).
+#: Each group is a *physics* read of the trained CLU, not a learned projection:
+#:   ``energy``       — H(q, p) level/spread/TREND over the window. The trend is
+#:                      the basin-exit signal: a system drifting off its basin
+#:                      accumulates energy monotonically.
+#:   ``potential``    — V(q) level/trend (the landscape height alone).
+#:   ``kinetic``      — T(p) = H - V level (how fast the state is moving).
+#:   ``gradv``        — ||grad V(q)||^2 level/last/trend. The DISTANCE-TO-
+#:                      INSTABILITY read: at a basin bottom ||grad V|| ~ 0, and
+#:                      it grows as the state is pushed up the valley wall.
+#:   ``relax``        — damped rollout from the window's FINAL state to a
+#:                      settled point q*: relaxation residual ||grad V(q*)||^2,
+#:                      the settled height V(q*), and the drift ||q* - q_end||^2
+#:                      (how far the state had to fall to reach its basin).
+#:                      This is the basin-MEMBERSHIP / valley-aware read.
+#:   ``predict``      — multi-step CLU rollout MSE over the window.
+#:   ``basin_coords`` — the settled point q* itself (C dims): WHICH basin the
+#:                      window belongs to, not just how far from it.
+CAFE_FEATURE_GROUPS = (
+    "energy",
+    "potential",
+    "kinetic",
+    "gradv",
+    "relax",
+    "predict",
+    "basin_coords",
+)
+
+#: Valley-aware anomaly arms (item 3 of ``clu-cafe-integration``): score the
+#: SETTLED state, not the transient. ``valley`` = relaxation residual +
+#: V(q*); ``valley_predict`` additionally adds the (z-scored) rollout error.
+CAFE_ANOMALY_MODES = ("valley", "valley_predict", "energy", "predict")
+
+
+@dataclass(frozen=True)
+class CLUCafeEncodeConfig:
+    """Configuration for the CAFE ``encode()`` feature map (CLU -> (N, D)).
+
+    The CAFE harness contract is ``encode(X: (N, T, C)) -> (N, D)`` frozen
+    embeddings, which a downstream probe then fits (``BaseModel``:
+    LogisticRegression / kNN / CoxPH). This config selects WHICH physics reads
+    of the trained CLU become embedding coordinates.
+
+    ⚠ Why the feature choice is load-bearing for Event Prediction: CAFE's
+    default event probe is a **linear** CoxPH on the embedding, and a
+    proportional-hazards risk score ``beta . z`` induces the SAME sample
+    ranking at every horizon. So h-AUROC is determined entirely by one linear
+    functional of these features — the embedding must therefore expose
+    coordinates that are individually monotone in degradation, not merely
+    informative in a nonlinear sense.
+
+    Attributes:
+        feature_groups: which of :data:`CAFE_FEATURE_GROUPS` to emit, in order.
+        standardize: z-score the raw windows with statistics fitted on the
+            first (training) ``encode`` call. CAFE's C-MAPSS loader already
+            normalizes per channel, so this is near a no-op there; it protects
+            datasets whose loaders do not normalize.
+        batch_size: windows per vmapped feature-extraction chunk (memory guard).
+        anomaly_mode: which arm :meth:`CLUCafeModel.anomaly_score` uses.
+        max_probe_train: cap on training rows handed to the downstream probe
+            (CoxPH on ~18k x D is the dominant cost of a C-MAPSS run);
+            ``None`` disables. Subsampling is seeded and uniform.
+        relax_gamma, relax_steps: OPTIONAL overrides of the ``CLUScorerConfig``
+            dissipation/rollout length, used only by the CAFE feature map.
+            ``None`` inherits. These exist as separate knobs because the
+            anomaly scorer's defaults (gamma=0.1, relax_steps=32) are tuned for
+            a different job and are shared with the voraus path — changing them
+            there would move published anomaly numbers.
+
+            ⚠ THE RELAXATION BUDGET IS THE KNOB THAT MATTERS. What controls
+            settling is the dimensionless product ``gamma * steps * dt``
+            (:meth:`relax_budget`), not either factor alone:
+              * budget ~ 0.16 (the inherited default) damps only 15% of the
+                initial velocity — q* is a free-streaming continuation, NOT a
+                settled point, and every basin feature is near-chance.
+              * budget ~ 1.6 is the useful regime (measured best on C-MAPSS
+                FD001).
+              * budget >~ 60 collapses EVERY window onto one settled point
+                (measured: q* cross-sample std -> 0.000, and the linear probe
+                then goes singular). The learned potential has effectively one
+                basin, so complete relaxation is information-destroying. This
+                is the anti-collapse failure mode, made quantitative.
+    """
+
+    feature_groups: tuple = CAFE_FEATURE_GROUPS
+    standardize: bool = True
+    batch_size: int = 512
+    anomaly_mode: str = "valley"
+    max_probe_train: int | None = None
+    relax_gamma: float | None = None
+    relax_steps: int | None = None
+
+    def relax_budget(self, cfg) -> float:
+        """The dimensionless damping budget ``gamma * steps * dt`` actually used."""
+        gamma = self.relax_gamma if self.relax_gamma is not None else cfg.gamma
+        steps = self.relax_steps if self.relax_steps is not None else cfg.relax_steps
+        return float(gamma) * int(steps) * float(cfg.dt)
+
+    def __post_init__(self) -> None:
+        if self.relax_steps is not None and self.relax_steps < 1:
+            raise ValueError("relax_steps override must be >= 1")
+        if self.relax_gamma is not None and self.relax_gamma < 0:
+            raise ValueError("relax_gamma override must be >= 0")
+        for g in self.feature_groups:
+            if g not in CAFE_FEATURE_GROUPS:
+                raise ValueError(
+                    f"unknown CAFE feature group {g!r}; valid: {CAFE_FEATURE_GROUPS}"
+                )
+        if not self.feature_groups:
+            raise ValueError("feature_groups must be non-empty")
+        if self.anomaly_mode not in CAFE_ANOMALY_MODES:
+            raise ValueError(
+                f"anomaly_mode must be one of {CAFE_ANOMALY_MODES}, "
+                f"got {self.anomaly_mode}"
+            )
+        if self.batch_size < 1:
+            raise ValueError("batch_size must be >= 1")
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self), sort_keys=True)
+
+
 @dataclass(frozen=True)
 class CLUScorerConfig:
     """Configuration for the CLU anomaly scorer (``CHLUScorer``).
