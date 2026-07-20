@@ -33,6 +33,20 @@ eval = [
     "pyarrow>=15.0",
     "pyreadr>=0.5.0",
 ]
+# CAFE benchmark integration (chlu/eval/cafe_model.py, scripts/cafe/): install via
+#   uv sync --extra cafe
+# lifelines backs cafe-bench's default CoxPH event probe.
+# ⚠ lifelines pins pandas<3, and uv resolves ONE pandas for the whole lock, so
+# declaring this extra pinned the locked pandas 3.0.3 -> 2.3.3 PROJECT-WIDE:
+# `uv sync --extra eval` now also gets 2.3.3. That is compatible (eval only needs
+# >=2.0) and the full suite is green at 354, but it is a real lockfile-wide change,
+# not an isolated one. Revisit if anything starts needing pandas 3.x.
+# cafe_bench itself is NOT declared here — it is a separate checkout kept outside
+# this repo (see scripts/cafe/run_clu_cafe.py); chlu never imports it at module scope.
+cafe = [
+    "lifelines>=0.30",
+    "pandas>=2.0,<3",
+]
 # GPU (NVIDIA) support via self-contained pip CUDA wheels — Linux only.
 # On macOS this extra is a no-op (marker), so `uv sync --extra cuda` is safe everywhere.
 # jax[cuda12] pulls jax-cuda12-plugin[with-cuda] (bundled CUDA/cuDNN libs);
