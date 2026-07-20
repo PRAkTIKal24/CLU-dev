@@ -16,6 +16,7 @@
 #SBATCH -p serial            # 1-core CPU partition (Intel), 7-0 max
 #SBATCH -t 2:00:00           # REQUIRED (no default); generous for ~6GB of CUDA wheels
 #SBATCH --job-name=clu-env
+#SBATCH -o logs/%x-%j.out         # combined stdout+stderr -> logs/ (dir must exist)
 
 module purge
 set -eo pipefail

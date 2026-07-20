@@ -18,6 +18,7 @@
 #SBATCH -t 4:00:00           # OVERRIDE PER RUN. Max 4-0.
 #SBATCH -a 0-4               # tasks 0..4 -> seeds SEED_BASE+0..4
 #SBATCH --job-name=clu-sweep
+#SBATCH -o logs/%x-%A_%a.out      # per array task -> logs/ (dir must exist)
 
 module purge
 set -eo pipefail

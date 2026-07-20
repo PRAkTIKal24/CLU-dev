@@ -16,6 +16,7 @@
 #SBATCH -n 8                 # host cores (RAM scales with this: ~10.4GB/core)
 #SBATCH -t 4:00:00           # OVERRIDE PER RUN (sbatch -t ...). Max 4-0.
 #SBATCH --job-name=clu-gpu
+#SBATCH -o logs/%x-%j.out         # combined stdout+stderr -> logs/ (dir must exist)
 
 module purge                 # no CUDA module needed: jax[cuda12] pip wheels
                              # bundle CUDA/cuDNN; the node driver (580.126.09)

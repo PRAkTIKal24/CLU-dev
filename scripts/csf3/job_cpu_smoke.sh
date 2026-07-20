@@ -11,6 +11,7 @@
 #SBATCH -p serial            # 1-core Intel CPU partition
 #SBATCH -t 1:00:00           # generous buffer for a cold XLA cache
 #SBATCH --job-name=clu-smoke-cpu
+#SBATCH -o logs/%x-%j.out         # combined stdout+stderr -> logs/ (dir must exist)
 
 module purge
 set -eo pipefail
