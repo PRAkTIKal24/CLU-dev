@@ -25,6 +25,7 @@ import abc
 import hashlib
 import os
 import shutil
+import tempfile
 import urllib.request
 import zipfile
 from collections.abc import Iterable, Iterator
@@ -158,9 +159,22 @@ def download_file(
     md5: str | None = None,
     timeout: int = 60,
 ) -> Path:
-    """Stream ``url`` to ``dest`` (via .part + rename) and verify checksums.
+    """Stream ``url`` to ``dest`` and verify checksums — **concurrency-safe**.
 
-    Skips the download when ``dest`` already exists and passes verification.
+    Safe under N parallel processes sharing one cache (the CSF3 flagship
+    launches ~6 ``--download`` jobs against the same networked home cache). The
+    strategy is unique-temp + atomic-rename + check-final-first — deliberately
+    **not** ``flock`` (advisory locks are unreliable on the networked FS):
+
+    1. **Check final first.** If ``dest`` already exists and verifies, return it
+       immediately (the common case once one job has published the file). No
+       shared ``.part`` for a peer to read or clobber.
+    2. **Download to a process-unique temp** (``mkstemp`` in ``dest``'s own
+       directory, so it is on the same filesystem), verify the checksum on that
+       temp, then **atomically** ``os.replace(temp, dest)``. Concurrent
+       processes each write their own temp; the renames are last-writer-wins,
+       but every temp is an identical *verified* file, so ``dest`` is always
+       valid. The process's own temp is removed on any failure.
     """
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -171,16 +185,38 @@ def download_file(
         if md5 and file_digest(p, "md5") != md5:
             raise IOError(f"md5 mismatch for {p}")
 
+    # 1. check-final-first: use an already-published, verified file as-is.
     if dest.exists():
-        _verify(dest)
-        return dest
+        try:
+            _verify(dest)
+            return dest
+        except IOError:
+            # A corrupt/legacy final (or a mid-migration leftover): fall through
+            # and re-download to a fresh temp, then atomically overwrite it.
+            pass
 
-    part = dest.with_suffix(dest.suffix + ".part")
-    print(f"downloading {url} -> {dest}")
-    with urllib.request.urlopen(url, timeout=timeout) as resp, open(part, "wb") as out:
-        shutil.copyfileobj(resp, out, length=1 << 20)
-    _verify(part)
-    part.rename(dest)
+    # 2. download to a process-unique temp on the SAME filesystem as dest, so
+    #    os.replace() below is an atomic same-fs rename.
+    fd, tmp_name = tempfile.mkstemp(
+        dir=dest.parent, prefix=dest.name + ".", suffix=f".{os.getpid()}.part"
+    )
+    tmp = Path(tmp_name)
+    try:
+        print(f"downloading {url} -> {dest}")
+        with urllib.request.urlopen(url, timeout=timeout) as resp, os.fdopen(
+            fd, "wb"
+        ) as out:
+            shutil.copyfileobj(resp, out, length=1 << 20)
+        _verify(tmp)
+        # atomic publish; last-writer-wins is safe (every temp is identical).
+        os.replace(tmp, dest)
+    except BaseException:
+        # clean up only our own temp; never touch a peer's temp or the final.
+        try:
+            tmp.unlink()
+        except FileNotFoundError:
+            pass
+        raise
     return dest
 
 
