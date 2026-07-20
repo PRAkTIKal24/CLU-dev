@@ -14,11 +14,15 @@
 #
 #SBATCH -p gpuA              # A100 (80GB) partition
 #SBATCH -G 1                 # 1 GPU per array task
-#SBATCH -n 8                 # host cores per task
+#SBATCH -n 1                 # 1 task per array element
+#SBATCH -c 8                 # ...with 8 cores (<=12/GPU on CSF3)
 #SBATCH -t 4:00:00           # OVERRIDE PER RUN. Max 4-0.
-#SBATCH -a 0-4               # tasks 0..4 -> seeds SEED_BASE+0..4
+#SBATCH -a 0-4%4             # <=4 concurrent (CSF3 <=4 GPU/user cap)
 #SBATCH --job-name=clu-sweep
-#SBATCH -o logs/%x-%A_%a.out      # per array task -> logs/ (dir must exist)
+#SBATCH -o logs/%x-%A_%a.out      # stdout -> logs/ (dir must exist)
+#SBATCH -e logs/%x-%A_%a.err      # stderr -> logs/
+#SBATCH --mail-type=END,FAIL      # email per array task end/fail
+#SBATCH --mail-user=pratik.jawahar@postgrad.manchester.ac.uk   # (identifier - strip for anon submissions)
 
 module purge
 set -eo pipefail

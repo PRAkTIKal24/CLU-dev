@@ -39,10 +39,14 @@
 #
 #SBATCH -p gpuA              # A100 (80GB) partition
 #SBATCH -G 1                 # 1 GPU
-#SBATCH -n 8                 # host cores (~10.4GB RAM/core)
+#SBATCH -n 1                 # 1 task (single Python process)
+#SBATCH -c 8                 # ...with 8 cores (<=12/GPU on CSF3; RAM ~10.4GB/core)
 #SBATCH -t 4:00:00           # OVERRIDE PER RUN (sbatch -t ...). Max 4-0.
 #SBATCH --job-name=clu-eval
-#SBATCH -o logs/%x-%j.out         # combined stdout+stderr -> logs/ (dir must exist)
+#SBATCH -o logs/%x-%j.out         # stdout -> logs/ (dir must exist)
+#SBATCH -e logs/%x-%j.err         # stderr -> logs/
+#SBATCH --mail-type=END,FAIL      # email on job end/failure
+#SBATCH --mail-user=pratik.jawahar@postgrad.manchester.ac.uk   # (identifier - strip for anon submissions)
 
 module purge                 # jax[cuda12] pip wheels bundle CUDA/cuDNN; only
                              # the node NVIDIA driver is required.
