@@ -173,6 +173,21 @@ def setup_experiment_parsers(subparsers):
                                 help='Quick mode (fewer queries/items/steps)')
     exp_ret_parser.set_defaults(func=cmd_exp_retrieval)
 
+    # exp-primitive-harness
+    exp_ph_parser = subparsers.add_parser(
+        'exp-primitive-harness',
+        help='Compare CLU vs MLP/GRU/SSM/attention in one drop-in slot at matched params'
+    )
+    exp_ph_parser.add_argument('--project', help='Project name to use')
+    exp_ph_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_ph_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (30 steps, 1 lr, 1 seed, tiny budget)')
+    exp_ph_parser.add_argument('--families', nargs='+',
+                               choices=['mqar', 'adding', 'parity'],
+                               help='Subset of task families to run')
+    exp_ph_parser.add_argument('--steps', type=int, help='Override train_steps')
+    exp_ph_parser.set_defaults(func=cmd_exp_primitive_harness)
+
     # exp-minus-physics
     exp_mp_parser = subparsers.add_parser(
         'exp-minus-physics',
@@ -647,6 +662,39 @@ def cmd_exp_s1(args):
     try:
         run_experiment_s1(config=config, models_dir=str(paths['models']))
         console.print("✓ Experiment S1 completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_primitive_harness(args):
+    """Run the primitive harness (CLU vs MLP/GRU/SSM/attention, matched params)."""
+    console.print(
+        "[bold cyan]Running PRIMITIVE HARNESS: CLU vs MLP/GRU/SSM/attention "
+        "in one drop-in slot[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+    if getattr(args, 'steps', None):
+        config.experiment_primitive_harness.train_steps = args.steps
+
+    try:
+        from ..experiments.exp_primitive_harness import run_primitive_harness
+
+        run_primitive_harness(
+            config=config,
+            save_dir=str(paths['plots']),
+            seed=getattr(args, 'seed', None),
+            quick=getattr(args, 'quick', False),
+            families=getattr(args, 'families', None),
+        )
+        console.print("✓ Primitive harness completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1

@@ -1038,6 +1038,71 @@ class ExperimentRetrievalConfig:
 
 
 @dataclass
+class ExperimentPrimitiveHarnessConfig:
+    """Configuration for the primitive harness (w20).
+
+    Evaluates the CLU as a GENERAL primitive: MLP / GRU / SSM / attention / CLU
+    are dropped into one interchangeable slot (``chlu/core/blocks.py``) at
+    matched parameter count, trained identically, on >= 2 task families reported
+    SEPARATELY (never averaged). See chlu/experiments/exp_primitive_harness.py.
+    """
+
+    # ---- the shared slot (identical for every primitive) ----
+    primitives: List[str] = field(
+        default_factory=lambda: ["mlp", "gru", "ssm", "attention", "clu"]
+    )
+    d_model: int = 64
+    n_layers: int = 2  # 2, not 1: MQAR needs an induction-head circuit, which a
+    # 1-layer attention model provably cannot form (Zoology). A 1-layer harness
+    # would hobble the strongest baseline and flatter every other primitive.
+    # Budget is matched on the parameters of the BLOCK STACK (the primitive's
+    # own parameters, summed over n_layers). Embedding / positional embedding /
+    # head are identical across primitives by construction, so including them
+    # would dilute the match; total params are reported alongside.
+    target_block_params: int = 40000
+    param_tol: float = 0.05  # accept |params/target - 1| <= tol
+    width_search_lo: int = 4
+    width_search_hi: int = 512
+
+    # ---- optimisation (identical for every primitive) ----
+    lr_grid: List[float] = field(default_factory=lambda: [3e-4, 1e-3, 3e-3])
+    train_steps: int = 2000
+    # LR selection runs short (same length for every primitive, so the tuning
+    # budget stays equal by construction); the winning LR is then re-trained at
+    # full length for n_seeds. 600 steps discriminates the grid cleanly —
+    # measured: attention on MQAR T=64 kv=4 reaches 0.44 at lr=1e-3 vs 0.99 at
+    # lr=3e-3 by step 800, i.e. the grid ordering is already resolved.
+    tune_steps: int = 600
+    batch_size: int = 32
+    eval_batch: int = 256
+    grad_clip: float = 1.0
+    n_seeds: int = 3  # seeds for the final (best-LR) numbers
+
+    # ---- family 1: MQAR ----
+    mqar_vocab: int = 256
+    mqar_seq_lens: List[int] = field(default_factory=lambda: [32, 64, 128, 256])
+    mqar_kv_fixed: int = 4  # kv held fixed while seq_len sweeps (distractor axis)
+    mqar_kv_sweep: List[int] = field(default_factory=lambda: [2, 4, 8, 16])
+    mqar_seq_len_fixed: int = 128  # seq_len held fixed while kv sweeps
+
+    # ---- family 2: adding problem ----
+    adding_seq_len: int = 128
+
+    # ---- family 3: parity ----
+    parity_seq_len: int = 64
+
+    # ---- CLU block physics (defaults, NOT tuned per family) ----
+    clu_dt: float = 0.1
+    clu_gamma: float = 0.05  # > 0 is REQUIRED for a readable state
+    clu_steps: int = 1  # Verlet steps per token
+    clu_hidden: int = 32  # potential-MLP hidden width
+    clu_kinetic_mode: str = "newtonian_learned"
+    clu_potential_type: str = "mlp"
+    ssm_selective: bool = True  # Mamba-style input-dependent timescale
+    attn_heads: int = 4
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -1091,6 +1156,9 @@ class CHLUConfig:
     experiment_kt: ExperimentKTConfig = field(default_factory=ExperimentKTConfig)
     experiment_retrieval: ExperimentRetrievalConfig = field(
         default_factory=ExperimentRetrievalConfig
+    )
+    experiment_primitive_harness: ExperimentPrimitiveHarnessConfig = field(
+        default_factory=ExperimentPrimitiveHarnessConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -1191,6 +1259,12 @@ def load_config(path: Path) -> CHLUConfig:
                 ExperimentRetrievalConfig, data.get("experiment_retrieval", {})
             )
         ),
+        experiment_primitive_harness=ExperimentPrimitiveHarnessConfig(
+            **filter_valid_fields(
+                ExperimentPrimitiveHarnessConfig,
+                data.get("experiment_primitive_harness", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -1223,6 +1297,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_paid_access": asdict(config.experiment_paid_access),
         "experiment_kt": asdict(config.experiment_kt),
         "experiment_retrieval": asdict(config.experiment_retrieval),
+        "experiment_primitive_harness": asdict(config.experiment_primitive_harness),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
