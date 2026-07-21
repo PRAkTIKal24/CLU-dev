@@ -47,7 +47,17 @@ def _parse_args(argv=None):
     p.add_argument("--hidden", type=int, default=None)
     p.add_argument("--kinetic-mode", default=None,
                    choices=("newtonian_identity", "newtonian_learned", "relativistic"))
-    p.add_argument("--dt", type=float, default=None)
+    p.add_argument("--dt", type=float, default=None,
+                   help="Verlet INTEGRATOR step (numerical accuracy only). "
+                        "Constrained by stability, dt*omega < 2; measured "
+                        "omega ~= 0.52 on FD001, so dt=1.0 runs at a ~3.8x "
+                        "margin. Must not exceed --data-dt.")
+    p.add_argument("--data-dt", type=float, default=None,
+                   help="PHYSICAL sampling interval of the data, in its own "
+                        "time units (C-MAPSS is cycle-indexed => 1.0). Sets "
+                        "the finite-difference momentum p=(q1-q0)/data_dt. "
+                        "Was conflated with --dt at 0.05 until w20, inflating "
+                        "K by 400x; set it equal to --dt to reproduce that.")
     p.add_argument("--gamma", type=float, default=None)
     p.add_argument("--relax-steps", type=int, default=None)
     p.add_argument("--predict-horizon", type=int, default=None)
@@ -159,7 +169,8 @@ def main(argv=None) -> int:
     for name, val in (
         ("epochs", args.epochs), ("max_fit_windows", args.max_fit_windows),
         ("batch_size", args.batch_size), ("lr", args.lr), ("hidden", args.hidden),
-        ("kinetic_mode", args.kinetic_mode), ("dt", args.dt), ("gamma", args.gamma),
+        ("kinetic_mode", args.kinetic_mode), ("dt", args.dt),
+        ("data_dt", args.data_dt), ("gamma", args.gamma),
         ("relax_steps", args.relax_steps), ("predict_horizon", args.predict_horizon),
         ("mass_lr_mult", args.mass_lr_mult),
         ("mass_spread_lambda", args.mass_spread_lambda),
