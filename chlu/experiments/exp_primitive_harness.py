@@ -64,9 +64,25 @@ class Family:
         self.model_kwargs = model_kwargs
         self.metric_name = metric_name
         self.higher_is_better = higher_is_better
+        self._jit_batch = {}
 
     def batch(self, key, n):
         raise NotImplementedError
+
+    def jbatch(self, key, n):
+        """JIT-compiled, per-batch-size-cached batch generation.
+
+        Fresh batches are drawn every step, and the generators (especially
+        MQAR's without-replacement key/value sampling) cost more per step
+        uncompiled than the training step itself. This is pure harness
+        overhead: it sits OUTSIDE the timed region, so it never enters the
+        reported wall-clock cost of any primitive.
+        """
+        fn = self._jit_batch.get(n)
+        if fn is None:
+            fn = jax.jit(lambda k: self.batch(k, n))
+            self._jit_batch[n] = fn
+        return fn(key)
 
     def loss(self, model, x, y, mask):
         raise NotImplementedError
@@ -272,7 +288,7 @@ def train_one(primitive, cfg, family, width, lr, seed, measure_cost=False):
     diverged = False
     for i in range(cfg.train_steps):
         bkey = jax.random.fold_in(dkey, i)
-        x, y, mask = family.batch(bkey, cfg.batch_size)
+        x, y, mask = family.jbatch(bkey, cfg.batch_size)
         t0 = time.perf_counter()
         model, opt_state, loss = step(model, opt_state, x, y, mask)
         loss = float(loss)
@@ -285,7 +301,7 @@ def train_one(primitive, cfg, family, width, lr, seed, measure_cost=False):
             diverged = True
             break
 
-    xe, ye, me = family.batch(ekey, cfg.eval_batch)
+    xe, ye, me = family.jbatch(ekey, cfg.eval_batch)
     metric = float(evaluate(model, xe, ye, me)) if not diverged else float("nan")
 
     out = {
