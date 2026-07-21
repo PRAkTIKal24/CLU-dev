@@ -351,6 +351,30 @@ class CLUScorerConfig:
         dt: Verlet timestep — the INTEGRATOR step, a numerical-accuracy knob.
             Constrained only by stability (``dt * omega < 2``); it does NOT
             carry the data's time units. See ``data_dt``.
+
+            ⚠ **Choose this self-consistently, and do not trust an at-init
+            check.** ``omega = sqrt(lambda_max(grad^2 V) / M_min)`` is a
+            property of the TRAINED model, and the trained curvature depends on
+            the ``dt`` it was trained at. Measured on FD001 (150 epochs, seed
+            42), ``omega`` at init is 0.51 -- which makes ``dt=1.0`` look safe
+            -- but after training:
+
+                dt=1.0  -> omega= 4.13, dt*omega=4.13  UNSTABLE
+                dt=0.5  -> omega= 5.54, dt*omega=2.77  UNSTABLE
+                dt=0.25 -> omega= 7.96, dt*omega=1.99  marginal
+                dt=0.125-> omega=13.46, dt*omega=1.68  (default, 1.19x margin)
+                dt=0.05 -> omega=22.32, dt*omega=1.12  (1.79x margin, 20x cost)
+
+            ``omega`` GROWS as ``dt`` shrinks: a finer integrator lets training
+            build a sharper potential, which eats the margin it just bought.
+            Nothing in the objective penalizes curvature, so the model
+            self-organizes to the stability edge and NO ``dt`` buys a
+            comfortable margin. Lowering ``dt`` still helps (energy drift over
+            16 cycles falls 2.94 -> 0.081) but sub-linearly, at ``substeps``x
+            the compute. The real fix is curvature control or a mass floor.
+            ``mass_spread_lambda`` makes this WORSE from the mass side
+            (lambda=50 drives ``M_min`` to 0.027 and ``dt*omega`` to 29.6), so
+            retune ``dt`` whenever you change it.
         data_dt: the PHYSICAL sampling interval of the data, in the data's own
             time units — the Delta-t separating consecutive window frames. Used
             for (a) the finite-difference momentum ``p = (q1-q0)/data_dt`` and
@@ -406,7 +430,7 @@ class CLUScorerConfig:
     rest_mass: float = 1.0
     c: float = 1.0
     tie_channel_mass: bool = False
-    dt: float = 1.0
+    dt: float = 0.125
     data_dt: float = 1.0
     gamma: float = 0.1
     epochs: int = 150

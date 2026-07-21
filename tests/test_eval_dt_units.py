@@ -44,6 +44,20 @@ def test_data_dt_defaults_to_one_cycle():
     assert CLUScorerConfig().data_dt == 1.0
 
 
+def test_default_integrator_step_is_stable_for_the_trained_curvature():
+    """dt=0.125 => dt*omega=1.68 < 2 on the trained FD001 model (w20 scan).
+
+    Pins the retuned default AND the reason for it. dt=1.0 would be 4.13 --
+    unstable -- but only AFTER training; at init omega is 0.51 and dt=1.0 looks
+    fine, which is exactly the trap. See CLUScorerConfig.dt's docstring.
+    """
+    cfg = CLUScorerConfig()
+    assert cfg.dt == 0.125
+    assert cfg.substeps == 8
+    omega_trained_fd001 = 13.4614  # measured, 150 epochs, seed 42
+    assert cfg.dt_eff * omega_trained_fd001 < 2.0
+
+
 def test_substeps_and_dt_eff_consistent():
     cfg = CLUScorerConfig(dt=0.05, data_dt=1.0)
     assert cfg.substeps == 20
