@@ -51,6 +51,16 @@ def _parse_args(argv=None):
     p.add_argument("--gamma", type=float, default=None)
     p.add_argument("--relax-steps", type=int, default=None)
     p.add_argument("--predict-horizon", type=int, default=None)
+    p.add_argument("--mass-lr-mult", type=float, default=None,
+                   help="Run log_mass on its own Adam slot at lr*MULT. The "
+                        "default (1.0) is what every CLU run in this program "
+                        "has used, and it leaves the mass spectrum at init "
+                        "(see clu-latent-io-audit). 10 is the known-safe "
+                        "setting; 100 inverts the ordering (CM-5/N8).")
+    p.add_argument("--mass-spread-lambda", type=float, default=None,
+                   help="R-1 mass-spread term: subtract LAMBDA*Var(log_mass) "
+                        "from the loss, forcing a non-degenerate timescale "
+                        "hierarchy. On from epoch 0 (T3). Default 0.0 = off.")
     p.add_argument("--seed", type=int, default=42)
     # --- encode knobs ---
     p.add_argument("--feature-groups", default=None,
@@ -151,6 +161,8 @@ def main(argv=None) -> int:
         ("batch_size", args.batch_size), ("lr", args.lr), ("hidden", args.hidden),
         ("kinetic_mode", args.kinetic_mode), ("dt", args.dt), ("gamma", args.gamma),
         ("relax_steps", args.relax_steps), ("predict_horizon", args.predict_horizon),
+        ("mass_lr_mult", args.mass_lr_mult),
+        ("mass_spread_lambda", args.mass_spread_lambda),
     ):
         if val is not None:
             clu_kw[name] = val
@@ -204,6 +216,15 @@ def main(argv=None) -> int:
     record["embedding_dim"] = len(model.feature_names())
     record["feature_names"] = model.feature_names()
     record["subsample"] = n_cap
+    shared = getattr(model, "_shared", None)
+    if shared is not None and getattr(shared, "mass_diagnostics", None):
+        record["mass_diagnostics"] = shared.mass_diagnostics
+        md = shared.mass_diagnostics
+        print(
+            f"log_mass: std {md['std_init']:.4g} -> {md['std_final']:.4g} | "
+            f"max drift {md['max_abs_drift']:.4g} | "
+            f"movement rms_ratio {md['movement']['rms_ratio']:.4g}"
+        )
 
     out = Path(args.results_dir) / args.model / f"{dataset_key}.json"
     out.write_text(json.dumps(record, indent=2))
