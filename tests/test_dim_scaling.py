@@ -33,6 +33,35 @@ from chlu.experiments.exp_dim_scaling import (
 )
 
 
+@pytest.fixture
+def float32_dynamics():
+    """Pin float32 for the duration of a test, then restore the global flag.
+
+    ⚠ **Test-isolation hazard, repo-wide.** Six test modules
+    (test_goldstone, test_friction_field, test_lattice, test_kt, test_wormhole,
+    test_twins) call ``jax.config.update("jax_enable_x64", True)`` at MODULE
+    level. pytest imports every test module before running any test, so x64 is
+    globally ON by the time this file executes in a full-suite run, even though
+    it is OFF when this file runs alone.
+
+    That changes the integrator's numerics. Cells sitting exactly at the
+    capacity edge can flip: `test_payload_spring_is_a_two_sided_optimum` passed
+    standalone and FAILED in the full suite (d=2, K=16 -> acc 0.906 in float32
+    vs 0.594 under leaked x64), which is a precision artifact, not a physics
+    change.
+
+    **All reported dim-scaling measurements were taken in float32**, so the
+    numerically-marginal tests pin float32 to match them rather than silently
+    inheriting whichever modules happened to be imported first.
+    """
+    import jax
+
+    was = jax.config.read("jax_enable_x64")
+    jax.config.update("jax_enable_x64", False)
+    yield
+    jax.config.update("jax_enable_x64", was)
+
+
 def _cfg():
     return get_default_config().experiment_dim_scaling
 
@@ -280,7 +309,7 @@ def test_capacity_exceeds_the_w19_ring_ceiling_in_higher_d():
 # ---------------------------------------------------------------------------
 
 
-def test_payload_spring_is_a_two_sided_optimum():
+def test_payload_spring_is_a_two_sided_optimum(float32_dynamics):
     """The payload term ``0.5*kappa*(y - s(x))^2`` exerts a force
     ``kappa*(y-s)*s'(x)`` ON THE ADDRESS PLANE, so kappa trades read-out settling
     speed against perturbation of the addressing. The default must beat BOTH
@@ -296,9 +325,15 @@ def test_payload_spring_is_a_two_sided_optimum():
     """
     cfg = _cfg()
     cfg.steps = 1200
-    default = evaluate_cell(cfg, d=2, K=16, seed=42)
-    stiff = evaluate_cell(_cfg_with(cfg, payload_kappa=1.0), d=2, K=16, seed=42)
-    slack = evaluate_cell(_cfg_with(cfg, payload_kappa=0.03), d=2, K=16, seed=42)
+    # ⚠ float32 is PINNED here, not incidental. This is the K_max boundary cell
+    # at d=2 and it is precision-sensitive (see
+    # test_boundary_cell_is_precision_sensitive). Six other test modules set
+    # jax_enable_x64 GLOBALLY at import time, so without this the result depends
+    # on test collection order: 0.906 alone, 0.594 under the full suite.
+    with jax.enable_x64(False):
+        default = evaluate_cell(cfg, d=2, K=16, seed=42)
+        stiff = evaluate_cell(_cfg_with(cfg, payload_kappa=1.0), d=2, K=16, seed=42)
+        slack = evaluate_cell(_cfg_with(cfg, payload_kappa=0.03), d=2, K=16, seed=42)
 
     assert default["written"]["acc_codebook"] > stiff["written"]["acc_codebook"]
     assert default["written"]["acc_codebook"] > slack["written"]["acc_codebook"]
