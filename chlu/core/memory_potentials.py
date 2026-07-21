@@ -21,10 +21,24 @@ Two landscapes:
     a permanent latch (exactly flat SO(2) angle, ``mu^2 == 0``), a decaying item
     written at the *same locus* (the radial excursion, ``mu_rad^2 = 8*lam*f^2``),
     and an uncorrelated item at a fresh location (a broken-symmetry pair).
+
+``DesignFreedomPotential`` (w20 — the one LEARNED family in this module)
+    The same memory landscape rebuilt as ``designed part + LEARNED part``, with a
+    switch (``rung``) controlling how much of the structure is designed in. This
+    is the vehicle for the w20 question "does the w19 loop survive a learned
+    landscape, and how much design does it need?". Its learned part is trained by
+    ``chlu.training.train_memory``. It is the ONLY thing here that is not purely
+    hand-built, and its docstring says exactly which terms are designed at each
+    rung so no result from it can be mistaken for emergence.
 """
 
+from typing import Optional
+
 import equinox as eqx
+import jax
 import jax.numpy as jnp
+
+from chlu.core.potentials import PotentialMLP
 
 
 def _safe_theta(q0: jnp.ndarray, q1: jnp.ndarray, eps: float):
@@ -207,6 +221,198 @@ class ThreeModePotential(eqx.Module):
         v = v + self.beta * (q[2] ** 2 - self.d**2) ** 2
         v = v + 0.5 * self.k_perp * jnp.sum(q[3:] ** 2)
         return v
+
+
+class RBFAtoms(eqx.Module):
+    """A learned dictionary of LOCALIZED wells: ``V = -sum_j d_j exp(-|q-c_j|^2/2s_j^2)``.
+
+    The point of this family is that locality is **imposed by the basis** (each
+    atom has compact-ish support) while *where* the atoms sit, how deep and how
+    wide they are, is learned. It is the rung that isolates "designed locality,
+    learned placement" from "designed placement".
+
+    Depths are ``softplus``-positive so an atom can only ever dig a well, never
+    build a hill — a designed sign constraint, stated because it is structure.
+    """
+
+    centers: jnp.ndarray  # (n_atoms, dim)
+    log_width: jnp.ndarray  # (n_atoms,)
+    depth_raw: jnp.ndarray  # (n_atoms,) -> softplus -> depth
+    confine: float = eqx.field(static=True)
+
+    def __init__(
+        self,
+        dim: int,
+        n_atoms: int,
+        key: jax.random.PRNGKey,
+        init_scale: float = 1.0,
+        init_width: float = 0.3,
+        confine: float = 0.05,
+    ):
+        k_c, k_d = jax.random.split(key, 2)
+        self.centers = jax.random.normal(k_c, (n_atoms, dim)) * init_scale
+        self.log_width = jnp.full((n_atoms,), jnp.log(init_width))
+        self.depth_raw = jax.random.normal(k_d, (n_atoms,)) * 0.1
+        self.confine = confine
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        s = jnp.exp(self.log_width)
+        d2 = jnp.sum((q[None, :] - self.centers) ** 2, axis=-1)
+        depth = jax.nn.softplus(self.depth_raw)
+        v = -jnp.sum(depth * jnp.exp(-d2 / (2.0 * s**2 + 1e-9)))
+        return v + self.confine * jnp.sum(q**2)
+
+
+#: Design-freedom ladder, least free -> most free. The integer is the "freedom"
+#: coordinate of the fidelity-vs-design-freedom curve.
+DESIGN_RUNGS = (
+    "designed",  # 0: w19 hand-built landscape, zero learned parameters
+    "skeleton_residual",  # 1: w19 landscape + a small learned residual
+    "sites_learned_payload",  # 2: designed ring + K angular wells; payload learned
+    "local_rbf",  # 3: learned localized atoms (locality designed, placement learned)
+    "free_mlp",  # 4: free MLP + coercivity only
+)
+
+
+class DesignFreedomPotential(eqx.Module):
+    """``V = V_designed(q) + scale * V_learned(q)`` with a design-freedom switch.
+
+    The five rungs (``DESIGN_RUNGS``), and **exactly** what is designed in each:
+
+    ==========================  ========================================  ===================
+    rung                        designed terms                            learned terms
+    ==========================  ========================================  ===================
+    ``designed``                ring vacuum + K angular wells +           (none)
+                                payload spring carrying the true a_k
+    ``skeleton_residual``       same as ``designed``                      MLP x residual_scale
+    ``sites_learned_payload``   ring vacuum + K angular wells             MLP
+                                (address geometry only, NO payload)
+    ``local_rbf``               coercivity only                           RBF atoms
+    ``free_mlp``                coercivity only                           MLP
+    ==========================  ========================================  ===================
+
+    ⚠ **Two honesty notes that must travel with every number this produces.**
+
+    1. Even ``free_mlp`` is not structure-free: ``PotentialMLP`` carries a
+       ``0.05*|q|^2`` confinement term, which is required for the unit to be
+       coercive at all (F5 Prop-10 — Deep/Conv omit it and are architecturally
+       non-coercive). "Free" means free *potential family*, not free structure.
+    2. In **every** rung the WRITER supplies the target sites ``c_i`` to the
+       training objective. The landscape is learned; the *placement of the items*
+       is chosen. Nothing here tests whether item sites emerge on their own, and
+       no result from this module may be quoted as if it did (N46/D3).
+
+    The designed part is held FIXED during training; only ``learned`` is
+    optimized (see ``chlu.training.train_memory.trainable_filter``).
+    """
+
+    designed: Optional[RingRegisterPotential]
+    learned: Optional[eqx.Module]
+    rung: str = eqx.field(static=True)
+    residual_scale: float = eqx.field(static=True)
+    confine: float = eqx.field(static=True)
+    dim: int = eqx.field(static=True)
+
+    def __init__(
+        self,
+        rung: str,
+        dim: int,
+        payloads,
+        key: jax.random.PRNGKey,
+        lam: float = 1.0,
+        f: float = 1.0,
+        barrier: float = 0.2,
+        payload_kappa: float = 1.0,
+        bump_width: float = 0.05,
+        hidden: int = 64,
+        n_atoms: int = 24,
+        residual_scale: float = 0.1,
+        confine: float = 0.05,
+        rbf_init_width: float = 0.3,
+    ):
+        """
+        Args:
+            rung: one of ``DESIGN_RUNGS``.
+            dim: latent dim (>= 3: address plane q0,q1 + payload channel q2).
+            payloads: (K,) stored values. Used by the DESIGNED payload spring
+                (``designed``/``skeleton_residual``) and, for every rung, by the
+                training objective as the write target.
+            key: PRNG key for the learned part.
+            residual_scale: multiplier on the learned residual at rung 1. Small
+                by design: the rung asks "does adding learned slop break a
+                working designed landscape?", not "can learning replace it?".
+        """
+        if rung not in DESIGN_RUNGS:
+            raise ValueError(f"rung must be one of {DESIGN_RUNGS}, got {rung!r}")
+        if dim < 3:
+            raise ValueError(f"DesignFreedomPotential requires dim >= 3, got {dim}")
+        self.rung = rung
+        self.dim = dim
+        self.residual_scale = residual_scale
+        self.confine = confine
+
+        pay = jnp.asarray(payloads, dtype=jnp.float32)
+        if rung in ("designed", "skeleton_residual"):
+            designed_pay = pay
+            kappa = payload_kappa
+        elif rung == "sites_learned_payload":
+            # Address geometry designed, payload channel NOT: kappa=0 removes the
+            # payload spring entirely, so the payload well must be learned.
+            designed_pay = jnp.zeros_like(pay)
+            kappa = 0.0
+        else:
+            designed_pay = None
+            kappa = 0.0
+
+        if designed_pay is not None:
+            self.designed = RingRegisterPotential(
+                designed_pay,
+                lam=lam,
+                f=f,
+                b=barrier,
+                kappa=kappa,
+                bump_width=bump_width,
+                n_spectator=dim - 3,
+            )
+        else:
+            self.designed = None
+
+        if rung == "designed":
+            self.learned = None
+        elif rung == "local_rbf":
+            self.learned = RBFAtoms(
+                dim, n_atoms, key, init_width=rbf_init_width, confine=confine
+            )
+        else:
+            self.learned = PotentialMLP(dim, hidden=hidden, key=key)
+
+    @property
+    def design_freedom(self) -> int:
+        """Position on the design-freedom ladder (0 = fully designed)."""
+        return DESIGN_RUNGS.index(self.rung)
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        v = 0.0
+        if self.designed is not None:
+            v = v + self.designed(q)
+        if self.learned is not None:
+            scale = self.residual_scale if self.rung == "skeleton_residual" else 1.0
+            v = v + scale * self.learned(q)
+        return v
+
+
+def ring_sites(K: int, f: float = 1.0, dim: int = 3, payloads=None) -> jnp.ndarray:
+    """The K write targets ``z_i = (f*cos th_i, f*sin th_i, a_i, 0...)``.
+
+    Identical geometry to the w19 designed landscape, so the design-freedom sweep
+    varies ONLY the potential family, not where the items live.
+    """
+    th = jnp.arange(K, dtype=jnp.float32) * (2.0 * jnp.pi / K)
+    z = jnp.zeros((K, dim))
+    z = z.at[:, 0].set(f * jnp.cos(th)).at[:, 1].set(f * jnp.sin(th))
+    if payloads is not None:
+        z = z.at[:, 2].set(jnp.asarray(payloads, dtype=jnp.float32))
+    return z
 
 
 def designed_payloads(K: int, seed: int = 0, lo: float = -1.0, hi: float = 1.0):
