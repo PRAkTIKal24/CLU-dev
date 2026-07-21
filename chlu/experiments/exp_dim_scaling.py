@@ -979,7 +979,6 @@ def run_experiment_dim_scaling(
     results["item2_width_sweep"] = item2_width_sweep(cfg, seed=seed)
     print("[item 4] gamma dependence", flush=True)
     results["item4_gamma"] = item4_gamma(cfg, seed=seed)
-    print("[item 5] addressing capacity (decoder-free)", flush=True)
 
     results["figures"] = _plot_all(results, save_dir)
 
