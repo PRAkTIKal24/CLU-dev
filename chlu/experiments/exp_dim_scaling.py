@@ -570,16 +570,34 @@ def item1_k_max_vs_dim(cfg, seed: int = 0):
         key: _fit_growth(
             np.array([r["d"] for r in rows], dtype=float),
             np.array([max(r[key], 1) for r in rows], dtype=float),
+            np.array([bool(r[cens]) for r in rows]),
         )
-        for key in ("k_max_codebook", "k_max_selectivity")
+        for key, cens in (
+            ("k_max_codebook", "censored_codebook"),
+            ("k_max_selectivity", "censored_selectivity"),
+        )
     }
     return {"rows": rows, "fit": fits["k_max_codebook"], "fits": fits}
 
 
-def _fit_growth(ds, ks):
-    """Exponential (A^d) vs polynomial (d^alpha) fit of a capacity curve."""
+def _fit_growth(ds, ks, censored=None):
+    """Exponential (A^d) vs polynomial (d^alpha) fit of a capacity curve.
+
+    ⚠ **Censored points MUST be excluded.** A cell that hit the compute cap
+    without ever failing yields a LOWER BOUND on K_max, not a measurement, and
+    including it flattens the curve at exactly the dimensions where growth is
+    fastest. Measured consequence of getting this wrong on the shipped run:
+    including the censored d=12 and d=16 points (both pinned at the cap, 2048)
+    dropped the fitted base from A=2.13 to A=1.51, collapsed the exponential
+    R^2 from 0.986 to 0.844, and **inverted the model comparison** so a
+    polynomial appeared to fit better -- i.e. it would have reversed the
+    headline conclusion of the experiment.
+    """
     fit = {}
     ok = ks > 1
+    if censored is not None:
+        ok = ok & ~np.asarray(censored, dtype=bool)
+        fit["n_censored_excluded"] = int(np.sum(censored))
     if ok.sum() >= 2:
         # log K_max = d * log A  (+ intercept): exponential growth test
         A_mat = np.stack([ds[ok], np.ones(ok.sum())], axis=1)
@@ -784,8 +802,42 @@ def _plot_all(results, save_dir):
     if it1 and it1["rows"]:
         fig, (a1, a2) = plt.subplots(1, 2, figsize=(11.5, 4.4))
         ds = [r["d"] for r in it1["rows"]]
-        km = [max(r["k_max"], 0.5) for r in it1["rows"]]
-        a1.semilogy(ds, km, "o-", lw=2, label="measured $K_{max}$")
+        # ⚠ Censored cells (hit the compute cap without ever failing) are LOWER
+        # BOUNDS, not measurements. Plotting them as ordinary points makes the
+        # curve appear to saturate at high d, which is an artifact of the cap and
+        # the opposite of what the data says. Drawn hollow with up-arrows.
+        meas = [(r["d"], r["k_max"]) for r in it1["rows"] if not r["censored"]]
+        cens = [(r["d"], r["k_max"]) for r in it1["rows"] if r["censored"]]
+        if meas:
+            a1.semilogy(*zip(*meas), "o-", lw=2, label="measured $K_{max}$")
+        if cens:
+            a1.semilogy(
+                *zip(*cens),
+                "o",
+                mfc="none",
+                mec="C0",
+                label="censored (lower bound, hit $K$ cap)",
+            )
+            for d_, k_ in cens:
+                a1.annotate(
+                    "",
+                    xy=(d_, k_ * 3.0),
+                    xytext=(d_, k_),
+                    arrowprops=dict(arrowstyle="->", color="C0", lw=1.2),
+                )
+        fit = it1.get("fit", {})
+        if fit.get("exponential_base_A"):
+            A, b = fit["exponential_base_A"], fit["exponential_intercept"]
+            xs = np.linspace(min(ds), max(ds), 50)
+            a1.semilogy(
+                xs,
+                np.exp(b) * A**xs,
+                "-",
+                color="C0",
+                alpha=0.4,
+                lw=1.0,
+                label=f"fit $A^d$, $A$={A:.2f} ($R^2$={fit['exponential_r2']:.3f})",
+            )
         pk = [r["packing_bound_1plus2Rovw"] for r in it1["rows"]]
         if all(p is not None for p in pk):
             a1.semilogy(ds, pk, "s--", label=r"packing bound $(1+2R/w)^d$")

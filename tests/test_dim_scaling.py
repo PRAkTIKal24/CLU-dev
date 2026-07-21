@@ -325,15 +325,11 @@ def test_payload_spring_is_a_two_sided_optimum(float32_dynamics):
     """
     cfg = _cfg()
     cfg.steps = 1200
-    # ⚠ float32 is PINNED here, not incidental. This is the K_max boundary cell
-    # at d=2 and it is precision-sensitive (see
-    # test_boundary_cell_is_precision_sensitive). Six other test modules set
-    # jax_enable_x64 GLOBALLY at import time, so without this the result depends
-    # on test collection order: 0.906 alone, 0.594 under the full suite.
-    with jax.enable_x64(False):
-        default = evaluate_cell(cfg, d=2, K=16, seed=42)
-        stiff = evaluate_cell(_cfg_with(cfg, payload_kappa=1.0), d=2, K=16, seed=42)
-        slack = evaluate_cell(_cfg_with(cfg, payload_kappa=0.03), d=2, K=16, seed=42)
+    # float32 pinned by the `float32_dynamics` fixture: this is the d=2 K_max
+    # boundary cell and it flips with precision (0.906 f32 / 0.594 f64).
+    default = evaluate_cell(cfg, d=2, K=16, seed=42)
+    stiff = evaluate_cell(_cfg_with(cfg, payload_kappa=1.0), d=2, K=16, seed=42)
+    slack = evaluate_cell(_cfg_with(cfg, payload_kappa=0.03), d=2, K=16, seed=42)
 
     assert default["written"]["acc_codebook"] > stiff["written"]["acc_codebook"]
     assert default["written"]["acc_codebook"] > slack["written"]["acc_codebook"]
@@ -366,6 +362,73 @@ def test_query_budget_shrinks_per_item_count_at_large_K():
     cfg = _fast_cfg(max_total_queries=1024, n_query_per_item=32, min_query_per_item=4)
     assert evaluate_cell(cfg, d=2, K=2, seed=0)["n_query_per_item_effective"] == 32
     assert evaluate_cell(cfg, d=2, K=512, seed=0)["n_query_per_item_effective"] == 4
+
+
+def test_boundary_cell_is_precision_sensitive_but_the_law_is_not():
+    """⭐ Documents a real precision sensitivity in the shipped run, so nobody
+    later "discovers" it as a bug — and bounds its blast radius.
+
+    The d=2, K=16 cell sits exactly on the 0.9 codebook threshold and **flips
+    with float precision**: 0.906 (float32, PASS) vs 0.594 (float64, FAIL),
+    moving the d=2 codebook K_max from 16 to 8. Every other measured boundary
+    cell is unchanged under both precisions (d=1/3/4/6 identical), and the fitted
+    growth base moves only 2.13 -> 2.21 — **the exponential conclusion is
+    precision-robust even though this one cell is not.**
+
+    Note the float64 value reproduces w19's ring ceiling of 8 exactly.
+
+    The decoder-free selectivity criterion is NOT sensitive here (0.943 vs
+    0.930, both passing) — one more reason it is the better capacity statistic.
+    """
+    cfg = _cfg()
+    with jax.enable_x64(False):
+        f32 = evaluate_cell(cfg, d=2, K=16, seed=42)
+    with jax.enable_x64(True):
+        f64 = evaluate_cell(cfg, d=2, K=16, seed=42)
+
+    assert f32["written"]["acc_codebook"] == pytest.approx(0.906, abs=0.02)
+    assert f64["written"]["acc_codebook"] == pytest.approx(0.594, abs=0.02)
+    assert f32["written"]["acc_codebook"] >= 0.9 > f64["written"]["acc_codebook"]
+    # ...while addressing passes under BOTH precisions.
+    assert f32["written"]["selectivity"] >= 0.9
+    assert f64["written"]["selectivity"] >= 0.9
+
+
+# ---------------------------------------------------------------------------
+# The growth fit
+# ---------------------------------------------------------------------------
+
+
+def test_growth_fit_excludes_censored_points():
+    """⭐ REGRESSION. A censored cell (hit the compute cap without ever failing)
+    is a LOWER BOUND on K_max, not a measurement. Including it flattens the curve
+    at exactly the dimensions where growth is fastest.
+
+    Reproduces the shipped run's numbers: K_max = 4, 16, 32, 64, 256, 1024 at
+    d = 1, 2, 3, 4, 6, 8, with d = 12 and 16 both pinned at the k_cap of 2048.
+    Including the two censored points drops the fitted base 2.13 -> 1.51,
+    collapses R^2 0.986 -> 0.844 and INVERTS the model comparison — i.e. it would
+    have reversed the headline conclusion of the experiment.
+    """
+    from chlu.experiments.exp_dim_scaling import _fit_growth
+
+    ds = np.array([1, 2, 3, 4, 6, 8, 12, 16], dtype=float)
+    ks = np.array([4, 16, 32, 64, 256, 1024, 2048, 2048], dtype=float)
+    cens = np.array([False] * 6 + [True, True])
+
+    good = _fit_growth(ds, ks, cens)
+    assert good["n_censored_excluded"] == 2
+    assert good["n_points_fitted"] == 6
+    assert good["exponential_base_A"] == pytest.approx(2.126, rel=1e-3)
+    assert good["exponential_r2"] == pytest.approx(0.986, abs=2e-3)
+    assert good["exponential_beats_polynomial"]
+
+    bad = _fit_growth(ds, ks, None)
+    assert bad["exponential_base_A"] == pytest.approx(1.512, rel=1e-3)
+    assert bad["exponential_r2"] == pytest.approx(0.844, abs=2e-3)
+    assert not bad["exponential_beats_polynomial"], (
+        "censored points must not be able to flip the growth-law verdict"
+    )
 
 
 # ---------------------------------------------------------------------------
