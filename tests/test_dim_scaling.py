@@ -496,6 +496,33 @@ def test_dim_scaling_config_present_and_round_trips(tmp_path):
     assert back.experiment_dim_scaling.dims == [2, 5]
 
 
+def test_results_config_dump_records_every_load_bearing_flag():
+    """⭐ REGRESSION (provenance). The results JSON must record every flag that
+    can move a reported number, or the flag-provenance table cannot be rebuilt
+    from the artifact.
+
+    The first shipped run omitted `query_noise_mode`, `wall_margin` and the query
+    budget — all three change K_max — and a downstream report consequently quoted
+    a query budget that was never used.
+    """
+    import inspect
+
+    from chlu.experiments import exp_dim_scaling as m
+
+    src = inspect.getsource(m.run_experiment_dim_scaling)
+    for flag in (
+        "wall_margin",
+        "query_noise_mode",
+        "max_total_queries",
+        "min_query_per_item",
+        "well_width",
+        "gamma",
+        "steps",
+        "payload_kappa",
+    ):
+        assert f'"{flag}"' in src, f"{flag} missing from the results config dump"
+
+
 def test_apply_quick_shrinks_the_sweep():
     cfg = get_default_config()
     apply_quick(cfg)

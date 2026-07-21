@@ -948,8 +948,13 @@ def run_experiment_dim_scaling(
         "designed_not_learned": True,
         "config": {
             k: getattr(cfg, k)
+            # ⚠ Provenance: every flag that can move a reported number must be
+            # recorded here. `query_noise_mode`, `wall_margin` and the query
+            # budget are all load-bearing (they change K_max), and the first
+            # shipped run omitted them from the dump.
             for k in (
                 "R",
+                "wall_margin",
                 "well_width",
                 "well_depth",
                 "payload_kappa",
@@ -961,7 +966,10 @@ def run_experiment_dim_scaling(
                 "n_subsample",
                 "n_query_per_item",
                 "query_sigma",
+                "query_noise_mode",
                 "query_sigma_p",
+                "max_total_queries",
+                "min_query_per_item",
                 "selectivity_threshold",
                 "blank_margin",
                 "dims",
