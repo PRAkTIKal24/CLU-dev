@@ -93,6 +93,7 @@ def _build_model(cfg: CLUScorerConfig, n_channels: int, key):
             kinetic_mode=cfg.kinetic_mode,
             potential_type=cfg.potential_type,
             tie_channel_mass=cfg.tie_channel_mass,
+            mass_parameterization=cfg.mass_parameterization,
             key=key,
         )
 
@@ -273,6 +274,45 @@ def _collect_log_mass(model) -> np.ndarray:
     return np.concatenate(out) if out else np.zeros((0,), dtype=np.float32)
 
 
+def _collect_mass_vector(model) -> np.ndarray:
+    """Flat concatenation of every CHLU unit's ACTUAL inertial mass vector.
+
+    Unlike :func:`_collect_log_mass` this applies the unit's
+    ``mass_parameterization`` (and channel tying), so it reports the M that
+    the dynamics actually sees. That distinction is the whole point of the
+    w20 softplus-trap finding: a large spread in ``log_mass`` can correspond
+    to a nearly-degenerate spread in M.
+    """
+    out: list[np.ndarray] = []
+
+    def _visit(node):
+        mv = getattr(node, "mass_vector", None)
+        if callable(mv) and hasattr(node, "log_mass"):
+            out.append(np.asarray(mv()).ravel())
+            return
+        if isinstance(node, eqx.Module):
+            for sub in vars(node).values():
+                _visit(sub)
+        elif isinstance(node, (list, tuple)):
+            for sub in node:
+                _visit(sub)
+
+    _visit(model)
+    return np.concatenate(out) if out else np.zeros((0,), dtype=np.float32)
+
+
+def _mass_ratio(mv: np.ndarray) -> float:
+    """``M_max / M_min`` — the dimensionless timescale-spread figure of merit.
+
+    1.0 means a fully degenerate (single-timescale) spectrum. This, NOT
+    ``std(log_mass)``, is the quantity to quote (w19 item 1).
+    """
+    if mv.size == 0:
+        return 0.0
+    lo = float(np.min(mv))
+    return float(np.max(mv) / lo) if lo > 0 else float("inf")
+
+
 def _log_mass_leaves_jnp(model) -> list:
     """Traceable counterpart of :func:`_collect_log_mass` (for use in a loss)."""
     out: list = []
@@ -421,6 +461,7 @@ class _SharedCLUFit:
         hz = int(min(cfg.predict_horizon, L - 1))
         pw, ew, ereg = cfg.predict_weight, cfg.energy_weight, cfg.energy_reg
         neg = cfg.neg_noise_scale
+        neg_p = float(cfg.neg_momentum_scale)
         spread_lam = float(cfg.mass_spread_lambda)
 
         def loss_fn(model, batch, nkey):
@@ -442,8 +483,21 @@ class _SharedCLUFit:
             # data-interval finite difference (see _momentum)
             ps = ((batch[:, 1:, :] - batch[:, :-1, :]) / data_dt).reshape(-1, C)
             h_data = jax.vmap(model.H)(qs, ps)
-            noise = neg * jax.random.normal(nkey, qs.shape)
-            h_neg = jax.vmap(model.H)(qs + noise, ps)
+            # Momentum-perturbed negatives (w20). At neg_p == 0.0 the negatives
+            # share the data's p exactly, so the kinetic terms cancel in the
+            # difference below and dE_contrast/d log_mass is IDENTICALLY zero —
+            # the historical behaviour. At neg_p > 0 that cancellation breaks
+            # and the contrastive term acquires a genuine per-channel mass
+            # gradient. neg_p == 0.0 must consume the key EXACTLY as before
+            # (no split), so the default arm stays bit-reproducible.
+            if neg_p > 0.0:
+                qkey, pkey = jax.random.split(nkey)
+                noise = neg * jax.random.normal(qkey, qs.shape)
+                ps_neg = ps + neg_p * jax.random.normal(pkey, ps.shape)
+            else:
+                noise = neg * jax.random.normal(nkey, qs.shape)
+                ps_neg = ps
+            h_neg = jax.vmap(model.H)(qs + noise, ps_neg)
             energy_contrastive = jnp.mean(h_data) - jnp.mean(h_neg)
             reg = ereg * (jnp.mean(h_data**2) + jnp.mean(h_neg**2))
             total = pw * predict_mse + ew * energy_contrastive + reg
@@ -478,6 +532,7 @@ class _SharedCLUFit:
         self.model = model
         # -- mass-spectrum diagnostics (clu-latent-io-audit item 1) ----------
         lm0, lm1 = _collect_log_mass(model_init), _collect_log_mass(model)
+        mv0, mv1 = _collect_mass_vector(model_init), _collect_mass_vector(model)
         self.mass_diagnostics = {
             "log_mass_init": lm0.tolist(),
             "log_mass_final": lm1.tolist(),
@@ -494,6 +549,15 @@ class _SharedCLUFit:
             "differential_drift": float(np.std(lm1 - lm0)) if lm0.size else 0.0,
             "mass_lr_mult": float(cfg.mass_lr_mult),
             "mass_spread_lambda": float(cfg.mass_spread_lambda),
+            "neg_momentum_scale": float(cfg.neg_momentum_scale),
+            "mass_parameterization": str(cfg.mass_parameterization),
+            # The figures of merit for the w20 mass-visible question. The
+            # ACCEPTANCE test is mass_ratio_final > mass_ratio_init: training
+            # must EXPAND the spectrum, not merely move it.
+            "mass_ratio_init": _mass_ratio(mv0),
+            "mass_ratio_final": _mass_ratio(mv1),
+            "mass_vector_init": mv0.tolist(),
+            "mass_vector_final": mv1.tolist(),
             "movement": _movement_partition(model_init, model),
         }
         # hybrid z-score stats on a capped train subset (untuned combination).

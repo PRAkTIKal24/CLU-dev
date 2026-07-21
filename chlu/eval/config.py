@@ -404,6 +404,16 @@ class CLUScorerConfig:
             down, H(negatives) up).
         neg_noise_scale: Gaussian perturbation making the EBM negatives
             (denoising-EBM basin around the data manifold).
+        neg_momentum_scale: Gaussian perturbation applied to the MOMENTUM of
+            the EBM negatives, in data-momentum units. Default 0.0 = OFF =
+            historical behaviour. ⚠ This knob exists because at 0.0 the
+            contrastive term has EXACTLY zero mass gradient: negatives share
+            the data's ``p``, so every kinetic term cancels identically in
+            ``H(data) - H(neg)`` and the EBM's representational half is
+            structurally blind to the mass (w19 item 1, confirmed to survive
+            the w20 dt-units fix). Perturbing ``p`` breaks that cancellation
+            and is the only candidate here that fixes the defect at its source
+            rather than adding a competing regularizer.
         energy_reg: energy-magnitude regularizer (keeps H from exploding;
             mirrors train_generative's 0.005 term).
         momentum_init: how p0 is seeded from a window ("finite_diff" =
@@ -419,6 +429,13 @@ class CLUScorerConfig:
             explicit pressure toward a NON-DEGENERATE timescale hierarchy
             (the "hierarchy must be designed in" doctrine, CM-5). Default 0.0 =
             OFF = term never touched. Applied from epoch 0 (theorist T3).
+        mass_parameterization: forwarded to :class:`~chlu.core.chlu_unit.CHLU`
+            — the map from ``log_mass`` to M. "softplus" (default) is the
+            historical, bit-compatible map. "exp" escapes softplus's linear
+            regime so a log-scale spread buys exponential dynamic range;
+            the "_zeromean" variants gauge-fix the mass scale so common-mode
+            pressure (``energy_reg``) cannot express itself at all. See
+            ``CHLU.mass_vector``.
         seed: RNG seed for CLU init + training + subsampling.
         lattice: optional :class:`CLULatticeConfig` (G7b torus hook); None
             (default) fits a single ``CHLU``.
@@ -443,10 +460,12 @@ class CLUScorerConfig:
     predict_weight: float = 1.0
     energy_weight: float = 1.0
     neg_noise_scale: float = 0.5
+    neg_momentum_scale: float = 0.0
     energy_reg: float = 0.005
     momentum_init: str = "finite_diff"
     mass_lr_mult: float = 1.0
     mass_spread_lambda: float = 0.0
+    mass_parameterization: str = "softplus"
     seed: int = 42
     lattice: CLULatticeConfig | None = None
 
@@ -460,6 +479,17 @@ class CLUScorerConfig:
             raise ValueError("mass_lr_mult must be > 0")
         if self.mass_spread_lambda < 0:
             raise ValueError("mass_spread_lambda must be >= 0")
+        if self.neg_momentum_scale < 0:
+            raise ValueError("neg_momentum_scale must be >= 0")
+        # Local import: this module is deliberately JAX-free at import time,
+        # and chlu.core.chlu_unit pulls in jax/equinox.
+        from chlu.core.chlu_unit import _MASS_PARAMETERIZATIONS
+
+        if self.mass_parameterization not in _MASS_PARAMETERIZATIONS:
+            raise ValueError(
+                "mass_parameterization must be one of "
+                f"{sorted(_MASS_PARAMETERIZATIONS)}"
+            )
         if self.predict_horizon < 1 or self.relax_steps < 1:
             raise ValueError("predict_horizon and relax_steps must be >= 1")
         if self.dt <= 0 or self.data_dt <= 0:

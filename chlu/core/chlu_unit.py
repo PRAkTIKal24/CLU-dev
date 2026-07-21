@@ -20,6 +20,12 @@ from chlu.core.potentials import (
 )
 
 
+#: Accepted values of ``CHLU.mass_parameterization`` (see ``mass_vector``).
+_MASS_PARAMETERIZATIONS = frozenset(
+    {"softplus", "exp", "softplus_zeromean", "exp_zeromean"}
+)
+
+
 class RelativisticGibbsWarning(UserWarning):
     """Emitted when ``noise_mode="fdt"`` is used with ``relativistic`` kinetics.
 
@@ -60,6 +66,16 @@ class CHLU(eqx.Module):
     # inertial masses so the kinetic term cannot explicitly break the channel
     # symmetry (F5 §4.1 — multiplet members share a common inertial mass).
     tie_channel_mass: bool = eqx.field(static=True)
+    # How log_mass maps to the inertial mass M (w20 mass-visible-objective).
+    # "softplus" (default) is the historical map and is bit-compatible.
+    # The other three exist because softplus is LINEAR for x >> 0, so once a
+    # common-mode drift pushes log_mass into that regime a log-scale spread
+    # stops buying exponential dynamic range (w19: std(log M)=0.56 bought a
+    # mass ratio of only 1.28). "*_zeromean" additionally centres log_mass at
+    # use time, which makes the overall mass SCALE an exact gauge (theorist
+    # Prop 6: only ratios are physical) and so denies any common-mode-only
+    # pressure — notably energy_reg — a direction to express itself in.
+    mass_parameterization: str = eqx.field(static=True)
     # Optional position-gated friction field gamma_phi(q) (trash regions,
     # F5 Def-5/Prop-11; chlu/core/friction_field.py). None (default) keeps the
     # historical scalar-gamma damping path bit-compatible. Access via
@@ -76,6 +92,7 @@ class CHLU(eqx.Module):
         kinetic_mode: str = "newtonian_identity",
         potential_type: str = "mlp",
         tie_channel_mass: bool = False,
+        mass_parameterization: str = "softplus",
         tilt_delta: float = 0.0,
         tilt_n: int = 1,
         spurion_delta: float = 0.0,
@@ -101,6 +118,21 @@ class CHLU(eqx.Module):
                            (kinetic isotropy for the SO(2) channel, F5 §4.1).
                            False (default) preserves independent per-coordinate
                            masses — the "broken isotropy" switch.
+            mass_parameterization: map from ``log_mass`` to the inertial mass M
+                           (default "softplus" = historical, bit-compatible).
+                           Options:
+                             "softplus"          M = softplus(x)
+                             "exp"               M = exp(x)  — a log-scale
+                                 spread buys EXPONENTIAL range at any offset,
+                                 escaping softplus's linear regime (w20 (c)).
+                             "softplus_zeromean" M = softplus(x - mean(x))
+                             "exp_zeromean"      M = exp(x - mean(x)), i.e. the
+                                 geometric mean of M is pinned to exactly 1.
+                           The "_zeromean" variants gauge-fix the overall mass
+                           SCALE at use time (constraint by reparameterization,
+                           same trick as ``tie_channel_mass``), so common-mode
+                           gradient pressure is projected out and only the
+                           physically meaningful RATIOS can move (Prop 6).
             tilt_delta: Explicit SO(2)-breaking amplitude delta for an additive
                            delta*cos(n*theta) tilt on the channel (F5 §3.3c GMOR
                            probe). 0.0 (default) = no tilt (no wrapper added).
@@ -137,6 +169,12 @@ class CHLU(eqx.Module):
                 f"tie_channel_mass requires dim >= 2 (channel = coords (0, 1)), got dim={dim}"
             )
         self.tie_channel_mass = tie_channel_mass
+        if mass_parameterization not in _MASS_PARAMETERIZATIONS:
+            raise ValueError(
+                f"unknown mass_parameterization {mass_parameterization!r}; "
+                f"expected one of {sorted(_MASS_PARAMETERIZATIONS)}"
+            )
+        self.mass_parameterization = mass_parameterization
 
         # Initialize potential network based on potential_type
         if potential_type == "conv":
@@ -204,6 +242,16 @@ class CHLU(eqx.Module):
         if getattr(self, "tie_channel_mass", False):
             tied = 0.5 * (log_m[0] + log_m[1])
             log_m = log_m.at[0].set(tied).at[1].set(tied)
+        # getattr guards checkpoints pickled before this field existed, which
+        # must keep decoding as the historical softplus map (handover §7.13).
+        mode = getattr(self, "mass_parameterization", "softplus")
+        if mode.endswith("_zeromean"):
+            # Centre at USE time, so the common mode is a gauge direction the
+            # gradient cannot move (it is projected out of every mass gradient)
+            # rather than a soft penalty that merely competes with energy_reg.
+            log_m = log_m - jnp.mean(log_m)
+        if mode.startswith("exp"):
+            return jnp.exp(log_m)
         return jax.nn.softplus(log_m)
 
     def effective_inertia(self) -> jnp.ndarray:
@@ -229,7 +277,7 @@ class CHLU(eqx.Module):
         else:
             raise ValueError(f"Unknown kinetic mode: {self.kinetic_mode}.")
 
-    def T(self, p: jnp.ndarray) -> float:
+    def T(self, p: jnp.ndarray, mass_override: Optional[jnp.ndarray] = None) -> float:
         """
         Kinetic energy T(p) alone, per the configured kinetic_mode:
 
@@ -244,6 +292,9 @@ class CHLU(eqx.Module):
 
         Args:
             p: Momentum (dim,)
+            mass_override: optional per-launch inertial mass vector (dim,)
+                replacing the global ``mass_vector()`` for THIS evaluation
+                (Prop 6 per-address masses). None (default) = global mass.
 
         Returns:
             Kinetic energy (scalar)
@@ -251,7 +302,14 @@ class CHLU(eqx.Module):
         # Compute inertial-mass vector (always prepared, used if needed).
         # mass_vector() == softplus(log_mass), with optional channel tying
         # (bit-identical to the historical computation when untied).
-        M = self.mass_vector()  # Ensure positive-definite
+        #
+        # mass_override (w20, theorist Prop 6 / OQ-B) makes the mass a
+        # PER-LAUNCH attribute rather than a global model parameter: the
+        # address selector supplies the M for this rollout. Without it the
+        # mass cannot be an address component at all, because every rollout
+        # shares one M. None (default) = the trainable global mass = the
+        # historical path, bit-for-bit.
+        M = self.mass_vector() if mass_override is None else mass_override
         M_inv = 1.0 / (M + 1e-6)  # Inverse inertial mass with numerical stability
 
         # Select kinetic energy calculation based on mode
@@ -281,7 +339,12 @@ class CHLU(eqx.Module):
                 f"Must be 'newtonian_identity', 'newtonian_learned', or 'relativistic'."
             )
 
-    def H(self, q: jnp.ndarray, p: jnp.ndarray) -> float:
+    def H(
+        self,
+        q: jnp.ndarray,
+        p: jnp.ndarray,
+        mass_override: Optional[jnp.ndarray] = None,
+    ) -> float:
         """
         Compute the Hamiltonian with selectable kinetic energy mode.
 
@@ -295,11 +358,14 @@ class CHLU(eqx.Module):
         Args:
             q: Position (dim,)
             p: Momentum (dim,)
+            mass_override: optional per-launch inertial mass vector (dim,),
+                forwarded to ``T`` (Prop 6 per-address masses). None
+                (default) = the global trainable mass, bit-compatible.
 
         Returns:
             Total energy (scalar)
         """
-        kinetic = self.T(p)
+        kinetic = self.T(p, mass_override)
 
         # Potential energy (always computed the same way)
         potential = self.potential_net(q)
@@ -464,7 +530,13 @@ class CHLU(eqx.Module):
             stacklevel=3,
         )
 
-    def step(self, state: tuple, dt: float, gamma: float = 0.0) -> tuple:
+    def step(
+        self,
+        state: tuple,
+        dt: float,
+        gamma: float = 0.0,
+        mass_override: Optional[jnp.ndarray] = None,
+    ) -> tuple:
         """
         Single time step using Velocity Verlet integrator.
 
@@ -482,8 +554,16 @@ class CHLU(eqx.Module):
             (q_next, p_next): Updated state
         """
         q, p = state
+        # ``mass_override is None`` is a PYTHON-level branch on a static
+        # argument (not a traced value), so passing self.H unwrapped keeps the
+        # default path bit-identical rather than merely numerically equal.
+        H_fn = (
+            self.H
+            if mass_override is None
+            else (lambda qq, pp: self.H(qq, pp, mass_override))
+        )
         return velocity_verlet_step(
-            self.H, q, p, dt, gamma,
+            H_fn, q, p, dt, gamma,
             gamma_field=getattr(self, "friction_field", None),
         )
 
@@ -548,6 +628,7 @@ class CHLU(eqx.Module):
         steps: int,
         dt: float,
         gamma: float = 0.0,
+        mass_override: Optional[jnp.ndarray] = None,
     ) -> jnp.ndarray:
         """
         Unroll trajectory using jax.lax.scan for efficiency.
@@ -557,6 +638,14 @@ class CHLU(eqx.Module):
             p0: Initial momentum (dim,)
             steps: Number of time steps
             dt: Time step size
+            gamma: Friction coefficient
+            mass_override: optional per-launch inertial mass (dim,). This is
+                what makes the mass an ADDRESS component (theorist Prop 6 /
+                OQ-B): the caller — an address selector — chooses the mass
+                for this retrieval, so different addresses read the same
+                landscape at different timescales (tau ~ sqrt(M)). None
+                (default) uses the global trainable mass and is bit-identical
+                to the historical rollout.
 
         Returns:
             Trajectory of shape (steps, 2*dim) where each row is [q, p]
@@ -564,7 +653,7 @@ class CHLU(eqx.Module):
 
         def scan_fn(state, _):
             q, p = state
-            q_next, p_next = self.step((q, p), dt, gamma)
+            q_next, p_next = self.step((q, p), dt, gamma, mass_override)
             # Concatenate q and p for output
             output = jnp.concatenate([q_next, p_next])
             return (q_next, p_next), output
