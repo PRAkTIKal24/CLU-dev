@@ -113,11 +113,51 @@ def test_momentum_perturbed_negatives_break_the_kinetic_cancellation():
     assert _contrast_grad(0.5) > 1e-3
 
 
-def test_contrastive_mass_gradient_scales_as_sigma_squared():
-    """d/dM of E[E_contrast] = +0.5 * sigma^2 * M^-2, so the gradient is
-    quadratic in the perturbation scale."""
-    g1, g2 = _contrast_grad(0.25), _contrast_grad(0.5)
-    assert g2 / g1 == pytest.approx(4.0, rel=0.15)
+def _mean_contrast_grad(neg_p, dim=6, n=128, n_keys=64):
+    """RMS of the NOISE-AVERAGED mass gradient.
+
+    The sigma^2 law is a statement about E[E_contrast]. A single noise draw
+    also carries the cross-term -sum_i p_i d_i / M_i, which is O(sigma) with
+    random sign and vanishes only in expectation -- so it must be averaged out
+    before the law is testable (see the companion test below).
+    """
+    model = CHLU(
+        dim=dim, hidden=16, kinetic_mode="newtonian_learned",
+        key=jax.random.PRNGKey(0),
+    )
+    qs = jax.random.normal(jax.random.PRNGKey(7), (n, dim))
+    ps = jax.random.normal(jax.random.PRNGKey(8), (n, dim))
+
+    def contrast(m, k):
+        h_data = jax.vmap(m.H)(qs, ps)
+        qk, pk = jax.random.split(jax.random.PRNGKey(k))
+        noise = 0.5 * jax.random.normal(qk, qs.shape)
+        ps_neg = ps + neg_p * jax.random.normal(pk, ps.shape)
+        return jnp.mean(h_data) - jnp.mean(jax.vmap(m.H)(qs + noise, ps_neg))
+
+    tot = np.zeros(dim)
+    for k in range(n_keys):
+        tot += np.asarray(eqx.filter_grad(contrast)(model, k).log_mass)
+    return float(np.sqrt(np.mean((tot / n_keys) ** 2)))
+
+
+def test_expected_contrastive_mass_gradient_scales_as_sigma_squared():
+    """E[E_contrast] = -0.5*sigma^2*sum_i 1/M_i, so d/dM_i = +0.5*sigma^2/M_i^2
+    and the expected gradient is QUADRATIC in the perturbation scale."""
+    g1, g2 = _mean_contrast_grad(0.25), _mean_contrast_grad(0.5)
+    assert g2 / g1 == pytest.approx(4.0, rel=0.05)
+
+
+def test_single_draw_gradient_is_dominated_by_the_cross_term_at_small_sigma():
+    """Practical consequence for choosing sigma: for a SINGLE noise draw the
+    O(sigma) cross-term dominates at small sigma, so the per-batch mass
+    gradient grows ~linearly there and only approaches the sigma^2 law once
+    sigma is large. Pins the crossover so it is not mistaken for a bug."""
+    small = _contrast_grad(0.2) / _contrast_grad(0.1)
+    large = _contrast_grad(1.0) / _contrast_grad(0.5)
+    assert small < 3.0, "small-sigma regime should be sub-quadratic"
+    assert large == pytest.approx(4.0, rel=0.1), "large-sigma should be quadratic"
+    assert small < large
 
 
 # ── mass parameterizations ───────────────────────────────────────────────
