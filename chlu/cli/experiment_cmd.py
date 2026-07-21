@@ -15,6 +15,10 @@ from ..experiments.exp_v1_gate import run_experiment_v1_gate
 from ..experiments.exp_v1_wormhole import run_experiment_v1_wormhole
 from ..experiments.exp_lattice import run_experiment_lattice
 from ..experiments.exp_s1_gamma_field import run_experiment_s1
+from ..experiments.exp_dim_scaling import (
+    run_experiment_dim_scaling,
+    apply_quick as apply_dim_scaling_quick,
+)
 from ..experiments.exp_retrieval import (
     run_experiment_retrieval,
     apply_quick as apply_retrieval_quick,
@@ -172,6 +176,17 @@ def setup_experiment_parsers(subparsers):
     exp_ret_parser.add_argument('--quick', action='store_true',
                                 help='Quick mode (fewer queries/items/steps)')
     exp_ret_parser.set_defaults(func=cmd_exp_retrieval)
+
+    # exp-dim-scaling
+    exp_dim_parser = subparsers.add_parser(
+        'exp-dim-scaling',
+        help='Measure retrieval capacity K_max vs address-space dimension d'
+    )
+    exp_dim_parser.add_argument('--project', help='Project name to use')
+    exp_dim_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_dim_parser.add_argument('--quick', action='store_true',
+                                help='Quick mode (d<=3, K<=16, short rollouts)')
+    exp_dim_parser.set_defaults(func=cmd_exp_dim_scaling)
 
     # exp-minus-physics
     exp_mp_parser = subparsers.add_parser(
@@ -678,6 +693,38 @@ def cmd_exp_retrieval(args):
             seed=getattr(args, 'seed', None),
         )
         console.print(f"✓ Experiment RETRIEVAL completed -> {res['metrics_path']}",
+                      style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_dim_scaling(args):
+    """Run the address-space dimension-scaling capacity measurement."""
+    console.print(
+        "[bold cyan]Running Experiment DIM-SCALING: K_max vs address dimension "
+        "(HAND-DESIGNED, not learned)[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        apply_dim_scaling_quick(config)
+
+    try:
+        res = run_experiment_dim_scaling(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+        )
+        console.print(f"✓ Experiment DIM-SCALING completed -> {res['metrics_path']}",
                       style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
