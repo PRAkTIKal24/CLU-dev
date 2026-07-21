@@ -7,7 +7,7 @@ providing type safety and defaults for all experiments, training, and models.
 
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import yaml
 
@@ -1038,6 +1038,110 @@ class ExperimentRetrievalConfig:
 
 
 @dataclass
+class ExperimentLearnedMemoryConfig:
+    """Configuration for the LEARNED write -> address -> read loop (w20).
+
+    w19 (``ExperimentRetrievalConfig``) ran the loop on a HAND-DESIGNED
+    landscape. This group runs the same loop on a landscape whose potential is
+    **trained** (``chlu.training.train_memory``), across a design-freedom ladder
+    from the w19 hand-built landscape to a free MLP, and measures the
+    fidelity-vs-design-freedom curve. See chlu/experiments/exp_learned_memory.py.
+
+    Geometry defaults are deliberately IDENTICAL to the w19 group so the two
+    experiments are directly comparable; only the potential family changes.
+    """
+
+    # ---- geometry (matched to ExperimentRetrievalConfig) ----
+    lam: float = 1.0
+    f: float = 1.0
+    barrier: float = 0.2
+    payload_kappa: float = 1.0
+    bump_width: float = 0.05
+    payload_seed: int = 0
+
+    # ---- design-freedom ladder ----
+    rungs: List[str] = field(
+        default_factory=lambda: [
+            "designed",
+            "skeleton_residual",
+            "sites_learned_payload",
+            "local_rbf",
+            "free_mlp",
+        ]
+    )
+    hidden: int = 64  # learned MLP width
+    n_atoms: int = 24  # learned RBF dictionary size
+    residual_scale: float = 0.1  # learned residual weight at rung `skeleton_residual`
+    rbf_init_width: float = 0.3
+
+    # ---- write objective (chlu/training/train_memory.py) ----
+    write_steps: int = 600
+    write_lr: float = 3e-3
+    write_weight_decay: float = 1e-4
+    write_n_perturb: int = 32
+    write_sigma_addr: float = 0.25
+    write_sigma_pay: float = 0.6
+    write_margin: float = 0.15
+    write_barrier: float = 0.2
+
+    # ---- TWO-PHASE retrieval ----
+    # Phase 1 relaxes the query to its address (dissipative, no gradient needed);
+    # phase 2 rolls out from the address for the read (where gradients are safe).
+    dt: float = 0.05
+    gamma_address: float = 0.05
+    gamma_read: float = 0.0
+    address_steps: int = 400
+    read_steps: int = 800
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+
+    # ---- queries / read ----
+    n_query_per_item: int = 32
+    query_sigma_theta: float = 0.15  # x f => q-space jitter, matched to w19 arc length
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1
+    item_counts: List[int] = field(default_factory=lambda: [2, 4, 8, 16])
+    survival_fracs: List[float] = field(
+        default_factory=lambda: [0.05, 0.1, 0.25, 0.5, 0.75, 0.99]
+    )
+
+    # ---- pass criteria for the minimum-viable-design point ----
+    pass_strict: float = 0.9
+    pass_read: float = 0.9
+    # A blank landscape must read within this of chance, else the cell is not a
+    # measurement (w19: blank 0.469 vs chance 0.500).
+    blank_margin: float = 0.15
+
+    # ---- item 3: cross-write interference ----
+    interference_K: int = 4
+    interference_write_steps: int = 300
+
+    # ---- item 4: the 2-D gamma map ----
+    gamma_map_K: int = 4
+    gamma_map_rungs: List[str] = field(
+        default_factory=lambda: ["designed", "sites_learned_payload"]
+    )
+    gamma_address_grid: List[float] = field(
+        default_factory=lambda: [0.0, 0.005, 0.02, 0.05, 0.1]
+    )
+    gamma_read_grid: List[float] = field(
+        default_factory=lambda: [0.0, 0.005, 0.02, 0.05, 0.1]
+    )
+
+    # w19 reference numbers, carried in the results JSON so any comparison in a
+    # report is made against the actual measured baseline, not a remembered one.
+    w19_baseline: Dict[str, float] = field(
+        default_factory=lambda: {
+            "payload_abs_err": 9.98e-4,
+            "codebook_read_K2": 1.000,
+            "codebook_read_K8": 0.992,
+            "blank_control_K2": 0.469,
+            "designed_corruption": 4.17e-7,
+        }
+    )
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -1089,6 +1193,9 @@ class CHLUConfig:
         default_factory=ExperimentMinusPhysicsConfig
     )
     experiment_kt: ExperimentKTConfig = field(default_factory=ExperimentKTConfig)
+    experiment_learned_memory: ExperimentLearnedMemoryConfig = field(
+        default_factory=ExperimentLearnedMemoryConfig
+    )
     experiment_retrieval: ExperimentRetrievalConfig = field(
         default_factory=ExperimentRetrievalConfig
     )
@@ -1191,6 +1298,12 @@ def load_config(path: Path) -> CHLUConfig:
                 ExperimentRetrievalConfig, data.get("experiment_retrieval", {})
             )
         ),
+        experiment_learned_memory=ExperimentLearnedMemoryConfig(
+            **filter_valid_fields(
+                ExperimentLearnedMemoryConfig,
+                data.get("experiment_learned_memory", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -1223,6 +1336,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_paid_access": asdict(config.experiment_paid_access),
         "experiment_kt": asdict(config.experiment_kt),
         "experiment_retrieval": asdict(config.experiment_retrieval),
+        "experiment_learned_memory": asdict(config.experiment_learned_memory),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }

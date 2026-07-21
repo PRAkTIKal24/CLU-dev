@@ -15,6 +15,10 @@ from ..experiments.exp_v1_gate import run_experiment_v1_gate
 from ..experiments.exp_v1_wormhole import run_experiment_v1_wormhole
 from ..experiments.exp_lattice import run_experiment_lattice
 from ..experiments.exp_s1_gamma_field import run_experiment_s1
+from ..experiments.exp_learned_memory import (
+    run_experiment_learned_memory,
+    apply_quick as apply_learned_memory_quick,
+)
 from ..experiments.exp_retrieval import (
     run_experiment_retrieval,
     apply_quick as apply_retrieval_quick,
@@ -172,6 +176,18 @@ def setup_experiment_parsers(subparsers):
     exp_ret_parser.add_argument('--quick', action='store_true',
                                 help='Quick mode (fewer queries/items/steps)')
     exp_ret_parser.set_defaults(func=cmd_exp_retrieval)
+
+    # exp-learned-memory
+    exp_lm_parser = subparsers.add_parser(
+        'exp-learned-memory',
+        help='Does the write/address/read loop survive a LEARNED landscape? '
+             '(design-freedom sweep, w20)'
+    )
+    exp_lm_parser.add_argument('--project', help='Project name to use')
+    exp_lm_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_lm_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (2 rungs, K=2, short rollouts)')
+    exp_lm_parser.set_defaults(func=cmd_exp_learned_memory)
 
     # exp-minus-physics
     exp_mp_parser = subparsers.add_parser(
@@ -681,6 +697,38 @@ def cmd_exp_retrieval(args):
                       style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_learned_memory(args):
+    """Run the LEARNED write -> address -> read loop + design-freedom sweep."""
+    console.print(
+        "[bold cyan]Running Experiment LEARNED-MEMORY: does the retrieval loop "
+        "survive a LEARNED landscape?[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        apply_learned_memory_quick(config)
+
+    try:
+        res = run_experiment_learned_memory(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+        )
+        console.print(f"\u2713 Experiment LEARNED-MEMORY completed -> {res['metrics_path']}",
+                      style="bold green")
+    except Exception as e:
+        console.print(f"\u2717 Error: {e}", style="bold red")
         return 1
 
     return 0
