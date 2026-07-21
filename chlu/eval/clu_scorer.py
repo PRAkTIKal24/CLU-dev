@@ -221,6 +221,34 @@ def _build_literal_lattice(cfg: CLUScorerConfig, n_channels: int, key):
     return CLULattice(units=units, edges=edges, couplings=couplings)
 
 
+def rollout_on_data_grid(model, q0, p0, n_samples: int, dt: float, substeps: int,
+                         gamma: float = 0.0):
+    """Roll ``model`` forward and return the state at each DATA sample time.
+
+    Runs ``n_samples * substeps`` Verlet steps of size ``dt`` and keeps every
+    ``substeps``-th, so consecutive returned rows are one ``data_dt`` apart in
+    PHYSICAL time and line up with consecutive data frames.
+
+    This is what decouples the integrator step from the data interval (w20).
+    Before the split the two were the same number, so a plain ``steps=n``
+    rollout happened to land on the data grid; with ``dt < data_dt`` it no
+    longer does, and comparing an ``n``-step rollout against data ``n`` frames
+    ahead would silently compare different physical times.
+
+    Args:
+        n_samples: number of DATA frames to predict.
+        dt: integrator step (``cfg.dt_eff``).
+        substeps: integrator steps per data frame (``cfg.substeps``).
+
+    Returns:
+        ``(n_samples, 2*dim)`` — the ``[q, p]`` trajectory on the data grid.
+    """
+    traj = model(q0, p0, int(n_samples) * int(substeps), dt, gamma)
+    if substeps > 1:
+        traj = traj[substeps - 1 :: substeps]
+    return traj
+
+
 def _is_mass_path(path) -> bool:
     """True if a pytree leaf path passes through a ``log_mass`` attribute.
 
@@ -335,9 +363,15 @@ class _SharedCLUFit:
 
     # -- momentum estimate --------------------------------------------------
     def _momentum(self, q_now: jnp.ndarray, q_next: jnp.ndarray) -> jnp.ndarray:
+        """``p = (q_next - q_now) / data_dt`` — a DATA-interval quantity.
+
+        Divides by the physical sampling interval, NOT the integrator step:
+        the finite difference spans one data frame regardless of how finely
+        the integrator later resolves it (w20 dt-units split).
+        """
         if self.cfg.momentum_init == "zero":
             return jnp.zeros_like(q_now)
-        return (q_next - q_now) / self.cfg.dt
+        return (q_next - q_now) / self.cfg.data_dt
 
     # -- training -----------------------------------------------------------
     def ensure_fit(self, train_windows: np.ndarray) -> None:
@@ -383,7 +417,7 @@ class _SharedCLUFit:
             optim = optax.adam(cfg.lr)
         opt_state = optim.init(eqx.filter(model, eqx.is_inexact_array))
 
-        dt = cfg.dt
+        dt, nsub, data_dt = cfg.dt_eff, cfg.substeps, cfg.data_dt
         hz = int(min(cfg.predict_horizon, L - 1))
         pw, ew, ereg = cfg.predict_weight, cfg.energy_weight, cfg.energy_reg
         neg = cfg.neg_noise_scale
@@ -394,15 +428,19 @@ class _SharedCLUFit:
             q0 = batch[:, 0, :]
             p0 = self._momentum(q0, batch[:, 1, :])
             # --- wake prediction MSE (dynamics) ---
+            # hz DATA frames ahead, via hz*nsub integrator steps.
             def roll(qi, pi):
-                return model(qi, pi, hz, dt, 0.0)[:, :C]  # (hz, C) positions
+                return rollout_on_data_grid(
+                    model, qi, pi, hz, dt, nsub, 0.0
+                )[:, :C]  # (hz, C) positions
 
             pred = jax.vmap(roll)(q0, p0)  # (B, hz, C)
             target = batch[:, 1 : hz + 1, :]
             predict_mse = jnp.mean((pred - target) ** 2)
             # --- contrastive energy (denoising EBM) ---
             qs = batch[:, :-1, :].reshape(-1, C)
-            ps = ((batch[:, 1:, :] - batch[:, :-1, :]) / dt).reshape(-1, C)
+            # data-interval finite difference (see _momentum)
+            ps = ((batch[:, 1:, :] - batch[:, :-1, :]) / data_dt).reshape(-1, C)
             h_data = jax.vmap(model.H)(qs, ps)
             noise = neg * jax.random.normal(nkey, qs.shape)
             h_neg = jax.vmap(model.H)(qs + noise, ps)
@@ -471,9 +509,10 @@ class _SharedCLUFit:
 
     # -- score arms (operate on reshaped (n, L, C) arrays) ------------------
     def _energy_scores(self, W: jnp.ndarray) -> np.ndarray:
-        model, dt = self.model, self.cfg.dt
+        model = self.model
         qs = W[:, :-1, :]
-        ps = (W[:, 1:, :] - W[:, :-1, :]) / dt
+        # data-interval finite difference (see _momentum)
+        ps = (W[:, 1:, :] - W[:, :-1, :]) / self.cfg.data_dt
 
         def per_window(qw, pw):
             return jnp.mean(jax.vmap(model.H)(qw, pw))
@@ -488,7 +527,9 @@ class _SharedCLUFit:
         p0 = self._momentum(q0, W[:, 1, :])
 
         def roll(qi, pi):
-            return model(qi, pi, hz, cfg.dt, 0.0)[:, :C]
+            return rollout_on_data_grid(
+                model, qi, pi, hz, cfg.dt_eff, cfg.substeps, 0.0
+            )[:, :C]
 
         pred = jax.vmap(roll)(q0, p0)
         target = W[:, 1 : hz + 1, :]
@@ -501,7 +542,9 @@ class _SharedCLUFit:
         anchor_idx = jnp.asarray(
             np.linspace(0, L - 2, n_anchors).round().astype(int)
         )
-        gamma, dt, relax = cfg.gamma, cfg.dt, cfg.relax_steps
+        # A relaxation rollout is never compared against data, so it is
+        # integrator-native: relax_steps counts INTEGRATOR steps at dt_eff.
+        gamma, dt, relax = cfg.gamma, cfg.dt_eff, cfg.relax_steps
         V = model.potential_net
 
         def resid_one(q0i, p0i):

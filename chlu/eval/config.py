@@ -296,10 +296,16 @@ class CLUCafeEncodeConfig:
     relax_steps: int | None = None
 
     def relax_budget(self, cfg) -> float:
-        """The dimensionless damping budget ``gamma * steps * dt`` actually used."""
+        """The dimensionless damping budget ``gamma * steps * dt_eff`` in use.
+
+        ``relax_steps`` counts INTEGRATOR steps, so the budget is set by the
+        integrator step ``dt_eff``, not by ``data_dt``. Note this rescaled with
+        the w20 dt-units split: at the old conflated ``dt=0.05`` the default
+        budget was 0.16, at ``dt_eff=1.0`` the same ``gamma/steps`` gives 3.2.
+        """
         gamma = self.relax_gamma if self.relax_gamma is not None else cfg.gamma
         steps = self.relax_steps if self.relax_steps is not None else cfg.relax_steps
-        return float(gamma) * int(steps) * float(cfg.dt)
+        return float(gamma) * int(steps) * float(cfg.dt_eff)
 
     def __post_init__(self) -> None:
         if self.relax_steps is not None and self.relax_steps < 1:
@@ -342,7 +348,21 @@ class CLUScorerConfig:
         hidden: potential-net hidden width.
         rest_mass, c: relativistic-kinetics knobs (inert otherwise).
         tie_channel_mass: tie the SO(2) channel's inertial masses.
-        dt: Verlet timestep for rollouts.
+        dt: Verlet timestep — the INTEGRATOR step, a numerical-accuracy knob.
+            Constrained only by stability (``dt * omega < 2``); it does NOT
+            carry the data's time units. See ``data_dt``.
+        data_dt: the PHYSICAL sampling interval of the data, in the data's own
+            time units — the Delta-t separating consecutive window frames. Used
+            for (a) the finite-difference momentum ``p = (q1-q0)/data_dt`` and
+            (b) fixing how much physical time one predicted sample spans.
+            On cycle-indexed C-MAPSS one frame is one cycle, so **1.0**.
+
+            ⚠ These two were a SINGLE field (``dt=0.05``) until w20, which
+            conflated a physical unit with a numerical one. At 0.05 on
+            cycle-indexed data the momenta were inflated 20x and K by 400x,
+            which made the ``energy_reg`` term 99.2% of the loss and left the
+            wake rollout 98.3% ballistic (``clu-latent-io-audit``, w19). Setting
+            ``data_dt == dt`` reproduces the old (conflated) behaviour exactly.
         gamma: dissipation used in the relaxation rollout (residual arm) and
             the predictive rollout.
         epochs: training epochs (Hamiltonian contrastive divergence).
@@ -386,7 +406,8 @@ class CLUScorerConfig:
     rest_mass: float = 1.0
     c: float = 1.0
     tie_channel_mass: bool = False
-    dt: float = 0.05
+    dt: float = 1.0
+    data_dt: float = 1.0
     gamma: float = 0.1
     epochs: int = 150
     lr: float = 1e-3
@@ -417,6 +438,34 @@ class CLUScorerConfig:
             raise ValueError("mass_spread_lambda must be >= 0")
         if self.predict_horizon < 1 or self.relax_steps < 1:
             raise ValueError("predict_horizon and relax_steps must be >= 1")
+        if self.dt <= 0 or self.data_dt <= 0:
+            raise ValueError("dt and data_dt must be > 0")
+        if self.dt > self.data_dt + 1e-12:
+            raise ValueError(
+                f"dt ({self.dt}) must not exceed data_dt ({self.data_dt}): the "
+                "integrator cannot take a step longer than the interval it is "
+                "asked to resolve"
+            )
+
+    @property
+    def substeps(self) -> int:
+        """Integrator steps per DATA sample: ``round(data_dt / dt)``, min 1.
+
+        A rollout that is compared against data must advance exactly one
+        ``data_dt`` per predicted sample; with a finer integrator step that
+        takes ``substeps`` Verlet steps per sample. ``dt == data_dt`` gives 1
+        and the plain single-step rollout (the pre-w20 code path).
+        """
+        return max(1, int(round(self.data_dt / self.dt)))
+
+    @property
+    def dt_eff(self) -> float:
+        """The integrator step actually used: ``data_dt / substeps``.
+
+        Snapped so that ``substeps`` steps land exactly on the data grid — an
+        un-snapped ``dt`` would accumulate a physical-time offset over a rollout.
+        """
+        return self.data_dt / self.substeps
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), sort_keys=True)
