@@ -581,16 +581,27 @@ def run_primitive_harness(
     )
 
     families = build_families(cfg, want)
+    out_path = os.path.join(results_dir, "exp_primitive_harness.json")
 
     results = []
     for family in families:
         print(f"\n--- {family.name} ---")
         run_family(cfg, family, cfg.primitives, results)
+        # Checkpoint after every family: a multi-hour sweep must never be
+        # all-or-nothing. A run interrupted at family k still yields k families
+        # of usable, structured results.
+        _write_summary(out_path, cfg, results, rescue=False, complete=False)
 
     if rescue:
         print("\n--- LR RESCUE PASS (non-selected LRs at full length, all primitives) ---")
         results = run_lr_rescue(cfg, {f.name: f for f in families}, results)
 
+    summary = _write_summary(out_path, cfg, results, rescue=rescue, complete=True)
+    print(f"\nWrote {out_path}")
+    return {"results": results, "summary": summary}
+
+
+def _write_summary(out_path, cfg, results, rescue, complete):
     summary = {
         "config": {
             "d_model": cfg.d_model,
@@ -612,13 +623,12 @@ def run_primitive_harness(
             "attn_heads": cfg.attn_heads,
         },
         "rescue_pass": rescue,
+        "complete": complete,
         "results": [{k: v for k, v in r.items() if k != "seed_runs"} for r in results],
     }
-    out_path = os.path.join(results_dir, "exp_primitive_harness.json")
     with open(out_path, "w") as f:
         json.dump(summary, f, indent=2)
-    print(f"\nWrote {out_path}")
-    return {"results": results, "summary": summary}
+    return summary
 
 
 def main():
