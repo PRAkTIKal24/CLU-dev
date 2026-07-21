@@ -1164,6 +1164,7 @@ class ExperimentDimScalingConfig:
         default_factory=lambda: [0.0, 0.002, 0.005, 0.01, 0.02, 0.05]
     )
     gamma_sweep_K: int = 8
+@dataclass
 class ExperimentLearnedMemoryConfig:
     """Configuration for the LEARNED write -> address -> read loop (w20).
 
@@ -1274,6 +1275,7 @@ class ExperimentLearnedMemoryConfig:
             "designed_corruption": 4.17e-7,
         }
     )
+@dataclass
 class ExperimentPrimitiveHarnessConfig:
     """Configuration for the primitive harness (w20).
 
