@@ -884,7 +884,16 @@ class ExperimentKTConfig:
     reduced_l_values: List[int] = field(default_factory=lambda: [8, 16, 32])
     reduced_tj_values: List[float] = field(
         default_factory=lambda: [
-            0.50, 0.60, 0.70, 0.80, 0.85, 0.90, 0.95, 1.00, 1.10, 1.20
+            0.50,
+            0.60,
+            0.70,
+            0.80,
+            0.85,
+            0.90,
+            0.95,
+            1.00,
+            1.10,
+            1.20,
         ]
     )
     reduced_seeds: List[int] = field(default_factory=lambda: [100, 101, 102])
@@ -1065,13 +1074,18 @@ class ExperimentDimScalingConfig:
     wall_margin: float = 0.5
     well_width: float = 0.15  # Gaussian well width w (the "w" of the packing bound)
     well_depth: float = 1.0  # b: well depth
-    # Payload-channel spring constant. 0.1, NOT 1.0: the payload term
-    # 0.5*kappa*(y - s(x))^2 exerts a force kappa*(y-s)*s'(x) ON THE ADDRESS
-    # PLANE, and at kappa=1 with |a_k|=1 that force is comparable to the well's
-    # own restoring force -- measured at d=2: queries launched 0.17 from their
-    # own site were ejected into a neighbouring well 1.37 away, capping
-    # selectivity at 0.875 even at K=2, where the sites are 1.37 apart and
-    # interference is nil. The payload must be a passive follower, not a driver.
+    # Payload-channel spring constant. The payload term 0.5*kappa*(y - s(x))^2
+    # exerts a force kappa*(y-s)*s'(x) ON THE ADDRESS PLANE, so kappa trades the
+    # read-out's settling speed against how much it perturbs addressing.
+    # Measured at the densest resolvable d=2 cell (K=16), codebook read accuracy:
+    #   kappa   1.00    0.30    0.10    0.03
+    #   acc     0.508   0.898   0.906   0.766
+    # kappa=1 is too stiff (the payload force perturbs the address once wells are
+    # close); kappa=0.03 is too slack (payload has not settled within the
+    # rollout: |err| 3e-3 vs 4e-5). 0.1 is the measured optimum.
+    # NOTE: selectivity is essentially kappa-independent (0.930-0.945 across the
+    # whole sweep) -- kappa affects the READ, not the addressing. The query
+    # ejection that capped selectivity at K=2 was `wall_margin`, not kappa.
     payload_kappa: float = 0.1
     c_conf: float = 10.0  # stiffness of the confining wall outside the ball
     site_seed: int = 0  # seed for the farthest-point site packing
@@ -1089,10 +1103,15 @@ class ExperimentDimScalingConfig:
 
     # ---- queries / linear read (w19 criteria verbatim) ----
     n_query_per_item: int = 32
-    # Total-query budget per cell. At large K the cost is K * n_query_per_item
-    # rollouts, so the per-item count is reduced (never below 8) to keep a cell
-    # affordable: n_eff = clip(max_total_queries // K, 8, n_query_per_item).
-    max_total_queries: int = 32768
+    # Total-query budget per cell. Cost scales as n_queries * steps * K (the
+    # potential sums over all K wells at every step), so the per-item count is
+    # reduced at large K to keep a cell affordable:
+    #   n_eff = clip(max_total_queries // K, min_query_per_item, n_query_per_item)
+    # steps is deliberately NOT reduced instead: at steps=600 the borderline
+    # d=2 K=16 cell flips from 0.906 to 0.867 accuracy, which would move K_max.
+    # The 1200-step rollout is load-bearing for comparability with w19.
+    max_total_queries: int = 8192
+    min_query_per_item: int = 4
     query_sigma: float = 0.15  # address jitter magnitude (w19 sigma_theta = 0.15)
     # How query_sigma is interpreted as d grows. "fixed_norm" (default) sets the
     # per-axis scale to sigma/sqrt(d) so the jitter NORM is sigma at every d --
@@ -1114,11 +1133,9 @@ class ExperimentDimScalingConfig:
     dims: List[int] = field(default_factory=lambda: [1, 2, 3, 4, 6, 8, 12, 16])
     # Geometric K ladder; the search stops at the first K below threshold.
     k_ladder: List[int] = field(
-        default_factory=lambda: [
-            2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096
-        ]
+        default_factory=lambda: [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
     )
-    k_cap: int = 4096  # compute cap; a cell stopped here is reported CENSORED
+    k_cap: int = 2048  # compute cap; a cell stopped here is reported CENSORED
 
     # ---- capture radius (the MEASURED w of the packing bound) ----
     capture_n_dirs: int = 16
@@ -1130,14 +1147,16 @@ class ExperimentDimScalingConfig:
     width_sweep: List[float] = field(
         default_factory=lambda: [0.08, 0.15, 0.22, 0.30, 0.45]
     )
+    # The width sweep is 3 dims x 5 widths = 15 ladders, so it gets a tighter
+    # compute cap than the headline curve. Cells stopped here are CENSORED and
+    # the sweep is read for its SHAPE (plateau vs power law), not absolute K_max.
+    width_sweep_k_cap: int = 512
 
     # ---- item 5: ADDRESSING capacity, decoder-free ----
     # Item 1 walks the ladder on the w19 codebook read, which stops when the
     # single scalar payload channel runs out of resolution -- at d >= 6 that
     # happens while addressing is still perfect (d=6, K=512: read 0.599,
     # selectivity 1.000). This sweep re-walks the ladder on selectivity alone so
-    # the address space's capacity is not understated by a 1-D read-out limit.
-    addressing_dims: List[int] = field(default_factory=lambda: [2, 3, 4, 6, 8])
 
     # ---- item 4: does dissipation still gate retrieval at d > 2? ----
     gamma_sweep_dims: List[int] = field(default_factory=lambda: [2, 4, 8])

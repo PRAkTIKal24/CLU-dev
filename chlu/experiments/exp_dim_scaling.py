@@ -132,8 +132,10 @@ def make_ball_queries(key, centers, n_per_item: int, cfg):
     x0 = x0 + jax.random.normal(k_x, (n, d)) * scale
 
     Q0 = jnp.zeros((n, dim)).at[:, :d].set(x0)
-    P0 = jnp.zeros((n, dim)).at[:, :d].set(
-        jax.random.normal(k_p, (n, d)) * cfg.query_sigma_p
+    P0 = (
+        jnp.zeros((n, dim))
+        .at[:, :d]
+        .set(jax.random.normal(k_p, (n, d)) * cfg.query_sigma_p)
     )
     return Q0, P0, labels
 
@@ -222,8 +224,13 @@ def measure_landscape_scales(cfg, d: int, w: Optional[float] = None, seed: int =
     ww = cfg.well_width if w is None else w
     centers = jnp.zeros((1, d))
     V = BallRegisterPotential(
-        jnp.ones(1), centers, R=cfg.R + cfg.wall_margin, w=ww, b=cfg.well_depth,
-        kappa=cfg.payload_kappa, c_conf=cfg.c_conf,
+        jnp.ones(1),
+        centers,
+        R=cfg.R + cfg.wall_margin,
+        w=ww,
+        b=cfg.well_depth,
+        kappa=cfg.payload_kappa,
+        c_conf=cfg.c_conf,
     )
     gradV = jax.jit(jax.grad(V))
 
@@ -330,7 +337,11 @@ def evaluate_cell(
     sep = site_separation(centers)
 
     key = jax.random.PRNGKey(seed)
-    n_per = int(np.clip(cfg.max_total_queries // K, 8, cfg.n_query_per_item))
+    n_per = int(
+        np.clip(
+            cfg.max_total_queries // K, cfg.min_query_per_item, cfg.n_query_per_item
+        )
+    )
     Q0, P0, labels = make_ball_queries(key, centers, n_per, cfg)
 
     out = {
@@ -402,7 +413,8 @@ def evaluate_cell(
         out["blank"]["acc_codebook"] <= out["chance"] + cfg.blank_margin
     )
     out["retrieved"] = bool(
-        out["blank_passes"] and out["written"]["acc_codebook"] >= cfg.selectivity_threshold
+        out["blank_passes"]
+        and out["written"]["acc_codebook"] >= cfg.selectivity_threshold
     )
     return out
 
@@ -418,16 +430,18 @@ def _cell_passes(cell, cfg, criterion: str) -> bool:
         fraction of queries that SETTLED NEAREST THEIR OWN SITE — pure
         addressing, no read-out involved.
 
-    ⚠ **Why both are needed, and why quoting only the first would understate
+    ⚠ **Why both are needed, and why quoting only the first may understate
     capacity.** All K items are read back through ONE SCALAR payload channel
-    whose codebook values live in a fixed range, so their spacing shrinks like
-    1/K and eventually falls below the payload's own retrieval error — a
-    **read-out resolution limit that has nothing to do with the address space**.
-    It shows up unmistakably in the data: at d=6, K=512 the codebook read scores
-    0.599 while selectivity is 1.000. Addressing is perfect there; the scalar
-    channel has run out of resolution. Reporting only the codebook number would
-    repeat exactly the estimator artifact w19 flagged (a one-hot probe scoring
-    0.484 at K=4 while the payload was retrieved to 7e-4).
+    whose codebook values live in a fixed range ``[-1, 1]``, so their spacing
+    shrinks like ``1/K`` and must eventually fall below the payload channel's own
+    retrieval error — a **read-out resolution limit that has nothing to do with
+    the address space**. If that happens, the codebook read fails while
+    ``selectivity`` stays at 1.000 (addressing perfect, scalar channel out of
+    resolution), which is the same class of estimator artifact w19 flagged (its
+    one-hot probe scored 0.484 at K=4 while the payload was retrieved to 7e-4).
+    Whether this regime is actually reached is an EMPIRICAL question answered by
+    the run, not an assumption — both criteria are therefore always reported and
+    the divergence between them is a measured output.
     """
     if not cell["blank_passes"]:
         return False
@@ -445,16 +459,19 @@ def k_max_for_dim(
     w: Optional[float] = None,
     verbose=True,
     criterion: str = "codebook",
+    k_cap: Optional[int] = None,
 ):
     """Walk the K ladder until the fidelity criterion breaks -> K_max at this d."""
+    cap = cfg.k_cap if k_cap is None else k_cap
     cells = []
-    k_max = 0
     censored = False
     for K in cfg.k_ladder:
-        if K > cfg.k_cap:
+        if K > cap:
             censored = True
             break
         cell = evaluate_cell(cfg, d, K, seed=seed, w=w)
+        cell["passes_codebook"] = _cell_passes(cell, cfg, "codebook")
+        cell["passes_selectivity"] = _cell_passes(cell, cfg, "selectivity")
         cell["passes"] = _cell_passes(cell, cfg, criterion)
         cells.append(cell)
         if verbose:
@@ -466,20 +483,31 @@ def k_max_for_dim(
                 f"sep={cell['site_sep_min_measured']:.3f}",
                 flush=True,
             )
-        if cell["passes"]:
-            k_max = K
-        else:
+        # Keep walking while EITHER criterion still passes, so one ladder yields
+        # K_max under both. Stopping on the stricter one alone would truncate the
+        # other and silently report it as censored.
+        if not (cell["passes_codebook"] or cell["passes_selectivity"]):
             break
     else:
         censored = True
 
+    def _kmax(flag):
+        passing = [c["K"] for c in cells if c[flag]]
+        return max(passing, default=0)
+
+    k_max_cb, k_max_sel = _kmax("passes_codebook"), _kmax("passes_selectivity")
+    k_top = max(c["K"] for c in cells)
     return {
         "d": d,
         "criterion": criterion,
-        "k_max": k_max,
+        "k_max": _kmax(f"passes_{criterion}"),
+        "k_max_codebook": k_max_cb,
+        "k_max_selectivity": k_max_sel,
         # A cell that ran out of ladder / hit the compute cap without ever
         # failing is CENSORED: k_max is a lower bound, not a measurement.
-        "censored": bool(censored and k_max == max(c["K"] for c in cells)),
+        "censored": bool(censored and _kmax(f"passes_{criterion}") == k_top),
+        "censored_codebook": bool(censored and k_max_cb == k_top),
+        "censored_selectivity": bool(censored and k_max_sel == k_top),
         "cells": cells,
     }
 
@@ -509,18 +537,25 @@ def item1_k_max_vs_dim(cfg, seed: int = 0):
         # My pre-registered resolution-floor law: sites must be separated by more
         # than the query noise can bridge AND more than one basin diameter.
         delta_req = max(5.0 * cfg.query_sigma, 2.0 * w_meas)
-        # ⚠ The d-dependence I did NOT put in the prereg and should have: the
-        # query jitter is per-axis, so its NORM grows as sigma*sqrt(d). In d
-        # dimensions a query lands a distance ~sigma*sqrt(d) from its site, so
-        # the separation the sites must maintain grows with d too. Reported
-        # alongside the registered form so the prereg can be scored honestly.
-        delta_req_sqrtd = max(5.0 * cfg.query_sigma * np.sqrt(d), 2.0 * w_meas)
+        # The same law with the jitter NORM substituted for the per-axis sigma.
+        # In "per_axis" mode the norm grows as sigma*sqrt(d) (a d-dependence I
+        # did NOT register and should have); in the default "fixed_norm" mode the
+        # norm is sigma at every d and the two forms coincide. Both are recorded
+        # so the prereg can be scored against whichever arm is being read.
+        sigma_norm = (
+            cfg.query_sigma
+            if cfg.query_noise_mode == "fixed_norm"
+            else cfg.query_sigma * np.sqrt(d)
+        )
+        delta_req_sqrtd = max(5.0 * sigma_norm, 2.0 * w_meas)
         rows.append(
             {
                 **res,
                 **{k: v for k, v in scales.items() if k != "d"},
                 "R_assumed": cfg.R,
                 "R_sites_measured": float(R_meas),
+                "query_noise_mode": cfg.query_noise_mode,
+                "query_jitter_norm": float(sigma_norm),
                 "packing_bound_1plus2Rovw": float(pack),
                 "resolution_floor_delta_req": float(delta_req),
                 "prereg_kmax_resolution_law": float((2.0 * R_meas / delta_req) ** d),
@@ -531,8 +566,18 @@ def item1_k_max_vs_dim(cfg, seed: int = 0):
             }
         )
 
-    ds = np.array([r["d"] for r in rows], dtype=float)
-    ks = np.array([max(r["k_max"], 1) for r in rows], dtype=float)
+    fits = {
+        key: _fit_growth(
+            np.array([r["d"] for r in rows], dtype=float),
+            np.array([max(r[key], 1) for r in rows], dtype=float),
+        )
+        for key in ("k_max_codebook", "k_max_selectivity")
+    }
+    return {"rows": rows, "fit": fits["k_max_codebook"], "fits": fits}
+
+
+def _fit_growth(ds, ks):
+    """Exponential (A^d) vs polynomial (d^alpha) fit of a capacity curve."""
     fit = {}
     ok = ks > 1
     if ok.sum() >= 2:
@@ -552,7 +597,8 @@ def item1_k_max_vs_dim(cfg, seed: int = 0):
         fit["polynomial_exponent_alpha"] = float(cp[0])
         fit["polynomial_r2"] = 1.0 - rp / (ss_tot + 1e-12)
         fit["exponential_beats_polynomial"] = bool(ss_res < rp)
-    return {"rows": rows, "fit": fit}
+        fit["n_points_fitted"] = int(ok.sum())
+    return fit
 
 
 # ---------------------------------------------------------------------------
@@ -570,7 +616,7 @@ def item2_width_sweep(cfg, seed: int = 0):
     for d in cfg.width_sweep_dims:
         for w in cfg.width_sweep:
             scales = measure_landscape_scales(cfg, d, w=w, seed=seed)
-            res = k_max_for_dim(cfg, d, seed=seed, w=w)
+            res = k_max_for_dim(cfg, d, seed=seed, w=w, k_cap=cfg.width_sweep_k_cap)
             w_meas = scales["w_measured_force_max"]
             R_meas = max(
                 (c["site_radius_max_measured"] for c in res["cells"]), default=cfg.R
@@ -716,45 +762,6 @@ def item4_gamma(cfg, seed: int = 0):
 # ---------------------------------------------------------------------------
 # Item 5 — ADDRESSING capacity, separated from READ-OUT capacity
 # ---------------------------------------------------------------------------
-
-
-def item5_addressing_capacity(cfg, seed: int = 0):
-    """K_max under the decoder-free SELECTIVITY criterion.
-
-    Item 1 walks the ladder on the w19 codebook read and therefore stops as soon
-    as the **scalar payload channel** runs out of resolution — which, at d >= 6,
-    happens while addressing is still perfect (d=6, K=512: read 0.599,
-    selectivity 1.000). Item 1's K_max is consequently a lower bound on the
-    address space's capacity, not a measurement of it.
-
-    This walks the same ladder on selectivity alone: did the query settle
-    nearest its own site? That is the physics question the task is really
-    asking ("how many items can be written and retrieved"), with the read-out
-    channel's 1-D bottleneck factored out. The blank control still vetoes every
-    cell.
-
-    Reported ALONGSIDE item 1, never instead of it — the codebook number is the
-    honest end-to-end capacity of the loop *as built*, and the selectivity
-    number is the capacity of the addressing mechanism the scaling law is about.
-    """
-    rows = []
-    for d in cfg.addressing_dims:
-        res = k_max_for_dim(cfg, d, seed=seed, criterion="selectivity")
-        rows.append(res)
-
-    ds = np.array([r["d"] for r in rows], dtype=float)
-    ks = np.array([max(r["k_max"], 1) for r in rows], dtype=float)
-    fit = {}
-    ok = ks > 1
-    if ok.sum() >= 2:
-        A_mat = np.stack([ds[ok], np.ones(ok.sum())], axis=1)
-        coef, *_ = np.linalg.lstsq(A_mat, np.log(ks[ok]), rcond=None)
-        ss_res = float(np.sum((np.log(ks[ok]) - A_mat @ coef) ** 2))
-        ss_tot = float(np.sum((np.log(ks[ok]) - np.log(ks[ok]).mean()) ** 2))
-        fit["exponential_base_A"] = float(np.exp(coef[0]))
-        fit["exponential_r2"] = 1.0 - ss_res / (ss_tot + 1e-12)
-        fit["any_censored"] = bool(any(r["censored"] for r in rows))
-    return {"rows": rows, "fit": fit}
 
 
 # ---------------------------------------------------------------------------
@@ -921,7 +928,6 @@ def run_experiment_dim_scaling(
     print("[item 4] gamma dependence", flush=True)
     results["item4_gamma"] = item4_gamma(cfg, seed=seed)
     print("[item 5] addressing capacity (decoder-free)", flush=True)
-    results["item5_addressing_capacity"] = item5_addressing_capacity(cfg, seed=seed)
 
     results["figures"] = _plot_all(results, save_dir)
 
@@ -948,7 +954,6 @@ def apply_quick(config: CHLUConfig) -> None:
     cfg.width_sweep = [0.15, 0.30]
     cfg.gamma_sweep_dims = [2]
     cfg.gamma_sweep = [0.0, 0.02]
-    cfg.addressing_dims = [2, 3]
 
 
 def main():

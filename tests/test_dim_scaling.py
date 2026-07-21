@@ -37,7 +37,17 @@ def _cfg():
     return get_default_config().experiment_dim_scaling
 
 
-def _fast_cfg(**over):
+def _cfg_with(base, **over):
+    """Copy of a config with fields overridden (arms of a sweep)."""
+    import copy
+
+    cfg = copy.copy(base)
+    for k, v in over.items():
+        setattr(cfg, k, v)
+    return cfg
+
+
+def _fast_cfg(**over):  # noqa: D401
     """A cheap cell: short rollouts, few queries. Same code path."""
     cfg = _cfg()
     cfg.steps = 200
@@ -263,6 +273,64 @@ def test_capacity_exceeds_the_w19_ring_ceiling_in_higher_d():
     assert cell["blank_passes"], cell["blank"]
     assert cell["written"]["acc_codebook"] > 0.9, cell["written"]
     assert cell["written"]["selectivity"] > 0.9, cell["written"]
+
+
+# ---------------------------------------------------------------------------
+# The two landscape-design defaults that are load-bearing, not cosmetic
+# ---------------------------------------------------------------------------
+
+
+def test_payload_spring_is_a_two_sided_optimum():
+    """The payload term ``0.5*kappa*(y - s(x))^2`` exerts a force
+    ``kappa*(y-s)*s'(x)`` ON THE ADDRESS PLANE, so kappa trades read-out settling
+    speed against perturbation of the addressing. The default must beat BOTH
+    failure modes at the densest resolvable d=2 cell:
+
+      * kappa=1.0 — too stiff, the payload force perturbs the address (0.508);
+      * kappa=0.03 — too slack, the payload has not settled in the rollout.
+
+    ⚠ Note what this test does NOT claim: selectivity is essentially
+    kappa-independent. kappa affects the READ, not the addressing. (An earlier
+    draft of this test asserted kappa fixed a selectivity collapse at K=2; that
+    was false — the collapse was ``wall_margin``, and the test below owns it.)
+    """
+    cfg = _cfg()
+    cfg.steps = 1200
+    default = evaluate_cell(cfg, d=2, K=16, seed=42)
+    stiff = evaluate_cell(_cfg_with(cfg, payload_kappa=1.0), d=2, K=16, seed=42)
+    slack = evaluate_cell(_cfg_with(cfg, payload_kappa=0.03), d=2, K=16, seed=42)
+
+    assert default["written"]["acc_codebook"] > stiff["written"]["acc_codebook"]
+    assert default["written"]["acc_codebook"] > slack["written"]["acc_codebook"]
+    # the slack arm fails for a SETTLING reason, visible in the payload error
+    assert slack["written"]["payload_abs_err"] > default["written"]["payload_abs_err"]
+    # ...and addressing is untouched across the whole sweep
+    for arm in (default, stiff, slack):
+        assert arm["written"]["selectivity"] > 0.9
+
+
+def test_wall_margin_keeps_jittered_queries_off_the_confining_wall():
+    """⭐ REGRESSION. Farthest-point sampling pushes sites ONTO the boundary of
+    the site region, so with zero clearance a query jittered OUTWARD from a
+    boundary site starts outside the wall — measured V=+0.68 with KE=0.44 at
+    step 0 — and is slingshotted across the ball into a foreign well.
+
+    With the margin the same cell is perfectly selective.
+    """
+    ok = evaluate_cell(_fast_cfg(wall_margin=0.5), d=2, K=2, seed=42)
+    bad = evaluate_cell(_fast_cfg(wall_margin=0.0), d=2, K=2, seed=42)
+    assert ok["written"]["selectivity"] == pytest.approx(1.0, abs=1e-6)
+    assert bad["written"]["selectivity"] < ok["written"]["selectivity"]
+    cfg = get_default_config().experiment_dim_scaling
+    assert cfg.wall_margin > 3.0 * cfg.query_sigma
+
+
+def test_query_budget_shrinks_per_item_count_at_large_K():
+    """Cost is n_queries * steps * K, so the per-item count must fall at large K
+    while never dropping below ``min_query_per_item``."""
+    cfg = _fast_cfg(max_total_queries=1024, n_query_per_item=32, min_query_per_item=4)
+    assert evaluate_cell(cfg, d=2, K=2, seed=0)["n_query_per_item_effective"] == 32
+    assert evaluate_cell(cfg, d=2, K=512, seed=0)["n_query_per_item_effective"] == 4
 
 
 # ---------------------------------------------------------------------------
