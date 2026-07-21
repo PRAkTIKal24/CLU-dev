@@ -809,10 +809,12 @@ def _plot_all(results, save_dir):
         meas = [(r["d"], r["k_max"]) for r in it1["rows"] if not r["censored"]]
         cens = [(r["d"], r["k_max"]) for r in it1["rows"] if r["censored"]]
         if meas:
-            a1.semilogy(*zip(*meas), "o-", lw=2, label="measured $K_{max}$")
+            a1.semilogy(
+                *zip(*meas, strict=True), "o-", lw=2, label="measured $K_{max}$"
+            )
         if cens:
             a1.semilogy(
-                *zip(*cens),
+                *zip(*cens, strict=True),
                 "o",
                 mfc="none",
                 mec="C0",
