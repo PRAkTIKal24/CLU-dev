@@ -245,18 +245,37 @@ def evaluate_cell(
     acc_full, _ = _probe_split(f_full, labels, K, np.random.default_rng(seed))
 
     # ⭐ ADDRESS LEAK. On a BLANK landscape every item stores the same value (0),
-    # so any site-to-site spread in the payload read-out is the read seeing the
-    # ADDRESS, not the content. This is the quantity that decides whether a
-    # blank control passes, so it is reported next to it rather than left to be
-    # inferred: the designed landscape has an exactly separable payload spring
-    # (spread == 0 when nothing is stored); a learned V couples q2 to (q0,q1)
-    # generically and does not.
+    # so ANY site-to-site structure the read can see is the address leaking into
+    # the payload channel, not content. Two spreads, because they are different
+    # leaks and only the second explains the measured blank failures:
+    #
+    #   read_val_site_spread     — spread of the settled VALUE across sites.
+    #   read_feature_site_spread — spread of the full tail FEATURE (n_subsample
+    #                              time points) across sites.
+    #
+    # The designed landscape has an exactly separable payload spring, so with
+    # nothing stored q2 is an independent oscillator with the SAME frequency at
+    # every site: both spreads are 0 and the blank control reads at chance. A
+    # learned V couples q2 to (q0,q1) generically, so the local curvature of the
+    # payload channel differs per site: the settled value can still be ~0
+    # everywhere (first spread ~0) while the tail OSCILLATION differs, and a
+    # linear read over several time points decodes the site from phase/frequency
+    # alone. That is why blank controls fail here with read_val_site_spread=0.
     site_means = np.array(
         [
             read_val[labels == k].mean() if np.any(labels == k) else np.nan
             for k in range(K)
         ]
     )
+    feat_site_means = np.stack(
+        [
+            np.asarray(f_pay)[labels == k].mean(axis=0)
+            if np.any(labels == k)
+            else np.full(f_pay.shape[1], np.nan)
+            for k in range(K)
+        ]
+    )
+    feat_spread = float(np.nanmean(np.nanstd(feat_site_means, axis=0)))
 
     out = {
         "K": K,
@@ -265,6 +284,7 @@ def evaluate_cell(
         "finite": finite,
         "read_val_site_means": [float(x) for x in site_means],
         "read_val_site_spread": float(np.nanstd(site_means)),
+        "read_feature_site_spread": feat_spread,
         "basin_success_rate": float(np.mean(basin_ok)),
         "strict_success_rate": float(np.mean(strict_ok)),
         "payload_abs_err_mean": float(np.mean(err)),
@@ -292,16 +312,38 @@ def evaluate_cell(
 
 
 def _blank_ok(written_cell, blank_cell, cfg):
-    """Blank control passes iff the blank read is near chance.
+    """Blank controls, split by WHAT the metric can be fooled by.
 
-    A blank landscape that reads ABOVE chance means the read is seeing the
-    address, not the memory: the written number in that cell is not a
-    measurement of retrieval (w19: blank 0.469 vs chance 0.500 = passing).
+    A blank landscape stores the same value (0) at every site, so anything a read
+    can still recover from it is address, not content. But the two families of
+    read used here are fooled by different things, and lumping them together
+    hides the main finding of this experiment:
+
+    **Classification reads (codebook, nearest-centroid) are fooled by an
+    arbitrarily SMALL address leak.** Because the anti-decoration guard fixes
+    q2(0) = p2(0) = 0 exactly, the payload channel is deterministic given the
+    address: there is no noise in it to mask a leak. A learned V couples q2 to
+    (q0,q1), so its payload-channel curvature differs very slightly per site
+    (measured spread ~1e-4 in feature units, against payload values of order 1)
+    — and a *perfectly systematic* 1e-4 difference is a perfect item code. This
+    is why every learned rung's blank scores ~1.00 under nearest-centroid while
+    its settled VALUE spread is ~0. The control must therefore be taken over the
+    STRONGEST read in use, not the headline one (gating on the codebook read
+    alone passed cells whose nearest-centroid blank was 0.992).
+
+    **Value-recovery metrics (strict success, payload error) are leak-immune.**
+    They ask for the stored NUMBER, and a blank landscape returns ~0 for every
+    item, so it scores ~0 however systematic its leak.
+
+    Returns ``(classification_ok, value_ok)``.
     """
-    return bool(
-        blank_cell["acc_payload_codebook_read"]
-        <= blank_cell["chance"] + cfg.blank_margin
+    class_blank = max(
+        blank_cell["acc_payload_codebook_read"],
+        blank_cell["acc_payload_nearest_centroid"],
     )
+    classification_ok = bool(class_blank <= blank_cell["chance"] + cfg.blank_margin)
+    value_ok = bool(blank_cell["strict_success_rate"] <= cfg.blank_strict_max)
+    return classification_ok, value_ok
 
 
 def _cell_pair(rung, cfg, K, seed, dim=3, with_durability=False, train_steps=None):
@@ -321,13 +363,18 @@ def _cell_pair(rung, cfg, K, seed, dim=3, with_durability=False, train_steps=Non
         model_for(Vw, dim), cfg, pay, seed, with_durability=with_durability
     )
     blank = evaluate_cell(model_for(Vb, dim), cfg, pay, seed)
+    class_ok, value_ok = _blank_ok(written, blank, cfg)
     return (
         {
             "rung": rung,
             "design_freedom": DESIGN_RUNGS.index(rung),
             "written": written,
             "blank": blank,
-            "blank_control_passes": _blank_ok(written, blank, cfg),
+            "blank_control_passes_classification": class_ok,
+            "blank_control_passes_value": value_ok,
+            # Back-compat alias: the STRICTER of the two, so anything reading
+            # this single flag cannot accidentally accept a leaking cell.
+            "blank_control_passes": bool(class_ok and value_ok),
             "write_loss_initial": hist_w[0] if hist_w else None,
             "write_loss_final": hist_w[-1] if hist_w else None,
             "n_learned_params": _n_params(Vw),
@@ -378,30 +425,63 @@ def item1_write_read(cfg, seed: int = 0):
 def item2_design_freedom(item1_result, cfg):
     """Collapse item 1 into the curve + the minimum-viable-design point.
 
-    Minimum viable design = the FREEST rung (largest design_freedom) that still
-    passes at every measured K: strict success >= threshold, codebook read >=
-    threshold, and a PASSING blank control. A rung whose blank control fails is
-    disqualified whatever its written score.
+    TWO scorings are reported, because the blank controls split (see _blank_ok):
+
+    * **value criterion (primary, leak-immune):** strict success >= pass_strict,
+      gated on the blank's VALUE control. Asks "does the stored number come
+      back?", which a blank landscape cannot fake.
+    * **combined criterion (strictest):** additionally requires the codebook read
+      >= pass_read gated on the blank's CLASSIFICATION control. Every learned
+      rung fails this one, because classification reads are decodable from an
+      arbitrarily small address leak.
+
+    Minimum viable design = the FREEST rung (largest design_freedom) passing the
+    criterion, over the item counts where the REFERENCE (designed) rung itself
+    works. Cells failing the relevant blank control are excluded as unmeasured,
+    not scored as failures.
     """
     by_rung = {}
     for row in item1_result["rows"]:
         by_rung.setdefault(row["rung"], []).append(row)
+
+    # ⚠ Only ask the design-freedom question where the DESIGNED baseline itself
+    # works. w19 measured a capacity ceiling of ~8 items on this ring
+    # (K_max ~ 0.2*2pi/sigma_theta = 8.4), and indeed the fully designed rung
+    # fails at K=16 (strict 0.176). Scoring learned rungs against K=16 would
+    # charge them for a CAPACITY limit that has nothing to do with learning, and
+    # would report "no rung survives" for the wrong reason. So the reference rung
+    # defines the admissible Ks, and everything else is scored on those.
+    ref_rows = by_rung.get(cfg.reference_rung, [])
+    reference_Ks = sorted(
+        r["written"]["K"]
+        for r in ref_rows
+        if r["blank_control_passes_value"]
+        and r["written"]["strict_success_rate"] >= cfg.pass_strict
+    )
+    capacity_limited_Ks = sorted(
+        set(r["written"]["K"] for r in ref_rows) - set(reference_Ks)
+    )
 
     curve = []
     for rung in cfg.rungs:
         rows = by_rung.get(rung, [])
         if not rows:
             continue
-        # ⚠ A cell whose blank control fails is NOT A MEASUREMENT — it is neither
-        # a pass nor a fail (protocol: "any cell without a passing blank control
-        # is not a measurement"). Scoring it as a failure would be just as wrong
-        # as scoring it as a success, so disqualified cells are EXCLUDED and
-        # counted, and a rung with no surviving cell is reported as unmeasured.
-        measured = [r for r in rows if r["blank_control_passes"]]
-        passes = bool(measured) and all(
-            r["written"]["strict_success_rate"] >= cfg.pass_strict
-            and r["written"]["acc_payload_codebook_read"] >= cfg.pass_read
-            for r in measured
+        in_capacity = [r for r in rows if r["written"]["K"] in reference_Ks]
+        # ⚠ A cell whose blank control fails is NOT A MEASUREMENT — neither a
+        # pass nor a fail (protocol). Excluded and counted, per criterion.
+        m_val = [r for r in in_capacity if r["blank_control_passes_value"]]
+        m_cls = [r for r in in_capacity if r["blank_control_passes_classification"]]
+        passes_value = bool(m_val) and all(
+            r["written"]["strict_success_rate"] >= cfg.pass_strict for r in m_val
+        )
+        passes_combined = (
+            passes_value
+            and bool(m_cls)
+            and all(
+                r["written"]["acc_payload_codebook_read"] >= cfg.pass_read
+                for r in m_cls
+            )
         )
         curve.append(
             {
@@ -414,49 +494,74 @@ def item2_design_freedom(item1_result, cfg):
                         "basin": r["written"]["basin_success_rate"],
                         "strict": r["written"]["strict_success_rate"],
                         "codebook_read": r["written"]["acc_payload_codebook_read"],
-                        "blank_read": r["blank"]["acc_payload_codebook_read"],
-                        "blank_leak_spread": r["blank"]["read_val_site_spread"],
-                        "blank_passes": r["blank_control_passes"],
+                        "blank_codebook": r["blank"]["acc_payload_codebook_read"],
+                        "blank_centroid": r["blank"]["acc_payload_nearest_centroid"],
+                        "blank_strict": r["blank"]["strict_success_rate"],
+                        "blank_leak_value_spread": r["blank"]["read_val_site_spread"],
+                        "blank_leak_feature_spread": r["blank"][
+                            "read_feature_site_spread"
+                        ],
+                        "blank_passes_value": r["blank_control_passes_value"],
+                        "blank_passes_classification": r[
+                            "blank_control_passes_classification"
+                        ],
                         "payload_abs_err": r["written"]["payload_abs_err_mean"],
                     }
                     for r in rows
                 ],
                 "n_cells": len(rows),
-                "n_cells_measured": len(measured),
-                "n_cells_disqualified_by_blank": len(rows) - len(measured),
-                "Ks_measured": [r["written"]["K"] for r in measured],
+                "n_cells_in_capacity": len(in_capacity),
+                "Ks_measured_value": [r["written"]["K"] for r in m_val],
+                "Ks_measured_classification": [r["written"]["K"] for r in m_cls],
+                "n_disqualified_by_value_blank": len(in_capacity) - len(m_val),
+                "n_disqualified_by_classification_blank": len(in_capacity) - len(m_cls),
                 "min_strict": (
-                    min(r["written"]["strict_success_rate"] for r in measured)
-                    if measured
+                    min(r["written"]["strict_success_rate"] for r in m_val)
+                    if m_val
                     else None
                 ),
                 "min_codebook_read": (
-                    min(r["written"]["acc_payload_codebook_read"] for r in measured)
-                    if measured
+                    min(r["written"]["acc_payload_codebook_read"] for r in m_cls)
+                    if m_cls
                     else None
                 ),
-                "all_blanks_pass": all(r["blank_control_passes"] for r in rows),
-                "passes": passes,
+                "passes_value_criterion": passes_value,
+                "passes_combined_criterion": passes_combined,
+                # primary reported flag = the leak-immune one
+                "passes": passes_value,
             }
         )
-    passing = [c for c in curve if c["passes"]]
+
+    def _min_viable(key):
+        p = [c for c in curve if c[key]]
+        if not p:
+            return None, None, False
+        best = max(p, key=lambda c: c["design_freedom"])
+        return (
+            best["rung"],
+            best["design_freedom"],
+            bool(any(c["design_freedom"] > 0 for c in p)),
+        )
+
+    v_rung, v_free, v_survives = _min_viable("passes_value_criterion")
+    c_rung, c_free, c_survives = _min_viable("passes_combined_criterion")
     return {
         "pass_strict_threshold": cfg.pass_strict,
         "pass_read_threshold": cfg.pass_read,
+        "blank_strict_max": cfg.blank_strict_max,
+        "reference_rung": cfg.reference_rung,
+        "reference_Ks": reference_Ks,
+        "capacity_limited_Ks_excluded": capacity_limited_Ks,
         "curve": curve,
-        "minimum_viable_design_rung": (
-            max(passing, key=lambda c: c["design_freedom"])["rung"] if passing else None
-        ),
-        "minimum_viable_design_freedom": (
-            max(c["design_freedom"] for c in passing) if passing else None
-        ),
-        "loop_survives_learning": bool(any(c["design_freedom"] > 0 for c in passing)),
+        # PRIMARY (leak-immune, value-recovery) answer
+        "minimum_viable_design_rung": v_rung,
+        "minimum_viable_design_freedom": v_free,
+        "loop_survives_learning": v_survives,
+        # SECONDARY (also requires a classification read validated by its blank)
+        "minimum_viable_design_rung_combined": c_rung,
+        "minimum_viable_design_freedom_combined": c_free,
+        "loop_survives_learning_combined": c_survives,
     }
-
-
-# ---------------------------------------------------------------------------
-# Item 3 — cross-write interference: does additive separability survive learning?
-# ---------------------------------------------------------------------------
 
 
 def item3_interference(cfg, seed: int = 0, dim: int = 3):

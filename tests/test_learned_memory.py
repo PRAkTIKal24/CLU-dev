@@ -216,35 +216,66 @@ def test_two_phase_retrieval_is_not_the_same_as_single_phase():
 
 def test_failing_blank_control_disqualifies_a_rung():
     """A cell whose blank control fails is NOT a measurement, however good the
-    written number is — the scoring must enforce that, not just report it."""
+    written number is — the scoring must enforce that, not just report it.
+
+    Also pins the SPLIT: value-recovery metrics are leak-immune, classification
+    reads are not, and a leaking rung must pass the first while failing the
+    second (this is the main measured result of the experiment, so it gets a
+    regression test rather than living only in a report).
+    """
     cfg = _cfg()
+
+    def _row(rung, freedom, blank_class_ok, blank_value_ok):
+        return {
+            "rung": rung,
+            "design_freedom": freedom,
+            "n_learned_params": 10,
+            "written": {
+                "K": 2,
+                "basin_success_rate": 1.0,
+                "strict_success_rate": 1.0,
+                "acc_payload_codebook_read": 1.0,
+                "payload_abs_err_mean": 0.0,
+            },
+            "blank": {
+                "acc_payload_codebook_read": 1.0,
+                "acc_payload_nearest_centroid": 1.0,
+                "strict_success_rate": 0.0,
+                "read_val_site_spread": 0.0,
+                "read_feature_site_spread": 1e-4,
+                "chance": 0.5,
+            },
+            "blank_control_passes_classification": blank_class_ok,
+            "blank_control_passes_value": blank_value_ok,
+            "blank_control_passes": bool(blank_class_ok and blank_value_ok),
+        }
+
+    cfg.rungs = ["designed", "free_mlp"]
+    cfg.reference_rung = "designed"
+    # designed: both controls pass. free_mlp: leaks => classification control
+    # fails, value control passes (a blank cannot fake the stored NUMBER).
     fake = {
-        "rows": [
-            {
-                "rung": "free_mlp",
-                "design_freedom": 4,
-                "n_learned_params": 10,
-                "written": {
-                    "K": 2,
-                    "basin_success_rate": 1.0,
-                    "strict_success_rate": 1.0,
-                    "acc_payload_codebook_read": 1.0,
-                    "payload_abs_err_mean": 0.0,
-                },
-                "blank": {
-                    "acc_payload_codebook_read": 1.0,
-                    "read_val_site_spread": 0.4,
-                },
-                "blank_control_passes": False,
-            }
-        ],
+        "rows": [_row("designed", 0, True, True), _row("free_mlp", 4, False, True)],
         "w19_baseline": {},
     }
-    cfg.rungs = ["free_mlp"]
     out = item2_design_freedom(fake, cfg)
-    assert out["curve"][0]["passes"] is False
-    assert out["minimum_viable_design_rung"] is None
-    assert out["loop_survives_learning"] is False
+    free = [c for c in out["curve"] if c["rung"] == "free_mlp"][0]
+    assert free["passes_value_criterion"] is True
+    assert free["passes_combined_criterion"] is False
+    assert free["n_disqualified_by_classification_blank"] == 1
+    assert out["minimum_viable_design_rung"] == "free_mlp"
+    assert out["minimum_viable_design_rung_combined"] == "designed"
+    assert out["loop_survives_learning_combined"] is False
+
+    # a cell failing the VALUE control is excluded from the primary criterion too
+    fake2 = {
+        "rows": [_row("designed", 0, True, True), _row("free_mlp", 4, True, False)],
+        "w19_baseline": {},
+    }
+    out2 = item2_design_freedom(fake2, cfg)
+    free2 = [c for c in out2["curve"] if c["rung"] == "free_mlp"][0]
+    assert free2["passes_value_criterion"] is False
+    assert out2["minimum_viable_design_rung"] == "designed"
 
 
 def test_learned_memory_config_round_trips(tmp_path):

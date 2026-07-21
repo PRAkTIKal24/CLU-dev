@@ -1106,11 +1106,20 @@ class ExperimentLearnedMemoryConfig:
     )
 
     # ---- pass criteria for the minimum-viable-design point ----
+    # The design-freedom question is only asked at item counts where the
+    # reference (fully designed) landscape itself passes — otherwise a rung is
+    # charged for the ring's CAPACITY ceiling (w19: ~8 items) rather than for
+    # anything to do with learning.
+    reference_rung: str = "designed"
     pass_strict: float = 0.9
     pass_read: float = 0.9
     # A blank landscape must read within this of chance, else the cell is not a
     # measurement (w19: blank 0.469 vs chance 0.500).
     blank_margin: float = 0.15
+    # A blank landscape must also fail the VALUE read: it stores 0 everywhere, so
+    # its strict-success rate must be ~0. This control is leak-immune, which is
+    # why it, not the classification control, defines the primary criterion.
+    blank_strict_max: float = 0.1
 
     # ---- item 3: cross-write interference ----
     interference_K: int = 4
