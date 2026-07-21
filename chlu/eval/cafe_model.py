@@ -48,7 +48,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from chlu.eval.clu_scorer import _SharedCLUFit
+from chlu.eval.clu_scorer import _SharedCLUFit, rollout_on_data_grid
 from chlu.eval.config import CLUCafeEncodeConfig, CLUScorerConfig
 
 
@@ -72,19 +72,29 @@ def _trend(y: jnp.ndarray) -> jnp.ndarray:
     return jnp.sum(tc * (y - jnp.mean(y))) / (jnp.sum(tc * tc) + 1e-12)
 
 
-def _window_features(model, w, dt, gamma, relax_steps, hz, groups):
+def _window_features(model, w, dt, gamma, relax_steps, hz, groups,
+                     data_dt=None, substeps=1):
     """Physics feature vector for ONE window ``w`` of shape (L, C).
 
-    Momentum is the finite difference ``(q_{t+1} - q_t) / dt`` — the same
+    Momentum is the finite difference ``(q_{t+1} - q_t) / data_dt`` — the same
     estimator ``clu_scorer`` uses, so energies are directly comparable between
     the CAFE bridge and the anomaly harness.
+
+    Args:
+        dt: INTEGRATOR step (``cfg.dt_eff``) for the relax/predict rollouts.
+        data_dt: PHYSICAL sampling interval for the finite-difference momentum
+            and the predict rollout's horizon. Defaults to ``dt`` — i.e. the
+            pre-w20 conflated behaviour — so existing callers are unchanged.
+        substeps: integrator steps per data frame (``cfg.substeps``).
     """
     L, C = w.shape
+    if data_dt is None:
+        data_dt = dt
     V = _potential(model)
     gradV = jax.grad(V)
 
     q = w[:-1]
-    p = (w[1:] - w[:-1]) / dt
+    p = (w[1:] - w[:-1]) / data_dt
 
     H_t = jax.vmap(model.H)(q, p)
     V_t = jax.vmap(V)(q)
@@ -117,7 +127,9 @@ def _window_features(model, w, dt, gamma, relax_steps, hz, groups):
                 jnp.sum((q_star - q[-1]) ** 2),     # drift to the basin
             ]
     if "predict" in groups:
-        pred = model(w[0], (w[1] - w[0]) / dt, hz, dt, 0.0)[:, :C]
+        pred = rollout_on_data_grid(
+            model, w[0], (w[1] - w[0]) / data_dt, hz, dt, substeps, 0.0
+        )[:, :C]
         feats += [jnp.mean((pred - w[1 : hz + 1]) ** 2)]
 
     # ``basin_coords`` alone leaves no scalar features — stack() rejects [].
@@ -201,7 +213,10 @@ class CLUCafeMixin:
         @eqx.filter_jit
         def batch_feats(m, Wb):
             return jax.vmap(
-                lambda w: _window_features(m, w, cfg.dt, gamma, relax, hz, groups)
+                lambda w: _window_features(
+                    m, w, cfg.dt_eff, gamma, relax, hz, groups,
+                    data_dt=cfg.data_dt, substeps=cfg.substeps,
+                )
             )(Wb)
 
         out = []

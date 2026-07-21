@@ -296,10 +296,16 @@ class CLUCafeEncodeConfig:
     relax_steps: int | None = None
 
     def relax_budget(self, cfg) -> float:
-        """The dimensionless damping budget ``gamma * steps * dt`` actually used."""
+        """The dimensionless damping budget ``gamma * steps * dt_eff`` in use.
+
+        ``relax_steps`` counts INTEGRATOR steps, so the budget is set by the
+        integrator step ``dt_eff``, not by ``data_dt``. Note this rescaled with
+        the w20 dt-units split: at the old conflated ``dt=0.05`` the default
+        budget was 0.16, at ``dt_eff=1.0`` the same ``gamma/steps`` gives 3.2.
+        """
         gamma = self.relax_gamma if self.relax_gamma is not None else cfg.gamma
         steps = self.relax_steps if self.relax_steps is not None else cfg.relax_steps
-        return float(gamma) * int(steps) * float(cfg.dt)
+        return float(gamma) * int(steps) * float(cfg.dt_eff)
 
     def __post_init__(self) -> None:
         if self.relax_steps is not None and self.relax_steps < 1:
@@ -342,7 +348,45 @@ class CLUScorerConfig:
         hidden: potential-net hidden width.
         rest_mass, c: relativistic-kinetics knobs (inert otherwise).
         tie_channel_mass: tie the SO(2) channel's inertial masses.
-        dt: Verlet timestep for rollouts.
+        dt: Verlet timestep — the INTEGRATOR step, a numerical-accuracy knob.
+            Constrained only by stability (``dt * omega < 2``); it does NOT
+            carry the data's time units. See ``data_dt``.
+
+            ⚠ **Choose this self-consistently, and do not trust an at-init
+            check.** ``omega = sqrt(lambda_max(grad^2 V) / M_min)`` is a
+            property of the TRAINED model, and the trained curvature depends on
+            the ``dt`` it was trained at. Measured on FD001 (150 epochs, seed
+            42), ``omega`` at init is 0.51 -- which makes ``dt=1.0`` look safe
+            -- but after training:
+
+                dt=1.0  -> omega= 4.13, dt*omega=4.13  UNSTABLE
+                dt=0.5  -> omega= 5.54, dt*omega=2.77  UNSTABLE
+                dt=0.25 -> omega= 7.96, dt*omega=1.99  marginal
+                dt=0.125-> omega=13.46, dt*omega=1.68  (default, 1.19x margin)
+                dt=0.05 -> omega=22.32, dt*omega=1.12  (1.79x margin, 20x cost)
+
+            ``omega`` GROWS as ``dt`` shrinks: a finer integrator lets training
+            build a sharper potential, which eats the margin it just bought.
+            Nothing in the objective penalizes curvature, so the model
+            self-organizes to the stability edge and NO ``dt`` buys a
+            comfortable margin. Lowering ``dt`` still helps (energy drift over
+            16 cycles falls 2.94 -> 0.081) but sub-linearly, at ``substeps``x
+            the compute. The real fix is curvature control or a mass floor.
+            ``mass_spread_lambda`` makes this WORSE from the mass side
+            (lambda=50 drives ``M_min`` to 0.027 and ``dt*omega`` to 29.6), so
+            retune ``dt`` whenever you change it.
+        data_dt: the PHYSICAL sampling interval of the data, in the data's own
+            time units — the Delta-t separating consecutive window frames. Used
+            for (a) the finite-difference momentum ``p = (q1-q0)/data_dt`` and
+            (b) fixing how much physical time one predicted sample spans.
+            On cycle-indexed C-MAPSS one frame is one cycle, so **1.0**.
+
+            ⚠ These two were a SINGLE field (``dt=0.05``) until w20, which
+            conflated a physical unit with a numerical one. At 0.05 on
+            cycle-indexed data the momenta were inflated 20x and K by 400x,
+            which made the ``energy_reg`` term 99.2% of the loss and left the
+            wake rollout 98.3% ballistic (``clu-latent-io-audit``, w19). Setting
+            ``data_dt == dt`` reproduces the old (conflated) behaviour exactly.
         gamma: dissipation used in the relaxation rollout (residual arm) and
             the predictive rollout.
         epochs: training epochs (Hamiltonian contrastive divergence).
@@ -360,6 +404,16 @@ class CLUScorerConfig:
             down, H(negatives) up).
         neg_noise_scale: Gaussian perturbation making the EBM negatives
             (denoising-EBM basin around the data manifold).
+        neg_momentum_scale: Gaussian perturbation applied to the MOMENTUM of
+            the EBM negatives, in data-momentum units. Default 0.0 = OFF =
+            historical behaviour. ⚠ This knob exists because at 0.0 the
+            contrastive term has EXACTLY zero mass gradient: negatives share
+            the data's ``p``, so every kinetic term cancels identically in
+            ``H(data) - H(neg)`` and the EBM's representational half is
+            structurally blind to the mass (w19 item 1, confirmed to survive
+            the w20 dt-units fix). Perturbing ``p`` breaks that cancellation
+            and is the only candidate here that fixes the defect at its source
+            rather than adding a competing regularizer.
         energy_reg: energy-magnitude regularizer (keeps H from exploding;
             mirrors train_generative's 0.005 term).
         momentum_init: how p0 is seeded from a window ("finite_diff" =
@@ -375,6 +429,13 @@ class CLUScorerConfig:
             explicit pressure toward a NON-DEGENERATE timescale hierarchy
             (the "hierarchy must be designed in" doctrine, CM-5). Default 0.0 =
             OFF = term never touched. Applied from epoch 0 (theorist T3).
+        mass_parameterization: forwarded to :class:`~chlu.core.chlu_unit.CHLU`
+            — the map from ``log_mass`` to M. "softplus" (default) is the
+            historical, bit-compatible map. "exp" escapes softplus's linear
+            regime so a log-scale spread buys exponential dynamic range;
+            the "_zeromean" variants gauge-fix the mass scale so common-mode
+            pressure (``energy_reg``) cannot express itself at all. See
+            ``CHLU.mass_vector``.
         seed: RNG seed for CLU init + training + subsampling.
         lattice: optional :class:`CLULatticeConfig` (G7b torus hook); None
             (default) fits a single ``CHLU``.
@@ -386,7 +447,8 @@ class CLUScorerConfig:
     rest_mass: float = 1.0
     c: float = 1.0
     tie_channel_mass: bool = False
-    dt: float = 0.05
+    dt: float = 0.125
+    data_dt: float = 1.0
     gamma: float = 0.1
     epochs: int = 150
     lr: float = 1e-3
@@ -398,10 +460,12 @@ class CLUScorerConfig:
     predict_weight: float = 1.0
     energy_weight: float = 1.0
     neg_noise_scale: float = 0.5
+    neg_momentum_scale: float = 0.0
     energy_reg: float = 0.005
     momentum_init: str = "finite_diff"
     mass_lr_mult: float = 1.0
     mass_spread_lambda: float = 0.0
+    mass_parameterization: str = "softplus"
     seed: int = 42
     lattice: CLULatticeConfig | None = None
 
@@ -415,8 +479,47 @@ class CLUScorerConfig:
             raise ValueError("mass_lr_mult must be > 0")
         if self.mass_spread_lambda < 0:
             raise ValueError("mass_spread_lambda must be >= 0")
+        if self.neg_momentum_scale < 0:
+            raise ValueError("neg_momentum_scale must be >= 0")
+        # Local import: this module is deliberately JAX-free at import time,
+        # and chlu.core.chlu_unit pulls in jax/equinox.
+        from chlu.core.chlu_unit import _MASS_PARAMETERIZATIONS
+
+        if self.mass_parameterization not in _MASS_PARAMETERIZATIONS:
+            raise ValueError(
+                "mass_parameterization must be one of "
+                f"{sorted(_MASS_PARAMETERIZATIONS)}"
+            )
         if self.predict_horizon < 1 or self.relax_steps < 1:
             raise ValueError("predict_horizon and relax_steps must be >= 1")
+        if self.dt <= 0 or self.data_dt <= 0:
+            raise ValueError("dt and data_dt must be > 0")
+        if self.dt > self.data_dt + 1e-12:
+            raise ValueError(
+                f"dt ({self.dt}) must not exceed data_dt ({self.data_dt}): the "
+                "integrator cannot take a step longer than the interval it is "
+                "asked to resolve"
+            )
+
+    @property
+    def substeps(self) -> int:
+        """Integrator steps per DATA sample: ``round(data_dt / dt)``, min 1.
+
+        A rollout that is compared against data must advance exactly one
+        ``data_dt`` per predicted sample; with a finer integrator step that
+        takes ``substeps`` Verlet steps per sample. ``dt == data_dt`` gives 1
+        and the plain single-step rollout (the pre-w20 code path).
+        """
+        return max(1, int(round(self.data_dt / self.dt)))
+
+    @property
+    def dt_eff(self) -> float:
+        """The integrator step actually used: ``data_dt / substeps``.
+
+        Snapped so that ``substeps`` steps land exactly on the data grid — an
+        un-snapped ``dt`` would accumulate a physical-time offset over a rollout.
+        """
+        return self.data_dt / self.substeps
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), sort_keys=True)
