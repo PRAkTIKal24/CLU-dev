@@ -893,8 +893,13 @@ def apply_quick(config: CHLUConfig) -> None:
     cfg.rungs = ["designed", "free_mlp"]
     cfg.item_counts = [2]
     cfg.n_query_per_item = 8
-    cfg.address_steps = 100
-    cfg.read_steps = 100
+    # NOT shorter than this: the settling budget is what makes the DESIGNED
+    # reference rung work, and if the reference fails then reference_Ks is empty
+    # and every rung reports "unmeasured" — a smoke run that looks like a
+    # scientific negative. 400+200 keeps the baseline honest and still runs in
+    # ~1 min.
+    cfg.address_steps = 400
+    cfg.read_steps = 200
     cfg.write_steps = 40
     cfg.write_n_perturb = 8
     cfg.interference_K = 3
