@@ -312,6 +312,6 @@ class SequenceModel(eqx.Module):
         """x: (T,) int tokens or (T, in_dim) floats -> (T, out_dim)."""
         h = jax.vmap(self.embed)(x)
         h = h + self.pos[: h.shape[0]]
-        for block, norm in zip(self.blocks, self.norms):
+        for block, norm in zip(self.blocks, self.norms, strict=True):
             h = jax.vmap(norm)(h + block(h))
         return jax.vmap(self.head)(h)

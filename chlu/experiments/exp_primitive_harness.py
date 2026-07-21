@@ -27,6 +27,7 @@ supervised-learning harness, because that is the setting in which the primitive
 claim has to hold.
 """
 
+import functools
 import json
 import os
 import time
@@ -221,6 +222,33 @@ def match_width(primitive, cfg, family, key):
 # --------------------------------------------------------------------------
 # Training
 # --------------------------------------------------------------------------
+@functools.lru_cache(maxsize=None)
+def _make_opt(lr, grad_clip):
+    """Cached optimizer: identical `lr` must yield the IDENTICAL object.
+
+    optax builds fresh closures per call, and ``eqx.filter_jit`` keys its cache
+    on the identity of non-array arguments — so constructing the optimizer inside
+    the training loop would force a full recompile for every (lr, seed) cell.
+    Measured: ~24 s of compilation per run against ~17 s of actual stepping.
+    """
+    return optax.chain(optax.clip_by_global_norm(grad_clip), optax.adam(lr))
+
+
+@eqx.filter_jit
+def _train_step(model, opt_state, x, y, mask, opt, family):
+    """Module-level so the compilation cache is shared across seeds and LRs."""
+    loss, grads = eqx.filter_value_and_grad(family.loss)(model, x, y, mask)
+    updates, opt_state = opt.update(
+        grads, opt_state, eqx.filter(model, eqx.is_inexact_array)
+    )
+    return eqx.apply_updates(model, updates), opt_state, loss
+
+
+@eqx.filter_jit
+def _eval_step(model, x, y, mask, family):
+    return family.metric(model, x, y, mask)
+
+
 def train_one(primitive, cfg, family, width, lr, seed, measure_cost=False):
     """Train one (primitive, family, lr, seed) cell. Returns a metrics dict.
 
@@ -231,19 +259,14 @@ def train_one(primitive, cfg, family, width, lr, seed, measure_cost=False):
     mkey, dkey, ekey = jax.random.split(key, 3)
     model = build_model(primitive, cfg, family, width, mkey)
 
-    opt = optax.chain(optax.clip_by_global_norm(cfg.grad_clip), optax.adam(lr))
+    opt = _make_opt(lr, cfg.grad_clip)
     opt_state = opt.init(eqx.filter(model, eqx.is_inexact_array))
 
-    @eqx.filter_jit
     def step(model, opt_state, x, y, mask):
-        loss, grads = eqx.filter_value_and_grad(family.loss)(model, x, y, mask)
-        updates, opt_state = opt.update(grads, opt_state, eqx.filter(model, eqx.is_inexact_array))
-        model = eqx.apply_updates(model, updates)
-        return model, opt_state, loss
+        return _train_step(model, opt_state, x, y, mask, opt, family)
 
-    @eqx.filter_jit
     def evaluate(model, x, y, mask):
-        return family.metric(model, x, y, mask)
+        return _eval_step(model, x, y, mask, family)
 
     step_times, losses = [], []
     diverged = False
@@ -393,14 +416,137 @@ def cfg_seed(cfg, i):
     return 1000 * i + 42
 
 
+# --------------------------------------------------------------------------
+# LR rescue pass (baseline integrity, Item 4)
+# --------------------------------------------------------------------------
+def run_lr_rescue(cfg, families_by_name, prior, log=print):
+    """Re-run the NON-selected LRs at FULL length, for every primitive equally.
+
+    Why this exists. Short-budget LR selection is fair (equal spend) but can be
+    *uninformative*: on a hard recall cell nothing has learned by the tuning
+    horizon, so all three LRs read at chance and the "winner" is noise. Observed
+    on the first run: SSM on MQAR T=32 kv=4 read 0.008/0.010/0.005 at 600 steps,
+    picked lr=1e-3 by a hair, and finished at 0.206 — while GRU, whose grid *had*
+    separated by then, picked 3e-3 and finished at 0.892. That is exactly the
+    "weak baseline" failure the harness must not commit: it would have understated
+    a competitor, and a number we later retract is worse than no number.
+
+    The pass is SYMMETRIC (every primitive, every family, same extra budget) and
+    monotone (it can only raise a primitive's reported score, never lower it), so
+    it cannot be a route to tuning toward a CLU win. Reported as its own table
+    with `rescued` flags, never silently merged.
+    """
+    rescued = []
+    for entry in prior:
+        if entry.get("all_diverged") or entry.get("best_lr") is None:
+            rescued.append(entry)
+            continue
+        family = families_by_name[entry["family"]]
+        others = [lr for lr in cfg.lr_grid if lr != entry["best_lr"]]
+        probes = [
+            train_one(entry["primitive"], cfg, family, entry["width"], lr,
+                      seed=cfg_seed(cfg, 0))
+            for lr in others
+        ]
+        valid = [r for r in probes if np.isfinite(r["metric"])]
+
+        def improves(r, ref=entry["metric_mean"], fam=family):
+            return r["metric"] > ref if fam.higher_is_better else r["metric"] < ref
+
+        better = [r for r in valid if improves(r)]
+        new = dict(entry)
+        new["rescue_probes"] = {
+            str(r["lr"]): r["metric"] for r in probes
+        }
+        if better:
+            win = (max if family.higher_is_better else min)(
+                better, key=lambda r: r["metric"]
+            )
+            seeds = [win] + [
+                train_one(entry["primitive"], cfg, family, entry["width"], win["lr"],
+                          seed=cfg_seed(cfg, s))
+                for s in range(1, cfg.n_seeds)
+            ]
+            vals = np.array([r["metric"] for r in seeds], float)
+            log(
+                f"  RESCUED {entry['family']}/{entry['primitive']}: "
+                f"lr {entry['best_lr']:g} -> {win['lr']:g}, "
+                f"{entry['metric_mean']:.4f} -> {np.nanmean(vals):.4f}"
+            )
+            new.update(
+                rescued=True,
+                pre_rescue_lr=entry["best_lr"],
+                pre_rescue_metric_mean=entry["metric_mean"],
+                best_lr=win["lr"],
+                metric_mean=float(np.nanmean(vals)),
+                metric_std=float(np.nanstd(vals)),
+                metric_per_seed=[float(v) for v in vals],
+            )
+        else:
+            new["rescued"] = False
+        rescued.append(new)
+    return rescued
+
+
+def build_families(cfg, want):
+    """Construct the family objects for the requested task families, in order."""
+    families = []
+    if "mqar" in want:
+        for T in cfg.mqar_seq_lens:  # [1a] distractor axis
+            families.append(MQARFamily(T, cfg.mqar_kv_fixed, cfg.mqar_vocab))
+        for kv in cfg.mqar_kv_sweep:  # [1b] capacity axis
+            if kv == cfg.mqar_kv_fixed and cfg.mqar_seq_len_fixed in cfg.mqar_seq_lens:
+                continue  # already measured in 1a
+            families.append(MQARFamily(cfg.mqar_seq_len_fixed, kv, cfg.mqar_vocab))
+    if "adding" in want:
+        families.append(AddingFamily(cfg.adding_seq_len))
+    if "parity" in want:
+        families.append(ParityFamily(cfg.parity_seq_len))
+    return families
+
+
+def rescue_from_json(path, config=None, out_path=None):
+    """Run the LR rescue pass against an existing harness JSON.
+
+    Lets the rescue be applied to a completed run without retraining the cells
+    that already have a converged, informative LR selection.
+    """
+    if config is None:
+        config = get_default_config()
+    cfg = config.experiment_primitive_harness
+    with open(path) as f:
+        summary = json.load(f)
+    prior = summary["results"]
+    names = {r["family"] for r in prior}
+    families = {f.name: f for f in build_families(cfg, {"mqar", "adding", "parity"})
+                if f.name in names}
+    missing = names - set(families)
+    if missing:
+        raise ValueError(f"Cannot rebuild families {missing} from the current config.")
+    rescued = run_lr_rescue(cfg, families, prior)
+    summary["results"] = rescued
+    summary["rescue_pass"] = True
+    out_path = out_path or path.replace(".json", "_rescued.json")
+    with open(out_path, "w") as f:
+        json.dump(summary, f, indent=2)
+    print(f"Wrote {out_path}")
+    return summary
+
+
 def run_primitive_harness(
     config: Optional[CHLUConfig] = None,
     save_dir: Optional[str] = None,
     seed: Optional[int] = None,
     quick: bool = False,
     families: Optional[list] = None,
+    rescue: bool = False,
 ) -> dict:
-    """Run the harness. ``families`` subsets {"mqar", "adding", "parity"}."""
+    """Run the harness. ``families`` subsets {"mqar", "adding", "parity"}.
+
+    ``rescue=True`` adds the symmetric full-length LR rescue pass (see
+    ``run_lr_rescue``) — recommended whenever the short tuning runs may not have
+    separated the grid.
+    """
     if config is None:
         config = get_default_config()
     if save_dir is not None:
@@ -434,30 +580,16 @@ def run_primitive_harness(
         f"lr_grid={cfg.lr_grid} seeds={cfg.n_seeds}"
     )
 
+    families = build_families(cfg, want)
+
     results = []
-    if "mqar" in want:
-        print("\n--- FAMILY 1: MQAR (associative recall) ---")
-        print("  [1a] distractor axis: seq_len sweep at fixed kv")
-        for T in cfg.mqar_seq_lens:
-            run_family(
-                cfg, MQARFamily(T, cfg.mqar_kv_fixed, cfg.mqar_vocab), cfg.primitives, results
-            )
-        print("  [1b] capacity axis: kv sweep at fixed seq_len")
-        for kv in cfg.mqar_kv_sweep:
-            if kv == cfg.mqar_kv_fixed and cfg.mqar_seq_len_fixed in cfg.mqar_seq_lens:
-                continue  # already measured in 1a
-            run_family(
-                cfg,
-                MQARFamily(cfg.mqar_seq_len_fixed, kv, cfg.mqar_vocab),
-                cfg.primitives,
-                results,
-            )
-    if "adding" in want:
-        print("\n--- FAMILY 2: adding problem (long-range integration) ---")
-        run_family(cfg, AddingFamily(cfg.adding_seq_len), cfg.primitives, results)
-    if "parity" in want:
-        print("\n--- FAMILY 3: parity (state tracking) ---")
-        run_family(cfg, ParityFamily(cfg.parity_seq_len), cfg.primitives, results)
+    for family in families:
+        print(f"\n--- {family.name} ---")
+        run_family(cfg, family, cfg.primitives, results)
+
+    if rescue:
+        print("\n--- LR RESCUE PASS (non-selected LRs at full length, all primitives) ---")
+        results = run_lr_rescue(cfg, {f.name: f for f in families}, results)
 
     summary = {
         "config": {
@@ -479,6 +611,7 @@ def run_primitive_harness(
             "ssm_selective": cfg.ssm_selective,
             "attn_heads": cfg.attn_heads,
         },
+        "rescue_pass": rescue,
         "results": [{k: v for k, v in r.items() if k != "seed_runs"} for r in results],
     }
     out_path = os.path.join(results_dir, "exp_primitive_harness.json")
@@ -497,6 +630,9 @@ def main():
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--families", nargs="+", choices=["mqar", "adding", "parity"])
     parser.add_argument("--steps", type=int, help="override train_steps")
+    parser.add_argument("--rescue", action="store_true",
+                        help="add the full-length LR rescue pass (all primitives)")
+    parser.add_argument("--rescue-from", help="run ONLY the rescue pass against an existing JSON")
     args = parser.parse_args()
     if args.project:
         from chlu.project import ProjectManager
@@ -510,9 +646,12 @@ def main():
         os.makedirs(save_dir, exist_ok=True)
     if args.steps:
         config.experiment_primitive_harness.train_steps = args.steps
+    if args.rescue_from:
+        rescue_from_json(args.rescue_from, config=config)
+        return
     run_primitive_harness(
         config=config, save_dir=save_dir, seed=args.seed,
-        quick=args.quick, families=args.families,
+        quick=args.quick, families=args.families, rescue=args.rescue,
     )
 
 
