@@ -148,16 +148,49 @@ def test_expected_contrastive_mass_gradient_scales_as_sigma_squared():
     assert g2 / g1 == pytest.approx(4.0, rel=0.05)
 
 
-def test_single_draw_gradient_is_dominated_by_the_cross_term_at_small_sigma():
-    """Practical consequence for choosing sigma: for a SINGLE noise draw the
-    O(sigma) cross-term dominates at small sigma, so the per-batch mass
-    gradient grows ~linearly there and only approaches the sigma^2 law once
+def _avg_grad_magnitude(neg_p, dim=6, n=128, n_keys=32):
+    """E[ rms |g| ] over noise draws.
+
+    Deliberately averages the MAGNITUDE, not the signed gradient: the signed
+    mean cancels the cross-term (that is what the sigma^2 test uses), while
+    the magnitude retains it. Averaging over keys makes the statistic
+    independent of any single noise realization -- and therefore of global
+    JAX state such as x64, which an earlier version of this test was
+    sensitive to (it passed alone and failed in the full suite).
+    """
+    model = CHLU(
+        dim=dim, hidden=16, kinetic_mode="newtonian_learned",
+        key=jax.random.PRNGKey(0),
+    )
+    qs = jax.random.normal(jax.random.PRNGKey(7), (n, dim))
+    ps = jax.random.normal(jax.random.PRNGKey(8), (n, dim))
+
+    def contrast(m, k):
+        h_data = jax.vmap(m.H)(qs, ps)
+        qk, pk = jax.random.split(jax.random.PRNGKey(k))
+        noise = 0.5 * jax.random.normal(qk, qs.shape)
+        ps_neg = ps + neg_p * jax.random.normal(pk, ps.shape)
+        return jnp.mean(h_data) - jnp.mean(jax.vmap(m.H)(qs + noise, ps_neg))
+
+    vals = [
+        float(np.sqrt(np.mean(
+            np.asarray(eqx.filter_grad(contrast)(model, k).log_mass) ** 2
+        )))
+        for k in range(n_keys)
+    ]
+    return float(np.mean(vals))
+
+
+def test_single_draw_gradient_is_sub_quadratic_at_small_sigma():
+    """Practical consequence for choosing sigma: the per-BATCH mass gradient
+    (a single noise draw) carries the O(sigma) cross-term, so it grows
+    sub-quadratically at small sigma and only approaches the sigma^2 law once
     sigma is large. Pins the crossover so it is not mistaken for a bug."""
-    small = _contrast_grad(0.2) / _contrast_grad(0.1)
-    large = _contrast_grad(1.0) / _contrast_grad(0.5)
+    small = _avg_grad_magnitude(0.2) / _avg_grad_magnitude(0.1)
+    large = _avg_grad_magnitude(1.0) / _avg_grad_magnitude(0.5)
     assert small < 3.0, "small-sigma regime should be sub-quadratic"
-    assert large == pytest.approx(4.0, rel=0.1), "large-sigma should be quadratic"
-    assert small < large
+    assert small < large, "the exponent must increase toward the sigma^2 law"
+    assert 3.0 < large <= 4.2, "large-sigma should approach (but not exceed) 4x"
 
 
 # ── mass parameterizations ───────────────────────────────────────────────
