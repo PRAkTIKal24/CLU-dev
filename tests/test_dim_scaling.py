@@ -266,6 +266,52 @@ def test_capacity_exceeds_the_w19_ring_ceiling_in_higher_d():
 
 
 # ---------------------------------------------------------------------------
+# Addressing capacity vs read-out capacity
+# ---------------------------------------------------------------------------
+
+
+def test_criterion_split_separates_addressing_from_readout():
+    """The scalar payload channel saturates before the address space does, so a
+    cell can fail the codebook read while addressing is still perfect. The two
+    criteria must therefore be able to disagree, with the blank control vetoing
+    both."""
+    from chlu.experiments.exp_dim_scaling import _cell_passes
+
+    cfg = _fast_cfg()
+    good_addressing_bad_read = {
+        "blank_passes": True,
+        "written": {"acc_codebook": 0.599, "selectivity": 1.000},
+    }
+    assert not _cell_passes(good_addressing_bad_read, cfg, "codebook")
+    assert _cell_passes(good_addressing_bad_read, cfg, "selectivity")
+
+    # The blank control outranks both criteria.
+    leaking = {
+        "blank_passes": False,
+        "written": {"acc_codebook": 1.0, "selectivity": 1.0},
+    }
+    assert not _cell_passes(leaking, cfg, "codebook")
+    assert not _cell_passes(leaking, cfg, "selectivity")
+
+    with pytest.raises(ValueError, match="criterion"):
+        _cell_passes(good_addressing_bad_read, cfg, "vibes")
+
+
+def test_selectivity_criterion_reaches_at_least_the_codebook_ceiling():
+    """Decoder-free addressing capacity must be >= end-to-end read capacity:
+    factoring OUT the 1-D read-out bottleneck cannot lower the ceiling."""
+    from chlu.experiments.exp_dim_scaling import k_max_for_dim
+
+    cfg = _fast_cfg()
+    cfg.k_ladder = [2, 4, 8, 16, 32]
+    cfg.k_cap = 32
+    cb = k_max_for_dim(cfg, d=3, seed=0, verbose=False, criterion="codebook")
+    sel = k_max_for_dim(cfg, d=3, seed=0, verbose=False, criterion="selectivity")
+    assert sel["k_max"] >= cb["k_max"], (cb["k_max"], sel["k_max"])
+    assert cb["criterion"] == "codebook" and sel["criterion"] == "selectivity"
+
+
+# ---------------------------------------------------------------------------
 # Config / CLI wiring
 # ---------------------------------------------------------------------------
 

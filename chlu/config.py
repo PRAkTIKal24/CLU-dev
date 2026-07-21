@@ -1131,6 +1131,14 @@ class ExperimentDimScalingConfig:
         default_factory=lambda: [0.08, 0.15, 0.22, 0.30, 0.45]
     )
 
+    # ---- item 5: ADDRESSING capacity, decoder-free ----
+    # Item 1 walks the ladder on the w19 codebook read, which stops when the
+    # single scalar payload channel runs out of resolution -- at d >= 6 that
+    # happens while addressing is still perfect (d=6, K=512: read 0.599,
+    # selectivity 1.000). This sweep re-walks the ladder on selectivity alone so
+    # the address space's capacity is not understated by a 1-D read-out limit.
+    addressing_dims: List[int] = field(default_factory=lambda: [2, 3, 4, 6, 8])
+
     # ---- item 4: does dissipation still gate retrieval at d > 2? ----
     gamma_sweep_dims: List[int] = field(default_factory=lambda: [2, 4, 8])
     gamma_sweep: List[float] = field(

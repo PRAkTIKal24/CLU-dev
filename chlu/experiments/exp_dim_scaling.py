@@ -407,7 +407,45 @@ def evaluate_cell(
     return out
 
 
-def k_max_for_dim(cfg, d: int, seed: int = 0, w: Optional[float] = None, verbose=True):
+def _cell_passes(cell, cfg, criterion: str) -> bool:
+    """Does a cell meet the fidelity criterion? The blank control always vetoes.
+
+    ``"codebook"`` (default, **w19 verbatim**)
+        payload-only linear-codebook read accuracy. This is the criterion the
+        task specifies, and it is the one the headline curve uses.
+
+    ``"selectivity"`` (decoder-free)
+        fraction of queries that SETTLED NEAREST THEIR OWN SITE — pure
+        addressing, no read-out involved.
+
+    ⚠ **Why both are needed, and why quoting only the first would understate
+    capacity.** All K items are read back through ONE SCALAR payload channel
+    whose codebook values live in a fixed range, so their spacing shrinks like
+    1/K and eventually falls below the payload's own retrieval error — a
+    **read-out resolution limit that has nothing to do with the address space**.
+    It shows up unmistakably in the data: at d=6, K=512 the codebook read scores
+    0.599 while selectivity is 1.000. Addressing is perfect there; the scalar
+    channel has run out of resolution. Reporting only the codebook number would
+    repeat exactly the estimator artifact w19 flagged (a one-hot probe scoring
+    0.484 at K=4 while the payload was retrieved to 7e-4).
+    """
+    if not cell["blank_passes"]:
+        return False
+    if criterion == "codebook":
+        return cell["written"]["acc_codebook"] >= cfg.selectivity_threshold
+    if criterion == "selectivity":
+        return cell["written"]["selectivity"] >= cfg.selectivity_threshold
+    raise ValueError(f"unknown criterion {criterion!r}")
+
+
+def k_max_for_dim(
+    cfg,
+    d: int,
+    seed: int = 0,
+    w: Optional[float] = None,
+    verbose=True,
+    criterion: str = "codebook",
+):
     """Walk the K ladder until the fidelity criterion breaks -> K_max at this d."""
     cells = []
     k_max = 0
@@ -417,6 +455,7 @@ def k_max_for_dim(cfg, d: int, seed: int = 0, w: Optional[float] = None, verbose
             censored = True
             break
         cell = evaluate_cell(cfg, d, K, seed=seed, w=w)
+        cell["passes"] = _cell_passes(cell, cfg, criterion)
         cells.append(cell)
         if verbose:
             print(
@@ -427,7 +466,7 @@ def k_max_for_dim(cfg, d: int, seed: int = 0, w: Optional[float] = None, verbose
                 f"sep={cell['site_sep_min_measured']:.3f}",
                 flush=True,
             )
-        if cell["retrieved"]:
+        if cell["passes"]:
             k_max = K
         else:
             break
@@ -436,6 +475,7 @@ def k_max_for_dim(cfg, d: int, seed: int = 0, w: Optional[float] = None, verbose
 
     return {
         "d": d,
+        "criterion": criterion,
         "k_max": k_max,
         # A cell that ran out of ladder / hit the compute cap without ever
         # failing is CENSORED: k_max is a lower bound, not a measurement.
@@ -674,6 +714,50 @@ def item4_gamma(cfg, seed: int = 0):
 
 
 # ---------------------------------------------------------------------------
+# Item 5 — ADDRESSING capacity, separated from READ-OUT capacity
+# ---------------------------------------------------------------------------
+
+
+def item5_addressing_capacity(cfg, seed: int = 0):
+    """K_max under the decoder-free SELECTIVITY criterion.
+
+    Item 1 walks the ladder on the w19 codebook read and therefore stops as soon
+    as the **scalar payload channel** runs out of resolution — which, at d >= 6,
+    happens while addressing is still perfect (d=6, K=512: read 0.599,
+    selectivity 1.000). Item 1's K_max is consequently a lower bound on the
+    address space's capacity, not a measurement of it.
+
+    This walks the same ladder on selectivity alone: did the query settle
+    nearest its own site? That is the physics question the task is really
+    asking ("how many items can be written and retrieved"), with the read-out
+    channel's 1-D bottleneck factored out. The blank control still vetoes every
+    cell.
+
+    Reported ALONGSIDE item 1, never instead of it — the codebook number is the
+    honest end-to-end capacity of the loop *as built*, and the selectivity
+    number is the capacity of the addressing mechanism the scaling law is about.
+    """
+    rows = []
+    for d in cfg.addressing_dims:
+        res = k_max_for_dim(cfg, d, seed=seed, criterion="selectivity")
+        rows.append(res)
+
+    ds = np.array([r["d"] for r in rows], dtype=float)
+    ks = np.array([max(r["k_max"], 1) for r in rows], dtype=float)
+    fit = {}
+    ok = ks > 1
+    if ok.sum() >= 2:
+        A_mat = np.stack([ds[ok], np.ones(ok.sum())], axis=1)
+        coef, *_ = np.linalg.lstsq(A_mat, np.log(ks[ok]), rcond=None)
+        ss_res = float(np.sum((np.log(ks[ok]) - A_mat @ coef) ** 2))
+        ss_tot = float(np.sum((np.log(ks[ok]) - np.log(ks[ok]).mean()) ** 2))
+        fit["exponential_base_A"] = float(np.exp(coef[0]))
+        fit["exponential_r2"] = 1.0 - ss_res / (ss_tot + 1e-12)
+        fit["any_censored"] = bool(any(r["censored"] for r in rows))
+    return {"rows": rows, "fit": fit}
+
+
+# ---------------------------------------------------------------------------
 # Figures (local, following the exp_paid_access / exp_retrieval precedent)
 # ---------------------------------------------------------------------------
 
@@ -836,6 +920,8 @@ def run_experiment_dim_scaling(
     results["item2_width_sweep"] = item2_width_sweep(cfg, seed=seed)
     print("[item 4] gamma dependence", flush=True)
     results["item4_gamma"] = item4_gamma(cfg, seed=seed)
+    print("[item 5] addressing capacity (decoder-free)", flush=True)
+    results["item5_addressing_capacity"] = item5_addressing_capacity(cfg, seed=seed)
 
     results["figures"] = _plot_all(results, save_dir)
 
@@ -862,6 +948,7 @@ def apply_quick(config: CHLUConfig) -> None:
     cfg.width_sweep = [0.15, 0.30]
     cfg.gamma_sweep_dims = [2]
     cfg.gamma_sweep = [0.0, 0.02]
+    cfg.addressing_dims = [2, 3]
 
 
 def main():
