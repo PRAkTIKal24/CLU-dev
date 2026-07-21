@@ -364,6 +364,17 @@ class CLUScorerConfig:
             mirrors train_generative's 0.005 term).
         momentum_init: how p0 is seeded from a window ("finite_diff" =
             (q1-q0)/dt, "zero").
+        mass_lr_mult: run every ``log_mass`` leaf on its own Adam slot at
+            ``lr * mass_lr_mult`` (mirrors ``training.mass_lr_mult``, which was
+            wired ONLY into ``chlu/training/train.py`` and therefore never
+            reached this — the CAFE/eval — training path). Default 1.0 is
+            bit-compatible (plain ``optax.adam(lr)``, no ``multi_transform``).
+            ⚠ CM-5/N8: 10x is the known-safe setting; 100x inverts the ordering.
+        mass_spread_lambda: coefficient of the R-1 mass-spread term
+            ``-lambda * Var(log_mass)`` added to the training loss, i.e. an
+            explicit pressure toward a NON-DEGENERATE timescale hierarchy
+            (the "hierarchy must be designed in" doctrine, CM-5). Default 0.0 =
+            OFF = term never touched. Applied from epoch 0 (theorist T3).
         seed: RNG seed for CLU init + training + subsampling.
         lattice: optional :class:`CLULatticeConfig` (G7b torus hook); None
             (default) fits a single ``CHLU``.
@@ -389,6 +400,8 @@ class CLUScorerConfig:
     neg_noise_scale: float = 0.5
     energy_reg: float = 0.005
     momentum_init: str = "finite_diff"
+    mass_lr_mult: float = 1.0
+    mass_spread_lambda: float = 0.0
     seed: int = 42
     lattice: CLULatticeConfig | None = None
 
@@ -398,6 +411,10 @@ class CLUScorerConfig:
             raise ValueError(f"kinetic_mode must be one of {valid_kin}")
         if self.momentum_init not in ("finite_diff", "zero"):
             raise ValueError("momentum_init must be finite_diff|zero")
+        if self.mass_lr_mult <= 0:
+            raise ValueError("mass_lr_mult must be > 0")
+        if self.mass_spread_lambda < 0:
+            raise ValueError("mass_spread_lambda must be >= 0")
         if self.predict_horizon < 1 or self.relax_steps < 1:
             raise ValueError("predict_horizon and relax_steps must be >= 1")
 

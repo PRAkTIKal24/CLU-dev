@@ -221,6 +221,83 @@ def _build_literal_lattice(cfg: CLUScorerConfig, n_channels: int, key):
     return CLULattice(units=units, edges=edges, couplings=couplings)
 
 
+def _is_mass_path(path) -> bool:
+    """True if a pytree leaf path passes through a ``log_mass`` attribute.
+
+    Matches a lone ``CHLU`` AND every unit of a ``CLULattice`` — same rule as
+    ``chlu/training/train.py``'s ``_lr_group_labels`` (keep the two in step).
+    """
+    return "log_mass" in [getattr(k, "name", None) for k in path]
+
+
+def _collect_log_mass(model) -> np.ndarray:
+    """Flat concatenation of every ``log_mass`` leaf in ``model``."""
+    out: list[np.ndarray] = []
+
+    def _visit(path, leaf):
+        if _is_mass_path(path):
+            out.append(np.asarray(leaf).ravel())
+        return leaf
+
+    jax.tree_util.tree_map_with_path(
+        _visit, eqx.filter(model, eqx.is_inexact_array)
+    )
+    return np.concatenate(out) if out else np.zeros((0,), dtype=np.float32)
+
+
+def _log_mass_leaves_jnp(model) -> list:
+    """Traceable counterpart of :func:`_collect_log_mass` (for use in a loss)."""
+    out: list = []
+
+    def _visit(path, leaf):
+        if _is_mass_path(path):
+            out.append(jnp.ravel(leaf))
+        return leaf
+
+    jax.tree_util.tree_map_with_path(
+        _visit, eqx.filter(model, eqx.is_inexact_array)
+    )
+    return out
+
+
+def _movement_partition(model_init, model_final) -> dict:
+    """How much of training's parameter movement landed on ``log_mass``?
+
+    The theorist's OQ1 gradient-path-partition test, on the real code path.
+    Returns total squared displacement and parameter counts for the ``mass``
+    leg (``log_mass``) vs the ``main`` leg (``V_theta`` and everything else),
+    plus two ratios: the raw L2 share (dominated by parameter COUNT) and the
+    per-parameter RMS ratio (the count-fair comparison, and the one to quote).
+    """
+    sq = {"mass": 0.0, "main": 0.0}
+    cnt = {"mass": 0, "main": 0}
+
+    def _visit(path, a, b):
+        key = "mass" if _is_mass_path(path) else "main"
+        d = np.asarray(b, dtype=np.float64) - np.asarray(a, dtype=np.float64)
+        sq[key] += float(np.sum(d * d))
+        cnt[key] += int(d.size)
+        return a
+
+    jax.tree_util.tree_map_with_path(
+        _visit,
+        eqx.filter(model_init, eqx.is_inexact_array),
+        eqx.filter(model_final, eqx.is_inexact_array),
+    )
+    total = sq["mass"] + sq["main"]
+    rms = {k: (sq[k] / cnt[k]) ** 0.5 if cnt[k] else 0.0 for k in sq}
+    return {
+        "mass_l2": sq["mass"] ** 0.5,
+        "main_l2": sq["main"] ** 0.5,
+        "n_mass": cnt["mass"],
+        "n_main": cnt["main"],
+        "mass_l2_fraction": (sq["mass"] / total) if total > 0 else 0.0,
+        "mass_rms": rms["mass"],
+        "main_rms": rms["main"],
+        "rms_ratio": (rms["mass"] / rms["main"]) if rms["main"] > 0 else 0.0,
+    }
+
+
 class _SharedCLUFit:
     """One trained CLU shared by all arms (so the comparison is one experiment).
 
@@ -236,6 +313,11 @@ class _SharedCLUFit:
         self.model = None
         self.n_channels = None
         self._hybrid_stats = None  # (e_mean, e_std, p_mean, p_std)
+        #: Mass-spectrum diagnostics, populated by :meth:`ensure_fit`. The
+        #: question "is the mass actually being learned?" is answered by
+        #: ``mass_diagnostics["movement"]["rms_ratio"]`` (log_mass movement per
+        #: parameter, relative to V_theta's).
+        self.mass_diagnostics: dict | None = None
 
     # -- reshaping ----------------------------------------------------------
     def _reshape(self, windows: np.ndarray) -> jnp.ndarray:
@@ -274,14 +356,38 @@ class _SharedCLUFit:
         key = jax.random.PRNGKey(cfg.seed)
         key, mkey = jax.random.split(key)
         model = _build_model(cfg, C, mkey)
+        model_init = model
 
-        optim = optax.adam(cfg.lr)
+        # Mass-specific lr. Mirrors chlu/training/train.py, which is where
+        # ``mass_lr_mult`` had been wired ALL ALONG — this eval/CAFE path used a
+        # plain ``optax.adam(lr)`` and so ran with the knob unreachable.
+        # mass_lr_mult == 1.0 keeps exactly that optimizer (bit-compatible).
+        if cfg.mass_lr_mult != 1.0:
+            def _lr_group_labels(tree):
+                # MUST be a label FUNCTION, not a labels pytree: a model-shaped
+                # pytree of strings is itself callable and optax would call it
+                # on the params (gamma-field-build lesson).
+                return jax.tree_util.tree_map_with_path(
+                    lambda path, _leaf: "mass" if _is_mass_path(path) else "main",
+                    tree,
+                )
+
+            optim = optax.multi_transform(
+                {
+                    "main": optax.adam(cfg.lr),
+                    "mass": optax.adam(cfg.lr * cfg.mass_lr_mult),
+                },
+                _lr_group_labels,
+            )
+        else:
+            optim = optax.adam(cfg.lr)
         opt_state = optim.init(eqx.filter(model, eqx.is_inexact_array))
 
         dt = cfg.dt
         hz = int(min(cfg.predict_horizon, L - 1))
         pw, ew, ereg = cfg.predict_weight, cfg.energy_weight, cfg.energy_reg
         neg = cfg.neg_noise_scale
+        spread_lam = float(cfg.mass_spread_lambda)
 
         def loss_fn(model, batch, nkey):
             # batch: (B, L, C)
@@ -302,7 +408,16 @@ class _SharedCLUFit:
             h_neg = jax.vmap(model.H)(qs + noise, ps)
             energy_contrastive = jnp.mean(h_data) - jnp.mean(h_neg)
             reg = ereg * (jnp.mean(h_data**2) + jnp.mean(h_neg**2))
-            return pw * predict_mse + ew * energy_contrastive + reg
+            total = pw * predict_mse + ew * energy_contrastive + reg
+            # R-1 mass-spread term: reward variance in log_mass, i.e. push the
+            # spectrum AWAY from the degenerate single-timescale configuration.
+            # Permutation-symmetric, so per T3 it can create diversity but can
+            # never choose the assignment. lam == 0.0 leaves the loss untouched.
+            if spread_lam > 0.0:
+                lm = _log_mass_leaves_jnp(model)
+                if lm:
+                    total = total - spread_lam * jnp.var(jnp.concatenate(lm))
+            return total
 
         @eqx.filter_jit
         def step(model, opt_state, batch, nkey):
@@ -323,6 +438,26 @@ class _SharedCLUFit:
                 model, opt_state, _ = step(model, opt_state, W[bidx], nkey)
 
         self.model = model
+        # -- mass-spectrum diagnostics (clu-latent-io-audit item 1) ----------
+        lm0, lm1 = _collect_log_mass(model_init), _collect_log_mass(model)
+        self.mass_diagnostics = {
+            "log_mass_init": lm0.tolist(),
+            "log_mass_final": lm1.tolist(),
+            "std_init": float(np.std(lm0)) if lm0.size else 0.0,
+            "std_final": float(np.std(lm1)) if lm1.size else 0.0,
+            "max_abs_drift": float(np.max(np.abs(lm1 - lm0))) if lm0.size else 0.0,
+            "mean_abs_drift": float(np.mean(np.abs(lm1 - lm0))) if lm0.size else 0.0,
+            # THE decomposition to read (clu-latent-io-audit): a COMMON-MODE
+            # drift rescales every channel's inertia together and is NOT a
+            # timescale hierarchy; only the DIFFERENTIAL part is. On FD001 the
+            # common mode is ~39x the differential at mass_lr_mult=1, i.e. the
+            # spectrum stays at its random init while the overall scale runs.
+            "common_mode_drift": float(np.mean(lm1 - lm0)) if lm0.size else 0.0,
+            "differential_drift": float(np.std(lm1 - lm0)) if lm0.size else 0.0,
+            "mass_lr_mult": float(cfg.mass_lr_mult),
+            "mass_spread_lambda": float(cfg.mass_spread_lambda),
+            "movement": _movement_partition(model_init, model),
+        }
         # hybrid z-score stats on a capped train subset (untuned combination).
         stat_W = W[: min(512, n)]
         e = self._energy_scores(stat_W)
