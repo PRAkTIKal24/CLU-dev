@@ -950,6 +950,94 @@ class ExperimentMinusPhysicsConfig:
 
 
 @dataclass
+class ExperimentRetrievalConfig:
+    """Configuration for the hand-built write -> address -> retrieve loop.
+
+    Stage-1 empirical test of the Head's addressable-dynamical-memory vision
+    (handover 2026-07-21): a HAND-DESIGNED ``RingRegisterPotential`` holding K
+    items, hand-picked addresses ``(m, q0, p0)``, and a LINEAR read on the
+    rollout tail. **Nothing here is learned** except the address itself in the
+    item-5 restructuring test. See chlu/experiments/exp_retrieval.py.
+    """
+
+    # ---- designed landscape geometry ----
+    lam: float = 1.0  # ring quartic; radial spectral mass mu_rad^2 = 8*lam*f^2
+    f: float = 1.0  # vacuum radius
+    # Angular barrier between item sites. 0.2, NOT 0.05: at 0.05 the well is
+    # too weak to hold a JITTERED query within the rollout (measured: mean
+    # payload error 0.18 at K=8, vs 0.002 at 0.2) — the particle never settles
+    # and every downstream number degrades for a reason that has nothing to do
+    # with memory capacity.
+    barrier: float = 0.2
+    payload_kappa: float = 1.0  # payload-channel spring constant
+    bump_width: float = 0.05  # payload bump width (FIXED as K grows -> interference)
+    payload_seed: int = 0  # seed for the designed non-monotone payload values
+
+    # ---- rollout ----
+    dt: float = 0.05
+    gamma: float = 0.02  # friction: needed for the particle to SETTLE in a well
+    steps: int = 1200
+    tail_frac: float = 0.25  # read only the tail (the head still carries the address)
+    n_subsample: int = 8
+
+    # ---- queries / linear probe ----
+    n_query_per_item: int = 64
+    query_sigma_theta: float = 0.15
+    query_sigma_r: float = 0.05
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1  # |readout - a_k| below this counts as "settled"
+    # Where along the rollout the survival read is taken (fraction of `steps`)
+    survival_fracs: List[float] = field(
+        default_factory=lambda: [0.05, 0.1, 0.25, 0.5, 0.75, 0.99]
+    )
+
+    # ---- item 2: mass as address key ----
+    mass_probe_K: int = 8
+    mass_probe_p: float = 0.5  # fixed |p0| components at the launch point
+    mass_log_lo: float = -1.5
+    mass_log_hi: float = 1.5
+    mass_n: int = 25  # scalar sweep resolution
+    mass_n_vec: int = 9  # per-axis resolution of the (m0, m1) grid
+    # Robustness of the mass key: a key is only usable if a small error in the
+    # mass still retrieves the same item. Counting DISTINCT items reachable by
+    # mass is not enough — a chaotic map has many reachable items and is still
+    # useless as an address.
+    mass_jitter_rel: float = 0.01
+    mass_jitter_n: int = 8
+    mass_robust_threshold: float = 0.9  # frac_same needed to count a mass cell
+
+    # ---- item 3: three write modes (ThreeModePotential, dim=4) ----
+    tm_beta: float = 1.0
+    tm_d: float = 1.0
+    tm_write_theta: float = 0.7
+    tm_write_dr: float = 0.3
+    tm_write_sign: int = 1
+    tm_steps: int = 2000
+
+    # ---- item 4: interference ----
+    item_counts: List[int] = field(default_factory=lambda: [2, 4, 8, 16, 32])
+    selectivity_threshold: float = 0.9
+
+    # ---- item 5: address restructuring (the learnability crux, weak form) ----
+    restructure_K: int = 8
+    restructure_offsets: List[int] = field(default_factory=lambda: [1, 2, 4])
+    address_lr: float = 0.05
+    address_steps: int = 300
+    smooth_n_theta: int = 181
+    smooth_rollout_steps: List[int] = field(
+        default_factory=lambda: [25, 50, 100, 200, 400, 800]
+    )
+    # gamma scan for the retrieval-vs-learnability tension (friction is what
+    # makes the read stable AND what kills the address gradient)
+    smooth_gammas: List[float] = field(
+        default_factory=lambda: [0.0, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1]
+    )
+    # item 5c: gamma-annealed address search (the repair implied by 5b)
+    anneal_gamma_lo: float = 0.001
+    anneal_n_stages: int = 6
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -1001,6 +1089,9 @@ class CHLUConfig:
         default_factory=ExperimentMinusPhysicsConfig
     )
     experiment_kt: ExperimentKTConfig = field(default_factory=ExperimentKTConfig)
+    experiment_retrieval: ExperimentRetrievalConfig = field(
+        default_factory=ExperimentRetrievalConfig
+    )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
@@ -1095,6 +1186,11 @@ def load_config(path: Path) -> CHLUConfig:
         experiment_kt=ExperimentKTConfig(
             **filter_valid_fields(ExperimentKTConfig, data.get("experiment_kt", {}))
         ),
+        experiment_retrieval=ExperimentRetrievalConfig(
+            **filter_valid_fields(
+                ExperimentRetrievalConfig, data.get("experiment_retrieval", {})
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -1126,6 +1222,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_minus_physics": asdict(config.experiment_minus_physics),
         "experiment_paid_access": asdict(config.experiment_paid_access),
         "experiment_kt": asdict(config.experiment_kt),
+        "experiment_retrieval": asdict(config.experiment_retrieval),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
