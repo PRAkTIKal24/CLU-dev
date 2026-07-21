@@ -7,7 +7,7 @@ address selector or read-out head is trained? Nothing here should ever be cited
 as an emergent capability (N46 precedent: designed structure worked, emergent
 structure never formed).
 
-Two landscapes:
+Three landscapes:
 
 ``RingRegisterPotential``
     A ring of ``K`` angular wells (item sites) carrying a **payload
@@ -21,7 +21,17 @@ Two landscapes:
     a permanent latch (exactly flat SO(2) angle, ``mu^2 == 0``), a decaying item
     written at the *same locus* (the radial excursion, ``mu_rad^2 = 8*lam*f^2``),
     and an uncorrelated item at a fresh location (a broken-symmetry pair).
+
+``BallRegisterPotential``
+    The **d-dimensional** generalization of the ring: K Gaussian item wells packed
+    into a flat-bottomed ball of radius ``R`` in ``d`` address dimensions, plus the
+    same payload channel. The ring's 8-item ceiling is an *angular*-resolution
+    limit of a 1-D address manifold; this class exists to measure whether capacity
+    is exponential in ``d`` (the packing bound ``(1 + 2R/w)^d``) or whether the
+    handful-of-items ceiling is a property of the primitive.
 """
+
+from typing import Optional
 
 import equinox as eqx
 import jax.numpy as jnp
@@ -207,6 +217,177 @@ class ThreeModePotential(eqx.Module):
         v = v + self.beta * (q[2] ** 2 - self.d**2) ** 2
         v = v + 0.5 * self.k_perp * jnp.sum(q[3:] ** 2)
         return v
+
+
+class BallRegisterPotential(eqx.Module):
+    """K-item addressable register in a **d-dimensional** address ball.
+
+    The `d`-dimensional generalization of ``RingRegisterPotential``. The ring is a
+    1-D address manifold embedded in 2-D, so its capacity is set by an *angular*
+    resolution limit (w19 measured ``K_max ~ 0.2 * 2*pi / sigma_theta`` = 8 items).
+    That number is a property of the ring, NOT of CLU — this class exists to find
+    out which.
+
+    .. code-block:: text
+
+        V(q) = c_conf * relu(||x||^2 - R^2)^2               # flat inside the ball, walls outside
+             - b * sum_k exp(-||x - c_k||^2 / (2 w^2))      # K item wells
+             + 0.5 * kappa * (y - s(x))^2                   # payload channel
+        s(x) = sum_k a_k * exp(-||x - c_k||^2 / (2 w^2))
+
+    with ``x = q[:d]`` the **address plane** and ``y = q[d]`` the **payload
+    channel**. Any spectator coordinates ``q[d+1:]`` get a harmonic well.
+
+    - **Item k** = the well at ``c_k`` together with its stored payload ``a_k``.
+    - **Address** = ``(m, q0, p0)``; the payload coordinate is always launched at
+      ``y(0) = 0``, so a payload-only read is structurally blind to the address.
+      This is the w19 anti-decoration guard, carried over verbatim.
+    - **Blank control** = the same object with ``payloads`` all zero: identical
+      dynamics, live read-out channel, nothing stored. A working loop must read
+      out at chance there. **A cell without a passing blank control is not a
+      measurement.**
+
+    Geometry notes (these are the whole point of the class):
+
+    - The confinement is **flat inside the ball** (``relu`` of ``||x||^2 - R^2``),
+      so the only structure inside the address region is the wells themselves.
+      A quartic/harmonic confinement would add a `d`-dependent restoring force
+      and confound the dimension scaling with a geometry change.
+    - The well width ``w`` is held FIXED as ``K`` grows (as ``bump_width`` is on
+      the ring), so neighbouring wells overlap more and more — that overlap is
+      the interference mechanism, and ``w`` vs the site separation is exactly the
+      packing-bound question ``(1 + 2R/w)^d``.
+    """
+
+    payloads: jnp.ndarray  # (K,) stored values a_k
+    centers: jnp.ndarray  # (K, d) item site locations
+    d: int = eqx.field(static=True)
+    K: int = eqx.field(static=True)
+    R: float = eqx.field(static=True)
+    w: float = eqx.field(static=True)
+    b: float = eqx.field(static=True)
+    kappa: float = eqx.field(static=True)
+    c_conf: float = eqx.field(static=True)
+    dim: int = eqx.field(static=True)
+    spectator_k: float = eqx.field(static=True)
+
+    def __init__(
+        self,
+        payloads,
+        centers,
+        R: float = 1.0,
+        w: float = 0.15,
+        b: float = 1.0,
+        kappa: float = 1.0,
+        c_conf: float = 10.0,
+        dim: Optional[int] = None,
+        spectator_k: float = 1.0,
+    ):
+        """
+        Args:
+            payloads: (K,) stored payload values a_k (designed, non-monotone).
+            centers: (K, d) item site locations inside the ball of radius R.
+            R: address-ball radius (the "region" of the packing bound).
+            w: Gaussian well width (the "w" of the packing bound ``(1+2R/w)^d``).
+            b: well depth.
+            kappa: payload spring constant.
+            c_conf: stiffness of the outside-the-ball confining wall.
+            dim: total latent dim; defaults to ``d + 1`` (address + payload).
+            spectator_k: spring constant for any coordinates beyond ``d + 1``.
+        """
+        self.payloads = jnp.asarray(payloads, dtype=jnp.float32)
+        self.centers = jnp.asarray(centers, dtype=jnp.float32)
+        self.K = int(self.centers.shape[0])
+        self.d = int(self.centers.shape[1])
+        self.dim = int(self.d + 1) if dim is None else int(dim)
+        if self.dim < self.d + 1:
+            raise ValueError(
+                f"dim={self.dim} too small for a {self.d}-D address plane plus a "
+                "payload channel (need dim >= d + 1)"
+            )
+        if self.payloads.shape[0] != self.K:
+            raise ValueError(
+                f"payloads has {self.payloads.shape[0]} entries but there are "
+                f"{self.K} centers"
+            )
+        self.R = R
+        self.w = w
+        self.b = b
+        self.kappa = kappa
+        self.c_conf = c_conf
+        self.spectator_k = spectator_k
+
+    def bumps(self, x: jnp.ndarray) -> jnp.ndarray:
+        """(K,) Gaussian activations of each item site at address ``x``."""
+        d2 = jnp.sum((x[None, :] - self.centers) ** 2, axis=-1)
+        return jnp.exp(-d2 / (2.0 * self.w**2))
+
+    def payload_profile(self, x: jnp.ndarray):
+        """s(x) — the designed payload written across the address ball."""
+        return jnp.sum(self.payloads * self.bumps(x))
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        x = q[: self.d]
+        y = q[self.d]
+
+        # Confining wall: identically zero inside the ball (relu), so the only
+        # structure the particle sees in the address region is the item wells.
+        excess = jnp.maximum(jnp.sum(x * x) - self.R**2, 0.0)
+        v = self.c_conf * excess**2
+
+        bumps = self.bumps(x)
+        v = v - self.b * jnp.sum(bumps)
+        v = v + 0.5 * self.kappa * (y - jnp.sum(self.payloads * bumps)) ** 2
+
+        if self.dim > self.d + 1:
+            v = v + 0.5 * self.spectator_k * jnp.sum(q[self.d + 1 :] ** 2)
+        return v
+
+
+def designed_sites(d: int, K: int, R: float = 1.0, seed: int = 0, pool: int = 20000):
+    """K item-site locations in the `d`-ball of radius R, by FARTHEST-POINT sampling.
+
+    Farthest-point (maximin) sampling from a uniform candidate pool maximizes the
+    achieved minimum pairwise separation, so this is the **best packing this design
+    can do** at a given K — the capacity it yields is an upper envelope, not a
+    typical draw. Deterministic given ``seed``.
+
+    The volume argument predicts the achieved separation
+    ``Delta(d, K) ~ 2 * R * K**(-1/d)``; ``site_separation`` measures what was
+    actually achieved so the prediction can be checked rather than assumed.
+
+    Returns:
+        (K, d) float32 array of site locations.
+    """
+    import numpy as np
+
+    rng = np.random.default_rng(seed)
+    n_pool = max(pool, 40 * K)
+    # Uniform in the d-ball: normalized Gaussian direction * U^(1/d) radius.
+    g = rng.normal(size=(n_pool, d))
+    g /= np.linalg.norm(g, axis=1, keepdims=True)
+    rad = R * rng.random(n_pool) ** (1.0 / d)
+    cand = g * rad[:, None]
+
+    idx = [0]
+    d2 = np.sum((cand - cand[0]) ** 2, axis=1)
+    for _ in range(1, K):
+        nxt = int(np.argmax(d2))
+        idx.append(nxt)
+        d2 = np.minimum(d2, np.sum((cand - cand[nxt]) ** 2, axis=1))
+    return jnp.asarray(cand[idx], dtype=jnp.float32)
+
+
+def site_separation(centers) -> float:
+    """Achieved minimum pairwise separation of a site set (the packing measurement)."""
+    import numpy as np
+
+    c = np.asarray(centers)
+    if c.shape[0] < 2:
+        return float("inf")
+    d2 = np.sum((c[:, None, :] - c[None, :, :]) ** 2, axis=-1)
+    np.fill_diagonal(d2, np.inf)
+    return float(np.sqrt(d2.min()))
 
 
 def designed_payloads(K: int, seed: int = 0, lo: float = -1.0, hi: float = 1.0):
