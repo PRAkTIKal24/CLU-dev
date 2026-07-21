@@ -884,7 +884,16 @@ class ExperimentKTConfig:
     reduced_l_values: List[int] = field(default_factory=lambda: [8, 16, 32])
     reduced_tj_values: List[float] = field(
         default_factory=lambda: [
-            0.50, 0.60, 0.70, 0.80, 0.85, 0.90, 0.95, 1.00, 1.10, 1.20
+            0.50,
+            0.60,
+            0.70,
+            0.80,
+            0.85,
+            0.90,
+            0.95,
+            1.00,
+            1.10,
+            1.20,
         ]
     )
     reduced_seeds: List[int] = field(default_factory=lambda: [100, 101, 102])
@@ -1038,6 +1047,126 @@ class ExperimentRetrievalConfig:
 
 
 @dataclass
+class ExperimentDimScalingConfig:
+    """Configuration for the address-space DIMENSION-SCALING measurement (w20).
+
+    w19 (``exp_retrieval``) measured a capacity ceiling of **8 items** on a 2-D
+    ring. That 8 is a property of the ring's *angular* resolution
+    (``K_max ~ 0.2 * 2*pi / sigma_theta``), not of CLU — the theorist's packing
+    bound ``(1 + 2R/w)^d`` is exponential in the address dimension ``d``. This
+    experiment generalizes the ring to a ``d``-dimensional address ball
+    (``BallRegisterPotential``) and measures ``K_max`` vs ``d``.
+
+    Fidelity criteria are the w19 criteria **verbatim** so the numbers are
+    comparable, including the mandatory blank-landscape control on every cell.
+    See chlu/experiments/exp_dim_scaling.py.
+    """
+
+    # ---- designed landscape geometry ----
+    R: float = 1.0  # radius of the region the SITES occupy (the "R" of the bound)
+    # Clearance between the outermost sites and the confining wall. Load-bearing,
+    # NOT cosmetic: farthest-point sampling pushes sites onto the boundary of the
+    # site region, so with zero margin a query jittered OUTWARD from a boundary
+    # site starts outside the wall. Measured at d=2: such a query began at
+    # V=+0.68 with KE=0.44, was slingshotted across the ball and captured by a
+    # well 1.37 away -- 4/128 queries, capping selectivity at 0.94 even at K=2.
+    # 0.5 > 3 * query_sigma keeps 3-sigma queries inside the force-free region.
+    wall_margin: float = 0.5
+    well_width: float = 0.15  # Gaussian well width w (the "w" of the packing bound)
+    well_depth: float = 1.0  # b: well depth
+    # Payload-channel spring constant. The payload term 0.5*kappa*(y - s(x))^2
+    # exerts a force kappa*(y-s)*s'(x) ON THE ADDRESS PLANE, so kappa trades the
+    # read-out's settling speed against how much it perturbs addressing.
+    # Measured at the densest resolvable d=2 cell (K=16), codebook read accuracy:
+    #   kappa   1.00    0.30    0.10    0.03
+    #   acc     0.508   0.898   0.906   0.766
+    # kappa=1 is too stiff (the payload force perturbs the address once wells are
+    # close); kappa=0.03 is too slack (payload has not settled within the
+    # rollout: |err| 3e-3 vs 4e-5). 0.1 is the measured optimum.
+    # NOTE: selectivity is essentially kappa-independent (0.930-0.945 across the
+    # whole sweep) -- kappa affects the READ, not the addressing. The query
+    # ejection that capped selectivity at K=2 was `wall_margin`, not kappa.
+    payload_kappa: float = 0.1
+    c_conf: float = 10.0  # stiffness of the confining wall outside the ball
+    site_seed: int = 0  # seed for the farthest-point site packing
+    payload_seed: int = 0  # seed for the designed non-monotone payload values
+
+    # ---- rollout (w19 values, so the cells are comparable) ----
+    dt: float = 0.05
+    gamma: float = 0.02  # friction: needed for the particle to SETTLE in a well
+    steps: int = 1200
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+    # Rollouts are vmapped in chunks: a (K * n_query) x steps x 2*dim trajectory
+    # buffer is what actually bites at large K, not the flop count.
+    rollout_chunk: int = 512
+
+    # ---- queries / linear read (w19 criteria verbatim) ----
+    n_query_per_item: int = 32
+    # Total-query budget per cell. Cost scales as n_queries * steps * K (the
+    # potential sums over all K wells at every step), so the per-item count is
+    # reduced at large K to keep a cell affordable:
+    #   n_eff = clip(max_total_queries // K, min_query_per_item, n_query_per_item)
+    # steps is deliberately NOT reduced instead: at steps=600 the borderline
+    # d=2 K=16 cell flips from 0.906 to 0.867 accuracy, which would move K_max.
+    # The 1200-step rollout is load-bearing for comparability with w19.
+    max_total_queries: int = 8192
+    min_query_per_item: int = 4
+    query_sigma: float = 0.15  # address jitter magnitude (w19 sigma_theta = 0.15)
+    # How query_sigma is interpreted as d grows. "fixed_norm" (default) sets the
+    # per-axis scale to sigma/sqrt(d) so the jitter NORM is sigma at every d --
+    # the apples-to-apples generalization of w19's 1-D ring arc jitter, holding
+    # query PRECISION fixed and varying only the address dimension. "per_axis"
+    # uses sigma literally, so the jitter norm grows as sigma*sqrt(d). The two
+    # give materially different capacity curves; both are reported.
+    query_noise_mode: str = "fixed_norm"
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1
+    selectivity_threshold: float = 0.9  # w19 threshold for "retrieved"
+    # A cell whose BLANK control beats chance by more than this is discarded, not
+    # reported: it means the read is leaking the address, not reading the memory.
+    blank_margin: float = 0.15
+
+    # ---- item 1: the K_max vs d curve ----
+    # d=1 is included deliberately: w19's ring is a 1-D address MANIFOLD embedded
+    # in 2-D, so the ring ceiling's comparison point is d=1, not d=2.
+    dims: List[int] = field(default_factory=lambda: [1, 2, 3, 4, 6, 8, 12, 16])
+    # Geometric K ladder; the search stops at the first K below threshold.
+    k_ladder: List[int] = field(
+        default_factory=lambda: [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
+    )
+    k_cap: int = 2048  # compute cap; a cell stopped here is reported CENSORED
+
+    # ---- capture radius (the MEASURED w of the packing bound) ----
+    capture_n_dirs: int = 16
+    capture_n_offsets: int = 24
+    capture_max_offset: float = 1.0
+
+    # ---- item 2: basin-width sweep at fixed d ----
+    width_sweep_dims: List[int] = field(default_factory=lambda: [2, 3, 4])
+    width_sweep: List[float] = field(
+        default_factory=lambda: [0.08, 0.15, 0.22, 0.30, 0.45]
+    )
+    # The width sweep is 3 dims x 5 widths = 15 ladders, so it gets a tighter
+    # compute cap than the headline curve. Cells stopped here are CENSORED and
+    # the sweep is read for its SHAPE (plateau vs power law), not absolute K_max.
+    width_sweep_k_cap: int = 512
+
+    # ---- item 5: ADDRESSING capacity, decoder-free ----
+    # Item 1 walks the ladder on the w19 codebook read, which stops when the
+    # single scalar payload channel runs out of resolution -- at d >= 6 that
+    # happens while addressing is still perfect (d=6, K=512: read 0.599,
+    # selectivity 1.000). This sweep re-walks the ladder on selectivity alone so
+
+    # ---- item 4: does dissipation still gate retrieval at d > 2? ----
+    gamma_sweep_dims: List[int] = field(default_factory=lambda: [2, 4, 8])
+    gamma_sweep: List[float] = field(
+        default_factory=lambda: [0.0, 0.002, 0.005, 0.01, 0.02, 0.05]
+    )
+    gamma_sweep_K: int = 8
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -1091,6 +1220,9 @@ class CHLUConfig:
     experiment_kt: ExperimentKTConfig = field(default_factory=ExperimentKTConfig)
     experiment_retrieval: ExperimentRetrievalConfig = field(
         default_factory=ExperimentRetrievalConfig
+    )
+    experiment_dim_scaling: ExperimentDimScalingConfig = field(
+        default_factory=ExperimentDimScalingConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -1191,6 +1323,11 @@ def load_config(path: Path) -> CHLUConfig:
                 ExperimentRetrievalConfig, data.get("experiment_retrieval", {})
             )
         ),
+        experiment_dim_scaling=ExperimentDimScalingConfig(
+            **filter_valid_fields(
+                ExperimentDimScalingConfig, data.get("experiment_dim_scaling", {})
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -1223,6 +1360,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_paid_access": asdict(config.experiment_paid_access),
         "experiment_kt": asdict(config.experiment_kt),
         "experiment_retrieval": asdict(config.experiment_retrieval),
+        "experiment_dim_scaling": asdict(config.experiment_dim_scaling),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
