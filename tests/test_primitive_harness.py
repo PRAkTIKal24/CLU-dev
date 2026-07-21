@@ -231,3 +231,52 @@ def test_harness_config_round_trips(tmp_path):
     assert loaded.experiment_primitive_harness.d_model == 123
     assert loaded.experiment_primitive_harness.lr_grid == [1e-2]
     assert loaded.experiment_primitive_harness.clu_gamma == pytest.approx(0.077)
+
+
+# --------------------------------------------------------------------------
+# LR rescue pass (Item 4: the baselines must be real)
+# --------------------------------------------------------------------------
+def test_rescue_is_monotone_under_winners_curse():
+    """The rescue must never LOWER a reported score.
+
+    Regression test for a real bug in this harness: the probe that triggers a
+    rescue is a single seed, but the reported number is an n_seeds mean, so a
+    lucky probe could replace a good result with a worse average (observed:
+    adding_T128/mlp, 0.1825 -> 0.1832 on a lower-is-better metric). The pass
+    exists to protect baselines; silently degrading one would invert its purpose.
+    """
+    from chlu.experiments.exp_primitive_harness import run_lr_rescue
+
+    cfg = get_default_config().experiment_primitive_harness
+    cfg.train_steps, cfg.tune_steps, cfg.eval_batch = 2, 2, 8
+    cfg.batch_size, cfg.n_seeds = 4, 2
+    cfg.lr_grid = [1e-4, 1e-3]
+    family = AddingFamily(8)  # lower-is-better metric
+    prior = [{
+        "primitive": "gru", "family": family.name, "width": 4,
+        "best_lr": 1e-3, "metric_mean": -1.0,  # unbeatable: nothing may replace it
+        "metric_std": 0.0, "all_diverged": False,
+    }]
+    out = run_lr_rescue(cfg, {family.name: family}, prior, log=lambda *a: None)
+    assert out[0]["rescued"] is False
+    assert out[0]["metric_mean"] == -1.0
+
+
+def test_rescue_adopts_a_genuine_improvement():
+    """...but it must still adopt an LR that really is better."""
+    from chlu.experiments.exp_primitive_harness import run_lr_rescue
+
+    cfg = get_default_config().experiment_primitive_harness
+    cfg.train_steps, cfg.tune_steps, cfg.eval_batch = 2, 2, 8
+    cfg.batch_size, cfg.n_seeds = 4, 2
+    cfg.lr_grid = [1e-4, 1e-3]
+    family = AddingFamily(8)
+    prior = [{
+        "primitive": "gru", "family": family.name, "width": 4,
+        "best_lr": 1e-3, "metric_mean": 1e9,  # absurdly bad: anything beats it
+        "metric_std": 0.0, "all_diverged": False,
+    }]
+    out = run_lr_rescue(cfg, {family.name: family}, prior, log=lambda *a: None)
+    assert out[0]["rescued"] is True
+    assert out[0]["metric_mean"] < 1e9
+    assert out[0]["pre_rescue_metric_mean"] == 1e9

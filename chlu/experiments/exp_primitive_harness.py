@@ -484,24 +484,111 @@ def run_lr_rescue(cfg, families_by_name, prior, log=print):
                 for s in range(1, cfg.n_seeds)
             ]
             vals = np.array([r["metric"] for r in seeds], float)
-            log(
-                f"  RESCUED {entry['family']}/{entry['primitive']}: "
-                f"lr {entry['best_lr']:g} -> {win['lr']:g}, "
-                f"{entry['metric_mean']:.4f} -> {np.nanmean(vals):.4f}"
-            )
-            new.update(
-                rescued=True,
-                pre_rescue_lr=entry["best_lr"],
-                pre_rescue_metric_mean=entry["metric_mean"],
-                best_lr=win["lr"],
-                metric_mean=float(np.nanmean(vals)),
-                metric_std=float(np.nanstd(vals)),
-                metric_per_seed=[float(v) for v in vals],
-            )
+            new_mean = float(np.nanmean(vals))
+            # Winner's curse guard. The probe that triggered the rescue is a
+            # SINGLE seed; the reported number is a 3-seed mean, which can come
+            # out worse than the original (observed: adding_T128/mlp probed
+            # better on seed 0 but averaged 0.1832 vs 0.1825 over three seeds).
+            # Adopt the new LR only if it still wins on the 3-seed mean, so the
+            # pass is genuinely monotone -- otherwise it could silently LOWER a
+            # baseline, which is the opposite of what it exists to do.
+            if improves({"metric": new_mean}):
+                log(
+                    f"  RESCUED {entry['family']}/{entry['primitive']}: "
+                    f"lr {entry['best_lr']:g} -> {win['lr']:g}, "
+                    f"{entry['metric_mean']:.4f} -> {new_mean:.4f}"
+                )
+                new.update(
+                    rescued=True,
+                    pre_rescue_lr=entry["best_lr"],
+                    pre_rescue_metric_mean=entry["metric_mean"],
+                    best_lr=win["lr"],
+                    metric_mean=new_mean,
+                    metric_std=float(np.nanstd(vals)),
+                    metric_per_seed=[float(v) for v in vals],
+                )
+            else:
+                log(
+                    f"  rescue probe won on 1 seed but LOST on {cfg.n_seeds} "
+                    f"({entry['family']}/{entry['primitive']}: "
+                    f"{entry['metric_mean']:.4f} kept vs {new_mean:.4f}) — winner's curse"
+                )
+                new["rescued"] = False
+                new["rescue_reverted_mean"] = new_mean
         else:
             new["rescued"] = False
         rescued.append(new)
     return rescued
+
+
+def benchmark_cost(cfg, family, primitives, n_steps=25, n_rounds=5, log=print):
+    """Interleaved wall-clock + FLOPs benchmark at matched parameter budget.
+
+    Wall-clock on a SHARED machine is not a property of the primitive alone: this
+    wave ran alongside other agents' jobs (load average 277 at one point), which
+    roughly doubled measured step times. Timing each primitive to completion in
+    turn would therefore hand whichever primitive ran during a quiet period an
+    artificial win.
+
+    Mitigation: cycle through the primitives round-robin, timing a short burst of
+    each per round, and report the MEDIAN over rounds plus the spread. Contention
+    then hits every primitive in roughly the same proportion, and the ratios
+    (which is what the report quotes) are far more stable than the absolutes.
+    FLOPs are exact and load-independent, so they are the primary cost metric.
+    """
+    prepared = {}
+    for primitive in primitives:
+        width, bp, tp, err = match_width(primitive, cfg, family, jax.random.PRNGKey(0))
+        model = build_model(primitive, cfg, family, width, jax.random.PRNGKey(0))
+        opt = _make_opt(1e-3, cfg.grad_clip)
+        prepared[primitive] = {
+            "width": width, "block_params": bp, "total_params": tp, "param_err": err,
+            "model": model, "opt": opt,
+            "opt_state": opt.init(eqx.filter(model, eqx.is_inexact_array)),
+            "times": [],
+            "fwd_flops": forward_flops(model, family.jbatch(jax.random.PRNGKey(0), 1)[0]),
+        }
+
+    x, y, mask = family.jbatch(jax.random.PRNGKey(1), cfg.batch_size)
+    for primitive in primitives:  # warm up compilation outside the timed region
+        st = prepared[primitive]
+        st["model"], st["opt_state"], loss = _train_step(
+            st["model"], st["opt_state"], x, y, mask, st["opt"], family
+        )
+        jax.block_until_ready(loss)
+
+    for rnd in range(n_rounds):
+        for primitive in primitives:
+            st = prepared[primitive]
+            t0 = time.perf_counter()
+            for _ in range(n_steps):
+                st["model"], st["opt_state"], loss = _train_step(
+                    st["model"], st["opt_state"], x, y, mask, st["opt"], family
+                )
+            jax.block_until_ready(loss)
+            st["times"].append((time.perf_counter() - t0) / n_steps)
+        log(f"  round {rnd + 1}/{n_rounds} done")
+
+    out = {}
+    for primitive in primitives:
+        st = prepared[primitive]
+        t = np.array(st["times"])
+        out[primitive] = {
+            "width": st["width"], "block_params": st["block_params"],
+            "total_params": st["total_params"], "param_err": st["param_err"],
+            "ms_per_step_median": float(np.median(t) * 1e3),
+            "ms_per_step_min": float(t.min() * 1e3),
+            "ms_per_step_iqr": float((np.percentile(t, 75) - np.percentile(t, 25)) * 1e3),
+            "fwd_flops": st["fwd_flops"],
+        }
+    ref = out.get("gru", {}).get("ms_per_step_median")
+    for primitive in primitives:
+        if ref:
+            out[primitive]["wallclock_x_gru"] = out[primitive]["ms_per_step_median"] / ref
+        fl = out.get("gru", {}).get("fwd_flops")
+        if fl and np.isfinite(fl):
+            out[primitive]["flops_x_gru"] = out[primitive]["fwd_flops"] / fl
+    return out
 
 
 def build_families(cfg, want):
@@ -659,6 +746,8 @@ def main():
     parser.add_argument("--rescue", action="store_true",
                         help="add the full-length LR rescue pass (all primitives)")
     parser.add_argument("--rescue-from", help="run ONLY the rescue pass against an existing JSON")
+    parser.add_argument("--benchmark", action="store_true",
+                        help="run ONLY the interleaved wall-clock/FLOPs cost benchmark")
     args = parser.parse_args()
     if args.project:
         from chlu.project import ProjectManager
@@ -674,6 +763,22 @@ def main():
         config.experiment_primitive_harness.train_steps = args.steps
     if args.rescue_from:
         rescue_from_json(args.rescue_from, config=config)
+        return
+    if args.benchmark:
+        cfg = config.experiment_primitive_harness
+        fam = MQARFamily(cfg.mqar_seq_len_fixed, cfg.mqar_kv_fixed, cfg.mqar_vocab)
+        out = benchmark_cost(cfg, fam, cfg.primitives)
+        path = os.path.join(save_dir, "..", "results", "primitive_cost_benchmark.json")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            json.dump({"family": fam.name, "cost": out}, f, indent=2)
+        for k, v in out.items():
+            print(f"  {k:10s} {v['ms_per_step_median']:7.1f} ms/step "
+                  f"(min {v['ms_per_step_min']:6.1f}, IQR {v['ms_per_step_iqr']:5.1f})  "
+                  f"{v['fwd_flops']:.3g} FLOP  "
+                  f"{v.get('wallclock_x_gru', float('nan')):.2f}x GRU wall / "
+                  f"{v.get('flops_x_gru', float('nan')):.2f}x GRU FLOPs")
+        print(f"Wrote {path}")
         return
     run_primitive_harness(
         config=config, save_dir=save_dir, seed=args.seed,
