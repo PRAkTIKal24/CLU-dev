@@ -759,9 +759,15 @@ def _plot_all(results, save_dir):
         )
         a1.plot(
             x,
-            [max(k["blank_read"] for k in c["per_K"]) for c in df["curve"]],
+            [max(k["blank_codebook"] for k in c["per_K"]) for c in df["curve"]],
             "^:",
-            label="blank control (max over K)",
+            label="blank, codebook read (max over K)",
+        )
+        a1.plot(
+            x,
+            [max(k["blank_centroid"] for k in c["per_K"]) for c in df["curve"]],
+            "v:",
+            label="blank, NEAREST-CENTROID read (max over K)",
         )
         a1.axhline(df["pass_strict_threshold"], color="r", ls="--", lw=0.8)
         a1.set_xticks(x)
@@ -861,11 +867,20 @@ def run_experiment_learned_memory(
     )
     results["item3_interference"] = item3_interference(cfg, seed=seed)
     results["item4_gamma_map"] = item4_gamma_map(cfg, seed=seed)
-    results["figures"] = _plot_all(results, save_dir)
-
+    # Write the metrics BEFORE plotting. A plotting bug must never destroy a
+    # completed run (it did once: a stale key in _plot_all raised after all four
+    # items had been computed, and the JSON is written downstream of it).
     results_dir = os.path.join(os.path.dirname(os.path.abspath(save_dir)), "results")
     os.makedirs(results_dir, exist_ok=True)
     out_path = os.path.join(results_dir, "exp_learned_memory_metrics.json")
+    with open(out_path, "w") as f:
+        json.dump(results, f, indent=2)
+
+    try:
+        results["figures"] = _plot_all(results, save_dir)
+    except Exception as exc:  # pragma: no cover - figures are not the result
+        results["figures"] = []
+        results["figure_error"] = repr(exc)
     with open(out_path, "w") as f:
         json.dump(results, f, indent=2)
     results["metrics_path"] = out_path
