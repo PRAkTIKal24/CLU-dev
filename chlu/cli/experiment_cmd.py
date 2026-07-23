@@ -31,6 +31,10 @@ from ..experiments.exp_retrieval import (
     run_experiment_retrieval,
     apply_quick as apply_retrieval_quick,
 )
+from ..experiments.exp_hopfield_capacity import (
+    run_experiment_hopfield_capacity,
+    apply_quick as apply_hopfield_capacity_quick,
+)
 from ..experiments.kt import KT_MODES
 
 console = Console()
@@ -195,6 +199,20 @@ def setup_experiment_parsers(subparsers):
     exp_dim_parser.add_argument('--quick', action='store_true',
                                 help='Quick mode (d<=3, K<=16, short rollouts)')
     exp_dim_parser.set_defaults(func=cmd_exp_dim_scaling)
+
+    # exp-hopfield-capacity
+    exp_hc_parser = subparsers.add_parser(
+        'exp-hopfield-capacity',
+        help='CLU vs modern-Hopfield/U-Hop SOTA on the associative-memory '
+             'retrieval benchmark (designed register, w22)'
+    )
+    exp_hc_parser.add_argument('--project', help='Project name to use')
+    exp_hc_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_hc_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (small load grid, short rollouts)')
+    exp_hc_parser.add_argument('--dataset',
+                               help='Override datasets (comma-separated)')
+    exp_hc_parser.set_defaults(func=cmd_exp_hopfield_capacity)
     # exp-learned-memory
     exp_lm_parser = subparsers.add_parser(
         'exp-learned-memory',
@@ -882,6 +900,41 @@ def cmd_exp_dim_scaling(args):
                       style="bold green")
     except Exception as e:
         console.print(f"\u2717 Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_hopfield_capacity(args):
+    """Run the Hopfield-capacity benchmark: CLU vs modern-Hopfield/U-Hop SOTA."""
+    console.print(
+        "[bold cyan]Running Experiment HOPFIELD-CAPACITY: CLU designed register "
+        "vs modern-Hopfield/U-Hop SOTA (DESIGNED, not learned)[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        apply_hopfield_capacity_quick(config)
+    if getattr(args, 'dataset', None):
+        config.experiment_hopfield_capacity.datasets = args.dataset.split(',')
+
+    try:
+        res = run_experiment_hopfield_capacity(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+        )
+        console.print(
+            f"✓ Experiment HOPFIELD-CAPACITY completed -> {res['metrics_path']}",
+            style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
         return 1
 
     return 0
