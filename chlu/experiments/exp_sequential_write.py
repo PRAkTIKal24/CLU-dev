@@ -465,6 +465,11 @@ def _gate_cell(
         "arm": arm,
         "seed": int(seed),
         "blank": bool(blank),
+        # ⚠ The `designed` rung has ZERO trainable parameters, so its "write" is
+        # a no-op and its 0.000 corruption is trivially true (w20 reported the
+        # same 0.000 for the same reason). The non-degenerate designed WRITE
+        # operator is the atom dictionary of item 2.
+        "n_learned_params": _n_learned(V2),
         "decision": decision["decision"],
         "d_min_proposed": float(decision["d_min_proposed"]),
         "d_min_written": float(decision["d_min_written"]),
@@ -485,6 +490,22 @@ def _gate_cell(
         "strict_drop": before["mean_strict"] - after["mean_strict"],
         "strict_B": float(strict_B),
     }
+
+
+def _n_learned(V) -> int:
+    """Trainable parameter count of a landscape's learned part (0 = designed)."""
+    import equinox as eqx
+
+    if getattr(V, "learned", None) is None:
+        return 0
+    return int(
+        sum(
+            x.size
+            for x in jax.tree_util.tree_leaves(
+                eqx.filter(V.learned, eqx.is_inexact_array)
+            )
+        )
+    )
 
 
 def _measured_drift(model, q_stars, cfg, dim):
