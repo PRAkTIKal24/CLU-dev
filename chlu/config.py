@@ -1668,6 +1668,64 @@ class ExperimentSequentialWriteConfig:
 
 
 @dataclass
+class ExperimentHopfieldCapacityConfig:
+    """Configuration for the Hopfield-capacity PERFORMANCE benchmark (w22).
+
+    The ONE external benchmark where a *designed* CLU is admissible (scout
+    #1-ranked target): the modern-Hopfield / dense-associative-memory retrieval
+    protocol, matched VERBATIM to ``MAGICS-LAB/UHop @ cdac754``
+    (``memory_retrieval.py``) and ``ml-jku/hopfield-layers @ f56f929``. Nothing
+    is learned on either side (the Hopfield line writes patterns in closed form;
+    CLU designs a landscape), so the w20 "learning destroys everything" blocker
+    does not bind. See chlu/experiments/exp_hopfield_capacity.py.
+
+    ⚠ The repo's success metric is **mean sqdiff** (Σ(clamp(x,0,1)−clamp(x̂,0,1))²
+    over pixels), NOT cosine>0.9 — the scout's cosine number was single-sourced.
+    We match sqdiff and ALSO report cosine + identity-retrieval accuracy.
+    """
+
+    datasets: List[str] = field(default_factory=lambda: ["mnist"])
+    load_grid: List[int] = field(default_factory=lambda: [16, 32, 64, 128, 256, 512])
+    noise_levels: List[float] = field(
+        default_factory=lambda: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    )
+    noise_fixed_load: int = 128  # load at which the noise sweep is run
+    n_data_pool: int = 2000  # how many images to draw the store from
+    mask_p: float = 0.5  # dropout fraction (the "50% masked" query) — repo verbatim
+
+    # Hopfield arms
+    hopfield_beta: float = 1.0  # repo default (β=1, 1 step)
+    hopfield_steps: int = 1  # repo default
+    hopfield_beta_tuned: float = 0.0  # 0 ⇒ auto β·⟨x,x⟩≈200 (sharp) rule
+    hopfield_steps_tuned: int = 2
+    activations: List[str] = field(default_factory=lambda: ["softmax", "sparsemax"])
+
+    # CLU designed register (GaussianMemoryPotential + damped Verlet).
+    # well width s = clu_s_frac * median NN pattern distance. MUST be < ~0.4:
+    # Gaussian wells wider than the inter-pattern spacing merge into one basin
+    # and every query settles to the centroid (measured: acc 1.00 at 0.3 vs 0.17
+    # = chance at 0.5 on 6 well-separated 32-d patterns). This is the localized
+    # dense-associative-memory regime; it is NOT tuned per load.
+    clu_s_frac: float = 0.3
+    clu_b: float = 1.0
+    clu_alpha: float = 1e-3
+    clu_gamma: float = 0.1  # settling friction (address phase)
+    clu_steps: int = 200
+    clu_dt: float = 0.0  # 0 ⇒ auto-set for stability from s and b
+    clu_tail_frac: float = 0.1  # read = mean of last tail_frac of the rollout
+    clu_kinetic_mode: str = "newtonian_identity"
+
+    # Retry differentiator (codebook-gated boosted second pass)
+    retry_enabled: bool = True
+    retry_boost: float = 1.5  # KE boost applied to the query on the retry launch
+    retry_conf_frac: float = 0.5  # bottom-fraction of first-pass confidences retried
+
+    success_cosine: float = 0.9  # scout's secondary criterion, reported alongside
+    seed: int = 0
+    rollout_chunk: int = 256
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -1736,6 +1794,9 @@ class CHLUConfig:
     )
     experiment_sequential_write: ExperimentSequentialWriteConfig = field(
         default_factory=ExperimentSequentialWriteConfig
+    )
+    experiment_hopfield_capacity: ExperimentHopfieldCapacityConfig = field(
+        default_factory=ExperimentHopfieldCapacityConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -1865,6 +1926,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_sequential_write", {}),
             )
         ),
+        experiment_hopfield_capacity=ExperimentHopfieldCapacityConfig(
+            **filter_valid_fields(
+                ExperimentHopfieldCapacityConfig,
+                data.get("experiment_hopfield_capacity", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -1902,6 +1969,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_potential_class": asdict(config.experiment_potential_class),
         "experiment_primitive_harness": asdict(config.experiment_primitive_harness),
         "experiment_sequential_write": asdict(config.experiment_sequential_write),
+        "experiment_hopfield_capacity": asdict(config.experiment_hopfield_capacity),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
