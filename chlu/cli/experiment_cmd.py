@@ -27,6 +27,10 @@ from ..experiments.exp_potential_class import (
     run_experiment_potential_class,
     apply_quick as apply_potential_class_quick,
 )
+from ..experiments.exp_designed_mechanism import (
+    run_experiment_designed_mechanism,
+    apply_quick as apply_designed_mechanism_quick,
+)
 from ..experiments.exp_retrieval import (
     run_experiment_retrieval,
     apply_quick as apply_retrieval_quick,
@@ -219,6 +223,17 @@ def setup_experiment_parsers(subparsers):
     exp_pc_parser.add_argument('--classes', nargs='+',
                                help='Override the swept potential classes')
     exp_pc_parser.set_defaults(func=cmd_exp_potential_class)
+    # exp-designed-mechanism
+    exp_dm_parser = subparsers.add_parser(
+        'exp-designed-mechanism',
+        help='Is the K=8 wall GEOMETRY or LEARNING? K_learned vs d for a learned '
+             'atom-dictionary mechanism, vs the designed 4*2^d ceiling (w22)'
+    )
+    exp_dm_parser.add_argument('--project', help='Project name to use')
+    exp_dm_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_dm_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (d<=3, K<=8, 2 seeds, tiny writes)')
+    exp_dm_parser.set_defaults(func=cmd_exp_designed_mechanism)
     # exp-primitive-harness
     exp_ph_parser = subparsers.add_parser(
         'exp-primitive-harness',
@@ -944,6 +959,39 @@ def cmd_exp_potential_class(args):
         )
         console.print(f"✓ Experiment POTENTIAL-CLASS completed -> {res['metrics_path']}",
                       style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_designed_mechanism(args):
+    """Run the K=8-wall discriminator: is it GEOMETRY or LEARNING?"""
+    console.print(
+        "[bold cyan]Running Experiment DESIGNED-MECHANISM: K_learned vs d (is the K=8 wall geometry or learning?)[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        apply_designed_mechanism_quick(config)
+
+    try:
+        res = run_experiment_designed_mechanism(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+        )
+        console.print(
+            f"✓ Experiment DESIGNED-MECHANISM completed -> {res['metrics_path']}",
+            style="bold green",
+        )
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
