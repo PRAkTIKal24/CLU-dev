@@ -1461,6 +1461,10 @@ class ExperimentSequentialWriteConfig:
     # arm, but if a primitive does not forget at all there, the curve is
     # uninformative and the interesting quantity is WHERE it breaks.
     kv_extended_items: int = 64
+    # ...and give the extended sweep its own symmetric rescue: the LR selected at
+    # K=16 need not be the best one at K=64, and the extended table is the
+    # deliverable, so it must not inherit an unrescued LR.
+    kv_extended_rescue: bool = True
 
     # ---- item 4: retrieval cost scaling in K ----
     cost_K_grid: List[int] = field(default_factory=lambda: [1, 2, 4, 8, 16])

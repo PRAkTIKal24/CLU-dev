@@ -905,19 +905,38 @@ def item3_cross_primitive(cfg, hcfg, seeds):
             m, rs = full(lr)
             if m > best_m:  # monotone: adopt ONLY if the full n-seed mean wins
                 best_m, best_rs, best_lr, rescued = m, rs, lr, lr
-        # --- extended sweep: same selected LR, same seeds, larger K. Reported
-        # separately, never merged into the matched-K headline. ---
-        ext = [
-            sequential_write_primitive(
-                prim, cfg, hcfg, s, best_lr, n_items=cfg.kv_extended_items
-            )
-            for s in seeds
-        ]
+
+        # --- extended sweep: same seeds, larger K, reported SEPARATELY (never
+        # merged into the matched-K headline) and given its own symmetric,
+        # monotone rescue: the LR selected at K=16 need not be the best at K=64,
+        # and adopting one only when the FULL n-seed mean improves keeps the pass
+        # unable to lower any primitive's score (the winner's-curse fix). ---
+        def extended(lr, prim=prim):
+            rs = [
+                sequential_write_primitive(
+                    prim, cfg, hcfg, s, lr, n_items=cfg.kv_extended_items
+                )
+                for s in seeds
+            ]
+            return float(np.nanmean([r["final_mean_retention"] for r in rs])), rs
+
+        ext_lr = best_lr
+        ext_m, ext = extended(ext_lr)
+        ext_rescued = None
+        if cfg.kv_extended_rescue:
+            for lr in hcfg.lr_grid:
+                if lr == best_lr:
+                    continue
+                m, rs = extended(lr)
+                if m > ext_m:
+                    ext_m, ext, ext_lr, ext_rescued = m, rs, lr, lr
         out.append(
             {
                 "primitive": prim,
                 "selected_lr": best_lr,
                 "extended_K": cfg.kv_extended_items,
+                "extended_lr": ext_lr,
+                "extended_rescued_to_lr": ext_rescued,
                 "extended_mean_retention_at_K": _mean_over_seeds(ext, "mean_retention"),
                 "extended_item1_retention_at_K": _mean_over_seeds(
                     ext, "item1_retained"
