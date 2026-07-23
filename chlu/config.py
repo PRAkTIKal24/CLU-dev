@@ -1451,6 +1451,123 @@ class ExperimentPotentialClassConfig:
 
 
 @dataclass
+class ExperimentDesignedMechanismConfig:
+    """Configuration for the K=8-wall discriminator (w22): GEOMETRY or LEARNING?
+
+    A fixed designed MECHANISM (``AtomDictionaryPotential``: learned amplitudes/
+    centers/widths, group-masked writes) with **learned content** (trained by
+    ``chlu.training.train_memory``) on a ``d``-dimensional address ball. Sweeps the
+    address dimension ``d`` and measures ``K_learned`` = the largest item count a
+    LEARNED atom dictionary clears at strict 0.9 (leak-immune value criterion, blank
+    control per cell), overlaid on ``K_designed`` re-measured on the SAME harness
+    with a hand-built ``BallRegisterPotential``.
+
+    ⚠ The atom count is scaled with K (``n_atoms = atoms_per_item·K``, ``n_groups =
+    K``) so a plateau in ``K_learned`` is a LEARNING failure, not a
+    parameterization-capacity failure (theorist §4.3, ``B_total ≤ P·b_θ``). See
+    chlu/experiments/exp_designed_mechanism.py.
+    """
+
+    # ---- d-ball geometry (shared with the designed dim-scaling arm) ----
+    R: float = 1.0
+    wall_margin: float = 0.5
+    well_width: float = 0.15  # designed BallRegisterPotential well width
+    well_depth: float = 1.0
+    payload_kappa: float = 0.1
+    c_conf: float = 10.0
+    site_seed: int = 0
+    payload_seed: int = 0
+
+    # ---- two-phase retrieval rollout ----
+    dt: float = 0.05
+    gamma_address: float = 0.05  # phase 1: dissipative relaxation to the address
+    # phase 2: value retrieval REQUIRES dissipation (address-space-dimension-scaling
+    # item 4: payload err 0.57 at gamma=0 vs ~1e-6 at gamma=0.02). The payload is the
+    # d-th coordinate of the atom-well center, launched at 0, and must dissipate up
+    # to a_i — a conservative read (gamma_read=0) leaves it oscillating and the tail
+    # mean misses the stored value, so strict success is ~0 even for the DESIGNED arm.
+    gamma_read: float = 0.02
+    address_steps: int = 400
+    read_steps: int = 800
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+    rollout_chunk: int = 256
+
+    # ---- queries + read (fixed_norm jitter, w19-comparable) ----
+    n_query_per_item: int = 32
+    max_total_queries: int = 4096
+    min_query_per_item: int = 4
+    query_sigma: float = 0.15
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1
+    pass_strict: float = 0.9
+    blank_strict_max: float = 0.1  # value blank must score at/below this
+    blank_margin: float = 0.15  # classification blank margin over chance (reported)
+
+    # ---- the LEARNED atom-dictionary mechanism ----
+    # Atoms PER ITEM. n_atoms = atoms_per_item * K, so the parameter budget scales
+    # with K and a plateau is a learning failure, not a capacity-of-parameters one.
+    atoms_per_item: int = 32
+    # Floor on the total atom count (n_atoms = max(atoms_per_item*K, min_atoms)).
+    # A large over-complete dictionary smooths the write optimization; scaling atoms
+    # DOWN at small K starves the write (d=4 K=2 with 64 atoms: write loss stuck at
+    # 0.18 on some seeds). The floor keeps every cell over-complete; the atoms_per_item
+    # *K term dominates and controls the budget once K is large.
+    min_atoms: int = 384
+    # centers ~ N(0, init_scale). ⚠ LOAD-BEARING and MEASURED: at init_scale=0.5 the
+    # flat-start atoms cluster near the origin and the writer cannot dig a well that
+    # reaches an item whose payload |a_i|=1 from the payload=0 launch manifold — d=2
+    # K=4 caps at strict 0.500 (only the |a_i|<1 items retrieve) regardless of atom
+    # count (tested to 1024 atoms). At init_scale=1.0 the atoms are spread across the
+    # full (d+1)-ball including the payload axis and d=2 K=4 reaches strict 1.000.
+    # This is the basin-reach limit potential-function-class flagged (open-Q #2),
+    # defused by the initialization, not by more parameters.
+    atom_init_scale: float = 1.0
+    atom_init_width: float = 0.3  # initial well width s
+    atom_depth_init: float = 1e-4  # flat start; the writer digs the wells (A=amp^2)
+    learned_confine: float = 0.05  # coercivity alpha*|q|^2
+    bits_per_param: int = 32  # for the reported B_total = P * bits_per_param
+
+    # ---- write objective (static, per-item minimum-digging) ----
+    write_steps: int = 600  # global write (matched to potential-function-class)
+    local_write_steps: int = 300  # per masked single-item write
+    write_lr: float = 3e-3
+    write_weight_decay: float = 1e-4
+    write_n_perturb: int = 32
+    write_sigma_addr: float = 0.25
+    write_sigma_pay: float = 0.6
+    write_margin: float = 0.15
+    write_barrier: float = 0.2
+
+    # ---- item 1: the discriminator sweep ----
+    dims: List[int] = field(default_factory=lambda: [2, 3, 4, 6, 8])
+    k_ladder: List[int] = field(
+        default_factory=lambda: [2, 4, 8, 16, 32, 64, 128]
+    )
+    k_cap: int = 128
+    # The discriminator uses the mechanism's BEST single-shot FIDELITY write =
+    # GLOBAL (potential-function-class: atoms global 1.000 vs local 0.859 at K=4),
+    # so a K_learned plateau cannot be blamed on a suboptimal write operator. The
+    # masked-vs-global write is compared explicitly in item 3 (interference).
+    learned_arm: str = "learned_global"
+    discriminator_seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])
+    designed_seeds: List[int] = field(default_factory=lambda: [0])
+
+    # ---- item 2: mass arm + coupling check ----
+    mass_dim: int = 3
+    mass_K: int = 4
+    mass_spread: float = 4.0  # per-item masses span [1/spread, spread] geometrically
+    mass_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    mass_help_threshold: float = 0.02  # delta-strict above which "mass helps"
+
+    # ---- item 3: interference across d ----
+    interference_dims: List[int] = field(default_factory=lambda: [2, 3, 4])
+    interference_K: int = 4
+    interference_write_steps: int = 300
+    interference_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+
+@dataclass
 class ExperimentPrimitiveHarnessConfig:
     """Configuration for the primitive harness (w20).
 
@@ -1789,6 +1906,9 @@ class CHLUConfig:
     experiment_potential_class: ExperimentPotentialClassConfig = field(
         default_factory=ExperimentPotentialClassConfig
     )
+    experiment_designed_mechanism: ExperimentDesignedMechanismConfig = field(
+        default_factory=ExperimentDesignedMechanismConfig
+    )
     experiment_primitive_harness: ExperimentPrimitiveHarnessConfig = field(
         default_factory=ExperimentPrimitiveHarnessConfig
     )
@@ -1914,6 +2034,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_potential_class", {}),
             )
         ),
+        experiment_designed_mechanism=ExperimentDesignedMechanismConfig(
+            **filter_valid_fields(
+                ExperimentDesignedMechanismConfig,
+                data.get("experiment_designed_mechanism", {}),
+            )
+        ),
         experiment_primitive_harness=ExperimentPrimitiveHarnessConfig(
             **filter_valid_fields(
                 ExperimentPrimitiveHarnessConfig,
@@ -1967,6 +2093,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_dim_scaling": asdict(config.experiment_dim_scaling),
         "experiment_learned_memory": asdict(config.experiment_learned_memory),
         "experiment_potential_class": asdict(config.experiment_potential_class),
+        "experiment_designed_mechanism": asdict(config.experiment_designed_mechanism),
         "experiment_primitive_harness": asdict(config.experiment_primitive_harness),
         "experiment_sequential_write": asdict(config.experiment_sequential_write),
         "experiment_hopfield_capacity": asdict(config.experiment_hopfield_capacity),

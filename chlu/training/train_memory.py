@@ -72,8 +72,17 @@ def write_loss(
     w_grad: float = 1.0,
     w_min: float = 1.0,
     w_barrier: float = 1.0,
+    payload_index: int = 2,
 ) -> jnp.ndarray:
-    """Scalar write loss (see module docstring). ``targets`` is (K, dim)."""
+    """Scalar write loss (see module docstring). ``targets`` is (K, dim).
+
+    ``payload_index`` is the coordinate that carries the stored value (the read-out
+    channel launched at zero by the anti-decoration guard). It defaults to ``2``,
+    the ring/w20 convention (address plane ``q0,q1`` + payload ``q2``); a
+    ``d``-dimensional address ball uses ``payload_index = d`` (address ``q[:d]`` +
+    payload ``q[d]``). All coordinates get ``sigma_addr`` jitter except the payload
+    channel, which gets ``sigma_pay`` and is pinned to 0 on the query manifold.
+    """
     K, dim = targets.shape
     gradV = jax.grad(lambda q: V(q))
 
@@ -82,20 +91,14 @@ def write_loss(
 
     # --- each target must be a MINIMUM over a finite neighbourhood ---
     k_p, k_q = jax.random.split(key, 2)
-    scale = jnp.concatenate(
-        [
-            jnp.full((2,), sigma_addr),
-            jnp.full((1,), sigma_pay),
-            jnp.full((dim - 3,), sigma_addr),
-        ]
-    )
+    scale = jnp.full((dim,), sigma_addr).at[payload_index].set(sigma_pay)
     delta = jax.random.normal(k_p, (K, n_perturb, dim)) * scale
     # ...and explicitly at the query manifold (payload channel launched at zero),
     # jittered on the address plane exactly as the queries will be.
     q_jit = jax.random.normal(k_q, (K, n_perturb, dim)) * scale
-    q_jit = q_jit.at[:, :, 2].set(0.0)
+    q_jit = q_jit.at[:, :, payload_index].set(0.0)
     query_pts = targets[:, None, :] + q_jit
-    query_pts = query_pts.at[:, :, 2].set(0.0)
+    query_pts = query_pts.at[:, :, payload_index].set(0.0)
 
     pts = jnp.concatenate([targets[:, None, :] + delta, query_pts], axis=1)
     v_t = jax.vmap(V)(targets)  # (K,)
