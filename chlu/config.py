@@ -1525,15 +1525,19 @@ class ExperimentDesignedMechanismConfig:
     # strict 0.400 despite a geometrically-trivial site separation 1.838). The ladder
     # walk then terminates at a starved low-K cell and K_learned reads as an optimizer
     # artifact, not a capacity. A geometric floor c**d compensates: it holds the
-    # atoms-near-each-site count ~constant across d. c = min_atoms_c = 2.0 is chosen to
-    # (i) match the designed capacity growth 4*2^d (constant atoms-per-designed-cell),
-    # and (ii) compensate the ~per-dimension halving of the near-site atom fraction at
-    # R~1, init_scale~1. base = min_atoms_base = 512 pins the d=2 floor at 2048 (the
-    # value w22 verified adequate for the real d=2 K=8 wall, 10240 params). Per-point
+    # atoms-near-each-site count ~constant across d. c = min_atoms_c = sqrt(2) is
+    # anchored EMPIRICALLY (w23 adequacy probe): the near-site atom count needed for a
+    # converged write grows ~sqrt(2) per added dimension — w22 shows d=6 adequate at
+    # 2048 atoms and the w23 probe shows d=8 K=16 reaches strict 1.000 by 4096-8192
+    # (2048*(sqrt2)^2 = 4096). This is BELOW the a-priori 4*2^d rate (c=2) because the
+    # achieved atom packing is non-ideal (address-space-dimension-scaling: d_eff~0.72d,
+    # shell concentration), so the effective per-dimension thinning is sub-2. base =
+    # min_atoms_base = 512 pins the floor with margin at every sweep dimension (d=2 ->
+    # 1024, d=6 -> 4096 = 2x w22, d=8 -> 8192 = strict 1.000 in the probe). Per-point
     # budget adequacy is verified empirically (a failing K must fail with a budget
     # whose further increase does not change the verdict).
     min_atoms_base: int = 512
-    min_atoms_c: float = 2.0
+    min_atoms_c: float = 1.4142135623730951  # sqrt(2)
     # centers ~ N(0, init_scale). ⚠ LOAD-BEARING and MEASURED: at init_scale=0.5 the
     # flat-start atoms cluster near the origin and the writer cannot dig a well that
     # reaches an item whose payload |a_i|=1 from the payload=0 launch manifold — d=2
