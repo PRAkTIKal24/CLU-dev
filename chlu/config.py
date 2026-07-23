@@ -1653,6 +1653,29 @@ class ExperimentPrimitiveHarnessConfig:
     )
     clu_steps_sweep: List[int] = field(default_factory=lambda: [1, 2, 4])
 
+    # ---- w22 gated-write performance test (exp_gated_write.py) ----
+    # The gated-write comparison re-runs the WHOLE five-primitive slot at the
+    # published-numbers budget (train 1200 / tune 400) so the re-run baselines
+    # double as a reproduction check. These fields drive that experiment only;
+    # they do not touch the shipped harness defaults above.
+    gw_train_steps: int = 1200
+    gw_tune_steps: int = 400
+    # MQAR runs the CLU at gamma=0 (gamma-read-sweep §1: +0.040 free, monotone,
+    # a category-(a) knob no baseline has); adding/parity keep the shipped gamma.
+    gw_mqar_gamma: float = 0.0
+    # Item 3a: long-horizon extrapolation — train at gw_extrap_train_T, test at
+    # each multiple. The founding CHLU claim (Exp A) is stable extrapolation.
+    gw_extrap_train_T: int = 64
+    gw_extrap_mults: List[int] = field(default_factory=lambda: [1, 2, 4])
+    gw_extrap_families: List[str] = field(
+        default_factory=lambda: ["adding", "parity"]
+    )
+    # Item 3c: robustness — Gaussian noise added to the (continuous) input at
+    # inference only. Sweep the std; adding problem (noise on the value channel).
+    gw_noise_grid: List[float] = field(
+        default_factory=lambda: [0.0, 0.05, 0.1, 0.2, 0.4]
+    )
+
 
 @dataclass
 class ExperimentSequentialWriteConfig:
