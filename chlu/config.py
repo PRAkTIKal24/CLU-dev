@@ -1808,6 +1808,87 @@ class ExperimentSequentialWriteConfig:
 
 
 @dataclass
+class ExperimentControllerMvpConfig:
+    """Configuration for the MVC-0 controller on a designed store (w23).
+
+    The N75 rematch: put CLU + the hand-coded controller (admission + placement +
+    eviction/decay, NO learning) on the SAME retention-vs-K chart as the w21
+    gru/mlp/attention lines, and report BOTH retention-per-admitted-item and
+    retention-per-offered-item (the abstention-vs-accuracy trade, stated before a
+    referee does). The controller writes the designed ``AtomStorePotential`` whose
+    atom writes are C3-local; the four primitive baselines are the
+    `primitive-harness` slot reused verbatim.
+
+    Geometry defaults are chosen so the gate CAN fire (N74): the designed store's
+    ``d_safe = d_safe_mult * atom_width = 4.4 * 0.35 = 1.54``, and proposals land
+    in a disk of radius ``proposal_radius = 2.0`` whose packing bound is ~6.1 —
+    so a majority of offers at K >= 8 are refused or relocated (on the w20 ring
+    the same gate was arithmetically vacuous). Retrieval / query / write knobs are
+    inherited from the sequential-write group so the numbers are directly
+    comparable to w21. See chlu/experiments/exp_controller_mvp.py.
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])
+
+    # ---- designed store (AtomStorePotential; theorist S3 values, = seq-write) ----
+    atom_width: float = 0.35
+    atom_alpha: float = 0.02
+    atom_amp: float = 1.0
+    payload_kappa: float = 1.0
+    payload_seed: int = 0
+
+    # ---- the admission gate (d_safe = d_safe_mult * atom_width) ----
+    d_safe_mult: float = 4.4
+    n_relocation_candidates: int = 400
+    proposal_radius: float = 2.0  # disk the controller proposes sites in (FIXED geom)
+
+    # ---- the K ladder for the rematch (controller lines are cheap: no training) ----
+    K_grid: List[int] = field(default_factory=lambda: [1, 2, 4, 8, 16, 32, 64])
+
+    # ---- budget / eviction / decay (the third decision rule) ----
+    # None => budget == store capacity (eviction fires only on a genuinely full
+    # store). A finite budget forces staleness/depth eviction earlier.
+    budget: Optional[int] = None
+    evict_policy: str = "staleness"  # or "depth"
+    leak: float = 0.0  # default per-tick decay for a leaky well (0 => never forgets)
+    amp_floor: float = 0.05  # a leaky well self-evicts below this depth
+    # "sized" geometry arm: grow the disk radius so the packing bound >= K, to
+    # show the controller wins per-offered too once the address space fits the load.
+    run_sized_geometry: bool = True
+
+    # ---- eviction/decay demo (item: permanent + leaky wells in one store) ----
+    decay_demo_K: int = 8
+    decay_demo_leak: float = 0.35  # ~half-life 2 ticks; a permanent item survives all
+
+    # ---- two-phase retrieval (identical to sequential-write / w20) ----
+    dt: float = 0.05
+    gamma_address: float = 0.05
+    gamma_read: float = 0.0
+    address_steps: int = 400
+    read_steps: int = 800
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+    n_query_per_item: int = 16
+    query_sigma_theta: float = 0.15
+    query_sigma_p: float = 0.05
+    f: float = 1.0
+    payload_tol: float = 0.1
+    payload_tol_frac: float = 0.35
+
+    # ---- the four-primitive baselines (primitive-harness slot; parametric) ----
+    run_primitives: bool = True
+    kv_primitives: List[str] = field(
+        default_factory=lambda: ["mlp", "gru", "attention", "clu"]
+    )
+    kv_baseline_K: int = 64  # the N75 rematch point
+    kv_vocab: int = 128
+    kv_key_len: int = 4
+    kv_max_write_steps: int = 200
+    kv_check_every: int = 1
+    kv_select_items: int = 8
+
+
+@dataclass
 class ExperimentHopfieldCapacityConfig:
     """Configuration for the Hopfield-capacity PERFORMANCE benchmark (w22).
 
@@ -1940,6 +2021,9 @@ class CHLUConfig:
     )
     experiment_hopfield_capacity: ExperimentHopfieldCapacityConfig = field(
         default_factory=ExperimentHopfieldCapacityConfig
+    )
+    experiment_controller_mvp: ExperimentControllerMvpConfig = field(
+        default_factory=ExperimentControllerMvpConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -2081,6 +2165,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_hopfield_capacity", {}),
             )
         ),
+        experiment_controller_mvp=ExperimentControllerMvpConfig(
+            **filter_valid_fields(
+                ExperimentControllerMvpConfig,
+                data.get("experiment_controller_mvp", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -2120,6 +2210,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_primitive_harness": asdict(config.experiment_primitive_harness),
         "experiment_sequential_write": asdict(config.experiment_sequential_write),
         "experiment_hopfield_capacity": asdict(config.experiment_hopfield_capacity),
+        "experiment_controller_mvp": asdict(config.experiment_controller_mvp),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
