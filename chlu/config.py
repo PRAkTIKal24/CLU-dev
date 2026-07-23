@@ -1508,12 +1508,32 @@ class ExperimentDesignedMechanismConfig:
     # Atoms PER ITEM. n_atoms = atoms_per_item * K, so the parameter budget scales
     # with K and a plateau is a learning failure, not a capacity-of-parameters one.
     atoms_per_item: int = 32
-    # Floor on the total atom count (n_atoms = max(atoms_per_item*K, min_atoms)).
-    # A large over-complete dictionary smooths the write optimization; scaling atoms
-    # DOWN at small K starves the write (d=4 K=2 with 64 atoms: write loss stuck at
-    # 0.18 on some seeds). The floor keeps every cell over-complete; the atoms_per_item
-    # *K term dominates and controls the budget once K is large.
+    # Floor on the total atom count. HARD lower bound, dimension-independent; the
+    # dimension-aware geometric floor below (min_atoms_base * min_atoms_c**d)
+    # dominates in the discriminator sweep. A large over-complete dictionary smooths
+    # the write optimization; scaling atoms DOWN at small K starves the write (d=4
+    # K=2 with 64 atoms: write loss stuck at 0.18 on some seeds). The floor keeps
+    # every cell over-complete; the atoms_per_item*K term dominates once K is large.
     min_atoms: int = 384
+    # ⚠ DIMENSION-AWARE atom floor (w23 dimension-aware-budget). The atom count is
+    #     n_atoms = max(atoms_per_item*K, min_atoms, round(min_atoms_base*min_atoms_c**d)).
+    # w22 (designed-mechanism-learned-content) scaled the budget with K ONLY, with a
+    # FIXED floor (min_atoms=2048 in the clean run). That floor is inadequate at high
+    # d: the atoms init N(0, atom_init_scale) in the (d+1)-ball, and the fraction
+    # landing near any stored site (radius ~R) DECAYS roughly geometrically per added
+    # dimension, so a fixed atom count starves the write at high d (d=8 K=2 stalled at
+    # strict 0.400 despite a geometrically-trivial site separation 1.838). The ladder
+    # walk then terminates at a starved low-K cell and K_learned reads as an optimizer
+    # artifact, not a capacity. A geometric floor c**d compensates: it holds the
+    # atoms-near-each-site count ~constant across d. c = min_atoms_c = 2.0 is chosen to
+    # (i) match the designed capacity growth 4*2^d (constant atoms-per-designed-cell),
+    # and (ii) compensate the ~per-dimension halving of the near-site atom fraction at
+    # R~1, init_scale~1. base = min_atoms_base = 512 pins the d=2 floor at 2048 (the
+    # value w22 verified adequate for the real d=2 K=8 wall, 10240 params). Per-point
+    # budget adequacy is verified empirically (a failing K must fail with a budget
+    # whose further increase does not change the verdict).
+    min_atoms_base: int = 512
+    min_atoms_c: float = 2.0
     # centers ~ N(0, init_scale). ⚠ LOAD-BEARING and MEASURED: at init_scale=0.5 the
     # flat-start atoms cluster near the origin and the writer cannot dig a well that
     # reaches an item whose payload |a_i|=1 from the payload=0 launch manifold — d=2

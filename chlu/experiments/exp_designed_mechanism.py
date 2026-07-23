@@ -86,19 +86,35 @@ def ball_setup(d: int, K: int, cfg, payloads=None):
     return centers, payloads, targets, site_separation(centers)
 
 
-def _atoms_for(cfg, K: int) -> int:
-    """Atom count = ``max(atoms_per_item·K, min_atoms)``.
+def _floor_atoms(cfg, d: int) -> int:
+    """Dimension-aware atom FLOOR ``max(min_atoms, round(min_atoms_base·c^d))``.
+
+    ⚠ w23 (dimension-aware-budget). w22 used a FIXED floor (``min_atoms``), which is
+    inadequate at high ``d``: the flat-start atoms init ``N(0, atom_init_scale)`` in
+    the ``(d+1)``-ball, and the fraction landing near any stored site (radius ~R)
+    DECAYS roughly geometrically per added dimension, so a fixed count starves the
+    write at high ``d`` (measured w22: d=8 K=2 stalled at strict 0.400 with site
+    separation 1.838 — geometrically trivial). A geometric floor ``c^d`` holds the
+    atoms-near-each-site count ~constant across ``d``. ``c = min_atoms_c = 2.0``
+    matches the designed capacity growth ``4·2^d`` and compensates the per-dimension
+    near-site thinning; ``base = min_atoms_base`` pins the low-``d`` floor.
+    """
+    geo = int(round(cfg.min_atoms_base * cfg.min_atoms_c**d))
+    return max(cfg.min_atoms, geo)
+
+
+def _atoms_for(cfg, K: int, d: int) -> int:
+    """Atom count = ``max(atoms_per_item·K, floor(d))``.
 
     The ``·K`` term scales the parameter budget with K so a ``K_learned`` plateau is
     a LEARNING failure, not a parameterization-capacity one (theorist §4.3). The
-    ``min_atoms`` FLOOR is load-bearing and separate: a large over-complete
-    dictionary also *smooths the write optimization* (potential-function-class used
-    896 atoms at every K), so scaling atoms down at small K would STARVE the write
-    and inject an optimization artifact (measured: d=4 K=2 with 64 atoms leaves the
-    write loss stuck at 0.18 on some seeds). The floor keeps every cell in the
-    over-complete regime; the ·K term dominates once K is large.
+    dimension-aware FLOOR (:func:`_floor_atoms`) is load-bearing and separate: a
+    large over-complete dictionary *smooths the write optimization*, and it must
+    scale with the address DIMENSION (not only with K) or the ladder walk terminates
+    on a starved low-K high-``d`` cell (w22 §7 confound, w23 fix). The floor keeps
+    every cell over-complete; the ·K term dominates once K is large.
     """
-    return max(cfg.atoms_per_item * K, cfg.min_atoms)
+    return max(cfg.atoms_per_item * K, _floor_atoms(cfg, d))
 
 
 def build_designed_model(centers, payloads, cfg) -> CHLU:
@@ -131,7 +147,7 @@ def build_learned_V(d: int, K: int, cfg, key) -> DesignFreedomPotential:
     partitioned into ``K`` contiguous atom blocks so a masked write is local in
     parameter space (one block per item slot). ``.learned`` is the atom dictionary.
     """
-    n_atoms = _atoms_for(cfg, K)
+    n_atoms = _atoms_for(cfg, K, d)
     return DesignFreedomPotential(
         rung="free_mlp",
         dim=d + 1,
@@ -915,7 +931,8 @@ def run_experiment_designed_mechanism(
                 "gamma_read", "address_steps", "read_steps", "tail_frac",
                 "n_subsample", "n_query_per_item", "query_sigma", "query_sigma_p",
                 "payload_tol", "pass_strict", "blank_strict_max", "blank_margin",
-                "atoms_per_item", "atom_init_scale", "atom_init_width",
+                "atoms_per_item", "min_atoms", "min_atoms_base", "min_atoms_c",
+                "atom_init_scale", "atom_init_width",
                 "atom_depth_init", "learned_confine", "bits_per_param",
                 "write_steps", "local_write_steps", "write_lr", "write_n_perturb",
                 "write_sigma_addr", "write_sigma_pay", "write_margin",
@@ -958,6 +975,10 @@ def apply_quick(config: CHLUConfig) -> None:
     cfg.discriminator_seeds = [0, 1]
     cfg.designed_seeds = [0]
     cfg.atoms_per_item = 8
+    # keep the dimension-aware floor tiny for the smoke path (dims=[2,3])
+    cfg.min_atoms = 32
+    cfg.min_atoms_base = 16
+    cfg.min_atoms_c = 2.0
     cfg.address_steps = 300
     cfg.read_steps = 200
     cfg.write_steps = 60
