@@ -1152,23 +1152,38 @@ def _plot_all(results, save_dir):
 
     paths = []
     curve = (results.get("item2_sequential") or {}).get("curve")
+    runs = (results.get("item2_sequential") or {}).get("runs") or []
     cross = (results.get("item3_cross_primitive") or {}).get("primitives")
     if not curve and not cross:
         return paths
-    fig, axes = plt.subplots(1, 3, figsize=(15.5, 4.4))
+    written = {}
+    for r in runs:
+        written.setdefault(r["arm"], []).append(r.get("n_written", float("nan")))
+    fig, axes = plt.subplots(1, 4, figsize=(20.5, 4.4))
 
     a = axes[0]
     for arm, c in (curve or {}).items():
         y = np.array(c["item1_strict_mean_std"])
         if y.size == 0:
             continue
-        x = np.arange(len(y))
-        a.errorbar(x, y[:, 0], yerr=y[:, 1], marker="o", ms=3, capsize=2, label=arm)
+        # ⚠ n_written, not just n_admitted: the C3 gate can admit a site and
+        # then refuse the write, which makes a flat item-1 curve mean "nothing
+        # else was ever stored" rather than "everything was preserved".
+        w = np.nanmean(written.get(arm, [np.nan]))
+        a.errorbar(
+            np.arange(len(y)),
+            y[:, 0],
+            yerr=y[:, 1],
+            marker="o",
+            ms=3,
+            capsize=2,
+            label=f"{arm} (adm {c['n_admitted_mean']:.0f}, written {w:.0f})",
+        )
     a.set_xlabel("number of subsequent write attempts")
     a.set_ylabel("retention of item 1 (strict)")
     a.set_title("CLU: sequential-write retention")
-    a.set_ylim(-0.05, 1.05)
-    a.legend(fontsize=7)
+    a.set_ylim(-0.05, 1.08)
+    a.legend(fontsize=6.5)
 
     a = axes[1]
     for arm, c in (curve or {}).items():
@@ -1182,33 +1197,38 @@ def _plot_all(results, save_dir):
             marker="s",
             ms=3,
             capsize=2,
-            label=f"{arm} (n adm {c['n_admitted_mean']:.1f})",
+            label=arm,
         )
     a.set_xlabel("number of subsequent write attempts")
     a.set_ylabel("mean retention over stored items")
     a.set_title("CLU: mean retention")
-    a.set_ylim(-0.05, 1.05)
-    a.legend(fontsize=7)
+    a.set_ylim(-0.05, 1.08)
+    a.legend(fontsize=6.5)
 
-    a = axes[2]
-    for p in cross or []:
-        y = np.array(p["item1_retention_at_K"])
-        if y.size == 0:
-            continue
-        a.errorbar(
-            np.arange(1, len(y) + 1),
-            y[:, 0],
-            yerr=y[:, 1],
-            marker="o",
-            ms=3,
-            capsize=2,
-            label=p["primitive"],
-        )
-    a.set_xlabel("number of items written (K)")
-    a.set_ylabel("retention of item 1")
-    a.set_title("cross-primitive, PARAMETRIC sequential writes")
-    a.set_ylim(-0.05, 1.05)
-    a.legend(fontsize=7)
+    # ⭐ The cross-primitive panels use the EXTENDED sweep: at the matched K=16
+    # every primitive is at ceiling, so that range cannot discriminate.
+    for ax, key, lab in (
+        (axes[2], "extended_item1_retention_at_K", "retention of item 1"),
+        (axes[3], "extended_mean_retention_at_K", "mean retention over items"),
+    ):
+        for p_ in cross or []:
+            y = np.array(p_.get(key) or p_.get(key.replace("extended_", "")))
+            if y.size == 0:
+                continue
+            ax.errorbar(
+                np.arange(1, len(y) + 1),
+                y[:, 0],
+                yerr=y[:, 1],
+                marker="o",
+                ms=2.5,
+                capsize=2,
+                label=p_["primitive"],
+            )
+        ax.set_xlabel("number of items written (K)")
+        ax.set_ylabel(lab)
+        ax.set_title("cross-primitive, PARAMETRIC sequential writes")
+        ax.set_ylim(-0.05, 1.08)
+        ax.legend(fontsize=6.5)
 
     fig.tight_layout()
     p = os.path.join(save_dir, "sequential_write_fig1_retention.png")
