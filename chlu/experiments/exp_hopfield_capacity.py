@@ -81,36 +81,61 @@ def load_patterns(dataset: str, n: int, seed: int):
 
 
 def _load_cifar10():
-    """Load CIFAR-10 train images from the canonical tarball if present."""
+    """Load CIFAR-10 images in [0,1], (N, 3072). Tries, in order: the canonical
+    python tarball, then a HuggingFace parquet mirror. (openml's CIFAR_10 copy is
+    checksum-blocked here.)"""
     import pickle
     import tarfile
 
     here = os.path.dirname(os.path.abspath(__file__))
-    candidates = [
-        os.path.join(
-            here,
-            "..",
-            "..",
-            ".claude",
-            "scratch",
-            "hopfield-capacity-benchmark",
-            "cifar10.tar.gz",
-        ),
+    scratch = os.path.join(
+        here, "..", "..", ".claude", "scratch", "hopfield-capacity-benchmark"
+    )
+    tar_candidates = [
+        os.path.join(scratch, "cifar10.tar.gz"),
         os.path.expanduser("~/cifar-10-python.tar.gz"),
         "cifar-10-python.tar.gz",
     ]
-    path = next((p for p in candidates if os.path.exists(p)), None)
-    if path is None:
-        raise FileNotFoundError(
-            "CIFAR-10 not available locally (openml copy is checksum-blocked). "
-            "Place cifar-10-python.tar.gz in .claude/scratch/"
-            "hopfield-capacity-benchmark/ to enable the CIFAR arm."
-        )
-    with tarfile.open(path, "r:gz") as tar:
-        member = next(m for m in tar.getmembers() if m.name.endswith("data_batch_1"))
-        d = pickle.load(tar.extractfile(member), encoding="bytes")
-    X = np.asarray(d[b"data"], dtype=np.float32) / 255.0  # (10000, 3072) in [0,1]
-    return X
+    path = next((p for p in tar_candidates if os.path.exists(p)), None)
+    if path is not None:
+        try:
+            with tarfile.open(path, "r:gz") as tar:
+                member = next(
+                    m for m in tar.getmembers() if m.name.endswith("data_batch_1")
+                )
+                d = pickle.load(tar.extractfile(member), encoding="bytes")
+            return np.asarray(d[b"data"], dtype=np.float32) / 255.0  # (10000, 3072)
+        except (tarfile.ReadError, EOFError, OSError):
+            pass  # incomplete download — fall through to the parquet mirror
+
+    pq_candidates = [
+        os.path.join(scratch, "cifar10_test.parquet"),
+        os.path.join(scratch, "cifar10_train.parquet"),
+    ]
+    pq = next((p for p in pq_candidates if os.path.exists(p)), None)
+    if pq is not None:
+        import io
+
+        import pyarrow.parquet as pq_reader
+        from PIL import Image
+
+        tbl = pq_reader.read_table(pq).to_pydict()
+        col = tbl.get("img", tbl.get("image"))
+        rows = []
+        for rec in col:
+            raw = rec["bytes"] if isinstance(rec, dict) else rec
+            im = np.asarray(
+                Image.open(io.BytesIO(raw)).convert("RGB"), dtype=np.float32
+            )
+            rows.append(im.reshape(-1) / 255.0)  # (3072,) in [0,1]
+        return np.stack(rows, axis=0)
+
+    raise FileNotFoundError(
+        "CIFAR-10 not available locally (openml copy is checksum-blocked, "
+        "toronto tarball throttled). Place cifar-10-python.tar.gz or a "
+        "cifar10_*.parquet (HuggingFace uoft-cs/cifar10) in .claude/scratch/"
+        "hopfield-capacity-benchmark/ to enable the CIFAR arm."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -219,8 +244,14 @@ def _settle_read(model, Q0, steps, dt, gamma, tail_steps, chunk):
     the short tail is stacked to average out residual oscillation. p(0)=0."""
     tail_steps = int(max(1, tail_steps))
     settle_steps = int(max(1, steps - tail_steps))
+    # x64-safety: under jax_enable_x64 the model's step promotes to float64
+    # (GaussianMemoryPotential pins its centers to float32, so V(q) promotes),
+    # while a float32 query would make the lax.scan carry types mismatch. Launch
+    # in the ambient default float dtype so input and output carries agree.
+    fdtype = jnp.result_type(float)
 
     def per_query(q0):
+        q0 = q0.astype(fdtype)
         p0 = jnp.zeros_like(q0)
 
         def step_fn(state, _):
@@ -315,8 +346,14 @@ def _hopfield_arms(cfg, patterns):
     beta_tuned = (
         cfg.hopfield_beta_tuned
         if cfg.hopfield_beta_tuned > 0
-        else 200.0 / (self_overlap + 1e-9)
+        else max(cfg.hopfield_beta, 200.0 / (self_overlap + 1e-9))
     )
+    # ⚠ Floor at the repo β so the "tuned" arm is never BLURRIER than the default
+    # (on CIFAR self_overlap≈900 ⇒ the bare rule gives β≈0.22 < 1). Measured:
+    # raw-pixel Hopfield retrieves CIFAR at chance (0.031) for EVERY β up to 256,
+    # clean or masked — natural-image inner products are DC-dominated, so the
+    # sparse/dense SOTA needs U-Hop's LEARNED kernel there (outside "nothing
+    # learned"). On MNIST the rule gives β≈2.4, a genuinely sharper arm.
     arms = {}
     for act in cfg.activations:
         act_fn = ACTIVATIONS[act]
@@ -493,8 +530,9 @@ def retry_differentiator(cfg, dataset, seed):
     def boosted(idx):
         # re-launch from the settled point with a KE boost toward the query
         model = build_clu_memory(patterns, s, cfg)
-        q_start = jnp.asarray(xhat1[idx])
-        direction = jnp.asarray(Q)[idx] - q_start
+        fdtype = jnp.result_type(float)  # x64-safety (see _settle_read)
+        q_start = jnp.asarray(xhat1[idx]).astype(fdtype)
+        direction = jnp.asarray(Q)[idx].astype(fdtype) - q_start
         p_boost = cfg.retry_boost * direction
         tail = int(max(1, cfg.clu_tail_frac * cfg.clu_steps))
         settle = int(max(1, cfg.clu_steps - tail))

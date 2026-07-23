@@ -8,6 +8,7 @@ not by pytest.
 import jax
 import jax.numpy as jnp
 import numpy as np
+import pytest
 
 from chlu.config import get_default_config
 from chlu.core.memory_potentials import GaussianMemoryPotential
@@ -22,6 +23,24 @@ from chlu.experiments.exp_hopfield_capacity import (
     hopfield_retrieve,
     score_retrieval,
 )
+
+
+@pytest.fixture
+def float32_dynamics():
+    """Pin float32 for the CLU-dynamics tests, restoring the global flag after.
+
+    ⚠ Repo-wide test-isolation hazard (handover §7.2): six test modules enable
+    ``jax_enable_x64`` at MODULE import, so x64 is globally ON in a full-suite
+    run. The CLU settling numerics reported for this benchmark were all taken in
+    float32; these marginal tests pin float32 to match, rather than inheriting
+    whichever modules were imported first. (The experiment code itself is now
+    x64-SAFE — the scan-carry dtype is launched in the ambient float dtype — so
+    this fixture is about matching the reported numbers, not avoiding a crash.)
+    """
+    was = jax.config.read("jax_enable_x64")
+    jax.config.update("jax_enable_x64", False)
+    yield
+    jax.config.update("jax_enable_x64", was)
 
 
 def _orthogonalish_patterns(M, D, seed=0):
@@ -79,7 +98,7 @@ def test_gaussian_memory_potential_has_wells_at_patterns():
     assert v_at < v_rand
 
 
-def test_clu_register_settles_toward_nearest_well():
+def test_clu_register_settles_toward_nearest_well(float32_dynamics):
     P = _orthogonalish_patterns(6, 32, seed=3)
     cfg = get_default_config().experiment_hopfield_capacity
     cfg.clu_steps = 80
@@ -93,7 +112,7 @@ def test_clu_register_settles_toward_nearest_well():
     assert m["identity_acc"] >= 0.5  # settles to the right well most of the time
 
 
-def test_capacity_sweep_synthetic_runs_and_has_all_arms():
+def test_capacity_sweep_synthetic_runs_and_has_all_arms(float32_dynamics):
     cfg = get_default_config().experiment_hopfield_capacity
     cfg.load_grid = [4, 8]
     cfg.n_data_pool = 64
