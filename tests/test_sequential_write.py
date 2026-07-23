@@ -279,3 +279,18 @@ def test_config_group_is_registered_everywhere():
     cfg = get_default_config()
     assert hasattr(cfg, "experiment_sequential_write")
     assert isinstance(cfg, CHLUConfig)
+
+
+def test_blank_control_is_informative_at_the_reported_item_counts():
+    """A blank store reads ~0, so a codeword within the tolerance of 0 would be
+    "retained" by an EMPTY landscape. Measured at K=5 (where the grid contains an
+    exact 0): blank item-1 retention 1.000 on nothing stored. The two K values
+    this experiment actually reports must be clear of that."""
+    from chlu.experiments.exp_sequential_write import blank_is_informative
+
+    cfg = get_default_config().experiment_sequential_write
+    for K in (cfg.interference_K, cfg.n_sequential_items):
+        pay = np.asarray(designed_payloads(K, seed=cfg.payload_seed))
+        assert blank_is_informative(cfg, pay), f"blank control degenerate at K={K}"
+    # ...and the guard really can fail (K=5 puts an exact 0 in the codebook)
+    assert not blank_is_informative(cfg, np.asarray(designed_payloads(5, seed=0)))

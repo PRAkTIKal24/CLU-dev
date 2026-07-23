@@ -275,7 +275,7 @@ def item1_gate_on_w20(cfg, seeds, dim: int = 3):
     sites_all = np.asarray(ring_sites(K, f=cfg.f, dim=dim, payloads=pay_all))
     d_safe = cfg.d_safe_mult * cfg.write_sigma_addr
 
-    rows = []
+    rows, blanks = [], []
     for rung in cfg.gate_rungs:
         for proposal in cfg.gate_proposals:
             for arm in cfg.gate_arms:
@@ -295,6 +295,26 @@ def item1_gate_on_w20(cfg, seeds, dim: int = 3):
                             dim,
                         )
                     )
+                # ⚠ Blank control on every (rung, proposal, arm), at the first
+                # seed: identical writes, NOTHING stored, scored against the
+                # real codebook. A cell whose blank passes the value read is not
+                # a measurement (w20 method finding).
+                blanks.append(
+                    _gate_cell(
+                        cfg,
+                        rung,
+                        proposal,
+                        arm,
+                        seeds[0],
+                        K,
+                        pay_all,
+                        pay_A,
+                        sites_all,
+                        d_safe,
+                        dim,
+                        blank=True,
+                    )
+                )
     return {
         "d_safe": float(d_safe),
         "ring_min_spacing": float(2.0 * cfg.f * np.sin(np.pi / K)),
@@ -308,17 +328,42 @@ def item1_gate_on_w20(cfg, seeds, dim: int = 3):
         },
         "theorist_reference": {"designed_gated_max_drift": 8.0e-5},
         "rows": rows,
+        "blank_rows": blanks,
     }
 
 
 def _gate_cell(
-    cfg, rung, proposal, arm, seed, K, pay_all, pay_A, sites_all, d_safe, dim
+    cfg,
+    rung,
+    proposal,
+    arm,
+    seed,
+    K,
+    pay_all,
+    pay_A,
+    sites_all,
+    d_safe,
+    dim,
+    blank: bool = False,
 ):
+    """One (rung, proposal, arm, seed) cell of the w20 interference protocol.
+
+    ``blank=True`` is the CONTROL: identical architecture, identical writes, but
+    **nothing stored** (all written payloads zero) -- and it is scored against
+    the REAL codebook, so any strict success it shows is the read recovering the
+    address rather than the content. ⚠ Scoring a blank against the zeros it was
+    written with reports 1.000 for an empty landscape; that is a tautology, not
+    a control, and it is one of the two blank-control bugs this harness hit.
+    """
     key = jax.random.PRNGKey(seed)
     k_v, k_a, k_b, k_prop, k_reloc = jax.random.split(key, 5)
 
-    V = build_landscape(rung, cfg, pay_all, k_v, dim=dim)
-    V, _ = learned_write(V, sites_all[:-1], k_a, cfg)
+    write_pay = np.zeros_like(np.asarray(pay_all)) if blank else np.asarray(pay_all)
+    sites_w = np.array(sites_all, dtype=float)
+    sites_w[:, 2] = write_pay
+
+    V = build_landscape(rung, cfg, write_pay, k_v, dim=dim)
+    V, _ = learned_write(V, sites_w[:-1], k_a, cfg)
     stored = sites_all[:-1]
 
     # ---- the PROPOSAL for item B ----
@@ -362,8 +407,8 @@ def _gate_cell(
     else:
         site_B = np.zeros(dim)
         site_B[:2] = decision["site"]
-        site_B[2] = float(pay_all[-1])
-        anchors = stored if arm == "anchored" else None
+        site_B[2] = float(write_pay[-1])
+        anchors = sites_w[:-1] if arm == "anchored" else None
         if arm in ("gated_c3", "anchored"):
             V2, steps_used, c3_max, truncated, c3_rejected = c3_gated_learned_write(
                 V,
@@ -419,6 +464,7 @@ def _gate_cell(
         "proposal": proposal,
         "arm": arm,
         "seed": int(seed),
+        "blank": bool(blank),
         "decision": decision["decision"],
         "d_min_proposed": float(decision["d_min_proposed"]),
         "d_min_written": float(decision["d_min_written"]),
@@ -483,9 +529,12 @@ def sequential_run(arm, cfg, seed, dim: int = 3, blank: bool = False):
     k_prop, k_v, k_w, k_reloc = jax.random.split(key, 4)
 
     proposals = _propose_sequence(k_prop, K, cfg, dim)
+    # ⚠ The blank control writes ZEROS but is scored against the REAL codebook.
+    # Scoring it against the zeros it was written with reports 1.000 for an empty
+    # landscape (measured: designed_gated blank 1.000) -- that is a tautology,
+    # not a control. `write_pay` goes into V; `payloads_all` does the scoring.
     payloads_all = np.asarray(designed_payloads(K, seed=cfg.payload_seed))
-    if blank:
-        payloads_all = np.zeros_like(payloads_all)
+    write_pay = np.zeros_like(payloads_all) if blank else payloads_all
 
     if designed:
         V = AtomDictionaryPotential(
@@ -497,7 +546,7 @@ def sequential_run(arm, cfg, seed, dim: int = 3, blank: bool = False):
         )
         d_safe = cfg.d_safe_mult * cfg.atom_width
     else:
-        V = build_landscape(cfg.sequential_rung, cfg, payloads_all, k_v, dim=dim)
+        V = build_landscape(cfg.sequential_rung, cfg, write_pay, k_v, dim=dim)
         d_safe = cfg.d_safe_mult * cfg.write_sigma_addr
 
     stored_sites, stored_pay, history, decisions = [], [], [], []
@@ -553,11 +602,11 @@ def sequential_run(arm, cfg, seed, dim: int = 3, blank: bool = False):
 
         site = np.zeros(dim)
         site[:2] = dec["site"]
-        site[2] = payloads_all[i]
+        site[2] = write_pay[i]
 
         steps_used = 0
         if designed:
-            V = V.with_item(site[:2], float(payloads_all[i]), amp=cfg.atom_amp)
+            V = V.with_item(site[:2], float(write_pay[i]), amp=cfg.atom_amp)
         else:
             k_w, kw = jax.random.split(k_w)
             anchors = np.stack(stored_sites) if (anchored and stored_sites) else None
@@ -640,7 +689,29 @@ def item2_sequential(cfg, seeds, dim: int = 3):
         # ONE blank control per arm (identical writes, all payloads zero, scored
         # against the REAL codebook) — the leak-immune control of the w20 method.
         blanks.append(sequential_run(arm, cfg, seeds[0], dim=dim, blank=True))
-    return {"runs": runs, "blank_runs": blanks, "curve": _retention_curve(runs, cfg)}
+    pay = np.asarray(designed_payloads(cfg.n_sequential_items, seed=cfg.payload_seed))
+    return {
+        "runs": runs,
+        "blank_runs": blanks,
+        "curve": _retention_curve(runs, cfg),
+        "blank_is_informative": blank_is_informative(cfg, pay),
+        "min_abs_codeword": float(np.min(np.abs(pay))),
+        "payload_tol_used": effective_payload_tol(cfg, pay),
+    }
+
+
+def blank_is_informative(cfg, payloads) -> bool:
+    """Can a landscape holding NOTHING accidentally match a codeword?
+
+    A blank store reads ~0 in the payload channel, so if any codeword lies
+    within the value tolerance of 0 the blank "retains" that item for free and
+    the control is uninformative for it. (Measured at K=5, where
+    ``designed_payloads`` puts an exact 0 in the codebook: blank item-1
+    retention 1.000 on an empty landscape.) At the reported K = 4 and K = 16 the
+    grid excludes 0 by 0.333 and 0.067 respectively, both above the tolerance.
+    """
+    tol = effective_payload_tol(cfg, payloads)
+    return bool(np.min(np.abs(np.asarray(payloads))) > tol)
 
 
 def _retention_curve(runs, cfg):
@@ -848,7 +919,9 @@ def item3_cross_primitive(cfg, hcfg, seeds):
                 "selected_lr": best_lr,
                 "extended_K": cfg.kv_extended_items,
                 "extended_mean_retention_at_K": _mean_over_seeds(ext, "mean_retention"),
-                "extended_item1_retention_at_K": _mean_over_seeds(ext, "item1_retained"),
+                "extended_item1_retention_at_K": _mean_over_seeds(
+                    ext, "item1_retained"
+                ),
                 "extended_steps_to_criterion_at_K": _mean_over_seeds(
                     ext, "steps_to_criterion"
                 ),
