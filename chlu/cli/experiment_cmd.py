@@ -39,6 +39,10 @@ from ..experiments.exp_hopfield_capacity import (
     run_experiment_hopfield_capacity,
     apply_quick as apply_hopfield_capacity_quick,
 )
+from ..experiments.exp_retry_compute import (
+    run_experiment_retry_compute,
+    apply_quick as apply_retry_compute_quick,
+)
 from ..experiments.kt import KT_MODES
 
 console = Console()
@@ -217,6 +221,20 @@ def setup_experiment_parsers(subparsers):
     exp_hc_parser.add_argument('--dataset',
                                help='Override datasets (comma-separated)')
     exp_hc_parser.set_defaults(func=cmd_exp_hopfield_capacity)
+
+    # exp-retry-compute
+    exp_rc_parser = subparsers.add_parser(
+        'exp-retry-compute',
+        help='Accuracy-vs-compute curve for CLU retrieval: CLU-gated retry + 5 '
+             'controls (ensemble/kick/ungated/feedforward/hopfield-k-steps, w23)'
+    )
+    exp_rc_parser.add_argument('--project', help='Project name to use')
+    exp_rc_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_rc_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (small grid, short ladder/rollouts)')
+    exp_rc_parser.add_argument('--dataset',
+                               help='Override datasets (comma-separated)')
+    exp_rc_parser.set_defaults(func=cmd_exp_retry_compute)
     # exp-learned-memory
     exp_lm_parser = subparsers.add_parser(
         'exp-learned-memory',
@@ -999,6 +1017,40 @@ def cmd_exp_hopfield_capacity(args):
         )
         console.print(
             f"✓ Experiment HOPFIELD-CAPACITY completed -> {res['metrics_path']}",
+            style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_retry_compute(args):
+    """Run the retry-compute study: accuracy-vs-compute curve, CLU-gated + 5 controls."""
+    console.print(
+        "[bold cyan]Running Experiment RETRY-COMPUTE: accuracy-vs-compute curve "
+        "(CLU-gated retry + 5 controls, w23)[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        apply_retry_compute_quick(config)
+    if getattr(args, 'dataset', None):
+        config.experiment_retry_compute.datasets = args.dataset.split(',')
+
+    try:
+        res = run_experiment_retry_compute(
+            config=config,
+            save_dir=str(paths['plots']),
+            seed=getattr(args, 'seed', None),
+        )
+        console.print(
+            f"✓ Experiment RETRY-COMPUTE completed -> {res['metrics_path']}",
             style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
