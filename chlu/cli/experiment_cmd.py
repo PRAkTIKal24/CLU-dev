@@ -215,6 +215,12 @@ def setup_experiment_parsers(subparsers):
                                choices=['mqar', 'adding', 'parity'],
                                help='Subset of task families to run')
     exp_ph_parser.add_argument('--steps', type=int, help='Override train_steps')
+    exp_ph_parser.add_argument('--gamma-sweep', action='store_true',
+                               help='Run ONLY the w21 CLU-internal gamma / read-mode / '
+                                    'clu_steps sweep (baselines untouched)')
+    exp_ph_parser.add_argument('--sweep-items', nargs='+',
+                               choices=['gamma', 'read', 'steps'],
+                               help='Subset of w21 sweep items (default: all three)')
     exp_ph_parser.set_defaults(func=cmd_exp_primitive_harness)
 
     # exp-minus-physics
@@ -714,6 +720,19 @@ def cmd_exp_primitive_harness(args):
         config.experiment_primitive_harness.train_steps = args.steps
 
     try:
+        if getattr(args, 'gamma_sweep', False):
+            from ..experiments.exp_primitive_harness import run_gamma_read_sweep
+
+            run_gamma_read_sweep(
+                config=config,
+                save_dir=str(paths['plots']),
+                families=getattr(args, 'families', None),
+                items=getattr(args, 'sweep_items', None),
+                quick=getattr(args, 'quick', False),
+            )
+            console.print("✓ w21 gamma/read sweep completed", style="bold green")
+            return 0
+
         from ..experiments.exp_primitive_harness import run_primitive_harness
 
         run_primitive_harness(

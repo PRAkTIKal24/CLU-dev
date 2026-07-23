@@ -18,9 +18,16 @@ else varies: same optimizer, schedule, data, LR grid, parameter budget.
    ("write current"). A driven Hamiltonian does not conserve H — the slot
    requires the unit to absorb an exogenous token stream, which the autonomous
    formulation has no channel for.
-2. *Dissipative, not symplectic.* ``gamma > 0`` is required for the state to be
-   readable (clu-retrieval-demo §6: retrieval accuracy 1.000 at gamma=0.02 vs
-   0.813 at gamma=0), so the block is conformal-symplectic, not symplectic.
+2. *Dissipative, not symplectic.* ``gamma > 0`` was assumed to be required for
+   the state to be readable (w19 clu-retrieval-demo §6: retrieval accuracy 1.000
+   at gamma=0.02 vs 0.813 at gamma=0), so the block is conformal-symplectic, not
+   symplectic. ⚠ **That justification was superseded**: w20
+   ``learned-landscape-write-read`` §5 showed the 0.813-at-gamma=0 figure is a
+   SINGLE-PHASE artifact (with a relaxation phase, fidelity is exactly invariant
+   to gamma_read), and ``address-space-dimension-scaling`` §4 showed identity
+   retrieval at gamma=0 is fine (0.969-1.000) while only *value* retrieval needs
+   dissipation. ``gamma`` is therefore a swept knob, not a fixed concession —
+   see ``chlu/experiments/exp_primitive_harness.py:run_gamma_read_sweep``.
 3. *Carry width 2*d_clu.* The state is (q, p), so parameter matching solves for
    ``d_clu`` separately from ``d_model``.
 
@@ -38,6 +45,12 @@ from chlu.core.chlu_unit import CHLU
 
 #: Primitives registered for the harness (order is the canonical report order).
 PRIMITIVES = ("mlp", "gru", "ssm", "attention", "clu")
+
+#: CLU-internal read modes (w21). See ``CLUBlock`` for the semantics.
+CLU_READ_MODES = ("endpoint", "trajectory")
+
+#: CLU-internal write-current modes (w21, EXPLORATORY). See ``CLUBlock``.
+CLU_WRITE_MODES = ("linear", "gated")
 
 
 class MLPBlock(eqx.Module):
@@ -174,15 +187,50 @@ class CLUBlock(eqx.Module):
     The read is linear on the *whole* state, matching every other block's
     linear read-out. The CHLU unit itself (``potential_net``, ``log_mass``) is
     used unmodified — this file adds no physics, only the input/output shell.
+
+    **Read modes** (w21 ``gamma-read-sweep`` Item 2). The two read types want
+    opposite dissipation, so the read is a knob, not a constant:
+
+    - ``"endpoint"`` (default, the shipped behaviour): read the *settled* state
+      after all ``clu_steps`` sub-steps, ``y_t = W_out [q_K ; p_K]``. Wants
+      ``gamma > 0`` — the value is only readable once it is a fixed point.
+    - ``"trajectory"``: read the whole intra-token rollout — the Prop-11 fiber,
+      ``y_t = W_out [q_1 ; p_1 ; ... ; q_K ; p_K]``. Wants ``gamma -> 0``,
+      because the oscillation *is* the signal and dissipation erases it.
+
+    ⚠ **At ``clu_steps == 1`` the two modes are the SAME MAP, exactly** (the
+    fiber has one element), including bit-identical initialisation, since
+    ``w_out`` has the same shape and consumes the same key. The read-mode axis
+    is only non-degenerate for ``clu_steps > 1``; this is asserted by
+    ``test_trajectory_read_is_identity_at_one_step``.
+
+    **Write modes** (w21, EXPLORATORY — ``"linear"`` is the shipped default and
+    the only mode any published number uses):
+
+    - ``"linear"``: ``p += W_in x_t``. The write current is *unconditionally*
+      linear in the token, so the state accumulates ``sum_t a v_t`` and
+      ``sum_t b m_t`` but never their product. Measured consequence
+      (`gamma-read-sweep` memory probe): at the readout the state decodes
+      ``sum_t v_t`` at R^2 = 1.000 and the marker positions at R^2 = 0.99 at
+      EVERY gamma, but the adding target -- a value x marker *conjunction* --
+      at R^2 ~ 0.07.
+    - ``"gated"``: ``p += (W_in x_t) * sigmoid(W_gate x_t)``. Supplies the one
+      ingredient the GRU (gates), the selective SSM (input-dependent Delta) and
+      attention (softmax QK) all have and the CLU did not: a multiplicative,
+      input-conditioned write. Costs ``d_clu`` under the matched-parameter
+      search, exactly like the fiber read.
     """
 
     clu: CHLU
     w_in: eqx.nn.Linear
+    w_gate: Optional[eqx.nn.Linear]
     w_out: eqx.nn.Linear
     dt: float = eqx.field(static=True)
     gamma: float = eqx.field(static=True)
     clu_steps: int = eqx.field(static=True)
     d_clu: int = eqx.field(static=True)
+    read_mode: str = eqx.field(static=True)
+    write_mode: str = eqx.field(static=True)
 
     def __init__(
         self,
@@ -195,13 +243,29 @@ class CLUBlock(eqx.Module):
         clu_steps: int = 1,
         kinetic_mode: str = "newtonian_learned",
         potential_type: str = "mlp",
+        read_mode: str = "endpoint",
+        write_mode: str = "linear",
         key,
     ):
+        if read_mode not in CLU_READ_MODES:
+            raise ValueError(
+                f"Unknown CLU read_mode {read_mode!r}. Must be one of {CLU_READ_MODES}."
+            )
+        if write_mode not in CLU_WRITE_MODES:
+            raise ValueError(
+                f"Unknown CLU write_mode {write_mode!r}. Must be one of {CLU_WRITE_MODES}."
+            )
+        # NOTE: still a 3-way split, and the gate key is folded in separately, so
+        # the default ("linear") block is initialised BIT-IDENTICALLY to the w20
+        # shipped harness. A 4-way split here would silently re-randomise every
+        # published CLU cell.
         k1, k2, k3 = jax.random.split(key, 3)
         self.d_clu = width
         self.dt = dt
         self.gamma = gamma
         self.clu_steps = clu_steps
+        self.read_mode = read_mode
+        self.write_mode = write_mode
         self.clu = CHLU(
             dim=width,
             hidden=hidden,
@@ -210,17 +274,33 @@ class CLUBlock(eqx.Module):
             key=k1,
         )
         self.w_in = eqx.nn.Linear(d_model, width, key=k2)
-        self.w_out = eqx.nn.Linear(2 * width, d_model, key=k3)
+        self.w_gate = (
+            eqx.nn.Linear(d_model, width, key=jax.random.fold_in(k2, 1))
+            if write_mode == "gated"
+            else None
+        )
+        # The trajectory read consumes the whole fiber, so its read-in width is
+        # clu_steps x larger. Parameter matching then solves for a SMALLER
+        # d_clu at the same budget -- the fiber is paid for out of state width,
+        # which is exactly the trade-off the sweep is meant to expose.
+        n_read = clu_steps if read_mode == "trajectory" else 1
+        self.w_out = eqx.nn.Linear(2 * width * n_read, d_model, key=k3)
 
     def __call__(self, x, *, key=None):
         kicks = jax.vmap(self.w_in)(x)  # (T, d_clu)
+        if self.w_gate is not None:  # EXPLORATORY: input-conditioned write current
+            kicks = kicks * jax.nn.sigmoid(jax.vmap(self.w_gate)(x))
+        trajectory = self.read_mode == "trajectory"
 
         def step(state, kick):
             q, p = state
             p = p + kick  # driven Hamiltonian: the write current
+            fiber = []
             for _ in range(self.clu_steps):
                 q, p = self.clu.step((q, p), self.dt, self.gamma)
-            return (q, p), jnp.concatenate([q, p])
+                if trajectory:
+                    fiber += [q, p]
+            return (q, p), jnp.concatenate(fiber if trajectory else [q, p])
 
         z0 = jnp.zeros(self.d_clu)
         _, states = jax.lax.scan(step, (z0, z0), kicks)
@@ -253,6 +333,8 @@ def make_block(name: str, d_model: int, width: int, *, key, **kwargs):
             clu_steps=kwargs.get("clu_steps", 1),
             kinetic_mode=kwargs.get("clu_kinetic_mode", "newtonian_learned"),
             potential_type=kwargs.get("clu_potential_type", "mlp"),
+            read_mode=kwargs.get("clu_read_mode", "endpoint"),
+            write_mode=kwargs.get("clu_write_mode", "linear"),
             key=key,
         )
     raise ValueError(f"Unknown primitive: {name}. Must be one of {PRIMITIVES}.")
