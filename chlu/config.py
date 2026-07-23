@@ -1403,7 +1403,11 @@ class ExperimentPotentialClassConfig:
     # ---- cross-write interference (the H-EXPR/H-SUPP discriminator) ----
     interference_K: int = 4
     interference_write_steps: int = 300
-    interference_seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])
+    # 7, not 5: the pre-registered adversarial check ("if an attention arm beats
+    # the atom dictionary on interference, re-run at 2 extra seeds") triggered.
+    interference_seeds: List[int] = field(
+        default_factory=lambda: [0, 1, 2, 3, 4, 5, 6]
+    )
 
     # ---- support radius, MEASURED (decay of ||grad dV|| vs distance) ----
     support_radii: List[float] = field(
@@ -1415,7 +1419,8 @@ class ExperimentPotentialClassConfig:
 
     # ---- does the design-freedom curve move? (w20 re-run with the best class) ----
     run_ladder_rerun: bool = True
-    ladder_family: str = "atoms"  # "auto" => the best class from the sweep
+    # Families to re-run the ladder with. "auto" => the best class from the sweep.
+    ladder_families: List[str] = field(default_factory=lambda: ["atoms", "hopfield"])
     ladder_rungs: List[str] = field(
         default_factory=lambda: [
             "skeleton_residual",

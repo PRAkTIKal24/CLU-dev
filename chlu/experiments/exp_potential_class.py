@@ -564,6 +564,69 @@ def _sphere(key, n: int, dim: int, r: float):
     return r * v / (jnp.linalg.norm(v, axis=1, keepdims=True) + 1e-12)
 
 
+def _c3_law_at_stored_sites(V_A, V_B, cfg, K: int, dim: int = 3):
+    """The theorist's C3 first-order drift law, measured at the ALREADY-STORED items.
+
+    ⚠ Everything is evaluated at the **relaxed fixed point** ``q*_i =
+    R_gamma(z_i)`` under ``V_A``, NOT at the read's LAUNCH point ``z_i`` -- which
+    sits on the ``q2 = 0`` query manifold (the anti-decoration guard) and is
+    therefore not stationary in the payload channel. Evaluated at the launch
+    point, ``lambda_min`` comes out NEGATIVE for five of the seven arms
+    *including the fully designed one* (-16.76 at the site whose payload is -1;
+    -4.93 averaged over the three probed sites), which would make the C3 bound
+    vacuous (``inf``) for a landscape that in fact retrieves at 1.000. At the
+    relaxed fixed point the designed landscape is a clean Morse minimum
+    (``lambda_min`` = +1.000). The stored item is wherever the dissipative
+    dynamics settle, which is also exactly the object the read uses (the
+    derived-address picture).
+
+    For each stored item (the K-1 written before B), at ``q*_i``:
+      * ``||grad dV(q*_i)||`` -- how hard the new write pushes on the old item;
+      * ``lambda_min(Hess V_A(q*_i))`` -- how stiffly the old item is held;
+      * ``predicted_drift = ||grad dV|| / lambda_min`` -- the C3 bound;
+      * ``measured_drift`` -- relax from ``z_i`` under the SAME damped dynamics
+        the reader uses, before and after the write, and compare the endpoints.
+    """
+    sites = np.asarray(ring_sites(K, f=cfg.f, dim=dim))[: K - 1]
+    gA = eqx.filter_jit(jax.grad(lambda q, m=V_A: m(q)))
+    gB = eqx.filter_jit(jax.grad(lambda q, m=V_B: m(q)))
+    HA = eqx.filter_jit(jax.hessian(lambda q, m=V_A: m(q)))
+    mA, mB = model_for(V_A, dim), model_for(V_B, dim)
+
+    def relax(model, q0):
+        tr = model(
+            jnp.asarray(q0),
+            jnp.zeros(dim),
+            cfg.address_steps,
+            cfg.dt,
+            cfg.gamma_address,
+        )
+        return np.asarray(tr[-1, :dim])
+
+    dg, lam, pred, meas, nonmorse = [], [], [], [], 0
+    for z in sites:
+        qA = relax(mA, z)  # the actual stored fixed point under V_A
+        qj = jnp.asarray(qA)
+        n = float(jnp.linalg.norm(gB(qj) - gA(qj)))
+        h = np.asarray(HA(qj))
+        lm = float(np.linalg.eigvalsh(0.5 * (h + h.T)).min())
+        dg.append(n)
+        lam.append(lm)
+        if lm > 1e-9:
+            pred.append(n / lm)
+        else:
+            nonmorse += 1
+        meas.append(float(np.linalg.norm(relax(mB, z) - qA)))
+    return {
+        "grad_dV_at_stored_sites": float(np.mean(dg)),
+        "lambda_min_at_stored_sites": float(np.mean(lam)),
+        "predicted_drift_c3": float(np.mean(pred)) if pred else float("nan"),
+        "measured_drift": float(np.mean(meas)),
+        "n_sites": int(len(sites)),
+        "n_non_morse_sites": int(nonmorse),
+    }
+
+
 def item3_support_radius(cfg, dim: int = 3):
     """Perturb theta by a SINGLE write and measure how far the change reaches.
 
@@ -582,11 +645,20 @@ def item3_support_radius(cfg, dim: int = 3):
     smoke run). ``r_10`` is accordingly the first radius **beyond the peak** at
     which the normalised curve falls below ``support_decay_threshold``.
 
-    This is the mechanism behind item 2.
+    ⭐ **Also measured, and the part that actually explains item 2: the C3 law at
+    the stored sites.** A shell average around the NEW site answers "how far does
+    the perturbation reach", but interference is governed by the theorist's
+    first-order drift law evaluated at the OLD items,
+    ``|dq*_i| <= ||grad dV(z_i)|| / lambda_min(Hess V(z_i))``. Two arms with the
+    same reach can therefore differ by an order of magnitude in interference if
+    one holds its items in stiffer wells. Both numerator and denominator are
+    measured here, together with the drift the DYNAMICS actually show (relax from
+    ``z_i`` under V before and after the write, and compare the endpoints), so the
+    bound can be checked rather than quoted.
     """
     out = []
     for arm in cfg.potential_classes:
-        curves, r10s, r_peaks = [], [], []
+        curves, r10s, r_peaks, mech = [], [], [], []
         for seed in cfg.support_seeds:
             V_A, V_B, _, K = _write_A_then_B(arm, cfg, seed, dim=dim)
             site_B = np.asarray(ring_sites(K, f=cfg.f, dim=dim))[K - 1]
@@ -624,6 +696,7 @@ def item3_support_radius(cfg, dim: int = 3):
             curves.append(curve)
             r10s.append(r10 if r10 is not None else float("nan"))
             r_peaks.append(curve[i_pk]["r"] if gpk > 0 else float("nan"))
+            mech.append(_c3_law_at_stored_sites(V_A, V_B, cfg, K, dim))
         # average the curves across seeds on the shared radius grid
         mean_curve = []
         for i, r in enumerate(cfg.support_radii):
@@ -655,6 +728,16 @@ def item3_support_radius(cfg, dim: int = 3):
                 "abs_peak_rms_grad_dV": float(
                     np.mean([max(c["rms_grad_dV"] for c in cur) for cur in curves])
                 ),
+                "c3_law": {
+                    k: _agg([m[k] for m in mech])
+                    for k in (
+                        "grad_dV_at_stored_sites",
+                        "lambda_min_at_stored_sites",
+                        "predicted_drift_c3",
+                        "measured_drift",
+                        "n_non_morse_sites",
+                    )
+                },
             }
         )
     return {"radii": list(cfg.support_radii), "arms": out}
@@ -975,17 +1058,20 @@ def run_experiment_potential_class(
     results["item3_support_radius"] = item3_support_radius(cfg)
 
     if cfg.run_ladder_rerun:
-        family = cfg.ladder_family
-        if family == "auto":
-            learned = [
-                v
-                for v in results["item1_class_sweep"]["verdict"]
-                if v["arm"] != cfg.reference_class
-            ]
-            best_arm = max(learned, key=lambda v: v["min_mean_strict_over_K"])["arm"]
-            family = arm_spec(best_arm)["family"]
-            results["ladder_family_auto_selected_from"] = best_arm
-        results["item4_ladder_rerun"] = item4_ladder_rerun(cfg, family)
+        learned = [
+            v
+            for v in results["item1_class_sweep"]["verdict"]
+            if v["arm"] != cfg.reference_class
+        ]
+        best_arm = max(learned, key=lambda v: v["min_mean_strict_over_K"])["arm"]
+        results["best_learned_arm"] = best_arm
+        fams, seen = [], set()
+        for f in cfg.ladder_families:
+            f = arm_spec(best_arm)["family"] if f == "auto" else f
+            if f not in seen:
+                seen.add(f)
+                fams.append(f)
+        results["item4_ladder_rerun"] = [item4_ladder_rerun(cfg, f) for f in fams]
 
     # Metrics are written BEFORE plotting: a plotting bug must never destroy a
     # completed run (it did once in w20).
@@ -1033,6 +1119,7 @@ def apply_quick(config: CHLUConfig) -> None:
     cfg.support_radii = [0.1, 0.5, 1.0, 2.0]
     cfg.support_probes_per_radius = 16
     cfg.support_seeds = [0]
+    cfg.ladder_families = ["atoms"]
     cfg.ladder_rungs = ["free_mlp"]
     cfg.ladder_item_counts = [2]
     cfg.ladder_seeds = [0]

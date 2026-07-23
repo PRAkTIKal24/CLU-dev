@@ -42,6 +42,7 @@ from chlu.core.memory_potentials import (
 from chlu.core.potentials import PotentialMLP
 from chlu.experiments.exp_potential_class import (
     ARM_TABLE,
+    _c3_law_at_stored_sites,
     build_arm,
     param_match_table,
     write_arm,
@@ -254,6 +255,45 @@ def test_atom_write_mask_fn_zeroes_exactly_the_masked_rows():
     out = atom_write_mask_fn(mask)(ones)
     got = np.asarray(out.learned.amp)
     assert np.allclose(got, np.asarray(mask, dtype=float))
+
+
+# ---------------------------------------------------------------------------
+# The C3 drift law must be evaluated where the item actually IS
+# ---------------------------------------------------------------------------
+
+
+def test_c3_law_is_evaluated_at_the_relaxed_fixed_point_not_the_nominal_site():
+    """The read's LAUNCH point is not a stationary point of the landscape.
+
+    Retrieval launches on the query manifold ``q2 = 0`` (the anti-decoration
+    guard). Evaluating the C3 Hessian there gives a NEGATIVE ``lambda_min`` even
+    for the fully DESIGNED landscape — measured -16.76 at the site whose payload
+    is -1, and -4.93 averaged over the three probed sites — which would make the
+    C3 bound vacuous for a landscape that in fact retrieves at 1.000. At the
+    RELAXED fixed point the same landscape is a clean Morse minimum
+    (lambda_min = +1.000), and an unwritten landscape must perturb nothing.
+    """
+    cfg = _cfg(address_steps=400)
+    K = 4
+    pay = designed_payloads(K, seed=cfg.payload_seed)
+    V = build_arm("designed", cfg, pay, jax.random.PRNGKey(0), K=K)
+    out = _c3_law_at_stored_sites(V, V, cfg, K)
+    assert out["grad_dV_at_stored_sites"] == 0.0
+    assert out["measured_drift"] == 0.0
+    assert out["n_non_morse_sites"] == 0, "the designed items must be Morse minima"
+    assert out["lambda_min_at_stored_sites"] > 0.0
+    # ...and the LAUNCH point is not: this is the trap, pinned.
+    launch = np.asarray(ring_sites(K, f=cfg.f, dim=3))[: K - 1]  # q2 = 0
+    lam = [
+        float(
+            np.linalg.eigvalsh(
+                np.asarray(jax.hessian(lambda q: V(q))(jnp.asarray(z)))
+            ).min()
+        )
+        for z in launch
+    ]
+    assert min(lam) < 0.0
+    assert float(np.mean(lam)) < 0.0
 
 
 # ---------------------------------------------------------------------------
