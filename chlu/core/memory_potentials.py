@@ -603,3 +603,127 @@ def designed_payloads(K: int, seed: int = 0, lo: float = -1.0, hi: float = 1.0):
     grid = np.linspace(lo, hi, K)
     rng = np.random.default_rng(seed)
     return jnp.asarray(rng.permutation(grid), dtype=jnp.float32)
+
+
+class AtomDictionaryPotential(eqx.Module):
+    """MVC-0's designed store: a **dictionary of localized atoms** with payloads.
+
+    .. code-block:: text
+
+        V(q) = alpha * |q_addr|^2                                # coercivity
+             - sum_i m_i * A_i * exp(-|q_addr - c_i|^2 / 2 s^2)  # K item wells
+             + 0.5 * kappa * (q_pay - S(q_addr))^2               # payload channel
+             + 0.5 * k_spec * |q_spec|^2                         # spectators
+        S(q_addr) = sum_i m_i * a_i * exp(-|q_addr - c_i|^2 / 2 s_pay^2)
+
+    ``q_addr = q[:2]``, ``q_pay = q[2]``, ``q_spec = q[3:]`` -- identical index
+    convention to :class:`RingRegisterPotential`, so the same queries, the same
+    anti-decoration guard (``q2(0) = 0``) and the same reads apply.
+
+    **Why this class exists.** The w19/w20 ring pins K items at K *evenly spaced*
+    angles determined by K itself, so "write one more item" is not an operation
+    it supports: the whole landscape changes. Sequential writing needs a
+    landscape whose sites are free, and MVC-0 §4 specifies exactly this object
+    (``AtomDictionaryPotential``) as the designed store, because an atom write is
+    **C3-local by construction**: the gradient it contributes at a stored minimum
+    at distance ``d`` carries ``exp(-d^2 / 2 s^2)``, which is ``6.3e-5`` at the
+    admission radius ``d_safe = 4.4 s``.
+
+    Writes are functional and mask-based: a fixed ``capacity`` of slots, an
+    ``active`` 0/1 mask, and :meth:`with_item` returns a NEW module with the next
+    slot filled. Nothing is trained here -- this is the designed arm.
+    """
+
+    centers: jnp.ndarray  # (capacity, 2) address-plane sites
+    payloads: jnp.ndarray  # (capacity,) stored values a_i
+    amps: jnp.ndarray  # (capacity,) well depths A_i
+    active: jnp.ndarray  # (capacity,) 0/1 slot mask m_i
+    alpha: float = eqx.field(static=True)
+    s: float = eqx.field(static=True)
+    s_pay: float = eqx.field(static=True)
+    kappa: float = eqx.field(static=True)
+    dim: int = eqx.field(static=True)
+    spectator_k: float = eqx.field(static=True)
+
+    def __init__(
+        self,
+        dim: int = 3,
+        capacity: int = 16,
+        alpha: float = 0.02,
+        s: float = 0.35,
+        s_pay: Optional[float] = None,
+        kappa: float = 1.0,
+        spectator_k: float = 1.0,
+    ):
+        """An EMPTY store. Items are added with :meth:`with_item`.
+
+        Args:
+            dim: latent dim (>= 3: address plane q0,q1 + payload channel q2).
+            capacity: number of slots (fixed, so the object is a static PyTree).
+            alpha: address-plane confinement (coercivity; F5 Prop-10).
+            s: atom width -- the ONLY length scale the admission radius
+                ``d_safe = 4.4 s`` is expressed in.
+            s_pay: payload-bump width (defaults to ``s``).
+            kappa: payload spring constant.
+        """
+        if dim < 3:
+            raise ValueError(f"AtomDictionaryPotential requires dim >= 3, got {dim}")
+        self.dim = dim
+        self.centers = jnp.zeros((capacity, 2))
+        self.payloads = jnp.zeros((capacity,))
+        self.amps = jnp.zeros((capacity,))
+        self.active = jnp.zeros((capacity,))
+        self.alpha = alpha
+        self.s = s
+        self.s_pay = s if s_pay is None else s_pay
+        self.kappa = kappa
+        self.spectator_k = spectator_k
+
+    @property
+    def capacity(self) -> int:
+        return int(self.centers.shape[0])
+
+    @property
+    def n_stored(self) -> int:
+        return int(jnp.sum(self.active))
+
+    def sites(self, dim: Optional[int] = None) -> jnp.ndarray:
+        """(n_stored, dim) full stored states ``z_i = (c_i, a_i, 0...)``."""
+        d = self.dim if dim is None else dim
+        idx = jnp.nonzero(self.active, size=self.capacity, fill_value=-1)[0]
+        idx = idx[idx >= 0]
+        z = jnp.zeros((idx.shape[0], d))
+        z = z.at[:, :2].set(self.centers[idx])
+        z = z.at[:, 2].set(self.payloads[idx])
+        return z
+
+    def with_item(self, center, payload: float, amp: float = 1.0):
+        """Append one item. Returns a NEW potential (writes are functional).
+
+        Raises ``RuntimeError`` when the dictionary is full -- an overflow is a
+        capacity alarm the controller must see, never a silent overwrite.
+        """
+        slot = int(jnp.argmin(self.active))
+        if float(self.active[slot]) != 0.0:
+            raise RuntimeError(f"AtomDictionaryPotential is full ({self.capacity})")
+        c = jnp.asarray(center, dtype=jnp.float32).reshape(-1)[:2]
+        new = eqx.tree_at(lambda t: t.centers, self, self.centers.at[slot].set(c))
+        new = eqx.tree_at(
+            lambda t: t.payloads, new, new.payloads.at[slot].set(float(payload))
+        )
+        new = eqx.tree_at(lambda t: t.amps, new, new.amps.at[slot].set(float(amp))) 
+        return eqx.tree_at(lambda t: t.active, new, new.active.at[slot].set(1.0))
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        addr = q[:2]
+        d2 = jnp.sum((addr[None, :] - self.centers) ** 2, axis=-1)
+        w_addr = self.active * jnp.exp(-d2 / (2.0 * self.s**2))
+        w_pay = self.active * jnp.exp(-d2 / (2.0 * self.s_pay**2))
+
+        v = self.alpha * jnp.sum(addr**2)
+        v = v - jnp.sum(self.amps * w_addr)
+        s_of_q = jnp.sum(self.payloads * w_pay)
+        v = v + 0.5 * self.kappa * (q[2] - s_of_q) ** 2
+        if self.dim > 3:
+            v = v + 0.5 * self.spectator_k * jnp.sum(q[3:] ** 2)
+        return v
