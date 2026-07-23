@@ -1451,10 +1451,16 @@ class ExperimentSequentialWriteConfig:
     )
     kv_n_items: int = 16
     kv_select_items: int = 8  # shorter run used for the (equal) LR selection
-    kv_vocab: int = 64
+    # >= kv_extended_items + 1: values are sampled WITHOUT replacement so that
+    # "retention" is per-item unambiguous.
+    kv_vocab: int = 128
     kv_key_len: int = 4
     kv_max_write_steps: int = 200
-    kv_check_every: int = 5
+    kv_check_every: int = 1  # 1 => full resolution on compute-to-criterion
+    # A second, LONGER sweep at the selected LR only: K=16 is matched to the CLU
+    # arm, but if a primitive does not forget at all there, the curve is
+    # uninformative and the interesting quantity is WHERE it breaks.
+    kv_extended_items: int = 64
 
     # ---- item 4: retrieval cost scaling in K ----
     cost_K_grid: List[int] = field(default_factory=lambda: [1, 2, 4, 8, 16])

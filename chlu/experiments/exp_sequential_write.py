@@ -834,10 +834,25 @@ def item3_cross_primitive(cfg, hcfg, seeds):
             m, rs = full(lr)
             if m > best_m:  # monotone: adopt ONLY if the full n-seed mean wins
                 best_m, best_rs, best_lr, rescued = m, rs, lr, lr
+        # --- extended sweep: same selected LR, same seeds, larger K. Reported
+        # separately, never merged into the matched-K headline. ---
+        ext = [
+            sequential_write_primitive(
+                prim, cfg, hcfg, s, best_lr, n_items=cfg.kv_extended_items
+            )
+            for s in seeds
+        ]
         out.append(
             {
                 "primitive": prim,
                 "selected_lr": best_lr,
+                "extended_K": cfg.kv_extended_items,
+                "extended_mean_retention_at_K": _mean_over_seeds(ext, "mean_retention"),
+                "extended_item1_retention_at_K": _mean_over_seeds(ext, "item1_retained"),
+                "extended_steps_to_criterion_at_K": _mean_over_seeds(
+                    ext, "steps_to_criterion"
+                ),
+                "extended_joint_censoring_at_K": _censor_rate(ext),
                 "rescued_to_lr": rescued,
                 "lr_selection": [(lr, m) for lr, m, _ in sel],
                 "runs": best_rs,
