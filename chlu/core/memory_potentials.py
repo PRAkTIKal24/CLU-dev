@@ -905,7 +905,7 @@ def designed_payloads(K: int, seed: int = 0, lo: float = -1.0, hi: float = 1.0):
     return jnp.asarray(rng.permutation(grid), dtype=jnp.float32)
 
 
-class AtomDictionaryPotential(eqx.Module):
+class AtomStorePotential(eqx.Module):
     """MVC-0's designed store: a **dictionary of localized atoms** with payloads.
 
     .. code-block:: text
@@ -924,7 +924,7 @@ class AtomDictionaryPotential(eqx.Module):
     angles determined by K itself, so "write one more item" is not an operation
     it supports: the whole landscape changes. Sequential writing needs a
     landscape whose sites are free, and MVC-0 §4 specifies exactly this object
-    (``AtomDictionaryPotential``) as the designed store, because an atom write is
+    (``AtomStorePotential``) as the designed store, because an atom write is
     **C3-local by construction**: the gradient it contributes at a stored minimum
     at distance ``d`` carries ``exp(-d^2 / 2 s^2)``, which is ``6.3e-5`` at the
     admission radius ``d_safe = 4.4 s``.
@@ -967,7 +967,7 @@ class AtomDictionaryPotential(eqx.Module):
             kappa: payload spring constant.
         """
         if dim < 3:
-            raise ValueError(f"AtomDictionaryPotential requires dim >= 3, got {dim}")
+            raise ValueError(f"AtomStorePotential requires dim >= 3, got {dim}")
         self.dim = dim
         self.centers = jnp.zeros((capacity, 2))
         self.payloads = jnp.zeros((capacity,))
@@ -1005,7 +1005,7 @@ class AtomDictionaryPotential(eqx.Module):
         """
         slot = int(jnp.argmin(self.active))
         if float(self.active[slot]) != 0.0:
-            raise RuntimeError(f"AtomDictionaryPotential is full ({self.capacity})")
+            raise RuntimeError(f"AtomStorePotential is full ({self.capacity})")
         c = jnp.asarray(center, dtype=jnp.float32).reshape(-1)[:2]
         new = eqx.tree_at(lambda t: t.centers, self, self.centers.at[slot].set(c))
         new = eqx.tree_at(

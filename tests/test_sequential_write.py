@@ -36,7 +36,7 @@ from chlu.core.admission import (
     min_separation,
     spacing_ok,
 )
-from chlu.core.memory_potentials import AtomDictionaryPotential, designed_payloads
+from chlu.core.memory_potentials import AtomStorePotential, designed_payloads
 from chlu.experiments.exp_learned_memory import model_for
 from chlu.experiments.exp_sequential_write import (
     evaluate_items,
@@ -118,7 +118,7 @@ def test_gate_refuses_when_the_store_is_saturated():
 # C3: locality of the write operator
 # ---------------------------------------------------------------------------
 def _store(sites, payloads, s=0.35):
-    V = AtomDictionaryPotential(dim=3, capacity=8, alpha=0.02, s=s)
+    V = AtomStorePotential(dim=3, capacity=8, alpha=0.02, s=s)
     for c, a in zip(sites, payloads, strict=True):
         V = V.with_item(c, a)
     return V
@@ -196,7 +196,7 @@ def test_blank_designed_store_fails_the_value_read():
 
 
 def test_atom_dictionary_full_raises():
-    V = AtomDictionaryPotential(dim=3, capacity=2)
+    V = AtomStorePotential(dim=3, capacity=2)
     V = V.with_item([0.0, 0.0], 0.1).with_item([2.0, 0.0], 0.2)
     assert V.n_stored == 2
     with pytest.raises(RuntimeError):
@@ -205,7 +205,7 @@ def test_atom_dictionary_full_raises():
 
 def test_atom_dictionary_rejects_low_dim():
     with pytest.raises(ValueError):
-        AtomDictionaryPotential(dim=2)
+        AtomStorePotential(dim=2)
 
 
 # ---------------------------------------------------------------------------

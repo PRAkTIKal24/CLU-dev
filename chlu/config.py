@@ -1637,7 +1637,7 @@ class ExperimentSequentialWriteConfig:
             "learned_anchored",
         ]
     )
-    # designed store (AtomDictionaryPotential; theorist S3 values)
+    # designed store (AtomStorePotential; theorist S3 values)
     atom_width: float = 0.35
     atom_alpha: float = 0.02
     atom_amp: float = 1.0

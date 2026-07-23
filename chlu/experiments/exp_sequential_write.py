@@ -64,7 +64,7 @@ from chlu.core.admission import (
     ring_proposer,
 )
 from chlu.core.memory_potentials import (
-    AtomDictionaryPotential,
+    AtomStorePotential,
     designed_payloads,
     ring_sites,
 )
@@ -558,7 +558,7 @@ def sequential_run(arm, cfg, seed, dim: int = 3, blank: bool = False):
     write_pay = np.zeros_like(payloads_all) if blank else payloads_all
 
     if designed:
-        V = AtomDictionaryPotential(
+        V = AtomStorePotential(
             dim=dim,
             capacity=K,
             alpha=cfg.atom_alpha,
@@ -1080,7 +1080,7 @@ def item4_retrieval_cost(cfg, hcfg, seed=0, dim: int = 3):
     # --- CLU landscape rollout on a designed store holding K items ---
     fl_r, wall_r = [], []
     for K in ks:
-        V = AtomDictionaryPotential(
+        V = AtomStorePotential(
             dim=dim,
             capacity=max(ks),
             alpha=cfg.atom_alpha,
