@@ -1027,3 +1027,55 @@ class AtomStorePotential(eqx.Module):
         if self.dim > 3:
             v = v + 0.5 * self.spectator_k * jnp.sum(q[3:] ** 2)
         return v
+
+
+class GaussianMemoryPotential(eqx.Module):
+    """A **D-dimensional dense associative memory** as a designed CLU landscape.
+
+    .. code-block:: text
+
+        V(q) = 0.5 * alpha * |q|^2  -  b * sum_i exp(-|q - xi_i|^2 / (2 s^2))
+
+    Each stored pattern ``xi_i`` (e.g. an image flattened to ``D`` pixels) is a
+    Gaussian well of depth ``b`` and width ``s``; the tiny ``alpha`` term is the
+    coercivity floor (F5 Prop-10). Retrieval is the **damped velocity-Verlet
+    rollout of a CLU wired to this potential**: launch from the (masked/noisy)
+    query, let the particle settle into the nearest well, read the settled state.
+
+    This is the direct-pattern analogue of :class:`BallRegisterPotential`/
+    :class:`AtomStorePotential` (the task-named designed registers): there the
+    address plane is low-D and the pattern is a separate payload; here the pattern
+    IS the address, so no payload channel is needed and the settled position is
+    the retrieved memory. It is a *localized* dense associative memory (Gaussian
+    interaction, cf. Krotov-Hopfield 2016) — distinct from the modern-Hopfield
+    ``logsumexp`` inner-product energy (:class:`HopfieldPotential`), whose
+    stationarity is one softmax-attention step. Nothing here is learned: the
+    centers ARE the stored patterns, ``s`` is set by a fixed data-driven rule.
+
+    ``s`` is intentionally the ONLY resolution knob (like ``beta`` in a
+    modern-Hopfield net); it is not tuned per load, so the capacity curve is not
+    flattered. The well curvature at a center is ``b/s^2 * I`` (a stiff quadratic
+    basin), so a settled particle sits at the argmin well to leading order — which
+    is why a Gaussian CLU register is expected to track the nearest-neighbour
+    floor and the sparse-Hopfield line, not the near-uniform dense-softmax line.
+    """
+
+    centers: jnp.ndarray  # (M, D) stored patterns
+    s: float = eqx.field(static=True)
+    b: float = eqx.field(static=True)
+    alpha: float = eqx.field(static=True)
+
+    def __init__(self, centers, s: float, b: float = 1.0, alpha: float = 1e-3):
+        self.centers = jnp.asarray(centers, dtype=jnp.float32)
+        self.s = float(s)
+        self.b = float(b)
+        self.alpha = float(alpha)
+
+    @property
+    def n_stored(self) -> int:
+        return int(self.centers.shape[0])
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        d2 = jnp.sum((q[None, :] - self.centers) ** 2, axis=-1)
+        wells = jnp.exp(-d2 / (2.0 * self.s**2))
+        return 0.5 * self.alpha * jnp.sum(q * q) - self.b * jnp.sum(wells)
