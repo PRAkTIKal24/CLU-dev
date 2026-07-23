@@ -1538,6 +1538,136 @@ class ExperimentPrimitiveHarnessConfig:
 
 
 @dataclass
+class ExperimentSequentialWriteConfig:
+    """Configuration for SEQUENTIAL-WRITE interference + the admission gate (w21).
+
+    w20 measured its worst result — write A, write B, A destroyed (strict
+    1.000 -> 0.000) — with **ungated** writes. The theorist measured the same
+    contrast with the MVC-0 admission gate and got max drift 8.0e-5. This group
+    runs both, on the exact w20 setup and on a K = 1..16 sequential-write curve,
+    plus the cross-primitive comparison in the `primitive-harness` slot.
+    See chlu/experiments/exp_sequential_write.py.
+
+    Geometry / write / retrieval defaults are deliberately IDENTICAL to
+    ``ExperimentLearnedMemoryConfig`` so the gated arm is directly comparable to
+    the w20 ungated numbers; only the controller changes.
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])
+
+    # ---- geometry + landscape family (matched to ExperimentLearnedMemoryConfig) ----
+    lam: float = 1.0
+    f: float = 1.0
+    barrier: float = 0.2
+    payload_kappa: float = 1.0
+    bump_width: float = 0.05
+    payload_seed: int = 0
+    hidden: int = 64
+    n_atoms: int = 24
+    residual_scale: float = 0.1
+    rbf_init_width: float = 0.3
+
+    # ---- write objective (chlu/training/train_memory.py) ----
+    write_steps: int = 600
+    write_lr: float = 3e-3
+    write_weight_decay: float = 1e-4
+    write_n_perturb: int = 32
+    write_sigma_addr: float = 0.25
+    write_sigma_pay: float = 0.6
+    write_margin: float = 0.15
+    write_barrier: float = 0.2
+
+    # ---- TWO-PHASE retrieval (w20 §5: fidelity depends on gamma_address only) ----
+    dt: float = 0.05
+    gamma_address: float = 0.05
+    gamma_read: float = 0.0
+    address_steps: int = 400
+    read_steps: int = 800
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+    n_query_per_item: int = 32
+    n_query_sequential: int = 16  # cheaper: the sequential curve evaluates K times
+    query_sigma_theta: float = 0.15
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1
+    # ...capped at this fraction of the codebook spacing (w20's ratio at K<=8),
+    # so "the stored value came back" stays unambiguous as K grows.
+    payload_tol_frac: float = 0.35
+
+    # ---- the MVC-0 admission gate (clu-controller-spec §C3/§C5/§4) ----
+    # d_safe = d_safe_mult * s. At 4.4 a Gaussian atom write contributes
+    # exp(-4.4^2/2) = 6.3e-5 of its gradient scale at a neighbouring minimum.
+    d_safe_mult: float = 4.4
+    # C3 budget on the predicted fixed-point drift ||H^-1 grad dV(q*)|| of a
+    # stored item. 0.1 is ~1/14 of the w20 ring's site spacing (1.414), i.e. well
+    # inside the deadband where address error is measured to be free.
+    delta_budget: float = 0.1
+    c3_chunk_steps: int = 25  # write granularity at which C3 is re-checked
+    n_relocation_candidates: int = 400
+    proposal_radius: float = 2.0  # disk the controller proposes sites in
+
+    # ---- item 1: the gate on the EXACT w20 failing setup ----
+    interference_K: int = 4
+    interference_write_steps: int = 300
+    gate_rungs: List[str] = field(
+        default_factory=lambda: ["designed", "sites_learned_payload", "free_mlp"]
+    )
+    gate_arms: List[str] = field(
+        default_factory=lambda: ["ungated", "gated_spacing", "gated_c3", "anchored"]
+    )
+    gate_proposals: List[str] = field(default_factory=lambda: ["ring", "disk"])
+
+    # ---- item 2: the sequential-write curve ----
+    n_sequential_items: int = 16
+    sequential_write_steps: int = 600
+    # ⚠ free_mlp, NOT the w20 rung: sequential writes place items at arbitrary
+    # gate-chosen locations in a disk, and `sites_learned_payload` carries a
+    # DESIGNED K-well ring at radius f that would fight every off-ring site.
+    # The w20 rung is used where the w20 geometry is used -- item 1.
+    sequential_rung: str = "free_mlp"
+    sequential_arms: List[str] = field(
+        default_factory=lambda: [
+            "designed_gated",
+            "designed_ungated",
+            "learned_gated",
+            "learned_ungated",
+            # "anchored" is NOT a gate: it is a structured write operator
+            # (C3 option (b), rehearsal from the codebook), carried as the arm
+            # that shows what actually rescues a global-support write.
+            "learned_anchored",
+        ]
+    )
+    # designed store (AtomDictionaryPotential; theorist S3 values)
+    atom_width: float = 0.35
+    atom_alpha: float = 0.02
+    atom_amp: float = 1.0
+
+    # ---- item 3: the cross-primitive comparison (primitive-harness slot) ----
+    kv_primitives: List[str] = field(
+        default_factory=lambda: ["mlp", "gru", "attention", "clu"]
+    )
+    kv_n_items: int = 16
+    kv_select_items: int = 8  # shorter run used for the (equal) LR selection
+    # >= kv_extended_items + 1: values are sampled WITHOUT replacement so that
+    # "retention" is per-item unambiguous.
+    kv_vocab: int = 128
+    kv_key_len: int = 4
+    kv_max_write_steps: int = 200
+    kv_check_every: int = 1  # 1 => full resolution on compute-to-criterion
+    # A second, LONGER sweep at the selected LR only: K=16 is matched to the CLU
+    # arm, but if a primitive does not forget at all there, the curve is
+    # uninformative and the interesting quantity is WHERE it breaks.
+    kv_extended_items: int = 64
+    # ...and give the extended sweep its own symmetric rescue: the LR selected at
+    # K=16 need not be the best one at K=64, and the extended table is the
+    # deliverable, so it must not inherit an unrescued LR.
+    kv_extended_rescue: bool = True
+
+    # ---- item 4: retrieval cost scaling in K ----
+    cost_K_grid: List[int] = field(default_factory=lambda: [1, 2, 4, 8, 16])
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -1603,6 +1733,9 @@ class CHLUConfig:
     )
     experiment_primitive_harness: ExperimentPrimitiveHarnessConfig = field(
         default_factory=ExperimentPrimitiveHarnessConfig
+    )
+    experiment_sequential_write: ExperimentSequentialWriteConfig = field(
+        default_factory=ExperimentSequentialWriteConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -1726,6 +1859,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_primitive_harness", {}),
             )
         ),
+        experiment_sequential_write=ExperimentSequentialWriteConfig(
+            **filter_valid_fields(
+                ExperimentSequentialWriteConfig,
+                data.get("experiment_sequential_write", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -1762,6 +1901,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_learned_memory": asdict(config.experiment_learned_memory),
         "experiment_potential_class": asdict(config.experiment_potential_class),
         "experiment_primitive_harness": asdict(config.experiment_primitive_harness),
+        "experiment_sequential_write": asdict(config.experiment_sequential_write),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
