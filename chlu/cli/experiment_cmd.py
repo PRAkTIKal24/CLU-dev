@@ -23,6 +23,10 @@ from ..experiments.exp_learned_memory import (
     run_experiment_learned_memory,
     apply_quick as apply_learned_memory_quick,
 )
+from ..experiments.exp_potential_class import (
+    run_experiment_potential_class,
+    apply_quick as apply_potential_class_quick,
+)
 from ..experiments.exp_retrieval import (
     run_experiment_retrieval,
     apply_quick as apply_retrieval_quick,
@@ -202,6 +206,19 @@ def setup_experiment_parsers(subparsers):
     exp_lm_parser.add_argument('--quick', action='store_true',
                                help='Quick mode (2 rungs, K=2, short rollouts)')
     exp_lm_parser.set_defaults(func=cmd_exp_learned_memory)
+    # exp-potential-class
+    exp_pc_parser = subparsers.add_parser(
+        'exp-potential-class',
+        help='Is the learned-landscape failure EXPRESSIVITY or SUPPORT STRUCTURE? '
+             '(MLP vs modern-Hopfield/attention vs atom dictionary, w21)'
+    )
+    exp_pc_parser.add_argument('--project', help='Project name to use')
+    exp_pc_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_pc_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (3 arms, K=2, 1 seed, tiny sizes)')
+    exp_pc_parser.add_argument('--classes', nargs='+',
+                               help='Override the swept potential classes')
+    exp_pc_parser.set_defaults(func=cmd_exp_potential_class)
     # exp-primitive-harness
     exp_ph_parser = subparsers.add_parser(
         'exp-primitive-harness',
@@ -839,6 +856,39 @@ def cmd_exp_learned_memory(args):
                       style="bold green")
     except Exception as e:
         console.print(f"\u2717 Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_potential_class(args):
+    """Run the potential FUNCTION-CLASS sweep (expressivity vs support structure)."""
+    console.print(
+        "[bold cyan]Running Experiment POTENTIAL-CLASS: expressivity or support structure?[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        apply_potential_class_quick(config)
+    if getattr(args, 'classes', None):
+        config.experiment_potential_class.potential_classes = list(args.classes)
+
+    try:
+        res = run_experiment_potential_class(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+        )
+        console.print(f"✓ Experiment POTENTIAL-CLASS completed -> {res['metrics_path']}",
+                      style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
         return 1
 
     return 0

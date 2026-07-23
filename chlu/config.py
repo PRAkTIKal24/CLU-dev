@@ -1275,6 +1275,181 @@ class ExperimentLearnedMemoryConfig:
             "designed_corruption": 4.17e-7,
         }
     )
+
+
+@dataclass
+class ExperimentPotentialClassConfig:
+    """Configuration for the POTENTIAL FUNCTION CLASS sweep (w21, Task D).
+
+    w20 found that no learned rung of the design-freedom ladder clears strict
+    0.9 at both K=4 and K=8, that write locality collapses (0.000 -> 2.9e-2 ..
+    5.0e-1) and that one subsequent write destroys the best rung. **Every w20
+    learned rung used ``PotentialMLP``.** Two hypotheses explain that:
+
+    * **H-EXPR** — the MLP is too weak; more capacity fixes it.
+    * **H-SUPP** — the failure is *global parameter support*: any weight update
+      moves every stored item, so attention (more global still) should fail at
+      least as badly and only *atom* writes can be local.
+
+    They make OPPOSITE predictions on the transformer arm, which is why this
+    group sweeps the **function class** with everything else held at the w20
+    values (the geometry/retrieval fields below are deliberately identical to
+    ``ExperimentLearnedMemoryConfig`` so the two experiments are comparable).
+    See chlu/experiments/exp_potential_class.py.
+    """
+
+    # ---- geometry / retrieval: IDENTICAL to the w20 group ----
+    lam: float = 1.0
+    f: float = 1.0
+    barrier: float = 0.2
+    payload_kappa: float = 1.0
+    bump_width: float = 0.05
+    payload_seed: int = 0
+    dt: float = 0.05
+    gamma_address: float = 0.05
+    gamma_read: float = 0.0
+    address_steps: int = 400
+    read_steps: int = 800
+    tail_frac: float = 0.25
+    n_subsample: int = 8
+    n_query_per_item: int = 32
+    query_sigma_theta: float = 0.15
+    query_sigma_p: float = 0.05
+    payload_tol: float = 0.1
+    survival_fracs: List[float] = field(
+        default_factory=lambda: [0.05, 0.1, 0.25, 0.5, 0.75, 0.99]
+    )
+    blank_margin: float = 0.15
+    blank_strict_max: float = 0.1
+    pass_strict: float = 0.9
+    pass_read: float = 0.9
+    reference_rung: str = "designed"
+
+    # ---- write objective: IDENTICAL to the w20 group ----
+    write_steps: int = 600
+    write_lr: float = 3e-3
+    write_weight_decay: float = 1e-4
+    write_n_perturb: int = 32
+    write_sigma_addr: float = 0.25
+    write_sigma_pay: float = 0.6
+    write_margin: float = 0.15
+    write_barrier: float = 0.2
+    # A LOCAL write is one masked, single-item write per item. Same per-write
+    # step budget as the global write; because each sub-write carries one target
+    # instead of K, total write FLOPs stay comparable (reported in the cost
+    # table, never assumed).
+    local_write_steps: int = 600
+
+    # ---- ⭐ the swept variable: the potential's function class ----
+    # "designed"       rung 0, zero learned parameters (the ceiling)
+    # "mlp"            w20 baseline (PotentialMLP)                 GLOBAL support
+    # "hopfield"       modern-Hopfield energy at beta_soft         support ~exp(-beta d)
+    # "hopfield_sharp" the same class at beta_sharp                (capacity held FIXED)
+    # "attn"           cross-attention w/ learned proj + values    GLOBAL-ish
+    # "atoms"          Gaussian atom dictionary, GLOBAL grad write LOCAL support
+    # "atoms_local"    the same class, per-item MASKED write       LOCAL support + LOCAL write
+    potential_classes: List[str] = field(
+        default_factory=lambda: [
+            "designed",
+            "mlp",
+            "hopfield",
+            "hopfield_sharp",
+            "attn",
+            "atoms",
+            "atoms_local",
+        ]
+    )
+    reference_class: str = "designed"
+    baseline_class: str = "mlp"
+
+    # ---- matched parameter count (⚠ an unmatched comparison settles nothing) ----
+    # PotentialMLP(dim=3, hidden=64) = 3*64+64 + 64*64+64 + 64+1 = 4481.
+    param_target: int = 4481
+    param_tol: float = 0.05
+    hidden: int = 64  # mlp
+    n_atoms: int = 896  # atoms: 896 * (3 + 1 + 1) = 4480
+    hopfield_n_mem: int = 1120  # hopfield: 1120 * (3 + 1) = 4480
+    attn_n_mem: int = 495  # attn: 8*3 + 495*8 + 495 = 4479
+    attn_d_head: int = 8
+
+    # ---- family hyperparameters ----
+    hopfield_beta_soft: float = 2.0
+    hopfield_beta_sharp: float = 8.0
+    # alpha = 1/2 makes V EXACTLY the modern-Hopfield energy: grad V = 0 reads
+    # q = sum_i softmax(beta <q,k_i>)_i k_i, i.e. one step of attention.
+    hopfield_confine: float = 0.5
+    hopfield_key_init: float = 0.1
+    attn_beta: float = 1.0
+    attn_key_init: float = 0.5
+    # Coercivity for every family EXCEPT hopfield (which needs alpha=1/2 to be
+    # the exact modern-Hopfield energy). 0.05 is PotentialMLP's own confinement,
+    # so the arms are coercive on identical terms (F5 Prop-10).
+    learned_confine: float = 0.05
+    atom_init_width: float = 0.3
+    atom_init_scale: float = 1.0
+    # Initial atom DEPTH (A_j = amp_j^2, so amp is init'd at sqrt of this). 1e-4
+    # => the dictionary starts FLAT and the writer digs the wells. w20's RBFAtoms
+    # started at softplus(N(0,0.1)) ~ 0.69 per atom, i.e. rugged on the same
+    # length scale retrieval has to traverse - a candidate explanation for the
+    # w20 local_rbf failure, measured here rather than assumed. See
+    # AtomDictionaryPotential's docstring for why the amplitude is NOT a softplus
+    # (a flat softplus start has a 3.4e-4 gradient and the write silently no-ops).
+    atom_depth_init: float = 1e-4
+
+    # ---- the sweep ----
+    class_item_counts: List[int] = field(default_factory=lambda: [4, 8])
+    class_seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])
+
+    # ---- cross-write interference (the H-EXPR/H-SUPP discriminator) ----
+    interference_K: int = 4
+    interference_write_steps: int = 300
+    # 7, not 5: the pre-registered adversarial check ("if an attention arm beats
+    # the atom dictionary on interference, re-run at 2 extra seeds") triggered.
+    interference_seeds: List[int] = field(
+        default_factory=lambda: [0, 1, 2, 3, 4, 5, 6]
+    )
+
+    # ---- support radius, MEASURED (decay of ||grad dV|| vs distance) ----
+    support_radii: List[float] = field(
+        default_factory=lambda: [0.05, 0.1, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0]
+    )
+    support_probes_per_radius: int = 96
+    support_decay_threshold: float = 0.1  # defines r_10
+    support_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # ---- does the design-freedom curve move? (w20 re-run with the best class) ----
+    run_ladder_rerun: bool = True
+    # Families to re-run the ladder with. "auto" => the best class from the sweep.
+    ladder_families: List[str] = field(default_factory=lambda: ["atoms", "hopfield"])
+    ladder_rungs: List[str] = field(
+        default_factory=lambda: [
+            "skeleton_residual",
+            "sites_learned_payload",
+            "free_mlp",
+        ]
+    )
+    ladder_item_counts: List[int] = field(default_factory=lambda: [4, 8])
+    ladder_seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])
+
+    # w20 reference numbers, carried in the results JSON so every comparison is
+    # made against the measured baseline rather than a remembered one.
+    w20_baseline: Dict[str, float] = field(
+        default_factory=lambda: {
+            "designed_strict_K4": 1.000,
+            "designed_strict_K8": 0.986,
+            "free_mlp_strict_K4": 0.853,
+            "free_mlp_strict_K8": 0.599,
+            "skeleton_residual_strict_K4": 0.903,
+            "skeleton_residual_strict_K8": 0.959,
+            "local_rbf_strict_K4": 0.623,
+            "local_rbf_strict_K8": 0.348,
+            "designed_corruption": 0.0,
+            "free_mlp_corruption": 3.53e-1,
+            "sites_learned_payload_corruption": 4.95e-1,
+        }
+    )
+
+
 @dataclass
 class ExperimentPrimitiveHarnessConfig:
     """Configuration for the primitive harness (w20).
@@ -1423,6 +1598,9 @@ class CHLUConfig:
     experiment_dim_scaling: ExperimentDimScalingConfig = field(
         default_factory=ExperimentDimScalingConfig
     )
+    experiment_potential_class: ExperimentPotentialClassConfig = field(
+        default_factory=ExperimentPotentialClassConfig
+    )
     experiment_primitive_harness: ExperimentPrimitiveHarnessConfig = field(
         default_factory=ExperimentPrimitiveHarnessConfig
     )
@@ -1536,6 +1714,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_learned_memory", {}),
             )
         ),
+        experiment_potential_class=ExperimentPotentialClassConfig(
+            **filter_valid_fields(
+                ExperimentPotentialClassConfig,
+                data.get("experiment_potential_class", {}),
+            )
+        ),
         experiment_primitive_harness=ExperimentPrimitiveHarnessConfig(
             **filter_valid_fields(
                 ExperimentPrimitiveHarnessConfig,
@@ -1576,6 +1760,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_retrieval": asdict(config.experiment_retrieval),
         "experiment_dim_scaling": asdict(config.experiment_dim_scaling),
         "experiment_learned_memory": asdict(config.experiment_learned_memory),
+        "experiment_potential_class": asdict(config.experiment_potential_class),
         "experiment_primitive_harness": asdict(config.experiment_primitive_harness),
         "data": asdict(config.data),
         "project": asdict(config.project),

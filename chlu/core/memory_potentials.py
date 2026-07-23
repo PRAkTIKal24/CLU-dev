@@ -439,6 +439,237 @@ class RBFAtoms(eqx.Module):
         return v + self.confine * jnp.sum(q**2)
 
 
+class AtomDictionaryPotential(eqx.Module):
+    """The theorist's MVC-0 substrate (clu-controller-spec §4): a LOCAL-support
+    dictionary ``V = alpha*|q|^2 + sum_j (-A_j exp(-|q-c_j|^2 / 2 s_j^2))`` whose
+    amplitudes, centers and widths are all learned.
+
+    Two things distinguish it from :class:`RBFAtoms`, and both are load-bearing
+    for w21 — neither is cosmetic:
+
+    1. **It starts FLAT, without a vanishing amplitude gradient.** The amplitude
+       is ``A_j = amp_j**2`` (non-negative and smooth), initialised at
+       ``sqrt(depth_init)`` with ``depth_init = 1e-4``: at init ``V ~
+       alpha*|q|^2`` and the *writer digs the wells*.
+       ⚠ Both halves of that sentence are load-bearing and were **measured**, not
+       assumed. ``RBFAtoms`` initialises ``depth_raw ~ N(0, 0.1)`` => every atom
+       already has depth ``softplus(0) = 0.69``, so a large dictionary starts
+       rugged on exactly the length scale the relaxation must traverse. But
+       simply pushing a ``softplus`` parameterisation down to a flat start
+       (``depth_raw = -8``) is *worse*: ``d softplus/dx = sigmoid(-8) = 3.4e-4``,
+       so with Adam the raw amplitude can move at most ``lr * steps = 1.8`` and
+       the deepest well reachable in a 600-step write is ``softplus(-6.2) =
+       2e-3`` — the write silently no-ops (measured: strict 0.062 at K=4, write
+       loss stuck at 0.12 vs 0.003 for the MLP). The squared parameterisation has
+       an O(1) gradient at small amplitude and reaches depth ``~1.8**2`` in the
+       same budget.
+    2. **It carries a GROUP STRUCTURE** (``n_groups``): atom rows are partitioned
+       into ``n_groups`` contiguous blocks, one per item slot. Together with
+       :func:`atom_write_mask_fn` this makes a write *local in parameter space* —
+       writing item ``i`` leaves every other item's atoms **bit-identical**. That
+       is the concrete form of the theorist's C3 claim ("dictionary/atom writes
+       are C3-local by construction") and the H-SUPP arm of w21.
+
+    ``A_j = amp_j**2 >= 0``: an atom can only ever dig a well, never build a
+    hill. That is a designed sign constraint and is stated as structure.
+    """
+
+    centers: jnp.ndarray  # (n_atoms, dim)
+    log_width: jnp.ndarray  # (n_atoms,)
+    amp: jnp.ndarray  # (n_atoms,) -> amp**2 -> depth
+    confine: float = eqx.field(static=True)
+    n_groups: int = eqx.field(static=True)
+
+    def __init__(
+        self,
+        dim: int,
+        n_atoms: int,
+        key: jax.random.PRNGKey,
+        init_scale: float = 1.0,
+        init_width: float = 0.3,
+        confine: float = 0.05,
+        depth_init: float = 1e-4,
+        n_groups: int = 1,
+    ):
+        self.centers = jax.random.normal(key, (n_atoms, dim)) * init_scale
+        self.log_width = jnp.full((n_atoms,), jnp.log(init_width))
+        self.amp = jnp.full((n_atoms,), float(depth_init) ** 0.5)
+        self.confine = confine
+        self.n_groups = max(1, int(n_groups))
+
+    @property
+    def n_atoms(self) -> int:
+        return int(self.centers.shape[0])
+
+    def group_rows(self, group: int) -> jnp.ndarray:
+        """Boolean row mask (n_atoms,) selecting the atoms owned by ``group``.
+
+        Blocks are contiguous and as equal as possible; a group index outside
+        ``[0, n_groups)`` selects nothing (used by the blank/degenerate cases).
+        """
+        import numpy as np
+
+        n = self.n_atoms
+        mask = np.zeros((n,), dtype=bool)
+        if 0 <= group < self.n_groups:
+            lo = round(group * n / self.n_groups)
+            hi = round((group + 1) * n / self.n_groups)
+            mask[lo:hi] = True
+        return jnp.asarray(mask)
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        s = jnp.exp(self.log_width)
+        d2 = jnp.sum((q[None, :] - self.centers) ** 2, axis=-1)
+        depth = self.amp**2
+        v = -jnp.sum(depth * jnp.exp(-d2 / (2.0 * s**2 + 1e-9)))
+        return v + self.confine * jnp.sum(q**2)
+
+
+class HopfieldPotential(eqx.Module):
+    """⭐ The **modern-Hopfield / attention** potential (Ramsauer et al. 2020):
+
+    ``V(q) = -(1/beta) * logsumexp_i(beta * <W q, k_i> + b_i) + alpha * |q|^2``.
+
+    This is the w21 discriminator arm. Three facts make it the right object:
+
+    * With ``alpha = 1/2`` and ``W = I`` this is **exactly** the modern-Hopfield
+      energy, and ``grad V = 0`` reads ``q = sum_i softmax(beta <q,k_i>)_i k_i``
+      — i.e. the stationarity condition *is* one step of attention over the
+      memory codebook. The arm is therefore a genuine in-framework test of
+      "attention-as-memory vs atoms-as-memory", not an MLP wearing a hat.
+    * Its **parameter support is exponentially local in the inner-product
+      metric**: ``dV/dk_i = -softmax_i * q``, so a memory at inner-product gap
+      ``d`` from ``q`` influences ``V(q)`` by ``~exp(-beta d)``. Attention is
+      therefore NOT automatically "more global than an MLP" — its support is a
+      *tunable* function of ``beta``, which an MLP has no analogue of. w21
+      measures this decay rather than assuming it.
+    * Capacity is held fixed while ``beta`` varies, which separates capacity from
+      support with a single knob.
+
+    ``beta`` is static (a hyperparameter of the class, as in Ramsauer), so the
+    learned parameter count is exactly ``n_mem * (d_head + 1)``.
+    """
+
+    keys_: jnp.ndarray  # (n_mem, d_head)
+    bias: jnp.ndarray  # (n_mem,)
+    proj: Optional[jnp.ndarray]  # (d_head, dim) or None => identity (d_head=dim)
+    beta: float = eqx.field(static=True)
+    confine: float = eqx.field(static=True)
+
+    def __init__(
+        self,
+        dim: int,
+        n_mem: int,
+        key: jax.random.PRNGKey,
+        beta: float = 8.0,
+        confine: float = 0.5,
+        d_head: int = 0,
+        key_init: float = 0.1,
+    ):
+        d_head = dim if d_head in (0, None) else int(d_head)
+        k_k, k_p = jax.random.split(key, 2)
+        self.keys_ = jax.random.normal(k_k, (n_mem, d_head)) * key_init
+        self.bias = jnp.zeros((n_mem,))
+        # d_head == dim => the pure Ramsauer form (no projection, W = I). A
+        # projection is only built when a different head width is asked for,
+        # because it would otherwise break the exact modern-Hopfield equivalence
+        # (and add d_head*dim parameters to the matched count).
+        if d_head == dim:
+            self.proj = None
+        else:
+            self.proj = jax.random.normal(k_p, (d_head, dim)) / jnp.sqrt(dim)
+        self.beta = float(beta)
+        self.confine = float(confine)
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        u = q if self.proj is None else self.proj @ q
+        s = self.beta * (self.keys_ @ u) + self.bias
+        return -jax.nn.logsumexp(s) / self.beta + self.confine * jnp.sum(q**2)
+
+
+class AttentionPotential(eqx.Module):
+    """Single-head **cross-attention** from the state to a learned memory
+    codebook, read out as a scalar energy:
+
+    ``V(q) = sum_i softmax(beta * <W q, k_i>)_i * v_i + alpha * |q|^2``.
+
+    Complements :class:`HopfieldPotential`. The Hopfield form is the *energy*
+    whose stationarity is the attention update; this one is the *architecture*
+    (learned query projection ``W``, keys ``k``, values ``v``, softmax mixing)
+    with a scalar value head. Both are run so that a negative transformer result
+    cannot be dismissed as "you did not build a real attention layer": the two
+    differ in whether the value head is tied to the key geometry (Hopfield) or
+    free (here).
+    """
+
+    proj: jnp.ndarray  # (d_head, dim)
+    keys_: jnp.ndarray  # (n_mem, d_head)
+    values: jnp.ndarray  # (n_mem,)
+    beta: float = eqx.field(static=True)
+    confine: float = eqx.field(static=True)
+
+    def __init__(
+        self,
+        dim: int,
+        n_mem: int,
+        key: jax.random.PRNGKey,
+        beta: float = 1.0,
+        confine: float = 0.05,
+        d_head: int = 8,
+        key_init: float = 0.5,
+        value_init: float = 0.1,
+    ):
+        k_p, k_k, k_v = jax.random.split(key, 3)
+        self.proj = jax.random.normal(k_p, (d_head, dim)) / jnp.sqrt(dim)
+        self.keys_ = jax.random.normal(k_k, (n_mem, d_head)) * key_init
+        self.values = jax.random.normal(k_v, (n_mem,)) * value_init
+        self.beta = float(beta)
+        self.confine = float(confine)
+
+    def __call__(self, q: jnp.ndarray) -> float:
+        u = self.proj @ q
+        a = jax.nn.softmax(self.beta * (self.keys_ @ u))
+        return jnp.sum(a * self.values) + self.confine * jnp.sum(q**2)
+
+
+def atom_write_mask_fn(row_mask: jnp.ndarray):
+    """Build an optax-update mask that freezes every atom row outside ``row_mask``.
+
+    This is what makes an atom write **local in parameter space**: the returned
+    callable multiplies the optimizer's updates for ``centers``/``log_width``/
+    ``amp`` by the row mask, so atoms belonging to other items come out of
+    the write **bit-identical** (masking the *updates*, not the gradients, is
+    required — ``optax.adamw``'s decoupled weight decay would otherwise still
+    shrink the frozen rows).
+
+    Intended use: ``train_memory_landscape(..., update_mask_fn=atom_write_mask_fn(m))``
+    where the potential is a :class:`DesignFreedomPotential` whose ``.learned`` is
+    an :class:`AtomDictionaryPotential`.
+    """
+    m = jnp.asarray(row_mask, dtype=jnp.float32)
+
+    def apply(updates):
+        atoms = updates.learned
+        return eqx.tree_at(
+            lambda u: [u.learned.centers, u.learned.log_width, u.learned.amp],
+            updates,
+            replace=[
+                atoms.centers * m[:, None],
+                atoms.log_width * m,
+                atoms.amp * m,
+            ],
+        )
+
+    return apply
+
+
+#: Learned potential families available to :class:`DesignFreedomPotential`. The
+#: RUNG says how much structure is designed in; the FAMILY says what function
+#: class the learned remainder is drawn from. w20 swept the rung at family
+#: ``mlp``; w21 sweeps the family at fixed rung.
+LEARNED_FAMILIES = ("mlp", "atoms", "hopfield", "attn")
+
+
 #: Design-freedom ladder, least free -> most free. The integer is the "freedom"
 #: coordinate of the fidelity-vs-design-freedom curve.
 DESIGN_RUNGS = (
@@ -464,8 +695,18 @@ class DesignFreedomPotential(eqx.Module):
     ``sites_learned_payload``   ring vacuum + K angular wells             MLP
                                 (address geometry only, NO payload)
     ``local_rbf``               coercivity only                           RBF atoms
-    ``free_mlp``                coercivity only                           MLP
+    ``free_mlp``                coercivity only                           ``learned_family``
     ==========================  ========================================  ===================
+
+    **Two orthogonal axes (w21).** The *rung* says how much structure is designed
+    in; ``learned_family`` (one of :data:`LEARNED_FAMILIES`) says which function
+    class the learned remainder is drawn from. w20 swept the rung at family
+    ``mlp`` and concluded "the loop needs essentially all of the designed
+    structure"; w21 asks whether that conclusion is a property of the *function
+    class* by sweeping the family. ``learned_family`` defaults to ``"mlp"``, so
+    every w20 result is reproduced bit-for-bit by the default path.
+    ``local_rbf`` pins the family to ``RBFAtoms`` (it IS the family statement of
+    that rung) and ignores ``learned_family``.
 
     ⚠ **Two honesty notes that must travel with every number this produces.**
 
@@ -488,6 +729,7 @@ class DesignFreedomPotential(eqx.Module):
     residual_scale: float = eqx.field(static=True)
     confine: float = eqx.field(static=True)
     dim: int = eqx.field(static=True)
+    learned_family: str = eqx.field(static=True, default="mlp")
 
     def __init__(
         self,
@@ -505,6 +747,15 @@ class DesignFreedomPotential(eqx.Module):
         residual_scale: float = 0.1,
         confine: float = 0.05,
         rbf_init_width: float = 0.3,
+        learned_family: str = "mlp",
+        n_mem: int = 1120,
+        beta: float = 8.0,
+        d_head: int = 8,
+        hopfield_confine: float = 0.5,
+        key_init: float = 0.1,
+        atom_depth_init: float = -8.0,
+        atom_groups: int = 1,
+        atom_init_scale: float = 1.0,
     ):
         """
         Args:
@@ -517,15 +768,33 @@ class DesignFreedomPotential(eqx.Module):
             residual_scale: multiplier on the learned residual at rung 1. Small
                 by design: the rung asks "does adding learned slop break a
                 working designed landscape?", not "can learning replace it?".
+            learned_family: which function class the LEARNED part is drawn from
+                (:data:`LEARNED_FAMILIES`). ``"mlp"`` reproduces w20 exactly.
+                ``n_mem``/``beta``/``d_head``/``hopfield_confine``/``key_init``
+                size the attention families; ``n_atoms``/``atom_depth_init``/
+                ``atom_groups``/``atom_init_scale`` size the atom dictionary.
         """
         if rung not in DESIGN_RUNGS:
             raise ValueError(f"rung must be one of {DESIGN_RUNGS}, got {rung!r}")
+        if learned_family not in LEARNED_FAMILIES:
+            raise ValueError(
+                f"learned_family must be one of {LEARNED_FAMILIES}, "
+                f"got {learned_family!r}"
+            )
         if dim < 3:
             raise ValueError(f"DesignFreedomPotential requires dim >= 3, got {dim}")
         self.rung = rung
         self.dim = dim
         self.residual_scale = residual_scale
         self.confine = confine
+        # `local_rbf` IS a family statement, so it records its own family name
+        # rather than silently accepting a contradictory `learned_family`.
+        if rung == "designed":
+            self.learned_family = "none"
+        elif rung == "local_rbf":
+            self.learned_family = "rbf_atoms"
+        else:
+            self.learned_family = learned_family
 
         pay = jnp.asarray(payloads, dtype=jnp.float32)
         if rung in ("designed", "skeleton_residual"):
@@ -559,8 +828,39 @@ class DesignFreedomPotential(eqx.Module):
             self.learned = RBFAtoms(
                 dim, n_atoms, key, init_width=rbf_init_width, confine=confine
             )
-        else:
+        elif learned_family == "mlp":
             self.learned = PotentialMLP(dim, hidden=hidden, key=key)
+        elif learned_family == "atoms":
+            self.learned = AtomDictionaryPotential(
+                dim,
+                n_atoms,
+                key,
+                init_scale=atom_init_scale,
+                init_width=rbf_init_width,
+                confine=confine,
+                depth_init=atom_depth_init,
+                n_groups=atom_groups,
+            )
+        elif learned_family == "hopfield":
+            self.learned = HopfieldPotential(
+                dim,
+                n_mem,
+                key,
+                beta=beta,
+                confine=hopfield_confine,
+                d_head=0,  # pure Ramsauer form: W = I
+                key_init=key_init,
+            )
+        else:  # "attn"
+            self.learned = AttentionPotential(
+                dim,
+                n_mem,
+                key,
+                beta=beta,
+                confine=confine,
+                d_head=d_head,
+                key_init=key_init,
+            )
 
     @property
     def design_freedom(self) -> int:

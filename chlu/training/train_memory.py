@@ -123,6 +123,7 @@ def train_memory_landscape(
     weight_decay: float = 1e-4,
     loss_kwargs: Optional[dict] = None,
     callback: Optional[Callable] = None,
+    update_mask_fn: Optional[Callable] = None,
 ):
     """Write ``targets`` into ``V`` by Adam on the learned part only.
 
@@ -133,6 +134,14 @@ def train_memory_landscape(
         key: PRNG key, split per step (never reused).
         steps, lr, weight_decay: optimizer settings.
         loss_kwargs: forwarded to :func:`write_loss`.
+        update_mask_fn: optional ``updates -> updates`` map applied to the
+            optimizer's update tree **before** it is added to the parameters.
+            This is how a write is made **local in parameter space** (w21): with
+            :func:`chlu.core.memory_potentials.atom_write_mask_fn` every atom
+            outside the written item's block comes out of the write
+            bit-identical. It must mask the *updates*, not the gradients,
+            because ``optax.adamw``'s decoupled weight decay is applied to the
+            update and would otherwise still shrink the frozen parameters.
 
     Returns:
         ``(V_trained, history)`` where history is a list of scalar losses.
@@ -153,6 +162,8 @@ def train_memory_landscape(
 
         val, grads = eqx.filter_value_and_grad(loss_fn)(params)
         updates, state = opt.update(grads, state, params)
+        if update_mask_fn is not None:
+            updates = update_mask_fn(updates)
         params = eqx.apply_updates(params, updates)
         return params, state, val
 
