@@ -102,14 +102,16 @@ def test_clu_block_uses_the_real_chlu_unit():
 
 
 def test_clu_block_gamma_is_dissipative_by_default():
-    """Concession 2: gamma > 0 is required for a readable state.
+    """Concession 2: the SHIPPED default is gamma > 0.
 
-    Pinned as a test because a future edit setting gamma=0 would restore
-    symplecticity and silently degrade every recall number
-    (clu-retrieval-demo §6: 1.000 at gamma=0.02 vs 0.813 at gamma=0).
+    ⚠ The original justification (w19 clu-retrieval-demo §6: 1.000 at gamma=0.02
+    vs 0.813 at gamma=0) was superseded in w20 — that 0.813 is a single-phase
+    artifact. The default is retained only so the w20 harness numbers reproduce
+    bit-for-bit; gamma is now a swept knob (w21 gamma-read-sweep). This test
+    therefore pins REPRODUCIBILITY, not a physical requirement.
     """
-    assert ExperimentPrimitiveHarnessConfig().clu_gamma > 0.0
-    assert make_block("clu", 16, 8, key=KEY).gamma > 0.0
+    assert ExperimentPrimitiveHarnessConfig().clu_gamma == 0.05
+    assert make_block("clu", 16, 8, key=KEY).gamma == 0.05
 
 
 # --------------------------------------------------------------------------
@@ -280,3 +282,145 @@ def test_rescue_adopts_a_genuine_improvement():
     assert out[0]["rescued"] is True
     assert out[0]["metric_mean"] < 1e9
     assert out[0]["pre_rescue_metric_mean"] == 1e9
+
+
+# --------------------------------------------------------------------------
+# w21 gamma-read-sweep: CLU-internal read modes and the sweep driver
+# --------------------------------------------------------------------------
+def test_trajectory_read_is_identity_at_one_step():
+    """At clu_steps=1 the fiber has ONE element, so the two read modes coincide.
+
+    This is the load-bearing caveat of the (gamma x read-mode) table: at the
+    shipped clu_steps=1 the read-mode axis is *provably* degenerate, so any
+    apparent difference there would be a bug (different key consumption, a
+    reordered concatenation, ...). Asserted bit-exactly, not approximately.
+    """
+    x = jax.random.normal(KEY, (10, 16))
+    end = make_block("clu", 16, 8, key=KEY, clu_steps=1, clu_read_mode="endpoint")
+    traj = make_block("clu", 16, 8, key=KEY, clu_steps=1, clu_read_mode="trajectory")
+    assert traj.w_out.in_features == end.w_out.in_features == 16
+    assert jnp.array_equal(traj.w_out.weight, end.w_out.weight)
+    assert jnp.array_equal(traj(x), end(x))
+
+
+def test_trajectory_read_widens_the_readout_and_differs_at_multistep():
+    """At clu_steps>1 the fiber read consumes the whole intra-token rollout."""
+    x = jax.random.normal(KEY, (10, 16))
+    end = make_block("clu", 16, 8, key=KEY, clu_steps=4, clu_read_mode="endpoint")
+    traj = make_block("clu", 16, 8, key=KEY, clu_steps=4, clu_read_mode="trajectory")
+    assert end.w_out.in_features == 2 * 8
+    assert traj.w_out.in_features == 4 * 2 * 8  # clu_steps x (q, p)
+    assert not jnp.allclose(traj(x), end(x))
+    assert jnp.all(jnp.isfinite(traj(x)))
+
+
+def test_unknown_read_mode_raises():
+    with pytest.raises(ValueError, match="read_mode"):
+        make_block("clu", 16, 8, key=KEY, clu_read_mode="settled")
+
+
+def test_trajectory_read_stays_causal():
+    """The fiber read must not leak future tokens (it only widens the per-token read)."""
+    T, t_pert = 12, 8
+    x = jax.random.normal(KEY, (T, 16))
+    block = make_block("clu", 16, 12, key=KEY, clu_steps=3, clu_read_mode="trajectory")
+    diff = jnp.abs(block(x) - block(x.at[t_pert].add(5.0))).max(axis=1)
+    assert float(diff[:t_pert].max()) == 0.0
+    assert float(diff[t_pert]) > 1e-6
+
+
+def test_gamma_zero_block_is_volume_preserving():
+    """gamma=0 restores the symplectic map: det J of one Verlet step is 1.
+
+    The whole point of the sweep is that gamma is a knob, so the gamma=0 end of
+    the grid must genuinely be the conservative unit and not a near-miss.
+    """
+    block = make_block("clu", 8, 4, key=KEY, clu_gamma=0.0)
+    q, p = jax.random.normal(KEY, (4,)), jax.random.normal(jax.random.PRNGKey(1), (4,))
+
+    def one_step(z):
+        qq, pp = block.clu.step((z[:4], z[4:]), block.dt, block.gamma)
+        return jnp.concatenate([qq, pp])
+
+    jac = jax.jacobian(one_step)(jnp.concatenate([q, p]))
+    assert float(jnp.abs(jnp.linalg.det(jac) - 1.0)) < 1e-5
+
+
+def test_memory_half_life_matches_the_2ln2_over_gamma_rule():
+    """The quoted 'half-life ~ 2 ln2 / gamma tokens' must be what the code does."""
+    import numpy as np
+
+    from chlu.experiments.exp_primitive_harness import memory_half_life_tokens
+
+    assert memory_half_life_tokens(0.0) == float("inf")
+    for g in (0.001, 0.01, 0.05):
+        assert memory_half_life_tokens(g) == pytest.approx(2 * np.log(2) / g, rel=0.05)
+    # clu_steps damps clu_steps times per TOKEN, so the half-life shortens.
+    assert memory_half_life_tokens(0.05, 4) == pytest.approx(
+        memory_half_life_tokens(0.05, 1) / 4, rel=1e-6
+    )
+
+
+def test_sweep_cell_restores_config_and_tags_results(tmp_path):
+    """A sweep cell must not leak its overrides into the next cell."""
+    from chlu.experiments.exp_primitive_harness import _sweep_cell
+
+    cfg = get_default_config().experiment_primitive_harness
+    cfg.train_steps, cfg.tune_steps, cfg.eval_batch = 2, 2, 8
+    cfg.batch_size, cfg.n_seeds, cfg.lr_grid = 4, 1, [1e-3]
+    cfg.target_block_params = 2000
+    family = AddingFamily(8)
+    results = []
+    _sweep_cell(cfg, family, {"clu_gamma": 0.0, "clu_steps": 2}, results,
+                str(tmp_path / "sweep.json"), log=lambda *a: None)
+    assert cfg.clu_gamma == 0.05 and cfg.clu_steps == 1  # restored
+    assert results[0]["cell"] == {"clu_gamma": 0.0, "clu_steps": 2}
+    assert results[0]["half_life_tokens"] == float("inf")
+    assert (tmp_path / "sweep.json").exists()
+
+
+def test_gamma_sweep_grids_round_trip(tmp_path):
+    config = get_default_config()
+    cfg = config.experiment_primitive_harness
+    assert cfg.clu_read_mode == "endpoint"  # shipped behaviour preserved
+    assert cfg.clu_gamma_sweep[0] == 0.0 and cfg.clu_gamma in cfg.clu_gamma_sweep
+    cfg.clu_gamma_sweep = [0.0, 0.02]
+    cfg.clu_read_mode = "trajectory"
+    cfg.clu_steps_sweep = [1, 8]
+    path = tmp_path / "config.yaml"
+    save_config(config, path)
+    loaded = load_config(path).experiment_primitive_harness
+    assert loaded.clu_gamma_sweep == [0.0, 0.02]
+    assert loaded.clu_read_mode == "trajectory"
+    assert loaded.clu_steps_sweep == [1, 8]
+
+
+def test_gated_write_is_off_by_default_and_bit_identical():
+    """EXPLORATORY write mode must not perturb the shipped block by one bit.
+
+    The gate key is folded in from k2 rather than taken from a 4-way split
+    precisely so the default block's initialisation is unchanged; a 4-way split
+    would silently re-randomise every published w20 CLU cell.
+    """
+    x = jax.random.normal(KEY, (10, 16))
+    default = make_block("clu", 16, 8, key=KEY)
+    explicit = make_block("clu", 16, 8, key=KEY, clu_write_mode="linear")
+    assert default.write_mode == "linear" and default.w_gate is None
+    assert jnp.array_equal(default(x), explicit(x))
+    assert ExperimentPrimitiveHarnessConfig().clu_write_mode == "linear"
+
+
+def test_gated_write_adds_a_multiplicative_input_gate():
+    x = jax.random.normal(KEY, (10, 16))
+    gated = make_block("clu", 16, 8, key=KEY, clu_write_mode="gated")
+    assert gated.w_gate is not None
+    assert gated.w_gate.weight.shape == gated.w_in.weight.shape
+    # Same w_in as the linear block (only the gate is new), yet a different map.
+    assert jnp.array_equal(gated.w_in.weight, make_block("clu", 16, 8, key=KEY).w_in.weight)
+    assert not jnp.allclose(gated(x), make_block("clu", 16, 8, key=KEY)(x))
+    assert jnp.all(jnp.isfinite(gated(x)))
+
+
+def test_unknown_write_mode_raises():
+    with pytest.raises(ValueError, match="write_mode"):
+        make_block("clu", 16, 8, key=KEY, clu_write_mode="conditional")

@@ -1331,13 +1331,35 @@ class ExperimentPrimitiveHarnessConfig:
 
     # ---- CLU block physics (defaults, NOT tuned per family) ----
     clu_dt: float = 0.1
-    clu_gamma: float = 0.05  # > 0 is REQUIRED for a readable state
+    # gamma > 0 was the w20 concession, justified by a w19 measurement that was
+    # retracted in the same wave (see CLUBlock docstring). It is now a swept
+    # knob; the default is left at the shipped value so w20 numbers reproduce.
+    clu_gamma: float = 0.05
     clu_steps: int = 1  # Verlet steps per token
     clu_hidden: int = 32  # potential-MLP hidden width
     clu_kinetic_mode: str = "newtonian_learned"
     clu_potential_type: str = "mlp"
+    clu_read_mode: str = "endpoint"  # "endpoint" (settled) | "trajectory" (fiber)
+    # EXPLORATORY (w21, outside the pre-registered grid): "linear" is the shipped
+    # write current p += W_in x; "gated" multiplies it by sigmoid(W_gate x),
+    # supplying the input-conditioned multiplicative write that the GRU, the
+    # selective SSM and attention all have. Default preserves shipped behaviour.
+    clu_write_mode: str = "linear"
     ssm_selective: bool = True  # Mamba-style input-dependent timescale
     attn_heads: int = 4
+
+    # ---- w21 gamma-read sweep grids (CLU-INTERNAL knobs only) ----
+    # Fairness: gamma / clu_steps / read_mode have no counterpart in the MLP,
+    # GRU, SSM or attention blocks, so sweeping them is category (a) of the task
+    # fairness rule -- a knob no other primitive has. Nothing here touches the
+    # shared slot, so the shipped baselines remain directly comparable.
+    clu_gamma_sweep: List[float] = field(
+        default_factory=lambda: [0.0, 0.001, 0.005, 0.01, 0.02, 0.05, 0.1]
+    )
+    clu_read_mode_sweep: List[str] = field(
+        default_factory=lambda: ["endpoint", "trajectory"]
+    )
+    clu_steps_sweep: List[int] = field(default_factory=lambda: [1, 2, 4])
 
 
 @dataclass
