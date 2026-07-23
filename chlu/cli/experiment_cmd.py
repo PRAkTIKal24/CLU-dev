@@ -240,6 +240,26 @@ def setup_experiment_parsers(subparsers):
                                help='Subset of w21 sweep items (default: all three)')
     exp_ph_parser.set_defaults(func=cmd_exp_primitive_harness)
 
+    # exp-gated-write
+    exp_gw_parser = subparsers.add_parser(
+        'exp-gated-write',
+        help='w22 gated-write performance test: is gated CLU competitive, and '
+             'is there a physics edge vs a matched gated GRU/SSM?'
+    )
+    exp_gw_parser.add_argument('--project', help='Project name to use')
+    exp_gw_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_gw_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (tiny budget, 1 seed, smoke)')
+    exp_gw_parser.add_argument('--items', nargs='+',
+                               choices=['item1', '3a', '3b', '3c', 'cost'],
+                               help='Subset of items to run (default: all)')
+    exp_gw_parser.add_argument('--families', nargs='+',
+                               choices=['adding', 'parity', 'mqar'],
+                               help='Item 1 family subset (default: all three)')
+    exp_gw_parser.add_argument('--out', default='gated_write.json',
+                               help='Output JSON filename')
+    exp_gw_parser.set_defaults(func=cmd_exp_gated_write)
+
     # exp-sequential-write
     exp_sw_parser = subparsers.add_parser(
         'exp-sequential-write',
@@ -774,6 +794,38 @@ def cmd_exp_primitive_harness(args):
             families=getattr(args, 'families', None),
         )
         console.print("✓ Primitive harness completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_gated_write(args):
+    """Run the w22 gated-write performance test."""
+    console.print(
+        "[bold cyan]Running GATED-WRITE performance test: is gated CLU "
+        "competitive, and is there a physics edge?[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    try:
+        from ..experiments.exp_gated_write import run_gated_write
+
+        run_gated_write(
+            config=config,
+            save_dir=str(paths['plots']),
+            items=getattr(args, 'items', None),
+            families=getattr(args, 'families', None),
+            out_name=getattr(args, 'out', 'gated_write.json'),
+            quick=bool(getattr(args, 'quick', False)),
+        )
+        console.print("✓ Gated-write performance test completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
