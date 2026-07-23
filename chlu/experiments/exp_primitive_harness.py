@@ -198,6 +198,8 @@ def build_model(primitive, cfg, family, width, key):
         clu_steps=cfg.clu_steps,
         clu_kinetic_mode=cfg.clu_kinetic_mode,
         clu_potential_type=cfg.clu_potential_type,
+        clu_read_mode=cfg.clu_read_mode,
+        clu_write_mode=cfg.clu_write_mode,
         ssm_selective=cfg.ssm_selective,
         n_heads=cfg.attn_heads,
         **family.model_kwargs,
@@ -521,6 +523,223 @@ def run_lr_rescue(cfg, families_by_name, prior, log=print):
     return rescued
 
 
+# --------------------------------------------------------------------------
+# w21: the (gamma x read-mode x clu_steps) sweep — CLU-INTERNAL knobs only
+# --------------------------------------------------------------------------
+def memory_half_life_tokens(gamma, clu_steps=1):
+    """Tokens for a lightly-damped oscillator's AMPLITUDE to halve.
+
+    ``velocity_verlet_step`` applies ``p <- (1-gamma) p`` once per Verlet
+    sub-step, i.e. ``clu_steps`` times per token. Over a cycle a harmonic mode
+    is half kinetic / half potential, so the *energy* decays like
+    ``(1-gamma)^clu_steps`` per token and the amplitude like the square root of
+    that. Hence half-life = ln2 / (-0.5 * clu_steps * ln(1-gamma))
+    ~= 2 ln2 / (gamma * clu_steps) for small gamma -- the ``2 ln2 / gamma``
+    figure quoted in the w20 report. Returns ``inf`` at gamma = 0.
+    """
+    if gamma <= 0:
+        return float("inf")
+    return float(np.log(2.0) / (-0.5 * clu_steps * np.log1p(-gamma)))
+
+
+def _sweep_cell(cfg, family, cell, results, out_path, log=print):
+    """Run one CLU sweep cell (a dict of CLU-internal overrides) and record it.
+
+    The overrides are written onto ``cfg`` because ``build_model`` reads the CLU
+    physics from there; they are restored afterwards so cells never leak into
+    each other. Only ``clu_*`` fields are ever touched, so the shared slot
+    (d_model, layers, budget, LR grid, steps, seeds) is byte-identical to the
+    shipped harness in every cell.
+    """
+    saved = {k: getattr(cfg, k) for k in cell}
+    for k, v in cell.items():
+        setattr(cfg, k, v)
+    try:
+        label = " ".join(f"{k.replace('clu_', '')}={v}" for k, v in cell.items())
+        log(f"\n  == CLU cell [{family.name}] {label} ==")
+        before = len(results)
+        run_family(cfg, family, ["clu"], results, log=log)
+        for r in results[before:]:
+            r["cell"] = dict(cell)
+            r["half_life_tokens"] = memory_half_life_tokens(
+                cfg.clu_gamma, cfg.clu_steps
+            )
+            r["seq_len"] = family.seq_len
+    finally:
+        for k, v in saved.items():
+            setattr(cfg, k, v)
+    # Checkpoint after every cell: a multi-hour sweep must never be
+    # all-or-nothing (same rule as run_primitive_harness).
+    _write_sweep(out_path, cfg, results, complete=False)
+    return results
+
+
+def _write_sweep(out_path, cfg, results, complete):
+    summary = {
+        "sweep": "gamma_read",
+        "complete": complete,
+        "shared_slot": {
+            "d_model": cfg.d_model,
+            "n_layers": cfg.n_layers,
+            "target_block_params": cfg.target_block_params,
+            "train_steps": cfg.train_steps,
+            "tune_steps": cfg.tune_steps,
+            "batch_size": cfg.batch_size,
+            "eval_batch": cfg.eval_batch,
+            "lr_grid": list(cfg.lr_grid),
+            "n_seeds": cfg.n_seeds,
+            "clu_dt": cfg.clu_dt,
+            "clu_hidden": cfg.clu_hidden,
+            "clu_kinetic_mode": cfg.clu_kinetic_mode,
+            "clu_potential_type": cfg.clu_potential_type,
+            "clu_read_mode": cfg.clu_read_mode,
+            "clu_write_mode": cfg.clu_write_mode,
+        },
+        "results": [{k: v for k, v in r.items() if k != "seed_runs"} for r in results],
+    }
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    with open(out_path, "w") as f:
+        json.dump(summary, f, indent=2)
+    return summary
+
+
+def run_gamma_read_sweep(
+    config: Optional[CHLUConfig] = None,
+    save_dir: Optional[str] = None,
+    families: Optional[list] = None,
+    items: Optional[list] = None,
+    out_name: str = "gamma_read_sweep.json",
+    quick: bool = False,
+) -> dict:
+    """w21 Item 1-3: sweep the CLU's own dissipation / read / integration knobs.
+
+    ``items`` subsets {"gamma", "read", "steps"}:
+
+    - ``gamma``  Item 1: gamma over ``cfg.clu_gamma_sweep`` on every requested
+      family, at the shipped read mode and clu_steps.
+    - ``read``   Item 2: the 2-D (gamma x read_mode) table. Run at
+      ``cfg.clu_steps`` **and** at the largest entry of ``clu_steps_sweep``,
+      because at clu_steps=1 the two read modes are provably the same map.
+    - ``steps``  Item 3: clu_steps over ``cfg.clu_steps_sweep`` at the best
+      gamma found by Item 1 (or the config default if Item 1 was not run),
+      adding problem only, with the cost multiple.
+
+    Only CLU-internal knobs vary. The baselines are untouched and remain
+    directly comparable to the shipped harness table.
+    """
+    if config is None:
+        config = get_default_config()
+    if save_dir is not None:
+        config.project.save_dir = save_dir
+    cfg = config.experiment_primitive_harness
+
+    if quick:
+        cfg.train_steps = 20
+        cfg.tune_steps = 10
+        cfg.lr_grid = [1e-3]
+        cfg.n_seeds = 1
+        cfg.eval_batch = 32
+        cfg.target_block_params = 4000
+        cfg.adding_seq_len = 32
+        cfg.parity_seq_len = 32
+        cfg.mqar_seq_len_fixed = 32
+        cfg.clu_gamma_sweep = [0.0, 0.05]
+        cfg.clu_steps_sweep = [1, 2]
+
+    want_items = set(items or ["gamma", "read", "steps"])
+    want_fams = set(families or ["adding", "parity", "mqar"])
+    save_dir = config.project.save_dir or "results/"
+    results_dir = os.path.join(save_dir, "..", "results")
+    out_path = os.path.join(results_dir, out_name)
+
+    # The three families at the shipped sweep points: adding T=128,
+    # parity T=64, MQAR kv=4 T=128 (mqar_seq_len_fixed / mqar_kv_fixed).
+    fams = []
+    if "adding" in want_fams:
+        fams.append(AddingFamily(cfg.adding_seq_len))
+    if "parity" in want_fams:
+        fams.append(ParityFamily(cfg.parity_seq_len))
+    if "mqar" in want_fams:
+        fams.append(MQARFamily(cfg.mqar_seq_len_fixed, cfg.mqar_kv_fixed, cfg.mqar_vocab))
+
+    print("=" * 70)
+    print("w21 GAMMA / READ-MODE / CLU_STEPS SWEEP (CLU-internal knobs only)")
+    print("=" * 70)
+    print(
+        f"families={[f.name for f in fams]} items={sorted(want_items)} "
+        f"gamma_grid={cfg.clu_gamma_sweep} steps_grid={cfg.clu_steps_sweep} "
+        f"train_steps={cfg.train_steps} tune_steps={cfg.tune_steps} "
+        f"seeds={cfg.n_seeds} lr_grid={cfg.lr_grid}"
+    )
+
+    results = []
+
+    # ---- Item 1: the gamma sweep ----
+    if "gamma" in want_items:
+        print("\n########## ITEM 1 — gamma sweep ##########")
+        for family in fams:
+            for g in cfg.clu_gamma_sweep:
+                _sweep_cell(cfg, family, {"clu_gamma": g}, results, out_path)
+
+    # ---- Item 2: gamma x read_mode ----
+    if "read" in want_items:
+        print("\n########## ITEM 2 — gamma x read mode ##########")
+        # clu_steps=1 is included so the degeneracy is *measured*, not asserted.
+        steps_for_read = sorted({cfg.clu_steps, max(cfg.clu_steps_sweep)})
+        for family in fams:
+            for k in steps_for_read:
+                for mode in cfg.clu_read_mode_sweep:
+                    for g in cfg.clu_gamma_sweep:
+                        if mode == "endpoint" and k == cfg.clu_steps and "gamma" in want_items:
+                            continue  # already measured by Item 1
+                        _sweep_cell(
+                            cfg, family,
+                            {"clu_gamma": g, "clu_read_mode": mode, "clu_steps": k},
+                            results, out_path,
+                        )
+
+    # ---- Item 3: clu_steps at the best gamma (adding only) ----
+    if "steps" in want_items:
+        print("\n########## ITEM 3 — clu_steps ##########")
+        adding = next((f for f in fams if f.name.startswith("adding")), None)
+        if adding is None:
+            print("  (skipped: adding family not requested)")
+        else:
+            best_g = _best_gamma(results, adding.name, cfg.clu_gamma)
+            print(f"  best gamma from Item 1 on {adding.name}: {best_g}")
+            for k in cfg.clu_steps_sweep:
+                if k == cfg.clu_steps and "gamma" in want_items:
+                    continue  # already measured at this gamma by Item 1
+                _sweep_cell(
+                    cfg, adding, {"clu_gamma": best_g, "clu_steps": k},
+                    results, out_path,
+                )
+
+    summary = _write_sweep(out_path, cfg, results, complete=True)
+    print(f"\nWrote {out_path}")
+    return {"results": results, "summary": summary, "out_path": out_path}
+
+
+def _best_gamma(results, family_name, default):
+    """Best gamma for ``family_name`` among Item-1 cells (endpoint, clu_steps=1)."""
+    cells = [
+        r for r in results
+        if r["family"] == family_name
+        and set(r.get("cell", {})) == {"clu_gamma"}
+        and np.isfinite(r.get("metric_mean", float("nan")))
+    ]
+    if not cells:
+        return default
+    higher = r_higher_is_better(family_name)
+    best = (max if higher else min)(cells, key=lambda r: r["metric_mean"])
+    return best["cell"]["clu_gamma"]
+
+
+def r_higher_is_better(family_name):
+    """Metric direction from a family name (accuracy up, MSE down)."""
+    return not family_name.startswith("adding")
+
+
 def benchmark_cost(cfg, family, primitives, n_steps=25, n_rounds=5, log=print):
     """Interleaved wall-clock + FLOPs benchmark at matched parameter budget.
 
@@ -588,6 +807,80 @@ def benchmark_cost(cfg, family, primitives, n_steps=25, n_rounds=5, log=print):
         fl = out.get("gru", {}).get("fwd_flops")
         if fl and np.isfinite(fl):
             out[primitive]["flops_x_gru"] = out[primitive]["fwd_flops"] / fl
+    return out
+
+
+def benchmark_clu_cells(cfg, family, cells, n_steps=25, n_rounds=5, log=print):
+    """Round-robin cost benchmark across CLU-internal configurations (w21 Item 3).
+
+    Same interleaving rationale as ``benchmark_cost`` (this machine is shared, so
+    sequential timing is not reproducible): cycle the cells, time a short burst of
+    each per round, report the median over rounds. Cost multiples are quoted
+    against the FIRST cell, which is by convention the shipped configuration.
+    """
+    prepared = {}
+    order = []
+    for cell in cells:
+        name = " ".join(f"{k.replace('clu_', '')}={v}" for k, v in cell.items())
+        order.append(name)
+        saved = {k: getattr(cfg, k) for k in cell}
+        for k, v in cell.items():
+            setattr(cfg, k, v)
+        try:
+            width, bp, tp, err = match_width("clu", cfg, family, jax.random.PRNGKey(0))
+            model = build_model("clu", cfg, family, width, jax.random.PRNGKey(0))
+        finally:
+            for k, v in saved.items():
+                setattr(cfg, k, v)
+        opt = _make_opt(1e-3, cfg.grad_clip)
+        prepared[name] = {
+            "cell": dict(cell), "width": width, "block_params": bp,
+            "total_params": tp, "param_err": err, "model": model, "opt": opt,
+            "opt_state": opt.init(eqx.filter(model, eqx.is_inexact_array)),
+            "times": [],
+            "fwd_flops": forward_flops(model, family.jbatch(jax.random.PRNGKey(0), 1)[0]),
+        }
+
+    x, y, mask = family.jbatch(jax.random.PRNGKey(1), cfg.batch_size)
+    for name in order:  # warm up compilation outside the timed region
+        st = prepared[name]
+        st["model"], st["opt_state"], loss = _train_step(
+            st["model"], st["opt_state"], x, y, mask, st["opt"], family
+        )
+        jax.block_until_ready(loss)
+
+    for rnd in range(n_rounds):
+        for name in order:
+            st = prepared[name]
+            t0 = time.perf_counter()
+            for _ in range(n_steps):
+                st["model"], st["opt_state"], loss = _train_step(
+                    st["model"], st["opt_state"], x, y, mask, st["opt"], family
+                )
+            jax.block_until_ready(loss)
+            st["times"].append((time.perf_counter() - t0) / n_steps)
+        log(f"  round {rnd + 1}/{n_rounds} done")
+
+    out = {}
+    for name in order:
+        st = prepared[name]
+        t = np.array(st["times"])
+        out[name] = {
+            "cell": st["cell"], "width": st["width"],
+            "block_params": st["block_params"], "total_params": st["total_params"],
+            "param_err": st["param_err"],
+            "ms_per_step_median": float(np.median(t) * 1e3),
+            "ms_per_step_min": float(t.min() * 1e3),
+            "ms_per_step_iqr": float((np.percentile(t, 75) - np.percentile(t, 25)) * 1e3),
+            "fwd_flops": st["fwd_flops"],
+        }
+    ref = out[order[0]]
+    for name in order:
+        out[name]["wallclock_x_ref"] = (
+            out[name]["ms_per_step_median"] / ref["ms_per_step_median"]
+        )
+        if np.isfinite(ref["fwd_flops"]) and ref["fwd_flops"]:
+            out[name]["flops_x_ref"] = out[name]["fwd_flops"] / ref["fwd_flops"]
     return out
 
 
@@ -721,6 +1014,8 @@ def _write_summary(out_path, cfg, results, rescue, complete):
                 "hidden": cfg.clu_hidden,
                 "kinetic_mode": cfg.clu_kinetic_mode,
                 "potential_type": cfg.clu_potential_type,
+                "read_mode": cfg.clu_read_mode,
+                "write_mode": cfg.clu_write_mode,
             },
             "ssm_selective": cfg.ssm_selective,
             "attn_heads": cfg.attn_heads,
@@ -748,6 +1043,14 @@ def main():
     parser.add_argument("--rescue-from", help="run ONLY the rescue pass against an existing JSON")
     parser.add_argument("--benchmark", action="store_true",
                         help="run ONLY the interleaved wall-clock/FLOPs cost benchmark")
+    parser.add_argument("--gamma-sweep", action="store_true",
+                        help="run ONLY the w21 CLU-internal gamma/read-mode/clu_steps sweep")
+    parser.add_argument("--sweep-items", nargs="+", choices=["gamma", "read", "steps"],
+                        help="which w21 sweep items to run (default: all)")
+    parser.add_argument("--sweep-out", default="gamma_read_sweep.json",
+                        help="filename for the w21 sweep JSON")
+    parser.add_argument("--clu-steps-benchmark", action="store_true",
+                        help="run ONLY the interleaved cost benchmark across clu_steps")
     args = parser.parse_args()
     if args.project:
         from chlu.project import ProjectManager
@@ -779,6 +1082,30 @@ def main():
                   f"{v.get('wallclock_x_gru', float('nan')):.2f}x GRU wall / "
                   f"{v.get('flops_x_gru', float('nan')):.2f}x GRU FLOPs")
         print(f"Wrote {path}")
+        return
+    if args.clu_steps_benchmark:
+        cfg = config.experiment_primitive_harness
+        fam = AddingFamily(cfg.adding_seq_len)
+        cells = [{"clu_steps": k} for k in cfg.clu_steps_sweep]
+        cells += [{"clu_steps": k, "clu_read_mode": "trajectory"}
+                  for k in cfg.clu_steps_sweep]
+        out = benchmark_clu_cells(cfg, fam, cells)
+        path = os.path.join(save_dir, "..", "results", "clu_steps_cost_benchmark.json")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            json.dump({"family": fam.name, "cost": out}, f, indent=2)
+        for k, v in out.items():
+            print(f"  {k:36s} d_clu={v['width']:4d} {v['ms_per_step_median']:7.1f} ms/step "
+                  f"(IQR {v['ms_per_step_iqr']:5.1f})  {v['fwd_flops']:.3g} FLOP  "
+                  f"{v['wallclock_x_ref']:.2f}x ref wall / "
+                  f"{v.get('flops_x_ref', float('nan')):.2f}x ref FLOPs")
+        print(f"Wrote {path}")
+        return
+    if args.gamma_sweep:
+        run_gamma_read_sweep(
+            config=config, save_dir=save_dir, families=args.families,
+            items=args.sweep_items, out_name=args.sweep_out, quick=args.quick,
+        )
         return
     run_primitive_harness(
         config=config, save_dir=save_dir, seed=args.seed,
