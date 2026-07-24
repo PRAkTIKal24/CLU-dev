@@ -27,6 +27,7 @@ from chlu.config import get_default_config
 from chlu.core.memory_potentials import atom_write_mask_fn
 from chlu.experiments.exp_designed_mechanism import (
     _atoms_for,
+    _floor_atoms,
     _fit_growth,
     apply_quick,
     ball_setup,
@@ -78,14 +79,15 @@ def test_write_loss_payload_index_generalizes():
 
 def test_param_budget_scales_with_K():
     c = get_default_config().experiment_designed_mechanism
-    # The floor pins small-K cells at min_atoms (an over-complete write regime); the
-    # atoms_per_item*K term dominates once K passes min_atoms/atoms_per_item.
-    k_floor = c.min_atoms // c.atoms_per_item
-    assert _atoms_for(c, 2) == c.min_atoms  # floored
-    big1, big2 = 2 * k_floor, 4 * k_floor
-    assert _atoms_for(c, big1) == c.atoms_per_item * big1  # ·K term dominates
-    assert _atoms_for(c, big2) == 2 * _atoms_for(c, big1)  # and scales with K
     d = 3
+    # The dimension-aware floor pins small-K cells (an over-complete write regime);
+    # the atoms_per_item*K term dominates once K passes floor(d)/atoms_per_item.
+    floor = _floor_atoms(c, d)
+    k_floor = floor // c.atoms_per_item
+    assert _atoms_for(c, 2, d) == floor  # floored
+    big1, big2 = 2 * k_floor, 4 * k_floor
+    assert _atoms_for(c, big1, d) == c.atoms_per_item * big1  # ·K term dominates
+    assert _atoms_for(c, big2, d) == 2 * _atoms_for(c, big1, d)  # and scales with K
     V1 = build_learned_V(d, big1, c, jax.random.PRNGKey(0))
     V2 = build_learned_V(d, big2, c, jax.random.PRNGKey(0))
     n1 = sum(x.size for x in jax.tree_util.tree_leaves(eqx.filter(V1, eqx.is_inexact_array)))
@@ -95,6 +97,27 @@ def test_param_budget_scales_with_K():
     # trainable_filter / atom_write_mask_fn machinery applies)
     assert V1.learned.n_groups == big1 and V2.learned.n_groups == big2
     assert V1.designed is None
+
+
+def test_dimension_aware_floor_grows_geometrically():
+    """The atom floor must scale with the address dimension (w23): floor(d+1) =
+    c * floor(d) in the geometric regime, and it must strictly exceed the fixed
+    hard floor at the sweep dimensions so a high-d low-K cell is not budget-starved.
+    """
+    c = get_default_config().experiment_designed_mechanism
+    # geometric law floor(d) = round(base * c**d) once it clears the hard floor
+    for d in (2, 3, 4, 6, 8):
+        assert _floor_atoms(c, d) == max(
+            c.min_atoms, round(c.min_atoms_base * c.min_atoms_c**d)
+        )
+    # strictly increasing in d, and the high-d floor is much larger than low-d
+    floors = [_floor_atoms(c, d) for d in (2, 3, 4, 6, 8)]
+    assert all(b > a for a, b in zip(floors, floors[1:], strict=False))
+    assert floors[-1] >= c.min_atoms_c**6 * floors[0] * 0.99  # d=8 vs d=2 ~ c^6
+    # at a fixed low K the atom count IS the dimension-aware floor (the ·K term is
+    # dominated), so the write budget grows with d exactly as the floor does.
+    assert _atoms_for(c, 2, 8) == _floor_atoms(c, 8)
+    assert _atoms_for(c, 2, 8) > _atoms_for(c, 2, 2)
 
 
 def test_masked_write_is_bit_local_in_d_ball():
