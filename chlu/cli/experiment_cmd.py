@@ -31,6 +31,10 @@ from ..experiments.exp_designed_mechanism import (
     run_experiment_designed_mechanism,
     apply_quick as apply_designed_mechanism_quick,
 )
+from ..experiments.exp_write_ceiling import (
+    run_experiment_write_ceiling,
+    apply_quick as apply_write_ceiling_quick,
+)
 from ..experiments.exp_retrieval import (
     run_experiment_retrieval,
     apply_quick as apply_retrieval_quick,
@@ -289,6 +293,21 @@ def setup_experiment_parsers(subparsers):
     exp_dm_parser.add_argument('--quick', action='store_true',
                                help='Quick mode (d<=3, K<=8, 2 seeds, tiny writes)')
     exp_dm_parser.set_defaults(func=cmd_exp_designed_mechanism)
+    # exp-write-ceiling
+    exp_wc_parser = subparsers.add_parser(
+        'exp-write-ceiling',
+        help='Can any write operator (masked/sequential, scale-invariant, '
+             'crowding-aware) break the d-independent K_ceiling~=32? (w24)'
+    )
+    exp_wc_parser.add_argument('--project', help='Project name to use')
+    exp_wc_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_wc_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (d=2, K<=4, tiny writes)')
+    exp_wc_parser.add_argument('--arms', nargs='+',
+                               help='Override the swept write arms')
+    exp_wc_parser.add_argument('--dims', nargs='+', type=int,
+                               help='Override the swept address dimensions')
+    exp_wc_parser.set_defaults(func=cmd_exp_write_ceiling)
     # exp-primitive-harness
     exp_ph_parser = subparsers.add_parser(
         'exp-primitive-harness',
@@ -1259,6 +1278,49 @@ def cmd_exp_designed_mechanism(args):
         )
         console.print(
             f"✓ Experiment DESIGNED-MECHANISM completed -> {res['metrics_path']}",
+            style="bold green",
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_write_ceiling(args):
+    """Run the w24 write-ceiling-break arms (locality / scale / crowding)."""
+    console.print(
+        "[bold cyan]Running Experiment WRITE-CEILING-BREAK: can any write break "
+        "K_ceiling~=32?[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        apply_write_ceiling_quick(config)
+    if getattr(args, 'arms', None):
+        config.experiment_write_ceiling.arms = list(args.arms)
+    if getattr(args, 'dims', None):
+        wc = config.experiment_write_ceiling
+        keep = [(d, k) for d, k in zip(wc.dims, wc.k_start, strict=False)
+                if d in args.dims]
+        wc.dims = [d for d, _ in keep] or list(args.dims)
+        wc.k_start = [k for _, k in keep] or [min(wc.k_ladder)] * len(wc.dims)
+
+    try:
+        res = run_experiment_write_ceiling(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+        )
+        console.print(
+            f"✓ Experiment WRITE-CEILING-BREAK completed "
+            f"({res['item4_verdict']['verdict']}) -> {res['metrics_path']}",
             style="bold green",
         )
     except Exception as e:
