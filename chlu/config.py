@@ -1962,6 +1962,65 @@ class ExperimentPhiReadInConfig:
 
 
 @dataclass
+class ExperimentRetryComputeConfig:
+    """Configuration for the RETRY-COMPUTE study (w23) — the accuracy-vs-compute
+    curve for CLU retrieval, with five pre-registered controls.
+
+    Promotes w22's single retry demo point (+46.9pp at ×1.5 compute) into a
+    defensible curve. On the w22 retrieval protocol (Gaussian noise queries,
+    matched to ``MAGICS-LAB/UHop`` ``memory_retrieval_noise.py``), sweeps a retry
+    ladder k ∈ {0,1,2,4,8} at ≥2 loads (M) and ≥2 noise levels (σ), reporting
+    identity accuracy vs total relaxation-step count for six lines:
+    CLU-gated retry, ungated-retry-all, ensemble-of-k-reads, random-kick retry,
+    feedforward-NN matched-compute, Hopfield-k-steps.
+    See chlu/experiments/exp_retry_compute.py.
+    """
+
+    datasets: List[str] = field(default_factory=lambda: ["mnist"])
+    # Loads/σ chosen for HEADROOM: first-pass CLU accuracy in [0.2, 0.9] (measured
+    # M=128/σ=0.3→0.69, M=256/σ=0.3→0.22, M=*/σ=0.2→0.83-0.92). Beyond the σ≈0.4
+    # basin-capture cliff every arm collapses to chance and no retry can recover a
+    # query that has left every well (the Δ_req limit — hopfield-capacity §2.2).
+    load_grid: List[int] = field(default_factory=lambda: [128, 256])  # ≥2 loads
+    noise_levels: List[float] = field(default_factory=lambda: [0.2, 0.3])  # ≥2 σ
+    # Query protocol: "mask" = torch.dropout(p) (the w22 capacity protocol where the
+    # retry boost recovers misses); "noise" = clamp(|x+N(0,σ)|,0,1) (Gaussian). The
+    # boost is MASK-specific (measured); both are run so the finding travels.
+    query_types: List[str] = field(default_factory=lambda: ["mask", "noise"])
+    mask_fracs: List[float] = field(default_factory=lambda: [0.5, 0.7])  # ≥2 mask lvls
+    n_data_pool: int = 2000
+    retry_ladder: List[int] = field(default_factory=lambda: [0, 1, 2, 4, 8])
+    retry_step_frac: float = 0.1  # fraction of lowest-conf reads retried per round
+    # cosine gate thresholds swept for the gated line (Item 1: "threshold swept").
+    # cos|correct≈0.998, cos|wrong≈0.95, so 0.99 cleanly gates the wrong tail;
+    # 0.95 under-retries; 1.0 (no gate) over-retries and corrupts correct reads.
+    conf_thresholds: List[float] = field(
+        default_factory=lambda: [0.95, 0.97, 0.99, 1.0]
+    )
+    main_threshold: float = 0.99  # threshold used for the main-figure gated line
+    retry_boost: float = 1.5  # KE boost injected toward the query on a retry launch
+
+    # CLU designed register (mirrors ExperimentHopfieldCapacityConfig defaults)
+    clu_s_frac: float = 0.3
+    clu_b: float = 1.0
+    clu_alpha: float = 1e-3
+    clu_gamma: float = 0.1
+    clu_steps: int = 150  # = 1 compute unit (one first-pass settle)
+    clu_dt: float = 0.0  # 0 ⇒ auto-set for stability from s and b
+    clu_tail_frac: float = 0.1
+    clu_kinetic_mode: str = "newtonian_identity"
+
+    # feedforward-NN matched-compute control (TTA augmentation + majority vote)
+    ff_aug_sigma: float = 0.1
+    # Hopfield-k-steps control (closed-form line iterated)
+    hopfield_beta: float = 1.0
+    hopfield_beta_tuned: float = 0.0  # 0 ⇒ auto β·⟨x,x⟩≈200 (floored at repo β)
+
+    seed: int = 0
+    rollout_chunk: int = 256
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -2039,6 +2098,9 @@ class CHLUConfig:
     )
     experiment_phi_read_in: ExperimentPhiReadInConfig = field(
         default_factory=ExperimentPhiReadInConfig
+    )
+    experiment_retry_compute: ExperimentRetryComputeConfig = field(
+        default_factory=ExperimentRetryComputeConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -2186,6 +2248,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_phi_read_in", {}),
             )
         ),
+        experiment_retry_compute=ExperimentRetryComputeConfig(
+            **filter_valid_fields(
+                ExperimentRetryComputeConfig,
+                data.get("experiment_retry_compute", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -2226,6 +2294,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_sequential_write": asdict(config.experiment_sequential_write),
         "experiment_hopfield_capacity": asdict(config.experiment_hopfield_capacity),
         "experiment_phi_read_in": asdict(config.experiment_phi_read_in),
+        "experiment_retry_compute": asdict(config.experiment_retry_compute),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
