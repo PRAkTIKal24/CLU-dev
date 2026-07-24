@@ -39,6 +39,10 @@ from ..experiments.exp_hopfield_capacity import (
     run_experiment_hopfield_capacity,
     apply_quick as apply_hopfield_capacity_quick,
 )
+from ..experiments.exp_phi_read_in import (
+    run_experiment_phi_read_in,
+    apply_quick as apply_phi_read_in_quick,
+)
 from ..experiments.kt import KT_MODES
 
 console = Console()
@@ -217,6 +221,22 @@ def setup_experiment_parsers(subparsers):
     exp_hc_parser.add_argument('--dataset',
                                help='Override datasets (comma-separated)')
     exp_hc_parser.set_defaults(func=cmd_exp_hopfield_capacity)
+
+    # exp-phi-read-in
+    exp_phi_parser = subparsers.add_parser(
+        'exp-phi-read-in',
+        help='Learned read-in φ around a DESIGNED store: Hopfield protocol '
+             're-fought in φ-space vs kNN-in-φ + laundering control (w23)'
+    )
+    exp_phi_parser.add_argument('--project', help='Project name to use')
+    exp_phi_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_phi_parser.add_argument('--quick', action='store_true',
+                                help='Quick mode (small sweeps, short AE/rollouts)')
+    exp_phi_parser.add_argument('--dataset',
+                                help='Override datasets (comma-separated)')
+    exp_phi_parser.add_argument('--arms',
+                                help='Override φ arms (comma-separated: pca,ae)')
+    exp_phi_parser.set_defaults(func=cmd_exp_phi_read_in)
     # exp-learned-memory
     exp_lm_parser = subparsers.add_parser(
         'exp-learned-memory',
@@ -999,6 +1019,43 @@ def cmd_exp_hopfield_capacity(args):
         )
         console.print(
             f"✓ Experiment HOPFIELD-CAPACITY completed -> {res['metrics_path']}",
+            style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_phi_read_in(args):
+    """Run the φ read-in benchmark: Hopfield protocol re-fought in φ-space."""
+    console.print(
+        "[bold cyan]Running Experiment PHI-READ-IN: learned φ around a DESIGNED "
+        "store (phase doctrine flagship, w23)[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        apply_phi_read_in_quick(config)
+    if getattr(args, 'dataset', None):
+        config.experiment_phi_read_in.datasets = args.dataset.split(',')
+    if getattr(args, 'arms', None):
+        config.experiment_phi_read_in.phi_arms = args.arms.split(',')
+
+    try:
+        res = run_experiment_phi_read_in(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+        )
+        console.print(
+            f"✓ Experiment PHI-READ-IN completed -> {res['metrics_path']}",
             style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")

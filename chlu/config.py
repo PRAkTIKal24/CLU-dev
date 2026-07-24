@@ -1890,6 +1890,78 @@ class ExperimentHopfieldCapacityConfig:
 
 
 @dataclass
+class ExperimentPhiReadInConfig:
+    """Configuration for the learned read-in ``φ`` around a DESIGNED store (w23).
+
+    The phase-doctrine flagship: *learn around a designed core*. A learned read-in
+    ``φ: raw x → feature`` lifts the query into a representation space; the store is
+    a **designed key–value register** (address = ``φ(x)`` written as a Gaussian
+    well; payload = the raw ``x``), and read-out ``ψ`` = settle → return the
+    payload. The w22 Hopfield/U-Hop protocol is re-fought in ``φ``-space against
+    **kNN-in-φ** (the trivial baseline, now a fair fight — cf. the pixel-space NN
+    floor that beat everyone in w22), **closed-form Hopfield-in-φ**, and the w22
+    **raw-space CLU** line (continuity control). See chlu/experiments/
+    exp_phi_read_in.py.
+
+    ⚠ **Laundering control (Item 3, mandatory):** same ``φ``, trivial store swap.
+    If kNN-in-φ matches CLU-in-φ everywhere, the win is ``φ``'s, not the store's
+    (the C17-3 lesson). A CLU margin that exists ONLY with the designed store is
+    the result the program needs.
+
+    Two ``φ`` arms, both trained OFF the CLU side (w20's law):
+      - ``pca``: frozen PCA-k (unsupervised, linear, cheap).
+      - ``ae``:  a small autoencoder trained on a DISJOINT data-distribution pool
+        with a reconstruction loss only — never sees the store, wells, or a
+        retrieval loss.
+    Both are fit on ``n_fit_pool`` images drawn disjoint from the store pool.
+
+    Metric = mean ``sqdiff`` in **pixel space** on the returned payload (identical
+    to w22 for comparability); identity-retrieval accuracy reported alongside.
+    """
+
+    datasets: List[str] = field(default_factory=lambda: ["mnist"])
+    phi_arms: List[str] = field(default_factory=lambda: ["pca", "ae"])
+    load_grid: List[int] = field(default_factory=lambda: [16, 32, 64, 128, 256])
+    noise_levels: List[float] = field(
+        default_factory=lambda: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    )
+    noise_fixed_load: int = 128
+    n_data_pool: int = 1500  # store pool (patterns drawn from here)
+    n_fit_pool: int = 3000  # DISJOINT pool used to fit/train φ
+    mask_p: float = 0.5  # dropout fraction (the 50%-masked query) — repo verbatim
+
+    # φ read-in
+    phi_dim: int = 32  # feature dimension k (the store's address space)
+    # φ-B autoencoder (trained on the disjoint pool, reconstruction only)
+    ae_hidden: int = 256
+    ae_epochs: int = 400  # full-batch Adam steps
+    ae_lr: float = 1e-3
+    ae_batch: int = 512
+
+    # closed-form Hopfield-in-φ arm
+    hopfield_beta: float = 1.0
+    hopfield_steps: int = 1
+    activations: List[str] = field(default_factory=lambda: ["softmax", "sparsemax"])
+
+    # CLU designed register in φ-space (GaussianMemoryPotential + damped Verlet)
+    clu_s_frac: float = 0.3  # s = clu_s_frac * median-NN(φ) distance (fixed rule)
+    clu_b: float = 1.0
+    clu_alpha: float = 1e-3
+    clu_gamma: float = 0.1
+    clu_steps: int = 200
+    clu_dt: float = 0.0  # 0 ⇒ auto-set from s and b
+    clu_tail_frac: float = 0.1
+    clu_kinetic_mode: str = "newtonian_identity"
+
+    # Item 4 — retry confidence probe (distance-to-nearest-well at settle)
+    probe_retry_confidence: bool = True
+
+    success_cosine: float = 0.9
+    seed: int = 0
+    rollout_chunk: int = 256
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -1964,6 +2036,9 @@ class CHLUConfig:
     )
     experiment_hopfield_capacity: ExperimentHopfieldCapacityConfig = field(
         default_factory=ExperimentHopfieldCapacityConfig
+    )
+    experiment_phi_read_in: ExperimentPhiReadInConfig = field(
+        default_factory=ExperimentPhiReadInConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -2105,6 +2180,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_hopfield_capacity", {}),
             )
         ),
+        experiment_phi_read_in=ExperimentPhiReadInConfig(
+            **filter_valid_fields(
+                ExperimentPhiReadInConfig,
+                data.get("experiment_phi_read_in", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -2144,6 +2225,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_primitive_harness": asdict(config.experiment_primitive_harness),
         "experiment_sequential_write": asdict(config.experiment_sequential_write),
         "experiment_hopfield_capacity": asdict(config.experiment_hopfield_capacity),
+        "experiment_phi_read_in": asdict(config.experiment_phi_read_in),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
