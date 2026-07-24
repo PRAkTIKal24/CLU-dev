@@ -1011,8 +1011,34 @@ class AtomStorePotential(eqx.Module):
         new = eqx.tree_at(
             lambda t: t.payloads, new, new.payloads.at[slot].set(float(payload))
         )
-        new = eqx.tree_at(lambda t: t.amps, new, new.amps.at[slot].set(float(amp))) 
+        new = eqx.tree_at(lambda t: t.amps, new, new.amps.at[slot].set(float(amp)))
         return eqx.tree_at(lambda t: t.active, new, new.active.at[slot].set(1.0))
+
+    def evict(self, slot: int):
+        """Clear one slot (``active -> 0``, ``amp -> 0``). Returns a NEW potential.
+
+        Eviction is the controller's budget verb (MVC-0 §3.C / C5): a full store
+        makes room by *removing* an item, never by silently overwriting (which
+        :meth:`with_item` forbids). A zero-amplitude, inactive slot contributes
+        nothing to ``V`` and its address is free to be re-used by a later write.
+        """
+        new = eqx.tree_at(lambda t: t.active, self, self.active.at[slot].set(0.0))
+        new = eqx.tree_at(lambda t: t.amps, new, new.amps.at[slot].set(0.0))
+        return new
+
+    def with_amps(self, amps):
+        """Return a NEW potential with per-slot amplitudes replaced.
+
+        This is the physical form of **scheduled decay** (leaky wells, w22): a
+        controller tick multiplies each non-permanent well's amplitude by
+        ``exp(-leak)``, so an item's basin shallows over time and, once its depth
+        falls below the confinement, stops holding a query — per-item forgetting
+        by construction, with permanent (``leak == 0``) wells left untouched.
+        """
+        a = jnp.asarray(amps, dtype=self.amps.dtype).reshape(-1)
+        if a.shape[0] != self.amps.shape[0]:
+            raise ValueError(f"amps must have length {self.amps.shape[0]}, got {a.shape[0]}")
+        return eqx.tree_at(lambda t: t.amps, self, a)
 
     def __call__(self, q: jnp.ndarray) -> float:
         addr = q[:2]

@@ -344,6 +344,20 @@ def setup_experiment_parsers(subparsers):
                                help='Subset of items to run (default: all)')
     exp_sw_parser.set_defaults(func=cmd_exp_sequential_write)
 
+    # exp-controller-mvp
+    exp_cm_parser = subparsers.add_parser(
+        'exp-controller-mvp',
+        help='MVC-0 controller (admission+placement+eviction, no learning) on a '
+             'designed store; the N75 rematch, per-admitted vs per-offered (w23)'
+    )
+    exp_cm_parser.add_argument('--project', help='Project name to use')
+    exp_cm_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_cm_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (2 seeds, short K ladder)')
+    exp_cm_parser.add_argument('--items', nargs='+', choices=['1', '2', '3'],
+                               help='Subset of items to run (default: all)')
+    exp_cm_parser.set_defaults(func=cmd_exp_controller_mvp)
+
     # exp-minus-physics
     exp_mp_parser = subparsers.add_parser(
         'exp-minus-physics',
@@ -937,6 +951,48 @@ def cmd_exp_sequential_write(args):
         )
         console.print(
             f"✓ Experiment SEQUENTIAL-WRITE completed -> {res['metrics_path']}",
+            style="bold green",
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_controller_mvp(args):
+    """Run the MVC-0 controller battery + the N75 rematch (w23)."""
+    console.print(
+        "[bold cyan]Running Experiment CONTROLLER-MVP: hand-coded controller on a "
+        "designed store; retention-vs-K per-admitted and per-offered[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    try:
+        from ..experiments.exp_controller_mvp import (
+            apply_quick as apply_ctrl_quick,
+        )
+        from ..experiments.exp_controller_mvp import (
+            run_experiment_controller_mvp,
+        )
+
+        if getattr(args, 'quick', False):
+            apply_ctrl_quick(config)
+
+        res = run_experiment_controller_mvp(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+            items=getattr(args, 'items', None),
+        )
+        console.print(
+            f"✓ Experiment CONTROLLER-MVP completed -> {res['metrics_path']}",
             style="bold green",
         )
     except Exception as e:
