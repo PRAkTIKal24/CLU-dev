@@ -2097,6 +2097,55 @@ class ExperimentRetryComputeConfig:
     hopfield_beta: float = 1.0
     hopfield_beta_tuned: float = 0.0  # 0 ⇒ auto β·⟨x,x⟩≈200 (floored at repo β)
 
+    # ── w24 AMBIGUITY REGIMES (the headroom benchmark) ───────────────────────
+    # w23 could not win the benchmark because there was nothing to win: on
+    # masked-pixel MNIST the trivial NN floor sits at 0.99–1.00 (N90). The fix is
+    # HEADROOM, and the ⭐ design constraint is that the headroom must come from
+    # AMBIGUITY (several stored items are consistent with the query) and NOT from
+    # DESTRUCTION (full-field Gaussian noise past the σ≈0.4 basin-capture cliff,
+    # where the query has left every well and no retry can recover it).
+    #
+    # A "regime" is "<store_mode>:<query_type>":
+    #   store_mode ∈ {"iid", "crowded"} · query_type ∈ {"mask", "noise", "block"}
+    # EMPTY (the default) ⇒ derived from ``query_types`` at store_mode "iid",
+    # i.e. byte-identical to the w23 grid. Nothing below changes w23 behaviour.
+    regimes: List[str] = field(default_factory=list)
+    # R-BLOCK levels: contiguous-occlusion AREA fraction (correlated erasure).
+    block_fracs: List[float] = field(default_factory=lambda: [0.5, 0.7])
+    # Survivor rescaling (1/(1-f), the torch.dropout convention) for BLOCK queries.
+    # True = inherited convention. ⚠ MEASURED (w24 gate iter 1): under *correlated*
+    # erasure the rescaling amplifies a surviving crop by 2-3.3x and destroys the
+    # query (first-pass 0.086 / NN floor 0.383 at f=0.4) — destruction, not
+    # ambiguity. False = the PARTIAL-KEY reading (query = pattern restricted to the
+    # surviving coordinates), which is the arm that produces real headroom.
+    block_rescale: bool = True
+    # R-CROWD levels: the iid dropout mask p used on a CROWDED store (ambiguity
+    # comes from the geometry, so the query degradation is kept mild).
+    crowd_mask_fracs: List[float] = field(default_factory=lambda: [0.3, 0.5])
+    # index of the pool pattern the crowded cluster is grown around
+    crowd_anchor: int = 0
+    # Contraction of the crowded store about its own centroid: xi' = c + rho(xi-c).
+    # 1.0 = plain nearest-neighbour cluster (no contraction). ⚠ MEASURED (w24 gate
+    # iter 1): the NN cluster ALONE creates no ambiguity (NN floor 1.000 everywhere)
+    # because the well width s = clu_s_frac*median-NN is store-ADAPTIVE and the NN
+    # rule is scale-free — a k-times tighter cluster simply gets k-times tighter
+    # wells. rho<1 shrinks median-NN while leaving the erasure displacement
+    # (proportional to the centroid norm) fixed, so sigma_q/median-NN grows as 1/rho.
+    crowd_rho: float = 1.0
+
+    # Item 2 — the headroom GATE, checked before spending a full ladder.
+    # Pass ⇔ first-pass CLU accuracy ∈ band AND NN floor < ceiling.
+    headroom_band: List[float] = field(default_factory=lambda: [0.5, 0.75])
+    headroom_nn_ceiling: float = 0.95
+
+    # ≥3 seeds are required on any cell that produces a headline (w23 ran 1).
+    # seeds = [seed, seed+1, …, seed+n_seeds-1]; the pool subsample, the store,
+    # the queries and the retry RNG all move with the seed.
+    n_seeds: int = 1
+    # the τ-sweep is expensive (4 extra gated ladders); run it on the first
+    # ``sweep_seeds`` seeds only.
+    sweep_seeds: int = 1
+
     seed: int = 0
     rollout_chunk: int = 256
 
