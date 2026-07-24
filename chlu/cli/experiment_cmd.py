@@ -43,6 +43,10 @@ from ..experiments.exp_phi_read_in import (
     run_experiment_phi_read_in,
     apply_quick as apply_phi_read_in_quick,
 )
+from ..experiments.exp_phi_stream import (
+    run_experiment_phi_stream,
+    apply_quick as apply_phi_stream_quick,
+)
 from ..experiments.exp_retry_compute import (
     run_experiment_retry_compute,
     apply_quick as apply_retry_compute_quick,
@@ -241,6 +245,26 @@ def setup_experiment_parsers(subparsers):
     exp_phi_parser.add_argument('--arms',
                                 help='Override φ arms (comma-separated: pca,ae)')
     exp_phi_parser.set_defaults(func=cmd_exp_phi_read_in)
+
+    # exp-phi-stream
+    exp_ps_parser = subparsers.add_parser(
+        'exp-phi-stream',
+        help='φ stream discipline on a class-incremental stream: task-1-only '
+             '(PRIMARY) vs generic-frozen (declared upper bound) φ, the '
+             'cost-of-strictness curve + kNN-in-φ laundering control (w24)'
+    )
+    exp_ps_parser.add_argument('--project', help='Project name to use')
+    exp_ps_parser.add_argument('--seed', type=int,
+                               help='Single seed (overrides cfg.seeds)')
+    exp_ps_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (1 seed, small store, short AE)')
+    exp_ps_parser.add_argument('--regimes',
+                               help='Override φ regimes (comma-separated: '
+                                    'task1_only,generic_frozen)')
+    exp_ps_parser.add_argument('--arms',
+                               help='Override φ arms (comma-separated: pca,ae)')
+    exp_ps_parser.set_defaults(func=cmd_exp_phi_stream)
+
     # exp-retry-compute
     exp_rc_parser = subparsers.add_parser(
         'exp-retry-compute',
@@ -1129,6 +1153,44 @@ def cmd_exp_phi_read_in(args):
         )
         console.print(
             f"✓ Experiment PHI-READ-IN completed -> {res['metrics_path']}",
+            style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_phi_stream(args):
+    """Run the φ stream-discipline study: cost of a task-1-only φ in Class-IL."""
+    console.print(
+        "[bold cyan]Running Experiment PHI-STREAM: task-1-only φ (PRIMARY) vs "
+        "generic-frozen φ (declared upper bound) on a class-incremental stream "
+        "(w24)[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        apply_phi_stream_quick(config)
+    if getattr(args, 'regimes', None):
+        config.experiment_phi_stream.phi_regimes = args.regimes.split(',')
+    if getattr(args, 'arms', None):
+        config.experiment_phi_stream.phi_arms = args.arms.split(',')
+
+    try:
+        res = run_experiment_phi_stream(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+        )
+        console.print(
+            f"✓ Experiment PHI-STREAM completed -> {res['metrics_path']}",
             style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
