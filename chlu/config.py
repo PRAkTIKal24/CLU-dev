@@ -1913,6 +1913,106 @@ class ExperimentControllerMvpConfig:
 
 
 @dataclass
+class ExperimentWriteCeilingConfig:
+    """Configuration for WRITE-CEILING-BREAK (w24): can any write operator break
+    the d-INDEPENDENT learned-capacity ceiling ``K_ceiling ~= 32``?
+
+    w23 (``dimension-aware-budget``) pinned ``K_learned(d) = min(2^d, K_ceiling)``
+    with ``K_ceiling ~= 32`` and showed the ceiling is **not** the terrain (the
+    designed register reaches >= 256 on the identical harness), **not** the
+    parameter count (d=6 K=64 gets *worse* at 2x atoms: 0.855 -> 0.809) and **not**
+    the dimension (K=64 is unwritable at d=6 AND d=8 despite 4x different
+    geometric room). What is left is the WRITE OPERATOR: one static GLOBAL
+    gradient dig asked to carve K disjoint valleys jointly, whose write loss
+    reaches ~0 while retrieval already fails -- i.e. an objective blind to
+    crowding.
+
+    This group configures the three levers, run as separate arms on the SAME
+    geometry/retrieval/budget as w23 (which it reads from
+    ``experiment_designed_mechanism``, so the ``baseline_global`` arm reproduces
+    the w23 line by construction):
+
+    * ``sequential_masked`` / ``sequential_free`` -- write items ONE AT A TIME so
+      no two valleys are dug by the same gradient step (masked = each item may
+      only move its own contiguous atom block, which w22/w23 already partitioned;
+      free = one item at a time but all atoms movable, which isolates "one
+      gradient at a time" from "parameter-space masking").
+    * ``scale_invariant`` -- rescale the write's LENGTH scales with the site
+      separation (which shrinks as ``K^{-1/d}``) and switch the item aggregation
+      to ``sum`` so the per-item gradient does not shrink as K grows. This closes
+      the "signal dilution vs optimization interference" question by measurement.
+    * ``crowding_aware`` -- an objective that can SEE crowding: worst-direction
+      (``max``) minimum-violation instead of the mean, nearest-neighbour barrier
+      instead of the ``1/K``-diluted all-pairs mean, and an explicit atom
+      encroachment penalty at ``d_safe`` (the write-time analogue of the MVC-0
+      spacing gate, :func:`chlu.core.admission.admit_site`).
+    * ``combo`` -- all three.
+
+    ⚠ **Fairness (N46).** Every arm keeps the same learned content
+    (amplitudes/centers/widths of an atom dictionary written by gradient descent)
+    and the same supplied structure as w23 (target sites are given by the writer;
+    atoms are partitioned into K contiguous blocks). A ceiling that breaks only by
+    making the WRITE more designed would be a scope collapse, not a win.
+    """
+
+    # ---- arms and grid ----
+    arms: List[str] = field(
+        default_factory=lambda: [
+            "baseline_global",
+            "sequential_masked",
+            "sequential_free",
+            "scale_invariant",
+            "crowding_aware",
+            "combo",
+        ]
+    )
+    dims: List[int] = field(default_factory=lambda: [4, 5, 6, 8])
+    k_ladder: List[int] = field(default_factory=lambda: [16, 32, 64, 128])
+    # Per-``dims`` entry: the rung the ladder walk STARTS at (the largest K that
+    # passed under the w23 baseline). The ceiling question lives above it; the
+    # start rung is still evaluated, so an arm that LOSES capacity is visible.
+    k_start: List[int] = field(default_factory=lambda: [16, 32, 32, 32])
+    k_cap: int = 128
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    # Seeds used while WALKING the ladder (screening). The decisive cells (last
+    # pass + first fail) are re-run at the full ``seeds`` list.
+    screen_seeds: int = 1
+    # Value-blank control seeds per cell (the control has never failed in w22/w23;
+    # 1 seed keeps it while halving the cost of the sweep).
+    blank_seeds: int = 1
+    # Queries per item for the read (w23 used 32; 16 halves the read cost and puts
+    # the strict-rate standard error at ~1% at K>=32 -- declared, and identical
+    # across arms so the comparison is internal).
+    n_query_per_item: int = 16
+
+    # ---- sequential / masked write ----
+    seq_steps_per_item: int = 300
+    seq_passes: int = 1  # sweeps over the item list
+
+    # ---- scale-invariant write ----
+    # sigma_addr = scale_sigma_frac * site_separation (w23 used a FIXED 0.25 while
+    # the separation shrinks as K^{-1/d}: at d=6 K=64, sep=0.795, so the
+    # perturbation ball reaches a THIRD of the way into the neighbour's cell).
+    scale_sigma_frac: float = 0.30
+    scale_width_frac: float = 0.35  # atom init width = frac * site_separation
+    scale_item_agg: str = "sum"  # per-item gradient independent of K
+
+    # ---- crowding-aware objective ----
+    crowd_weight: float = 1.0
+    crowd_d_safe_frac: float = 0.5  # d_safe = frac * site separation
+    crowd_d_safe_mult: float = 4.4  # cap at mult * atom width (admission.D_SAFE_MULT)
+    crowd_min_agg: str = "max"
+    crowd_barrier_pairs: str = "nn"
+
+    # ---- controls (N92 budget-adequacy protocol) ----
+    run_adequacy_recheck: bool = True  # first-fail cell re-run at 2x atoms
+    adequacy_atom_mult: float = 2.0
+    adequacy_seeds: int = 2
+    run_steps_recheck: bool = True  # first-fail cell re-run at 2x write steps
+    steps_recheck_mult: float = 2.0
+
+
+@dataclass
 class ExperimentHopfieldCapacityConfig:
     """Configuration for the Hopfield-capacity PERFORMANCE benchmark (w22).
 
@@ -2186,6 +2286,9 @@ class CHLUConfig:
     experiment_controller_mvp: ExperimentControllerMvpConfig = field(
         default_factory=ExperimentControllerMvpConfig
     )
+    experiment_write_ceiling: ExperimentWriteCeilingConfig = field(
+        default_factory=ExperimentWriteCeilingConfig
+    )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
@@ -2344,6 +2447,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_controller_mvp", {}),
             )
         ),
+        experiment_write_ceiling=ExperimentWriteCeilingConfig(
+            **filter_valid_fields(
+                ExperimentWriteCeilingConfig,
+                data.get("experiment_write_ceiling", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -2386,6 +2495,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_phi_read_in": asdict(config.experiment_phi_read_in),
         "experiment_retry_compute": asdict(config.experiment_retry_compute),
         "experiment_controller_mvp": asdict(config.experiment_controller_mvp),
+        "experiment_write_ceiling": asdict(config.experiment_write_ceiling),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
