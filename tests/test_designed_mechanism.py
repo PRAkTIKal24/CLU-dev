@@ -199,3 +199,51 @@ def test_blank_learned_scores_low_on_value(cfg):
     blank = score_cell(mb, centers, payloads, cfg, d, seed=0)
     # nothing stored -> strict success against the REAL payloads must be ~0
     assert blank["strict_success_rate"] <= cfg.blank_strict_max + 1e-9
+
+
+def test_trained_well_widths_recovers_planted_widths():
+    """⭐ w25 §5.0: the width dump must report the width of the atoms that FORM the
+    well at a site, not the population median.
+
+    Planted landscape: at each site one deep atom of width 0.11 (the well), plus a
+    large background of shallow far-away atoms of width 0.9. The population median is
+    0.9; the measured well width must be the planted 0.11.
+    """
+    from chlu.core.memory_potentials import AtomDictionaryPotential
+    from chlu.experiments.exp_designed_mechanism import trained_well_widths
+
+    d, K, dim = 3, 4, 4
+    c = get_default_config().experiment_designed_mechanism
+    _, _, targets, _ = ball_setup(d, K, c)
+    n_bg = 40
+    atoms = AtomDictionaryPotential(dim, K + n_bg, jax.random.PRNGKey(0))
+    centers = jnp.concatenate(
+        [jnp.asarray(targets), jax.random.normal(jax.random.PRNGKey(1), (n_bg, dim)) * 8.0]
+    )
+    widths = jnp.concatenate([jnp.full((K,), 0.11), jnp.full((n_bg,), 0.9)])
+    amps = jnp.concatenate([jnp.full((K,), 1.0), jnp.full((n_bg,), 0.05)])
+    atoms = eqx.tree_at(
+        lambda a: (a.centers, a.log_width, a.amp),
+        atoms,
+        (centers, jnp.log(widths), amps),
+    )
+    out = trained_well_widths(atoms, targets)
+
+    assert out["n_atoms"] == K + n_bg
+    assert np.isclose(out["all_atom_width_median"], 0.9, atol=1e-3)  # the wrong answer
+    assert np.isclose(out["w_atom"], 0.11, rtol=1e-3)  # the right one
+    assert len(out["w_atom_per_site"]) == K
+    assert all(n >= 1 for n in out["n_keep_per_site"])
+
+
+def test_trained_well_widths_accepts_wrapped_potential(cfg):
+    """It must accept the harness's ``DesignFreedomPotential`` wrapper (``.learned``)
+    as well as a bare atom dictionary, and report the INIT width on an unwritten V."""
+    from chlu.experiments.exp_designed_mechanism import trained_well_widths
+
+    d, K = 2, 4
+    _, _, targets, _ = ball_setup(d, K, cfg)
+    V = build_learned_V(d, K, cfg, jax.random.PRNGKey(0))
+    out = trained_well_widths(V, targets)
+    assert np.isclose(out["w_atom"], cfg.atom_init_width, rtol=1e-5)
+    assert np.isclose(out["all_atom_width_median"], cfg.atom_init_width, rtol=1e-5)
