@@ -53,6 +53,8 @@ from ..experiments.exp_phi_stream import (
 )
 from ..experiments.exp_retry_compute import (
     run_experiment_retry_compute,
+    run_headroom_gate as run_retry_compute_headroom_gate,
+    apply_ambiguity as apply_retry_compute_ambiguity,
     apply_quick as apply_retry_compute_quick,
 )
 from ..experiments.kt import KT_MODES
@@ -281,6 +283,12 @@ def setup_experiment_parsers(subparsers):
                                help='Quick mode (small grid, short ladder/rollouts)')
     exp_rc_parser.add_argument('--dataset',
                                help='Override datasets (comma-separated)')
+    exp_rc_parser.add_argument('--ambiguity', action='store_true',
+                               help='w24 AMBIGUITY/headroom regimes (contiguous '
+                                    'block occlusion + crowded store), 3 seeds')
+    exp_rc_parser.add_argument('--headroom', action='store_true',
+                               help='w24 Item 2 only: the cheap headroom gate '
+                                    '(first-pass + NN floor), no ladder')
     exp_rc_parser.set_defaults(func=cmd_exp_retry_compute)
     # exp-learned-memory
     exp_lm_parser = subparsers.add_parser(
@@ -1233,10 +1241,22 @@ def cmd_exp_retry_compute(args):
 
     if getattr(args, 'quick', False):
         apply_retry_compute_quick(config)
+    if getattr(args, 'ambiguity', False):
+        apply_retry_compute_ambiguity(config)
     if getattr(args, 'dataset', None):
         config.experiment_retry_compute.datasets = args.dataset.split(',')
 
     try:
+        if getattr(args, 'headroom', False):
+            res = run_retry_compute_headroom_gate(
+                config=config,
+                save_dir=str(paths['plots']),
+                seed=getattr(args, 'seed', None),
+            )
+            console.print(
+                f"✓ Headroom gate completed ({res['n_passed']} cell(s) passed) "
+                f"-> {res['metrics_path']}", style="bold green")
+            return 0
         res = run_experiment_retry_compute(
             config=config,
             save_dir=str(paths['plots']),
