@@ -2202,6 +2202,76 @@ class ExperimentRetryComputeConfig:
 
 
 @dataclass
+class ExperimentPhiStreamConfig:
+    """Configuration for the ``φ`` STREAM-DISCIPLINE study (w24) — what may the
+    learned read-in ``φ`` legitimately see in a CONTINUAL stream?
+
+    w23's ``φ`` (``exp_phi_read_in``) was fit on a disjoint pool that saw **all
+    ten classes**. For static recall that is fair. In **Class-IL it is data
+    leakage**: ``φ`` must not be trained on data from tasks the model has not yet
+    reached. This experiment implements three ``φ``-stream regimes behind one flag
+    and measures the **cost of strictness**.
+
+    Regimes (``phi_regimes``):
+      - ``task1_only`` — ⭐ **PRIMARY (Head ruling).** ``φ`` is fit on task 1's
+        classes only, then **frozen for the whole stream**. The defensible arm;
+        every headline number comes from here.
+      - ``generic_frozen`` — the w23-style all-classes pool, carried as a
+        **declared upper bound**. Clearly labelled, **never the headline**.
+      - ``online`` — **stub / interface only, not run** (see
+        ``chlu/experiments/exp_phi_stream.py::OnlineReadIn``). Its own experiment
+        later; whether it enters the CL results is a separate decision.
+
+    Stream = Split-MNIST-shaped: ``n_tasks`` × ``classes_per_task`` classes
+    (default 5×2). The store stays **DESIGNED** (Gaussian wells over ``φ(x)``,
+    payload = raw ``x``) and ``φ`` is **never trained through the store** (the w20
+    law, unchanged). ``kNN-in-φ`` is reported in **every** regime — the mandatory
+    laundering control (N89, CM-22(i)).
+    """
+
+    dataset: str = "mnist"
+    n_tasks: int = 5
+    classes_per_task: int = 2
+    phi_regimes: List[str] = field(
+        default_factory=lambda: ["task1_only", "generic_frozen"]
+    )
+    phi_arms: List[str] = field(default_factory=lambda: ["pca", "ae"])
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # stream / store sizing
+    items_per_task: int = 32  # items written into the designed store per task
+    n_fit_pool: int = 3000  # φ fit pool per regime (DISJOINT from the store pool)
+    n_store_region: int = 20000  # index region reserved for store draws
+    mask_p: float = 0.5  # 50%-masked query (repo-verbatim dropout query)
+
+    # φ read-in (shared by both regimes — only the FIT POOL differs)
+    phi_dim: int = 32
+    ae_hidden: int = 256
+    ae_epochs: int = 400
+    ae_lr: float = 1e-3
+    ae_batch: int = 512
+
+    # CLU designed register in φ-space (GaussianMemoryPotential + damped Verlet)
+    clu_s_frac: float = 0.3  # s = clu_s_frac * median-NN(φ keys) — one fixed rule
+    clu_b: float = 1.0
+    clu_alpha: float = 1e-3
+    clu_gamma: float = 0.1
+    clu_steps: int = 200
+    clu_dt: float = 0.0  # 0 ⇒ auto-set from s and b
+    clu_tail_frac: float = 0.1
+    clu_kinetic_mode: str = "newtonian_identity"
+    # well-width policy along the stream: "refit" recomputes s from the CURRENT
+    # keys at every stream position (uses only already-stored items — no future
+    # leakage); "task1_frozen" fixes s from the task-1 keys and never re-plans.
+    s_policy: str = "refit"
+
+    laundering_tie_band: float = 0.03
+    success_cosine: float = 0.9
+    seed: int = 0
+    rollout_chunk: int = 256
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -2288,6 +2358,9 @@ class CHLUConfig:
     )
     experiment_write_ceiling: ExperimentWriteCeilingConfig = field(
         default_factory=ExperimentWriteCeilingConfig
+    )
+    experiment_phi_stream: ExperimentPhiStreamConfig = field(
+        default_factory=ExperimentPhiStreamConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -2453,6 +2526,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_write_ceiling", {}),
             )
         ),
+        experiment_phi_stream=ExperimentPhiStreamConfig(
+            **filter_valid_fields(
+                ExperimentPhiStreamConfig,
+                data.get("experiment_phi_stream", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -2496,6 +2575,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_retry_compute": asdict(config.experiment_retry_compute),
         "experiment_controller_mvp": asdict(config.experiment_controller_mvp),
         "experiment_write_ceiling": asdict(config.experiment_write_ceiling),
+        "experiment_phi_stream": asdict(config.experiment_phi_stream),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
