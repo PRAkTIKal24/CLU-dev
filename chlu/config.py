@@ -2013,6 +2013,129 @@ class ExperimentWriteCeilingConfig:
 
 
 @dataclass
+class ExperimentShardedStoreConfig:
+    """Configuration for the **N-unit sharded store** (w25, R2 revival route ii).
+
+    `lattice-capacity-theory` (w24) proved **Prop L2** (a masked write on disjoint
+    atom groups IS N independent optimizers — AdamW's state factorizes elementwise,
+    so there is nothing to synchronize) and **Theorem L1**
+
+    .. code-block:: text
+
+        K_total = min( K_addr(Q, s, sigma_q) ,  sum_r K_write(unit r) )
+
+    Nobody had built the store. This group configures that build
+    (:mod:`chlu.core.shard_store`) and the §5.1 **2x2 discriminator**: does splitting
+    the SAME items across N units, each written by its own dig, clear a wall the
+    monolithic store cannot?
+
+    Everything about geometry, the two-phase read, the write operator, the query
+    noise and the pass criterion is inherited VERBATIM from
+    ``experiment_designed_mechanism`` (w23/w24), so the ``monolithic`` arm
+    reproduces the w23/w24 line by construction and is the mandatory **laundering
+    control** at every ``K_total``. Only the sharding knobs live here.
+
+    ⚠ The routing half of a sharded store is **classical nearest-neighbour
+    indexing** (N89 discipline). The approved claim is narrow: *the write is
+    additive at zero optimizer cost, and the read stays O(1) in depth, because a
+    classical O(N) score suffices to route.* "Capacity multiplies by sharding" is
+    NOT a dynamical result. See chlu/experiments/exp_sharded_store.py.
+    """
+
+    # ---- the 2x2 discriminator grid: cells are "d:K:n_shards" ----
+    # d=6 K=64 2x32 : the headline (additivity: min(K_addr, N*32))
+    # d=4 K=32 2x16 : ⭐ the CONTROL — must still FAIL (geometry-bound below the ceiling)
+    # d=8 K=64 2x32 / 4x16 : additivity is in N*K_ceiling, not in shard size
+    # d=8 K=256 8x32 : where geometry takes over (d_eff < d may bite)
+    cells: List[str] = field(
+        default_factory=lambda: ["6:64:2", "4:32:2", "8:64:2", "8:64:4"]
+    )
+    # Arms. ``monolithic`` = the w23/w24 line = the laundering control.
+    # ``sharded_matched``   : N shards, TOTAL atoms = the monolithic budget
+    #                         (parameter-matched; a win here is a free lunch).
+    # ``sharded_per_shard`` : each shard gets the budget a monolithic store of K/N
+    #                         items would get (the literal "N independent stores";
+    #                         total params ~N x, so its laundering line is...)
+    # ``monolithic_nx``     : ...the monolithic store at that SAME total atom count
+    #                         (w23 measured that more atoms make d=6 K=64 *worse*).
+    arms: List[str] = field(
+        default_factory=lambda: [
+            "monolithic",
+            "sharded_matched",
+            "sharded_per_shard",
+            "monolithic_nx",
+        ]
+    )
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    # Queries per item (w23 used 32; 16 halves the read cost at ~1% strict SE for
+    # K>=32 — declared, and identical across arms, exactly as w24 did).
+    n_query_per_item: int = 16
+    blank_seeds: int = 1  # value-blank control seeds per cell (leak-immunity)
+
+    # ---- allocation + partition (build item 3) ----
+    # "global" = ONE farthest-point packing of the UNION then dealt to shards (what
+    # Theorem L1's condition W4 requires); "local" = each shard packs its own set
+    # without knowing the others (the control that collapses the union separation).
+    allocation: str = "global"
+    partition: str = "spread"  # spread | contiguous | roundrobin
+
+    # ---- routing (build item 4) ----
+    router: str = "R2"  # headline router; ⛔ R1 is not implemented (N97)
+    routers: List[str] = field(default_factory=lambda: ["R2", "R3", "RG"])
+    # Top-2 abstention deadband. 0.0 = never abstain, so the headline number is
+    # per-offered and directly comparable to the monolithic arm (N91 discipline:
+    # no abstention credit in a headline). The sweep is reported separately.
+    abstain_deadband: float = 0.0
+    deadband_sweep: List[float] = field(
+        default_factory=lambda: [0.0, 0.01, 0.05, 0.2, 1.0]
+    )
+
+    # ---- localized atom init (build item 2, the N98 fix) ----
+    # OFF in the headline 2x2: it is an INITIALISATION, so turning it on inside the
+    # headline would confound the sharding effect with an init effect (and invites
+    # an N46 fairness attack). Reported as its own ablation, applied identically to
+    # BOTH arms. Radius = mult * atom_init_width; ADDRESS axes only (the payload
+    # axis keeps the w23 scatter, which is load-bearing for basin reach).
+    atom_init_local: bool = False
+    atom_init_local_mult: float = 2.0
+    init_ablation_cells: List[str] = field(default_factory=lambda: ["6:64:2"])
+    init_ablation_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # ---- item 2: the read-parity check (§5.3, DESIGNED shards, no write) ----
+    # Isolates the READ side: if global-allocator sharding still degrades with N,
+    # Prop L4 ("read-side discrimination is conserved by sharding") is wrong and
+    # there is an unmodelled cross-shard channel -> escalate, do not paper over.
+    parity_d: int = 4
+    parity_K: int = 32
+    parity_shards: List[int] = field(default_factory=lambda: [1, 2, 4, 8])
+    parity_allocations: List[str] = field(default_factory=lambda: ["global", "local"])
+    parity_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    parity_n_query_per_item: int = 16
+
+    # ---- item 3: wall-clock of routing vs read (the O(1)-in-depth claim) ----
+    timing_d: int = 6
+    timing_K: int = 64
+    timing_shards: List[int] = field(default_factory=lambda: [2, 4, 8])
+    timing_queries: int = 64
+    timing_repeats: int = 3
+
+    # ---- item 4: the global allocator demo (registry vs per-shard registries) ----
+    alloc_demo_K: int = 24
+    alloc_demo_shards: int = 4
+    alloc_demo_radius: float = 2.0
+    alloc_demo_s: float = 0.35  # well width; d_safe = 4.4 * s (admission.D_SAFE_MULT)
+    alloc_demo_seed: int = 0
+
+    # ---- which items run ----
+    run_discriminator: bool = True
+    run_read_parity: bool = True
+    run_timing: bool = True
+    run_allocator: bool = True
+    run_init_ablation: bool = True
+    run_deadband_sweep: bool = True
+
+
+@dataclass
 class ExperimentHopfieldCapacityConfig:
     """Configuration for the Hopfield-capacity PERFORMANCE benchmark (w22).
 
@@ -2532,6 +2655,9 @@ class CHLUConfig:
     experiment_cl_entry: ExperimentClEntryConfig = field(
         default_factory=ExperimentClEntryConfig
     )
+    experiment_sharded_store: ExperimentShardedStoreConfig = field(
+        default_factory=ExperimentShardedStoreConfig
+    )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
@@ -2708,6 +2834,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_cl_entry", {}),
             )
         ),
+        experiment_sharded_store=ExperimentShardedStoreConfig(
+            **filter_valid_fields(
+                ExperimentShardedStoreConfig,
+                data.get("experiment_sharded_store", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -2753,6 +2885,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_write_ceiling": asdict(config.experiment_write_ceiling),
         "experiment_phi_stream": asdict(config.experiment_phi_stream),
         "experiment_cl_entry": asdict(config.experiment_cl_entry),
+        "experiment_sharded_store": asdict(config.experiment_sharded_store),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }

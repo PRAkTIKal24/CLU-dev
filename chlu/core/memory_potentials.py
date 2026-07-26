@@ -399,6 +399,39 @@ def site_separation(centers) -> float:
     d2 = np.sum((c[:, None, :] - c[None, :, :]) ** 2, axis=-1)
     np.fill_diagonal(d2, np.inf)
     return float(np.sqrt(d2.min()))
+
+
+def _atom_group_owner(n_atoms: int, n_groups: int):
+    """Owner group index per atom row, matching :meth:`AtomDictionaryPotential.group_rows`.
+
+    Contiguous blocks with boundaries ``round(g*n/G)`` — the vectorized inverse of
+    that partition (numpy, so it is a trace-time constant). Mirrors
+    ``chlu.training.train_memory._atom_owner``; kept local to avoid a core->training
+    import.
+    """
+    import numpy as np
+
+    bounds = np.array(
+        [round(g * n_atoms / n_groups) for g in range(n_groups + 1)], dtype=int
+    )
+    rows = np.arange(n_atoms)
+    return np.clip(np.searchsorted(bounds, rows, side="right") - 1, 0, n_groups - 1)
+
+
+def _uniform_ball(key: jax.random.PRNGKey, n: int, dim: int) -> jnp.ndarray:
+    """``(n, dim)`` points drawn uniformly in the unit ``dim``-ball.
+
+    Normalized Gaussian direction times ``U^(1/dim)`` radius — the same construction
+    :func:`designed_sites` uses for its candidate pool, so a localized atom init and
+    a designed site set are drawn from the same geometry.
+    """
+    k_g, k_r = jax.random.split(key, 2)
+    g = jax.random.normal(k_g, (n, dim))
+    g = g / (jnp.linalg.norm(g, axis=1, keepdims=True) + 1e-12)
+    rad = jax.random.uniform(k_r, (n,)) ** (1.0 / max(dim, 1))
+    return g * rad[:, None]
+
+
 class RBFAtoms(eqx.Module):
     """A learned dictionary of LOCALIZED wells: ``V = -sum_j d_j exp(-|q-c_j|^2/2s_j^2)``.
 
@@ -490,8 +523,61 @@ class AtomDictionaryPotential(eqx.Module):
         confine: float = 0.05,
         depth_init: float = 1e-4,
         n_groups: int = 1,
+        group_centers=None,
+        local_radius: float = 0.0,
     ):
-        self.centers = jax.random.normal(key, (n_atoms, dim)) * init_scale
+        """
+        Args:
+            group_centers: optional ``(n_groups, L)`` localization targets, ``L <=
+                dim`` — group ``j``'s atoms are initialised in a ball of radius
+                ``local_radius`` around ``group_centers[j]`` **in the leading ``L``
+                coordinates only**; coordinates ``L:`` keep the scattered
+                ``N(0, init_scale)`` init. Together with ``local_radius > 0`` this
+                is the **N98 fix** (see below). ``None`` (default) => the historical
+                scatter, bit-identical.
+            local_radius: radius of that ball; ``0.0`` (default) disables the
+                localization entirely, so the default construction is unchanged
+                bit-for-bit (the localized draw uses a *folded* key, so even the
+                RNG stream of the default path is untouched).
+
+        ⚠ **N98 (w24 ``lattice-capacity-theory`` §1.4, measured).** With the shipped
+        ``init_scale=1.0`` EVERY group's atoms are scattered over the whole ball, so
+        group ``j`` owns atoms sitting inside item ``i``'s well from step 0. A masked
+        write for item ``i`` must then compensate for foreign atoms it is not allowed
+        to move, and masked-write != N-independent-optimizers by **1.4% in amplitude
+        — three orders above the 1.5e-5 site tail** (the theorist's own prediction P3
+        failed here). Localizing group ``j``'s atoms near site ``j`` restores W3 to
+        the site tail and makes Prop L2 exact in practice.
+
+        ⚠ **Why only the LEADING ``L`` coordinates (N46 fairness).** In the d-ball
+        harness the payload channel is coordinate ``d`` and its value is what the
+        write must *learn*; the address sites are already supplied to the write
+        objective. Localizing the ADDRESS axes therefore hands the writer nothing it
+        did not already have, while localizing the payload axis would hand it the
+        answer — and would also destroy the measured basin-reach property that makes
+        ``init_scale=1.0`` load-bearing (a well initialised at payload 0 cannot reach
+        ``|a_i| = 1``). Callers pass address-only ``group_centers`` for this reason.
+        """
+        centers = jax.random.normal(key, (n_atoms, dim)) * init_scale
+        if group_centers is not None and float(local_radius) > 0.0:
+            gc = jnp.asarray(group_centers, dtype=centers.dtype)
+            if gc.ndim != 2:
+                raise ValueError(f"group_centers must be 2-D, got shape {gc.shape}")
+            n_g = max(1, int(n_groups))
+            if int(gc.shape[0]) != n_g:
+                raise ValueError(
+                    f"group_centers has {gc.shape[0]} rows for {n_g} groups"
+                )
+            local_dims = int(gc.shape[1])
+            if local_dims > dim:
+                raise ValueError(
+                    f"group_centers width {local_dims} exceeds dim {dim}"
+                )
+            owner = jnp.asarray(_atom_group_owner(n_atoms, n_g))
+            k_ball = jax.random.fold_in(key, 1)  # default path's stream untouched
+            offs = _uniform_ball(k_ball, n_atoms, local_dims) * float(local_radius)
+            centers = centers.at[:, :local_dims].set(gc[owner] + offs)
+        self.centers = centers
         self.log_width = jnp.full((n_atoms,), jnp.log(init_width))
         self.amp = jnp.full((n_atoms,), float(depth_init) ** 0.5)
         self.confine = confine
@@ -756,6 +842,8 @@ class DesignFreedomPotential(eqx.Module):
         atom_depth_init: float = -8.0,
         atom_groups: int = 1,
         atom_init_scale: float = 1.0,
+        atom_group_centers=None,
+        atom_local_radius: float = 0.0,
     ):
         """
         Args:
@@ -773,6 +861,10 @@ class DesignFreedomPotential(eqx.Module):
                 ``n_mem``/``beta``/``d_head``/``hopfield_confine``/``key_init``
                 size the attention families; ``n_atoms``/``atom_depth_init``/
                 ``atom_groups``/``atom_init_scale`` size the atom dictionary.
+            atom_group_centers / atom_local_radius: the **N98 localized atom init**
+                (w25), forwarded verbatim to :class:`AtomDictionaryPotential`.
+                ``atom_local_radius = 0.0`` (default) is the historical scatter,
+                bit-identical.
         """
         if rung not in DESIGN_RUNGS:
             raise ValueError(f"rung must be one of {DESIGN_RUNGS}, got {rung!r}")
@@ -840,6 +932,8 @@ class DesignFreedomPotential(eqx.Module):
                 confine=confine,
                 depth_init=atom_depth_init,
                 n_groups=atom_groups,
+                group_centers=atom_group_centers,
+                local_radius=atom_local_radius,
             )
         elif learned_family == "hopfield":
             self.learned = HopfieldPotential(
