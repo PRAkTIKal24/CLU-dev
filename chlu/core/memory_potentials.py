@@ -934,7 +934,7 @@ class AtomStorePotential(eqx.Module):
     slot filled. Nothing is trained here -- this is the designed arm.
     """
 
-    centers: jnp.ndarray  # (capacity, 2) address-plane sites
+    centers: jnp.ndarray  # (capacity, addr_dim) address-space sites
     payloads: jnp.ndarray  # (capacity,) stored values a_i
     amps: jnp.ndarray  # (capacity,) well depths A_i
     active: jnp.ndarray  # (capacity,) 0/1 slot mask m_i
@@ -943,6 +943,7 @@ class AtomStorePotential(eqx.Module):
     s_pay: float = eqx.field(static=True)
     kappa: float = eqx.field(static=True)
     dim: int = eqx.field(static=True)
+    addr_dim: int = eqx.field(static=True)
     spectator_k: float = eqx.field(static=True)
 
     def __init__(
@@ -954,22 +955,35 @@ class AtomStorePotential(eqx.Module):
         s_pay: Optional[float] = None,
         kappa: float = 1.0,
         spectator_k: float = 1.0,
+        addr_dim: int = 2,
     ):
         """An EMPTY store. Items are added with :meth:`with_item`.
 
         Args:
-            dim: latent dim (>= 3: address plane q0,q1 + payload channel q2).
+            dim: latent dim (>= ``addr_dim + 1``: address block q[:addr_dim] +
+                payload channel q[addr_dim]).
             capacity: number of slots (fixed, so the object is a static PyTree).
-            alpha: address-plane confinement (coercivity; F5 Prop-10).
+            alpha: address-space confinement (coercivity; F5 Prop-10).
             s: atom width -- the ONLY length scale the admission radius
                 ``d_safe = 4.4 s`` is expressed in.
             s_pay: payload-bump width (defaults to ``s``).
             kappa: payload spring constant.
+            addr_dim: dimension of the address block (default **2**, the w23
+                address plane -- unchanged behaviour). The w25 continual-learning
+                entry addresses the store by ``φ(x) ∈ R^{phi_dim}``, so the store
+                must support an address block of arbitrary dimension; nothing else
+                about the object changes.
         """
-        if dim < 3:
-            raise ValueError(f"AtomStorePotential requires dim >= 3, got {dim}")
+        if addr_dim < 1:
+            raise ValueError(f"addr_dim must be >= 1, got {addr_dim}")
+        if dim < addr_dim + 1:
+            raise ValueError(
+                f"AtomStorePotential requires dim >= addr_dim + 1 "
+                f"({addr_dim + 1}), got {dim}"
+            )
         self.dim = dim
-        self.centers = jnp.zeros((capacity, 2))
+        self.addr_dim = int(addr_dim)
+        self.centers = jnp.zeros((capacity, int(addr_dim)))
         self.payloads = jnp.zeros((capacity,))
         self.amps = jnp.zeros((capacity,))
         self.active = jnp.zeros((capacity,))
@@ -990,11 +1004,12 @@ class AtomStorePotential(eqx.Module):
     def sites(self, dim: Optional[int] = None) -> jnp.ndarray:
         """(n_stored, dim) full stored states ``z_i = (c_i, a_i, 0...)``."""
         d = self.dim if dim is None else dim
+        a = self.addr_dim
         idx = jnp.nonzero(self.active, size=self.capacity, fill_value=-1)[0]
         idx = idx[idx >= 0]
         z = jnp.zeros((idx.shape[0], d))
-        z = z.at[:, :2].set(self.centers[idx])
-        z = z.at[:, 2].set(self.payloads[idx])
+        z = z.at[:, :a].set(self.centers[idx])
+        z = z.at[:, a].set(self.payloads[idx])
         return z
 
     def with_item(self, center, payload: float, amp: float = 1.0):
@@ -1006,7 +1021,7 @@ class AtomStorePotential(eqx.Module):
         slot = int(jnp.argmin(self.active))
         if float(self.active[slot]) != 0.0:
             raise RuntimeError(f"AtomStorePotential is full ({self.capacity})")
-        c = jnp.asarray(center, dtype=jnp.float32).reshape(-1)[:2]
+        c = jnp.asarray(center, dtype=jnp.float32).reshape(-1)[: self.addr_dim]
         new = eqx.tree_at(lambda t: t.centers, self, self.centers.at[slot].set(c))
         new = eqx.tree_at(
             lambda t: t.payloads, new, new.payloads.at[slot].set(float(payload))
@@ -1041,7 +1056,8 @@ class AtomStorePotential(eqx.Module):
         return eqx.tree_at(lambda t: t.amps, self, a)
 
     def __call__(self, q: jnp.ndarray) -> float:
-        addr = q[:2]
+        a = self.addr_dim
+        addr = q[:a]
         d2 = jnp.sum((addr[None, :] - self.centers) ** 2, axis=-1)
         w_addr = self.active * jnp.exp(-d2 / (2.0 * self.s**2))
         w_pay = self.active * jnp.exp(-d2 / (2.0 * self.s_pay**2))
@@ -1049,9 +1065,9 @@ class AtomStorePotential(eqx.Module):
         v = self.alpha * jnp.sum(addr**2)
         v = v - jnp.sum(self.amps * w_addr)
         s_of_q = jnp.sum(self.payloads * w_pay)
-        v = v + 0.5 * self.kappa * (q[2] - s_of_q) ** 2
-        if self.dim > 3:
-            v = v + 0.5 * self.spectator_k * jnp.sum(q[3:] ** 2)
+        v = v + 0.5 * self.kappa * (q[a] - s_of_q) ** 2
+        if self.dim > a + 1:
+            v = v + 0.5 * self.spectator_k * jnp.sum(q[a + 1 :] ** 2)
         return v
 
 
@@ -1087,12 +1103,30 @@ class GaussianMemoryPotential(eqx.Module):
     """
 
     centers: jnp.ndarray  # (M, D) stored patterns
+    amps: jnp.ndarray  # (M,) per-well depth multipliers (all-ones by default)
     s: float = eqx.field(static=True)
     b: float = eqx.field(static=True)
     alpha: float = eqx.field(static=True)
 
-    def __init__(self, centers, s: float, b: float = 1.0, alpha: float = 1e-3):
+    def __init__(self, centers, s: float, b: float = 1.0, alpha: float = 1e-3,
+                 amps=None):
+        """Args:
+            amps: optional ``(M,)`` per-well depth multipliers. ``None`` (the
+                default) means all-ones — **exactly** the uniform-depth store of
+                w22–w24. Per-well amplitudes exist so a store under **scheduled
+                per-item retention** (w25) can be read: a well whose amplitude has
+                decayed no longer holds a settling particle, which is what makes
+                the retention schedule physical rather than bookkeeping.
+        """
         self.centers = jnp.asarray(centers, dtype=jnp.float32)
+        m = int(self.centers.shape[0])
+        self.amps = (
+            jnp.ones((m,), dtype=jnp.float32)
+            if amps is None
+            else jnp.asarray(amps, dtype=jnp.float32).reshape(-1)
+        )
+        if self.amps.shape[0] != m:
+            raise ValueError(f"amps must have length {m}, got {self.amps.shape[0]}")
         self.s = float(s)
         self.b = float(b)
         self.alpha = float(alpha)
@@ -1103,5 +1137,5 @@ class GaussianMemoryPotential(eqx.Module):
 
     def __call__(self, q: jnp.ndarray) -> float:
         d2 = jnp.sum((q[None, :] - self.centers) ** 2, axis=-1)
-        wells = jnp.exp(-d2 / (2.0 * self.s**2))
+        wells = self.amps * jnp.exp(-d2 / (2.0 * self.s**2))
         return 0.5 * self.alpha * jnp.sum(q * q) - self.b * jnp.sum(wells)

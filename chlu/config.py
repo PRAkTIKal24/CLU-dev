@@ -2321,6 +2321,124 @@ class ExperimentPhiStreamConfig:
 
 
 @dataclass
+class ExperimentClEntryConfig:
+    """⭐ Configuration for the w25 CONTINUAL-LEARNING ENTRY (``exp_cl_entry``).
+
+    Rehearsal-free **Class-Incremental Learning** (task identity NOT given at test
+    time) on Split-MNIST / Split-CIFAR-10, from scratch, with a **designed CLU store**
+    addressed by a frozen task-1-only ``φ`` and driven by the MVC-0 controller. One
+    build carries three results: the entry (ACC + forgetting/BWT vs the mandatory
+    baseline table), the R3-native retry ladder on crowded-store recall of past-task
+    items, and the R1 **scheduled per-item retention** demonstration.
+
+    Binding protocol constraints encoded here:
+      - ``phi_dim >= 16`` (PREREG_CL_PHI §7 — below that the leakage-free arm pays a
+        real double-digit penalty);
+      - ``phi_regimes`` may only contain ``task1_only`` (PRIMARY) and
+        ``generic_frozen`` (declared upper bound, never a headline);
+      - ``memory_items`` is matched across the store, ER, iCaRL, GDumb and both
+        kNN-in-φ laundering lines (N89 / CM-22(i));
+      - the sizing rule (``controller-mvp`` handover item 4): the admission radius is
+        ``d_safe = d_safe_mult · s`` with ``s = clu_s_frac · median-NN(stored keys)``,
+        so ``d_safe_mult · clu_s_frac <= 1`` keeps the spacing gate self-consistent
+        with the width rule instead of refusing almost everything.
+    """
+
+    dataset: str = "mnist"  # mnist | cifar10
+    n_tasks: int = 5
+    classes_per_task: int = 2
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    items: List[str] = field(default_factory=lambda: ["entry", "retry", "retention"])
+
+    # ---- stream sizing ----
+    n_train_per_task: int = 2000  # stream items offered per task (store AND baselines)
+    n_test_per_task: int = 1000  # held-out test items per task (Class-IL evaluation)
+    n_fit_region: int = 10000  # train indices reserved for φ fit pools (disjoint)
+    n_fit_pool: int = 3000  # φ fit pool size (same in both regimes)
+
+    # ---- φ (PREREG_CL_PHI) ----
+    phi_regimes: List[str] = field(
+        default_factory=lambda: ["task1_only", "generic_frozen"]
+    )
+    phi_arm: str = "pca"  # pca | ae
+    phi_dim: int = 32  # ⚠ must be >= 16 (binding)
+    ae_hidden: int = 256
+    ae_epochs: int = 400
+    ae_lr: float = 1e-3
+    ae_batch: int = 512
+
+    # ---- the designed store + MVC-0 controller ----
+    memory_items: int = 200  # matched memory budget (items) for every method
+    clu_s_frac: float = 0.2  # s = clu_s_frac · median-NN(stored φ keys)
+    d_safe_mult: float = 4.4  # admission radius in units of s (4.4·0.2 = 0.88·median-NN)
+    s_policy: str = "refit"  # refit | task1_frozen
+    s_init_items: int = 200  # task-1 keys used to set the initial width
+    store_alpha: float = 1e-3  # address-space confinement
+    clu_b: float = 1.0
+    clu_alpha: float = 1e-3
+    clu_gamma: float = 0.1
+    clu_steps: int = 150
+    clu_dt: float = 0.0  # 0 ⇒ auto (0.5·s/√b)
+    clu_tail_frac: float = 0.1
+    clu_kinetic_mode: str = "newtonian_identity"
+    rollout_chunk: int = 256
+
+    # ---- baselines (cl_baselines.py) ----
+    baselines: List[str] = field(
+        default_factory=lambda: ["finetune", "ewc", "si", "lwf", "er", "icarl",
+                                 "gdumb", "joint"]
+    )
+    backbone: str = "mlp"  # mlp (MNIST) | cnn (CIFAR-10)
+    cnn_channels: List[int] = field(default_factory=lambda: [16, 32, 32])
+    mlp_width: int = 400
+    mlp_depth: int = 2
+    baseline_iters: int = 500  # optimizer steps per task, identical for every method
+    baseline_batch: int = 128
+    baseline_lr: float = 1e-3
+    ewc_lambda: float = 5000.0
+    si_c: float = 1.0
+    si_xi: float = 0.1
+    lwf_alpha: float = 1.0
+    lwf_temp: float = 2.0
+    fisher_samples: int = 200
+    eval_chunk: int = 1024
+    # N78 tuning discipline: each rehearsal-free baseline's ONE defining
+    # hyper-parameter is swept on seed 0 and the best value is used for all seeds;
+    # the grid and the winner are reported. Nothing else is tuned per method.
+    tune_baselines: bool = True
+    ewc_lambda_grid: List[float] = field(
+        default_factory=lambda: [100.0, 1000.0, 10000.0]
+    )
+    si_c_grid: List[float] = field(default_factory=lambda: [0.1, 1.0, 10.0])
+    lwf_alpha_grid: List[float] = field(default_factory=lambda: [0.5, 1.0, 2.0])
+
+    # ---- Item 3: the R3-native retry ladder ----
+    retry_ladder: List[int] = field(default_factory=lambda: [0, 1, 2, 4, 8])
+    retry_tau: float = 0.99  # confidence gate threshold (swept below)
+    retry_tau_grid: List[float] = field(
+        default_factory=lambda: [0.99, 0.999, 0.9999, 1.0]
+    )
+    retry_boost: float = 1.5
+    retry_step_frac: float = 0.1
+    retry_mask_p: float = 0.5  # PIXEL-space dropout (used by the retention probe)
+    retry_mask_levels: List[float] = field(default_factory=lambda: [0.5, 0.8])
+    retry_mid_task: int = 2  # store snapshot for the MID-STREAM retry cell (0-indexed)
+    ff_aug_sigma: float = 0.1  # matched-compute feedforward TTA noise
+
+    # ---- Item 4: scheduled per-item retention (R1 survivor) ----
+    # ⛔ naming (CM-22 m/n/o): scheduled per-item retention / scheduled forgetting.
+    # NEVER "certified", "unlearning", "deletion by construction", "exact deletion".
+    ticks_per_task: int = 4  # decay ticks per task (20 over a 5-task stream)
+    leak_slow: float = 0.0866  # half-life 8 ticks
+    leak_fast: float = 0.3466  # half-life 2 ticks
+    amp_floor: float = 0.05  # a well below this self-evicts
+    permanent_per_task: int = 10  # cap on the leak=0 cohort (permanence costs budget)
+
+    laundering_tie_band: float = 0.03
+    seed: int = 0
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -2410,6 +2528,9 @@ class CHLUConfig:
     )
     experiment_phi_stream: ExperimentPhiStreamConfig = field(
         default_factory=ExperimentPhiStreamConfig
+    )
+    experiment_cl_entry: ExperimentClEntryConfig = field(
+        default_factory=ExperimentClEntryConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -2581,6 +2702,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_phi_stream", {}),
             )
         ),
+        experiment_cl_entry=ExperimentClEntryConfig(
+            **filter_valid_fields(
+                ExperimentClEntryConfig,
+                data.get("experiment_cl_entry", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -2625,6 +2752,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_controller_mvp": asdict(config.experiment_controller_mvp),
         "experiment_write_ceiling": asdict(config.experiment_write_ceiling),
         "experiment_phi_stream": asdict(config.experiment_phi_stream),
+        "experiment_cl_entry": asdict(config.experiment_cl_entry),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }

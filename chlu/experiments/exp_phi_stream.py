@@ -83,22 +83,110 @@ ONLINE_STUB_NOTE = (
 # ---------------------------------------------------------------------------
 
 
-def load_labeled_images(dataset: str):
+def load_labeled_images(dataset: str, split: str = "all"):
     """Return ``(X, y)`` — ``(N, D)`` float32 images in ``[0,1]`` and int labels.
 
     Labels are required here (unlike w23's ``load_patterns``) because the stream is
     **class**-incremental and the downstream metric is a class read-out.
-    """
-    if dataset != "mnist":
-        raise ValueError(
-            f"phi-stream needs labels; only 'mnist' is wired (got {dataset!r})"
-        )
-    from sklearn.datasets import fetch_openml
 
-    mnist = fetch_openml("mnist_784", version=1, as_frame=False, parser="liac-arff")
-    X = np.asarray(mnist.data, dtype=np.float32) / 255.0
-    y = np.asarray(mnist.target).astype(int)
+    Args:
+        dataset: ``"mnist"`` (784-d) or ``"cifar10"`` (3072-d, w25 — the hard rung
+            of the continual-learning entry).
+        split: ``"all"`` (default, the w24 behaviour — the whole labelled set),
+            ``"train"`` or ``"test"``. The canonical splits are MNIST 60k/10k and
+            CIFAR-10 50k/10k; a Class-IL entry must evaluate on held-out test data,
+            so the split argument exists for w25 and changes nothing for w24 callers.
+    """
+    if split not in ("all", "train", "test"):
+        raise ValueError(f"split must be all|train|test, got {split!r}")
+    if dataset == "mnist":
+        from sklearn.datasets import fetch_openml
+
+        mnist = fetch_openml("mnist_784", version=1, as_frame=False, parser="liac-arff")
+        X = np.asarray(mnist.data, dtype=np.float32) / 255.0
+        y = np.asarray(mnist.target).astype(int)
+        n_train = 60000
+    elif dataset == "cifar10":
+        X, y, n_train = _load_cifar10_labeled()
+    else:
+        raise ValueError(
+            f"labelled stream data is wired for 'mnist'|'cifar10' (got {dataset!r})"
+        )
+    if split == "train":
+        return X[:n_train], y[:n_train]
+    if split == "test":
+        return X[n_train:], y[n_train:]
     return X, y
+
+
+def _load_cifar10_labeled():
+    """CIFAR-10 **with labels**, ``(X, y, n_train)``, train batches then test batch.
+
+    Reads the canonical python tarball (the same file
+    :func:`chlu.experiments.exp_hopfield_capacity._load_cifar10` uses; openml's
+    copy is checksum-blocked on this machine). w24's loader dropped the labels and
+    read only one batch — a Class-IL stream needs both.
+    """
+    import pickle
+    import tarfile
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    scratch = os.path.join(
+        here, "..", "..", ".claude", "scratch", "hopfield-capacity-benchmark"
+    )
+    candidates = [
+        p
+        for p in (
+            os.environ.get("CHLU_CIFAR10_TARBALL"),  # explicit override (worktrees:
+            # ``.claude/`` is gitignored, so a worktree has no scratch dir of its own)
+            os.path.join(scratch, "cifar10.tar.gz"),
+            os.path.expanduser("~/cifar-10-python.tar.gz"),
+            "cifar-10-python.tar.gz",
+        )
+        if p
+    ]
+    path = next((p for p in candidates if os.path.exists(p)), None)
+    if path is None:
+        raise FileNotFoundError(
+            "CIFAR-10 not available locally. Place cifar-10-python.tar.gz in "
+            ".claude/scratch/hopfield-capacity-benchmark/ to enable the CIFAR arm."
+        )
+    # decoding the 170 MB gzip takes minutes; cache the decoded arrays next to it
+    cache = os.path.join(os.path.dirname(os.path.abspath(path)), "cifar10_labeled.npz")
+    if os.path.exists(cache):
+        z = np.load(cache)
+        return z["X"], z["y"], int(z["n_train"])
+
+    Xtr, ytr, Xte, yte = [], [], [], []
+    with tarfile.open(path, "r:gz") as tar:
+        members = {m.name.split("/")[-1]: m for m in tar.getmembers()}
+        for i in range(1, 6):
+            name = f"data_batch_{i}"
+            if name not in members:
+                continue
+            d = pickle.load(tar.extractfile(members[name]), encoding="bytes")
+            Xtr.append(np.asarray(d[b"data"], dtype=np.float32) / 255.0)
+            ytr.append(np.asarray(d[b"labels"], dtype=int))
+        if "test_batch" in members:
+            d = pickle.load(tar.extractfile(members["test_batch"]), encoding="bytes")
+            Xte.append(np.asarray(d[b"data"], dtype=np.float32) / 255.0)
+            yte.append(np.asarray(d[b"labels"], dtype=int))
+    if not Xtr:
+        raise FileNotFoundError(f"no CIFAR-10 data batches found in {path}")
+    Xtr_a, ytr_a = np.concatenate(Xtr), np.concatenate(ytr)
+    if Xte:
+        Xte_a, yte_a = np.concatenate(Xte), np.concatenate(yte)
+    else:  # degenerate archive: fall back to a tail slice as the test split
+        Xte_a, yte_a = Xtr_a[-10000:], ytr_a[-10000:]
+        Xtr_a, ytr_a = Xtr_a[:-10000], ytr_a[:-10000]
+    X = np.concatenate([Xtr_a, Xte_a])
+    y = np.concatenate([ytr_a, yte_a])
+    n_train = int(len(Xtr_a))
+    try:
+        np.savez(cache, X=X, y=y, n_train=n_train)
+    except OSError:
+        pass  # read-only location: just pay the decode cost next time
+    return X, y, n_train
 
 
 def task_classes(cfg, t: int):

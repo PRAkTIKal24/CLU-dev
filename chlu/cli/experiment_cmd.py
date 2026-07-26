@@ -47,6 +47,11 @@ from ..experiments.exp_phi_read_in import (
     run_experiment_phi_read_in,
     apply_quick as apply_phi_read_in_quick,
 )
+from ..experiments.exp_cl_entry import (
+    run_experiment_cl_entry,
+    apply_cifar10 as apply_cl_entry_cifar10,
+    apply_quick as apply_cl_entry_quick,
+)
 from ..experiments.exp_phi_stream import (
     run_experiment_phi_stream,
     apply_quick as apply_phi_stream_quick,
@@ -270,6 +275,27 @@ def setup_experiment_parsers(subparsers):
     exp_ps_parser.add_argument('--arms',
                                help='Override φ arms (comma-separated: pca,ae)')
     exp_ps_parser.set_defaults(func=cmd_exp_phi_stream)
+
+    # exp-cl-entry
+    exp_cl_parser = subparsers.add_parser(
+        'exp-cl-entry',
+        help='⭐ The continual-learning entry (w25): rehearsal-free Class-IL with a '
+             'designed CLU store + task-1-only φ + MVC-0 controller, the mandatory '
+             'baseline table (ER/iCaRL/GDumb/EWC/SI/LwF + kNN-in-φ launder), the '
+             'R3-native retry ladder and the scheduled per-item retention demo'
+    )
+    exp_cl_parser.add_argument('--project', help='Project name to use')
+    exp_cl_parser.add_argument('--seed', type=int,
+                               help='Single seed (overrides cfg.seeds)')
+    exp_cl_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (1 seed, tiny stream/store)')
+    exp_cl_parser.add_argument('--dataset', choices=['mnist', 'cifar10'],
+                               help='Override dataset (cifar10 also selects the CNN)')
+    exp_cl_parser.add_argument('--items',
+                               help='Comma-separated items: entry,retry,retention')
+    exp_cl_parser.add_argument('--baselines',
+                               help='Override the baseline list (comma-separated)')
+    exp_cl_parser.set_defaults(func=cmd_exp_cl_entry)
 
     # exp-retry-compute
     exp_rc_parser = subparsers.add_parser(
@@ -1218,6 +1244,47 @@ def cmd_exp_phi_stream(args):
         )
         console.print(
             f"✓ Experiment PHI-STREAM completed -> {res['metrics_path']}",
+            style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_cl_entry(args):
+    """Run the w25 continual-learning entry (Class-IL + retry + retention)."""
+    console.print(
+        "[bold cyan]Running Experiment CL-ENTRY: rehearsal-free Class-IL with a "
+        "designed CLU store (w25) — entry + R3-native retry + scheduled per-item "
+        "retention[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        apply_cl_entry_quick(config)
+    if getattr(args, 'dataset', None):
+        config.experiment_cl_entry.dataset = args.dataset
+        if args.dataset == 'cifar10':
+            apply_cl_entry_cifar10(config)
+    if getattr(args, 'baselines', None):
+        config.experiment_cl_entry.baselines = args.baselines.split(',')
+
+    try:
+        res = run_experiment_cl_entry(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+            items=(args.items.split(',') if getattr(args, 'items', None) else None),
+        )
+        console.print(
+            f"✓ Experiment CL-ENTRY completed -> {res['metrics_path']}",
             style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
