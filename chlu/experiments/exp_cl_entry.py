@@ -219,7 +219,9 @@ class PhiStore:
         self.rng = np.random.default_rng(seed + 31337)
         self.labels = {}   # item_id -> label
         self.item_task = {}  # item_id -> task index at write
-        self.cohort = {}   # item_id -> retention cohort name
+        self.cohort = {}   # item_id -> retention cohort name (kept after eviction)
+        self.written = {}  # cohort -> items admitted
+        self.evictions = {"decay": {}, "budget": {}}  # reason -> cohort -> count
         self.next_id = 0
         self.per_task_stats = []
 
@@ -261,6 +263,7 @@ class PhiStore:
                 return {"decision": "refuse_full", "item_id": item_id, "slot": None}
             self.ctrl.evict_item(vid)
             self.labels.pop(vid, None)
+            self._count_evict(vid, "budget")
         row = self.ctrl.offer(
             item_id, np.asarray(key_vec, float), float(label),
             permanent=permanent, leak=leak,
@@ -269,11 +272,25 @@ class PhiStore:
             self.labels[item_id] = int(label)
             self.item_task[item_id] = int(task)
             self.cohort[item_id] = cohort
+            self.written[cohort] = self.written.get(cohort, 0) + 1
         return row
 
+    def _count_evict(self, item_id: int, reason: str):
+        c = self.cohort.get(int(item_id), "?")
+        self.evictions[reason][c] = self.evictions[reason].get(c, 0) + 1
+
     def tick(self):
-        """One scheduled-decay tick (per-item retention)."""
-        self.ctrl.tick()  # eviction bookkeeping lives in the controller's stats
+        """One scheduled-decay tick (per-item retention).
+
+        Items whose well has decayed below ``amp_floor`` are removed by the
+        controller; we attribute those to the **schedule** (as opposed to budget
+        pressure) so the two forgetting causes are never conflated in the report.
+        """
+        before = {r.item_id for r in self.ctrl.records.values()}
+        self.ctrl.tick()
+        after = {r.item_id for r in self.ctrl.records.values()}
+        for iid in before - after:
+            self._count_evict(iid, "decay")
 
     # -- read -------------------------------------------------------------
     def live(self):
@@ -536,6 +553,38 @@ def _auroc(scores, labels):
     return float((ranks[y].sum() - n1 * (n1 + 1) / 2) / (n1 * n0))
 
 
+def _feedforward_ladder_phi(Q, centers, true_idx, cfg, rng):
+    """Matched-compute feedforward floor **in φ-space**: ``k+1`` nearest-address reads
+    over test-time-augmented queries, majority-voted.
+
+    ⚠ Why not ``exp_retry_compute._feedforward_ladder``: that one augments with
+    ``clip(|q + noise|, 0, 1)``, which is correct for pixel queries in ``[0,1]`` and
+    **destroys** a φ feature vector (φ is zero-mean and signed — the abs+clip is not
+    an augmentation there, it is corruption). Here the augmentation is additive
+    Gaussian noise scaled to the store's own length scale (``ff_aug_sigma`` × the
+    median nearest-neighbour address spacing), with no clipping. One NN read is far
+    cheaper than one CLU settle, so charging the baseline ``k+1`` is generous to it.
+    """
+    C = np.asarray(centers, float)
+    Qn = np.asarray(Q, float)
+    scale = cfg.ff_aug_sigma * float(_median_nn_distance(C))
+
+    def nn_idx(q):
+        return ((q[:, None, :] - C[None, :, :]) ** 2).sum(-1).argmin(1)
+
+    votes = [nn_idx(Qn)]
+    out = {0: (float(np.mean(votes[0] == true_idx)), 1.0)}
+    for j in range(1, max(cfg.retry_ladder) + 1):
+        votes.append(nn_idx(Qn + rng.normal(size=Qn.shape) * scale))
+        if j in cfg.retry_ladder:
+            V = np.stack(votes, axis=0)
+            maj = np.array([
+                np.bincount(V[:, i]).argmax() for i in range(V.shape[1])
+            ])
+            out[j] = (float(np.mean(maj == true_idx)), float(j + 1))
+    return out
+
+
 def retry_native(cfg, store, stream, phi, seed: int, label: str):
     """⭐ Item 3 — the retry ladder on **stored past-task items** in the crowded store.
 
@@ -581,7 +630,12 @@ def retry_native(cfg, store, stream, phi, seed: int, label: str):
             model, Q, reads0, centers, true_idx, cfg, dt,
             np.random.default_rng(seed + 909),
         )
-        lines["feedforward_knn_phi"] = _feedforward_ladder(
+        lines["feedforward_knn_phi"] = _feedforward_ladder_phi(
+            Q, centers, true_idx, cfg, np.random.default_rng(seed + 313)
+        )
+        # the pixel-space TTA line is kept as a REPORTED-INVALID reference so the
+        # w24 harness comparison is auditable, not silently dropped
+        lines["feedforward_pixel_tta_INVALID_in_phi"] = _feedforward_ladder(
             Q, centers, true_idx, cfg, np.random.default_rng(seed + 313)
         )
 
@@ -699,6 +753,9 @@ def _retention_snapshot(cfg, store, stream, phi, tick: int, key):
         "tick": int(tick), "n_live": int(len(centers)),
         "decayed_out_cum": int(store.ctrl.stats["decayed_out"]),
         "refused_full_cum": int(store.ctrl.stats["refused_full"]),
+        "written_by_cohort": dict(store.written),
+        "evicted_by_schedule": dict(store.evictions["decay"]),
+        "evicted_by_budget": dict(store.evictions["budget"]),
         "cohorts": cohorts,
     }
 
@@ -733,9 +790,19 @@ def retention_law_check(rows, cfg):
                 r["cohorts"][cohort]["retrieval_retention"] for r in sel
             ],
         }
+    last = rows[-1] if rows else {}
     out["evictions"] = {
-        "decayed_out_total": int(rows[-1].get("decayed_out_cum", 0)) if rows else 0,
-        "refused_full_total": int(rows[-1].get("refused_full_cum", 0)) if rows else 0,
+        "decayed_out_total": int(last.get("decayed_out_cum", 0)),
+        "refused_full_total": int(last.get("refused_full_cum", 0)),
+        "written_by_cohort": last.get("written_by_cohort", {}),
+        "evicted_by_schedule_per_cohort": last.get("evicted_by_schedule", {}),
+        "evicted_by_budget_per_cohort": last.get("evicted_by_budget", {}),
+        "note": (
+            "two causes of forgetting, never conflated: 'schedule' = the well decayed "
+            "below amp_floor (the DIAL), 'budget' = the class-balanced eviction policy "
+            "made room for a new item (the CAPACITY). Permanent (leak=0) items are "
+            "exempt from both."
+        ),
     }
     out["naming"] = (
         f"{R1_NAME} / scheduled forgetting — a capability of the store, NOT "
@@ -810,10 +877,20 @@ def entry_verdict(table, cfg):
     clu = by.get("clu_entry_task1_only")
     if clu is None:
         return {"verdict": "no CLU entry row"}
-    free = [r for r in table if r["class"] == "rehearsal-free" and r["method"] != "clu_entry_task1_only"]
+    # the rehearsal-free CLASS = the published methods, not our own other arm: the
+    # generic_frozen CLU line is a declared upper bound, never a baseline to beat
+    free = [
+        r for r in table
+        if r["class"] == "rehearsal-free" and not r["method"].startswith("clu_entry")
+    ]
     replay = [r for r in table if r["class"] == "replay"]
     upper = [r for r in table if r["class"] == "upper-bound"]
-    launder = [r for r in table if r["class"] == "launder"]
+    # the launder must be in the SAME φ regime as the primary arm (a launder that
+    # saw future classes is out of protocol as a comparison)
+    launder = [
+        r for r in table
+        if r["class"] == "launder" and r["method"].endswith(PHI_PRIMARY)
+    ]
     best_free = max(free, key=lambda r: r["ACC"]) if free else None
     best_replay = max(replay, key=lambda r: r["ACC"]) if replay else None
     best_launder = max(launder, key=lambda r: r["ACC"]) if launder else None
@@ -829,6 +906,10 @@ def entry_verdict(table, cfg):
         "offline_upper_bound": (upper[0]["ACC"] if upper else None),
         "best_launder": (best_launder["method"] if best_launder else None),
         "clu_minus_launder": (clu["ACC"] - best_launder["ACC"] if best_launder else None),
+        "strict_phi_cost": (
+            by["clu_entry_generic_frozen"]["ACC"] - clu["ACC"]
+            if "clu_entry_generic_frozen" in by else None
+        ),
         "laundered": bool(
             best_launder and (clu["ACC"] - best_launder["ACC"]) <= cfg.laundering_tie_band
         ),
