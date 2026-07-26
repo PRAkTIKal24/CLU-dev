@@ -640,7 +640,9 @@ def retry_native(cfg, store, stream, phi, seed: int, label: str):
         )
 
         tau_sweep = {}
-        if li == 0:
+        # sweep the confidence gate on the HARDEST corruption level — the only one
+        # with headroom (on a saturated cell every tau gives the same flat curve)
+        if li == len(cfg.retry_mask_levels) - 1:
             for tau in cfg.retry_tau_grid:
                 tau_sweep[str(tau)] = _retry_ladder(
                     model, Q, reads0, centers, true_idx, cfg, dt, tau, "gated",
