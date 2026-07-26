@@ -2081,7 +2081,7 @@ class ExperimentShardedStoreConfig:
 
     # ---- routing (build item 4) ----
     router: str = "R2"  # headline router; ⛔ R1 is not implemented (N97)
-    routers: List[str] = field(default_factory=lambda: ["R2", "R3"])
+    routers: List[str] = field(default_factory=lambda: ["R2", "R3", "RG"])
     # Top-2 abstention deadband. 0.0 = never abstain, so the headline number is
     # per-offered and directly comparable to the monolithic arm (N91 discipline:
     # no abstention credit in a headline). The sweep is reported separately.
