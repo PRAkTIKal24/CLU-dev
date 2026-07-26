@@ -69,6 +69,7 @@ from chlu.core.memory_potentials import (
     site_separation,
 )
 from chlu.core.shard_store import (
+    ROUTERS,
     ShardedRegistry,
     allocate_sites,
     assert_per_shard_query_noise,
@@ -280,29 +281,53 @@ def score_sharded(store, centers, payloads, dm, ss, seed, router=None, deadband=
     read_seconds = time.perf_counter() - t0
 
     t1 = time.perf_counter()
-    scores = router_scores(router, store, Q0, addr_x=addr_x)
+    scores = router_scores(router, store, Q0, addr_x=addr_x, centers=centers)
     route, margin, abstain = route_from_scores(scores, deadband)
     route_seconds = time.perf_counter() - t1
 
     shard_of = store.item_shard_map(K)
     route_ok = shard_of[labels] == route
     finite = bool(np.all(np.isfinite(addr_x)) and np.all(np.isfinite(feat)))
-
-    # nearest center WITHIN the routed shard -> predicted global item id
     n = len(labels)
-    pred = np.empty(n, dtype=int)
-    x_sel = addr_x[np.arange(n), route]  # (n, d)
-    for r, g in enumerate(store.shard_items):
-        m = route == r
-        if not np.any(m):
-            continue
-        gi = np.asarray(g, dtype=int)
-        d2 = ((x_sel[m][:, None, :] - centers[gi][None, :, :]) ** 2).sum(-1)
-        pred[m] = gi[np.argmin(d2, axis=1)]
-    basin_ok = pred == labels
 
-    read_val = feat[np.arange(n), route].mean(axis=1)
-    err = np.abs(read_val - np.asarray(payloads)[labels])
+    def _score_with(sel):
+        """strict/basin given a shard choice ``sel`` (n,) — nearest center WITHIN
+        the chosen shard, then the payload read from that shard."""
+        pred = np.empty(n, dtype=int)
+        x_sel = addr_x[np.arange(n), sel]  # (n, d)
+        for r, g in enumerate(store.shard_items):
+            m = sel == r
+            if not np.any(m):
+                continue
+            gi = np.asarray(g, dtype=int)
+            dd = ((x_sel[m][:, None, :] - centers[gi][None, :, :]) ** 2).sum(-1)
+            pred[m] = gi[np.argmin(dd, axis=1)]
+        ok = pred == labels
+        val = feat[np.arange(n), sel].mean(axis=1)
+        e = np.abs(val - np.asarray(payloads)[labels])
+        return ok, e
+
+    basin_ok, err = _score_with(route)
+    # ⚠ ORACLE DIAGNOSTIC, never a headline. Score the same read with the TRUE
+    # shard supplied, to decompose "the write got easier because each dig carves
+    # K/N valleys" from "the router lost it". A number produced by telling the
+    # store the answer is not a retrieval result (the w24 masked-NN-oracle rule);
+    # it is reported ONLY as the ceiling the router is being measured against.
+    oracle_ok, oracle_err = _score_with(shard_of[labels])
+    strict_oracle = float(np.mean(oracle_ok & (oracle_err < dm.payload_tol)))
+
+    # Every router scored off the SAME read (the rollout is shared, so this costs
+    # nothing) — the routing decision is the only thing that varies.
+    by_router = {}
+    for name in ROUTERS:
+        sc = router_scores(name, store, Q0, addr_x=addr_x, centers=centers)
+        rt, _m, _ab = route_from_scores(sc, 0.0)
+        ok, e = _score_with(rt)
+        by_router[name] = {
+            "strict": float(np.mean(ok & (e < dm.payload_tol))),
+            "route_accuracy": float(np.mean(shard_of[labels] == rt)),
+        }
+
     strict_ok = basin_ok & (err < dm.payload_tol) & (~abstain)
 
     answered = ~abstain
@@ -316,6 +341,11 @@ def score_sharded(store, centers, payloads, dm, ss, seed, router=None, deadband=
         "basin_success_rate": float(np.mean(basin_ok & answered)),
         "selectivity": float(np.mean(basin_ok & answered)),
         "route_accuracy": float(np.mean(route_ok)),
+        # ⚠ ORACLE (never a headline): strict if the true shard were supplied.
+        "strict_oracle_route": strict_oracle,
+        "route_cost": strict_oracle - float(np.mean(strict_ok)),
+        # every router scored off the SAME read (see above)
+        "by_router": by_router,
         "route_margin_mean": float(np.mean(margin[np.isfinite(margin)]))
         if np.any(np.isfinite(margin))
         else float("inf"),
@@ -341,7 +371,14 @@ def evaluate_cell(arm, d, K, n_shards, seed, dm, ss, with_blank=True):
         **info, "written": written,
     }
     if with_blank == "if_pass":
-        with_blank = written["strict_success_rate"] >= dm.pass_strict
+        # a PASS under ANY shipped router must carry its leak-immunity control, so
+        # the trigger is the best router (the oracle bound), not just the headline
+        # one — otherwise a cell that passes under the registry router would be
+        # reported without a blank, which is not a measurement (w23 rule).
+        with_blank = (
+            max(written["strict_success_rate"], written["strict_oracle_route"])
+            >= dm.pass_strict
+        )
     if not with_blank:
         return out
     blank_pay = np.zeros_like(payloads)
@@ -528,25 +565,28 @@ def item2_read_parity(dm, ss):
         for n in ss.parity_shards:
             if K % n:
                 continue
-            got, seps, seps_in = [], [], []
+            got, seps, seps_in, per_seed = [], [], [], []
+            # ONE read per (allocation, N, seed) — every router is scored off it
+            for s in ss.parity_seeds:
+                store, centers, payloads, alloc = build_designed_shards(
+                    d, K, n, dmp, ss, allocation, s
+                )
+                seps.append(alloc["union_separation"])
+                seps_in.append(alloc["within_shard_separation_min"])
+                per_seed.append(
+                    score_sharded(store, centers, payloads, dmp, ss, s, deadband=0.0)
+                )
             for router in ss.routers:
-                per_seed = []
-                for s in ss.parity_seeds:
-                    store, centers, payloads, alloc = build_designed_shards(
-                        d, K, n, dmp, ss, allocation, s
-                    )
-                    seps.append(alloc["union_separation"])
-                    seps_in.append(alloc["within_shard_separation_min"])
-                    per_seed.append(
-                        score_sharded(store, centers, payloads, dmp, ss, s,
-                                      router=router, deadband=0.0)
-                    )
                 got.append(
                     {
                         "router": router,
-                        "strict": _agg([g["strict_success_rate"] for g in per_seed]),
-                        "route_accuracy": _agg([g["route_accuracy"] for g in per_seed]),
-                        "basin": _agg([g["basin_success_rate"] for g in per_seed]),
+                        "strict": _agg(
+                            [g["by_router"][router]["strict"] for g in per_seed]
+                        ),
+                        "route_accuracy": _agg(
+                            [g["by_router"][router]["route_accuracy"] for g in per_seed]
+                        ),
+                        "oracle": _agg([g["strict_oracle_route"] for g in per_seed]),
                     }
                 )
             rows.append(

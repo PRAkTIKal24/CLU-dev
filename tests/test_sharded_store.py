@@ -237,11 +237,61 @@ def test_spread_partition_is_balanced_and_total():
 
 
 def test_r1_router_is_not_shipped():
-    """⛔ N97: post-settle energy routes AT OR BELOW chance at equal well depth."""
-    assert ROUTERS == ("R2", "R3")
+    """⛔ N97: post-settle energy routes AT OR BELOW chance at equal well depth.
+
+    ``RG`` (distance to the registry) is shipped alongside R2/R3 because the
+    theorist's own O(1) condition names it ("pre-settle energy, distance to the
+    registry, or an explicit tag") — it is declared classical NN indexing (N89).
+    """
+    assert ROUTERS == ("R2", "R3", "RG")
     store, _, _ = _designed_shards()
     with pytest.raises(ValueError, match="N97"):
         router_scores("R1", store, jnp.zeros((1, 3)))
+
+
+def test_registry_router_is_exact_and_needs_no_dynamics():
+    """RG routes on the addresses the WRITER RECORDED — no rollout, no learned
+    parameters. It is exact here because the union separation (0.71-0.91 in the
+    swept cells) dwarfs the query jitter."""
+    store, centers, _ = _designed_shards(d=2, K=8, n=2)
+    Q0 = np.zeros((8, 3), dtype=np.float32)
+    Q0[:, :2] = centers + 0.02
+    sc = router_scores("RG", store, Q0, centers=centers)
+    route, _m, _ab = route_from_scores(sc)
+    assert np.mean(route == store.item_shard_map(8)) == 1.0
+    with pytest.raises(ValueError, match="registry"):
+        router_scores("RG", store, Q0)
+
+
+def test_r3_is_degenerate_on_a_flat_vacuum_store():
+    """⚠ MEASURED w25 (and it contradicts the theorist's R3 = 1.000): on the shipped
+    `BallRegisterPotential` — whose confinement is **identically flat inside the
+    address ball by design** — R3 (settling displacement) is not a discriminating
+    statistic, while R2 (pre-settle energy) discriminates by orders of magnitude.
+
+    The reason is structural. At an item's site the OWNING shard's gradient is ~0
+    (it is a minimum) and a FOREIGN shard's gradient is also ~0 (flat vacuum plus an
+    exponentially small well tail) — the two displacement scales are comparable, so
+    ``argmin_r ||x_final - q||`` is choosing between two near-equal small numbers.
+    The ENERGY, by contrast, differs by ~4 orders. Measured consequence at d=4 K=32,
+    global allocation: R3 strict 1.000 / 0.549 / 0.236 / 0.228 at N = 1/2/4/8 while
+    R2 stays 1.000 throughout. This test pins the mechanism, not the accuracy, so it
+    stays cheap.
+    """
+    store, centers, _ = _designed_shards(d=2, K=8, n=2)
+    own, far = store.shard_of(0), 1 - store.shard_of(0)
+    q = jnp.asarray(np.concatenate([centers[0], [0.0]]).astype(np.float32))
+    v_own = float(store.lattice.units[own].potential_net(q))
+    v_far = float(store.lattice.units[far].potential_net(q))
+    g = [
+        float(jnp.linalg.norm(jax.grad(lambda x, u=u: u.potential_net(x))(q)[:2]))
+        for u in (store.lattice.units[own], store.lattice.units[far])
+    ]
+    # R2 separates by >= 3 orders of magnitude...
+    assert abs(v_own) > 1000 * abs(v_far)
+    # ...while the forces that drive the displacement are both ~0 and within an
+    # order of magnitude of each other => R3 has essentially no signal to use.
+    assert max(g) < 1e-2 and max(g) < 20 * max(min(g), 1e-12)
 
 
 def test_r2_routes_a_designed_two_shard_store_exactly():

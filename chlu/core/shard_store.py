@@ -69,7 +69,14 @@ from chlu.core.memory_potentials import designed_sites, site_separation
 #: The routers this module ships. ⛔ R1 (post-settle energy) is ABSENT BY DESIGN
 #: (N97: at or below chance at equal well depth). Do not add it back without
 #: re-opening N97.
-ROUTERS = ("R2", "R3")
+#:
+#: ``RG`` is the **registry** router — distance to the nearest address the writer
+#: recorded — which the theorist's §3 lists alongside pre-settle energy as an
+#: admissible O(1) statistic ("pre-settle energy, distance to the registry, or an
+#: explicit tag"). It is **flagrantly classical nearest-neighbour indexing** and is
+#: declared as such (N89): the CLU dynamics contribute the settle-and-read, never
+#: the routing.
+ROUTERS = ("R2", "R3", "RG")
 
 #: Allocation strategies for the union of item addresses across shards.
 ALLOCATIONS = ("global", "local")
@@ -480,8 +487,32 @@ def r3_scores(addr_x: np.ndarray, Q0: np.ndarray, d: int) -> np.ndarray:
     return np.linalg.norm(np.asarray(addr_x) - q, axis=-1)
 
 
+def rg_scores(store: ShardedStore, Q0, centers) -> np.ndarray:
+    """``RG = argmin_r min_{c in shard r} ||q_addr - c||`` — the REGISTRY router.
+
+    Distance from the raw query to the nearest address **the writer recorded**
+    ("the writer records where it wrote" — the MVC-0 placement rule, C1). No
+    dynamics, no learned parameters, ``O(K_total * d)`` flops.
+
+    ⚠ **This is classical nearest-neighbour indexing and is declared as such**
+    (N89). It is included because the theorist's own O(1) condition names it
+    ("pre-settle energy, distance to the registry, or an explicit tag"), and
+    because it separates two very different failures: a *store* that cannot hold
+    its items, versus a *score* that cannot tell which unit holds them. Any number
+    it produces belongs to the classical index, not to the CLU dynamics.
+    """
+    q = np.asarray(Q0)[:, : store.d]
+    c = np.asarray(centers)
+    out = np.empty((q.shape[0], store.n_shards), dtype=float)
+    for r, g in enumerate(store.shard_items):
+        gi = np.asarray(g, dtype=int)
+        d2 = ((q[:, None, :] - c[gi][None, :, :]) ** 2).sum(-1)
+        out[:, r] = np.sqrt(d2.min(axis=1))
+    return out
+
+
 def router_scores(
-    router: str, store: ShardedStore, Q0, addr_x=None
+    router: str, store: ShardedStore, Q0, addr_x=None, centers=None
 ) -> np.ndarray:
     """Dispatch a router by name. ⛔ ``"R1"`` raises (N97)."""
     if router == "R1":
@@ -495,6 +526,10 @@ def router_scores(
         raise ValueError(f"router must be one of {ROUTERS}, got {router!r}")
     if router == "R2":
         return r2_scores(store, Q0)
+    if router == "RG":
+        if centers is None:
+            raise ValueError("RG needs the registry (centers)")
+        return rg_scores(store, Q0, centers)
     if addr_x is None:
         raise ValueError("R3 needs the settled addresses (addr_x)")
     return r3_scores(addr_x, np.asarray(Q0), store.d)
