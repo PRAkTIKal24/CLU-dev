@@ -35,6 +35,10 @@ from ..experiments.exp_write_ceiling import (
     run_experiment_write_ceiling,
     apply_quick as apply_write_ceiling_quick,
 )
+from ..experiments.exp_sharded_store import (
+    run_experiment_sharded_store,
+    apply_quick as apply_sharded_store_quick,
+)
 from ..experiments.exp_retrieval import (
     run_experiment_retrieval,
     apply_quick as apply_retrieval_quick,
@@ -340,6 +344,23 @@ def setup_experiment_parsers(subparsers):
     exp_wc_parser.add_argument('--dims', nargs='+', type=int,
                                help='Override the swept address dimensions')
     exp_wc_parser.set_defaults(func=cmd_exp_write_ceiling)
+    # exp-sharded-store
+    exp_ssto_parser = subparsers.add_parser(
+        'exp-sharded-store',
+        help='The first N-unit sharded CLU store (Prop L2 / Theorem L1) and the '
+             '2x2 discriminator: is the K~=32 write ceiling per-dig? (w25)'
+    )
+    exp_ssto_parser.add_argument('--project', help='Project name to use')
+    exp_ssto_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_ssto_parser.add_argument('--quick', action='store_true',
+                                 help='Quick mode (d=2, K=4, 1 seed, tiny writes)')
+    exp_ssto_parser.add_argument('--cells', nargs='+',
+                                 help='Override the swept cells (d:K:n_shards)')
+    exp_ssto_parser.add_argument('--arms', nargs='+',
+                                 help='Override the swept arms')
+    exp_ssto_parser.add_argument('--items', nargs='+',
+                                 help='Subset of items to run (1..6)')
+    exp_ssto_parser.set_defaults(func=cmd_exp_sharded_store)
     # exp-primitive-harness
     exp_ph_parser = subparsers.add_parser(
         'exp-primitive-harness',
@@ -1364,6 +1385,55 @@ def cmd_exp_designed_mechanism(args):
         )
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_sharded_store(args):
+    """Run the w25 N-unit sharded store + the 2x2 additivity discriminator."""
+    console.print(
+        "[bold cyan]Running Experiment SHARDED-STORE: is the K~=32 write ceiling "
+        "per-dig?[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+
+    if getattr(args, 'quick', False):
+        apply_sharded_store_quick(config)
+    if getattr(args, 'cells', None):
+        config.experiment_sharded_store.cells = list(args.cells)
+    if getattr(args, 'arms', None):
+        config.experiment_sharded_store.arms = list(args.arms)
+    if getattr(args, 'items', None):
+        ss = config.experiment_sharded_store
+        want = set(args.items)
+        ss.run_discriminator = '1' in want
+        ss.run_read_parity = '2' in want
+        ss.run_timing = '3' in want
+        ss.run_allocator = '4' in want
+        ss.run_init_ablation = '5' in want
+        ss.run_deadband_sweep = '6' in want
+
+    try:
+        res = run_experiment_sharded_store(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+        )
+        verdict = res.get('item1_verdict', {}).get('verdict', 'items subset')
+        console.print(
+            f"\u2713 Experiment SHARDED-STORE completed ({verdict}) -> "
+            f"{res['metrics_path']}",
+            style="bold green",
+        )
+    except Exception as e:
+        console.print(f"\u2717 Error: {e}", style="bold red")
         return 1
 
     return 0
