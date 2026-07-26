@@ -260,6 +260,39 @@ def test_r1_naming_rule_is_enforced_in_the_reported_strings():
     assert cle.R1_NAME in blob
 
 
+def test_phi_space_feedforward_floor_is_a_floor_not_a_collapse():
+    """⚠ The w24 ladder augments with ``clip(|q+noise|,0,1)`` — valid for pixels in
+    [0,1], DESTRUCTIVE for signed φ vectors (it collapsed the 'floor' to ~0.005).
+    The φ-space version must (a) equal exact 1-NN at k=0 and (b) not collapse."""
+    rng = np.random.default_rng(0)
+    C = rng.normal(size=(20, 8)) * 3.0
+    Q = C + rng.normal(size=C.shape) * 0.2  # queries near their own address
+    true_idx = np.arange(20)
+    cfg = _toy_cfg()
+    cfg.retry_ladder = [0, 1, 2]
+    out = cle._feedforward_ladder_phi(Q, C, true_idx, cfg, np.random.default_rng(1))
+    exact = float(np.mean(((Q[:, None, :] - C[None, :, :]) ** 2).sum(-1).argmin(1) == true_idx))
+    assert out[0][0] == pytest.approx(exact)
+    assert out[0][1] == 1.0
+    assert out[2][0] >= exact - 0.15  # votes may not help, but must not destroy
+
+
+def test_eviction_cause_is_attributed_schedule_vs_budget():
+    """Scheduled forgetting (the dial) must never be confused with budget pressure
+    (the capacity policy) — they are counted separately, per cohort."""
+    cfg = _toy_cfg()
+    st = cle.build_cl_stream(cfg, seed=0, data=_toy_data())
+    res = cle.run_clu_entry(cfg, st, cle.PHI_PRIMARY, seed=0, decay_on=True)
+    law = cle.retention_law_check(res["retention_rows"], cfg)
+    ev = law["evictions"]
+    assert "evicted_by_schedule_per_cohort" in ev and "evicted_by_budget_per_cohort" in ev
+    # permanent items are exempt from BOTH causes
+    assert ev["evicted_by_schedule_per_cohort"].get("permanent", 0) == 0
+    assert ev["evicted_by_budget_per_cohort"].get("permanent", 0) == 0
+    # a scheduled eviction can only be a leaky cohort
+    assert set(ev["evicted_by_schedule_per_cohort"]) <= {"slow", "fast"}
+
+
 def test_end_to_end_driver_writes_metrics_and_the_verdict(tmp_path):
     cfg_all = get_default_config()
     cfg_all.experiment_cl_entry = _toy_cfg()
