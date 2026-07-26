@@ -79,6 +79,15 @@ class Controller:
         amp_floor: a leaky well is evicted once its depth drops below this.
         evict_policy: ``"staleness"`` (LRU) or ``"depth"`` (shallowest first).
         n_candidates: relocation candidates drawn per admission attempt.
+        peer_addresses_fn: optional ``() -> (m, 2)`` callable returning addresses
+            held by OTHER shards. When given, the admission spacing test runs
+            against the **union** of this controller's addresses and its peers' —
+            i.e. the controller becomes one node of a *global address allocator*
+            (:class:`chlu.core.shard_store.ShardedRegistry`, w25 build item 3).
+            This is the only global object in a sharded store, and it is a
+            **registry, not an optimizer**: no gradient and no optimizer state
+            crosses a shard boundary, only the list of where things were written.
+            ``None`` (default) => single-store behaviour, unchanged.
 
     The controller owns its store: every method returns nothing and mutates
     ``self.store`` (a new frozen PyTree each time) and ``self.records``.
@@ -94,6 +103,7 @@ class Controller:
         amp_floor: float = 0.05,
         evict_policy: str = "staleness",
         n_candidates: int = 400,
+        peer_addresses_fn: Optional[Callable] = None,
     ):
         if evict_policy not in ("staleness", "depth"):
             raise ValueError(f"evict_policy must be staleness|depth, got {evict_policy}")
@@ -107,6 +117,7 @@ class Controller:
         self.amp_floor = float(amp_floor)
         self.evict_policy = evict_policy
         self.n_candidates = int(n_candidates)
+        self.peer_addresses_fn = peer_addresses_fn
 
         self.records: Dict[int, ItemRecord] = {}  # slot -> record (live only)
         self.t = 0
@@ -163,6 +174,13 @@ class Controller:
         self.stats["offered"] += 1
         q2 = np.asarray(q_new, dtype=float).reshape(-1)[:2]
         stored = self.stored_addresses()
+        if self.peer_addresses_fn is not None:
+            # GLOBAL allocation: the spacing test is run against the UNION of every
+            # shard's live addresses (w25 build item 3). Peers are *read only* —
+            # this controller never writes into, nor optimizes, another shard.
+            peers = np.asarray(self.peer_addresses_fn(), dtype=float).reshape(-1, 2)
+            if peers.size:
+                stored = np.concatenate([stored, peers], axis=0)
 
         # 1. ADMISSION — spacing gate with refuse-and-relocate (C5-A1/A2)
         dec = admit_site(
