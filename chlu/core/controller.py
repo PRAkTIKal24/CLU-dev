@@ -45,7 +45,7 @@ from typing import Callable, Dict, List, Optional
 
 import numpy as np
 
-from chlu.core.admission import admit_site
+from chlu.core.admission import admit_site, min_separation
 from chlu.core.memory_potentials import AtomStorePotential
 
 
@@ -79,6 +79,13 @@ class Controller:
         amp_floor: a leaky well is evicted once its depth drops below this.
         evict_policy: ``"staleness"`` (LRU) or ``"depth"`` (shallowest first).
         n_candidates: relocation candidates drawn per admission attempt.
+        allow_relocation: if ``False``, a proposal that fails the spacing gate is
+            **refused outright** — relocation is never attempted. Default ``True``
+            (the w23 behaviour). ⚠ The w25 continual-learning entry sets this
+            ``False``: there the address IS the content (``φ(x)``), so moving an
+            item to a free site would store it under an address no query can
+            reach. Refusal is the only legal admission outcome when the address is
+            derived from the item.
 
     The controller owns its store: every method returns nothing and mutates
     ``self.store`` (a new frozen PyTree each time) and ``self.records``.
@@ -94,10 +101,13 @@ class Controller:
         amp_floor: float = 0.05,
         evict_policy: str = "staleness",
         n_candidates: int = 400,
+        allow_relocation: bool = True,
     ):
         if evict_policy not in ("staleness", "depth"):
             raise ValueError(f"evict_policy must be staleness|depth, got {evict_policy}")
         self.store = store
+        self.addr_dim = int(getattr(store, "addr_dim", 2))
+        self.allow_relocation = bool(allow_relocation)
         self.d_safe = float(d_safe)
         self.budget = int(store.capacity if budget is None else budget)
         if self.budget > store.capacity:
@@ -130,18 +140,39 @@ class Controller:
         return sorted(self.records)
 
     def stored_addresses(self) -> np.ndarray:
-        """(n_live, 2) address-plane sites currently live."""
+        """(n_live, addr_dim) address-space sites currently live."""
         if not self.records:
-            return np.zeros((0, 2))
+            return np.zeros((0, self.addr_dim))
         return np.stack([self.records[s].center for s in self.live_slots()])
 
     def live_items(self):
         """(ids, centers, payloads) over the currently-live items, id-sorted."""
         recs = sorted(self.records.values(), key=lambda r: r.item_id)
         ids = [r.item_id for r in recs]
-        centers = np.stack([r.center for r in recs]) if recs else np.zeros((0, 2))
+        centers = (
+            np.stack([r.center for r in recs])
+            if recs
+            else np.zeros((0, self.addr_dim))
+        )
         pays = np.array([r.payload for r in recs], dtype=float)
         return ids, centers, pays
+
+    def live_amps(self) -> np.ndarray:
+        """(n_live,) current well depths, id-sorted (matches :meth:`live_items`)."""
+        recs = sorted(self.records.values(), key=lambda r: r.item_id)
+        amps = np.asarray(self.store.amps, dtype=float)
+        return np.array([amps[r.slot] for r in recs], dtype=float)
+
+    def evict_item(self, item_id: int, reason: str = "policy") -> bool:
+        """Public eviction verb: remove one live item by id. Returns whether it
+        was found. The w25 entry uses this for its class-balanced budget policy
+        (evict the least-recently-used item of the most-represented class), which
+        is a *policy* on top of the controller, not a change to its rules."""
+        for slot, r in list(self.records.items()):
+            if r.item_id == item_id:
+                self._evict(slot, reason="budget" if reason == "policy" else reason)
+                return True
+        return False
 
     # -- the three decisions --------------------------------------------------
     def offer(
@@ -161,20 +192,23 @@ class Controller:
         A refusal is a *correct* controller output, reported and never retried.
         """
         self.stats["offered"] += 1
-        q2 = np.asarray(q_new, dtype=float).reshape(-1)[:2]
+        q2 = np.asarray(q_new, dtype=float).reshape(-1)[: self.addr_dim]
         stored = self.stored_addresses()
 
         # 1. ADMISSION — spacing gate with refuse-and-relocate (C5-A1/A2)
-        dec = admit_site(
-            q2, stored, self.d_safe, key=key, proposer=proposer,
-            n_candidates=self.n_candidates,
-        )
+        if self.allow_relocation:
+            dec = admit_site(
+                q2, stored, self.d_safe, key=key, proposer=proposer,
+                n_candidates=self.n_candidates,
+            )
+        else:
+            dec = self._admit_no_relocate(q2, stored)
         if dec["decision"] == "refuse":
             self.stats["refused_spacing"] += 1
             row = self._row(item_id, "refuse_spacing", dec, None)
             self.log.append(row)
             return row
-        site = np.asarray(dec["site"], dtype=float)[:2]
+        site = np.asarray(dec["site"], dtype=float)[: self.addr_dim]
 
         # 2. BUDGET / EVICTION — make room if full (C5 budget, §3.C trash)
         evicted_id = None
@@ -236,6 +270,24 @@ class Controller:
         for slot in spent:
             self._evict(slot, reason="decay")
             self.stats["decayed_out"] += 1
+
+    def _admit_no_relocate(self, q_new, stored) -> dict:
+        """Spacing gate WITHOUT relocation (``allow_relocation=False``).
+
+        Same decision rule as :func:`chlu.core.admission.admit_site`'s first test,
+        with the same return schema, but a failed proposal is refused rather than
+        moved — the only legal behaviour when the address is derived from the item
+        itself (``q = φ(x)``) rather than allocated by the controller.
+        """
+        d_min = min_separation(q_new, stored)
+        ok = d_min >= self.d_safe
+        return {
+            "decision": "admit" if ok else "refuse",
+            "site": np.asarray(q_new, dtype=float) if ok else None,
+            "d_min_proposed": d_min,
+            "d_min_written": d_min if ok else float("nan"),
+            "n_candidates_examined": 0,
+        }
 
     # -- eviction internals ---------------------------------------------------
     def _pick_victim(self) -> Optional[int]:
