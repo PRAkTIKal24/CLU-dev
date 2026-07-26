@@ -163,6 +163,57 @@ def build_learned_V(d: int, K: int, cfg, key) -> DesignFreedomPotential:
     )
 
 
+def trained_well_widths(V, targets, top_frac: float = 0.9) -> dict:
+    """⭐ w25 (`lattice-capacity-theory` §5.0): the TRAINED well width at the stored sites.
+
+    ``atom_init_width`` is only an *initialisation* — ``log_width`` is trainable, so the
+    width that actually sets the geometry (and hence the ``minsep/width`` ratio the
+    geometric account of the capacity ceiling is built on) is a **measured**, not a
+    configured, quantity. This returns it, for one written landscape.
+
+    Per stored site ``x*`` the atoms are ranked by their contribution to the well there,
+    ``A_j·exp(-|x*-c_j|²/2s_j²)`` with ``A_j = amp_j²``; the atoms supplying the top
+    ``top_frac`` of the summed contribution are the ones that *form* the well, and the
+    reported width is the contribution-weighted median of their ``s_j``. Reported per
+    site and as the median over sites.
+
+    Args:
+        V: a written ``DesignFreedomPotential`` with an atom-dictionary ``.learned``
+            (or a bare :class:`AtomDictionaryPotential`).
+        targets: (K, dim) stored sites in the latent (address + payload channel).
+        top_frac: contribution mass that defines "the atoms that form the well".
+
+    Returns:
+        ``{"w_atom_per_site", "w_atom", "n_keep_per_site", "all_atom_width_median",
+        "init_width_atoms"}`` — ``w_atom`` is the median over sites (the headline).
+    """
+    atoms = V.learned if hasattr(V, "learned") else V
+    C = np.asarray(atoms.centers)
+    S = np.exp(np.asarray(atoms.log_width))
+    A = np.asarray(atoms.amp) ** 2
+    T = np.asarray(targets)
+
+    per_site, n_keep = [], []
+    for i in range(T.shape[0]):
+        d2 = ((C - T[i][None, :]) ** 2).sum(-1)
+        contrib = A * np.exp(-d2 / (2.0 * S**2))
+        order = np.argsort(-contrib)
+        cum = np.cumsum(contrib[order]) / max(float(contrib.sum()), 1e-30)
+        sel = order[: int(np.searchsorted(cum, top_frac) + 1)]
+        w, c = S[sel], contrib[sel]
+        o = np.argsort(w)
+        cw = np.cumsum(c[o]) / max(float(c.sum()), 1e-30)
+        per_site.append(float(w[o][int(np.searchsorted(cw, 0.5))]))
+        n_keep.append(int(sel.size))
+    return {
+        "w_atom_per_site": per_site,
+        "w_atom": float(np.median(per_site)),
+        "n_keep_per_site": n_keep,
+        "all_atom_width_median": float(np.median(S)),
+        "n_atoms": int(S.size),
+    }
+
+
 def _n_params(V) -> int:
     return int(
         sum(
