@@ -136,14 +136,23 @@ def controller_line(cfg, seed, K, arm, dim=DIM):
       ``on_evict``  — gate ON, FIXED radius, finite budget = round(N_pack): a
                       rolling buffer that EVICTS the least-recently-used item when
                       full. Exercises the eviction verb in the rematch itself.
+      ``canon_sized``— the w26 rematch cell: same sized geometry, but placement is
+                      CANONICAL (PGCP lattice) instead of refuse-and-relocate.
+                      Admission is deterministic — every item that finds a free cell is
+                      admitted, so ``n_admitted = min(K, n_cells)`` with **zero seed
+                      variance** — and the resulting store supports exact deletion.
+                      ``cfg.canonical_radius_mult`` inflates the lattice (1.05 => 73
+                      cells at K=64, i.e. no abstention at all).
     """
     key = jax.random.PRNGKey(seed)
     k_prop, k_ctrl = jax.random.split(key, 2)
     d_safe = cfg.d_safe_mult * cfg.atom_width
     pay = np.asarray(designed_payloads(K, seed=cfg.payload_seed))
 
-    if arm == "on_sized":
+    if arm in ("on_sized", "canon_sized"):
         radius = max(cfg.proposal_radius, radius_for_capacity(K, d_safe))
+        if arm == "canon_sized":
+            radius *= float(cfg.canonical_radius_mult)
     else:
         radius = cfg.proposal_radius
     n_pack = packing_bound_disk(radius, d_safe)
@@ -162,6 +171,14 @@ def controller_line(cfg, seed, K, arm, dim=DIM):
             amp=cfg.atom_amp, evict_policy=cfg.evict_policy,
             n_candidates=cfg.n_relocation_candidates,
         )
+    elif arm == "canon_sized":
+        # canonical placement: the lattice IS the allocator and the admission gate.
+        # evict_policy must be set-function (LRU is excluded from the deletion claim).
+        ctrl = Controller(
+            _new_store(cfg, K), d_safe=d_safe, budget=cfg.budget, amp=cfg.atom_amp,
+            evict_policy="depth", placement="canonical", lattice_radius=radius,
+        )
+        proposer = None  # nothing is ever relocated by search; the lattice decides
     else:  # on_fixed, on_sized
         ctrl = Controller(
             _new_store(cfg, K), d_safe=d_safe, budget=cfg.budget,
@@ -195,6 +212,7 @@ def controller_line(cfg, seed, K, arm, dim=DIM):
         "radius": float(radius),
         "d_safe": float(d_safe),
         "packing_bound": float(n_pack),
+        "n_cells": (None if ctrl.placer is None else int(ctrl.placer.n_cells)),
         "min_spacing_live": min_spacing,
         "n_admitted": int(sc["n_live"]),
         "stats": dict(ctrl.stats),
@@ -219,6 +237,8 @@ def item_rematch(cfg, hcfg, seeds):
     arms = ["off", "on_fixed", "on_evict"]
     if cfg.run_sized_geometry:
         arms.append("on_sized")
+    if cfg.run_canonical_placement:
+        arms.append("canon_sized")
 
     controller = {}
     for arm in arms:
@@ -478,7 +498,8 @@ def _plot(results, save_dir):
     if not rm:
         return []
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.6))
-    colors = {"off": "0.5", "on_fixed": "C0", "on_evict": "C2", "on_sized": "C3"}
+    colors = {"off": "0.5", "on_fixed": "C0", "on_evict": "C2", "on_sized": "C3",
+              "canon_sized": "C4"}
     for metric, ax, title in (
         ("per_admitted", axes[0], "retention per ADMITTED item"),
         ("per_offered", axes[1], "retention per OFFERED item"),
@@ -537,7 +558,8 @@ def run_experiment_controller_mvp(
                 "atom_width", "atom_alpha", "atom_amp", "payload_kappa",
                 "d_safe_mult", "n_relocation_candidates", "proposal_radius",
                 "K_grid", "budget", "evict_policy", "leak", "amp_floor",
-                "run_sized_geometry", "decay_demo_K", "decay_demo_leak",
+                "run_sized_geometry", "run_canonical_placement",
+                "canonical_radius_mult", "decay_demo_K", "decay_demo_leak",
                 "dt", "gamma_address", "gamma_read", "address_steps", "read_steps",
                 "n_query_per_item", "payload_tol", "payload_tol_frac",
                 "run_primitives", "kv_primitives", "kv_baseline_K",
