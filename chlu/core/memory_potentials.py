@@ -341,8 +341,13 @@ class BallRegisterPotential(eqx.Module):
         return jnp.exp(-d2 / (2.0 * self.w**2))
 
     def payload_profile(self, x: jnp.ndarray):
-        """s(x) — the (m,) designed payload written across the address ball."""
-        return jnp.sum(self.payloads * self.bumps(x)[:, None], axis=0)
+        """s(x) — the designed payload written across the address ball.
+
+        Scalar for the shipped single-channel register (bit-identical to w19-w25),
+        ``(m,)`` for the w26 multi-channel code.
+        """
+        prof = jnp.sum(self.payloads * self.bumps(x)[:, None], axis=0)
+        return prof[0] if self.m == 1 else prof
 
     def __call__(self, q: jnp.ndarray) -> float:
         x = q[: self.d]

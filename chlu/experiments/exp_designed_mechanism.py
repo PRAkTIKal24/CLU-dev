@@ -555,7 +555,11 @@ def _two_phase(model, Q0, P0, cfg, d: int, masses=None, stage_models=None):
         f = None
         for mdl in stages:
             q, p, f = _read(mdl, q, p, m)
-        return q[:, :d], f
+        # ⚠ the single-channel return shape is the SHIPPED contract (n, n_subsample)
+        # -- `exp_sharded_store`'s monolithic-equivalence test compares against it
+        # element-wise, so squeezing here (rather than at the call site) keeps every
+        # w20-w25 caller working unchanged.
+        return q[:, :d], (f[..., 0] if m_pay == 1 else f)
 
     n = Q0.shape[0]
     chunk = min(cfg.rollout_chunk, n)
@@ -611,7 +615,9 @@ def score_cell(model, centers, payloads, cfg, d: int, seed: int, masses_fn=None,
     basin = np.argmin(d2, axis=1)
     basin_ok = basin == labels
 
-    read_val = feat.mean(axis=1)  # (n, m)
+    read_val = feat.mean(axis=1)  # (n,) at m=1 (shipped shape), else (n, m)
+    if read_val.ndim == 1:
+        read_val = read_val[:, None]
     pay = np.asarray(payloads)
     if pay.ndim == 1:
         pay = pay[:, None]
