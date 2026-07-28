@@ -2523,6 +2523,12 @@ class ExperimentClEntryConfig:
     si_xi: float = 0.1
     lwf_alpha: float = 1.0
     lwf_temp: float = 2.0
+    # LwF's training cross-entropy scope: "seen" (the standard single-head
+    # Class-IL convention, and the one under which EWC/SI/finetune reproduce their
+    # published Split-MNIST values here to <=0.5 pp) or "current_task" (the other
+    # published decomposition). ⚠ NOT a hyper-parameter: it swings LwF's Class-IL
+    # score by tens of points. Default = the calibrated convention.
+    lwf_ce_scope: str = "seen"
     fisher_samples: int = 200
     eval_chunk: int = 1024
     # N78 tuning discipline: each rehearsal-free baseline's ONE defining

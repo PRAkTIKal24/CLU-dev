@@ -494,3 +494,19 @@ def test_frontier_dominance_requires_the_anti_degeneracy_clause():
     v2 = cle.frontier_verdict(tab, cfg)
     assert v2["dominates_at_budgets"] == ["100"]
     assert "CONTESTED WIN" in v2["reading"]
+
+
+def test_lwf_ce_scope_is_a_convention_not_a_hyperparameter():
+    """⚠ w26 diagnostic: restricting LwF's training cross-entropy to the CURRENT
+    task's classes (rather than every class seen so far) is a different loss
+    decomposition, not a tuning knob — it moves the Class-IL score far more than
+    the whole alpha grid does. The flag exists so the measurement is reproducible;
+    the DEFAULT stays on the convention under which EWC/SI/finetune reproduce their
+    published Split-MNIST values."""
+    cfg = _toy_cfg()
+    assert cfg.lwf_ce_scope == "seen"
+    st = cle.build_cl_stream(cfg, seed=0, data=_toy_data())
+    A_seen, _ = run_baseline_stream("lwf", st, cfg, seed=0, hyper={"lwf_alpha": 1.0})
+    cfg.lwf_ce_scope = "current_task"
+    A_cur, _ = run_baseline_stream("lwf", st, cfg, seed=0, hyper={"lwf_alpha": 1.0})
+    assert not np.allclose(A_seen, A_cur), "the flag must actually change training"

@@ -498,6 +498,18 @@ def run_baseline_stream(method: str, stream, cfg, seed: int, hyper: Optional[dic
     for t in range(T):
         Xt, yt = stream["train_X"][t], stream["train_y"][t]
         seen_mask[stream["task_classes"][t]] = True
+        # ⚠ w26 LwF diagnostic (`lwf_ce_scope`). Under the standard single-head
+        # Class-IL convention the training CE is masked to the classes seen SO FAR
+        # — that is what makes EWC/SI/finetune reproduce their published values
+        # here to <=0.5 pp, so it is the shipped default. Restricting the CE to the
+        # CURRENT task's classes instead (distillation still carrying the old ones)
+        # is a *different* loss decomposition, and it swings LwF's Class-IL score
+        # enormously; the flag exists so that measurement is reproducible without
+        # monkey-patching. See the matched-bytes-frontier report.
+        train_mask = seen_mask
+        if method == "lwf" and getattr(cfg, "lwf_ce_scope", "seen") == "current_task":
+            train_mask = np.zeros_like(seen_mask)
+            train_mask[stream["task_classes"][t]] = True
 
         if method == "joint":
             Xt = np.concatenate(stream["train_X"][: t + 1])
@@ -555,12 +567,12 @@ def run_baseline_stream(method: str, stream, cfg, seed: int, hyper: Optional[dic
             key, tk, mk2 = jax.random.split(key, 3)
             model = make_net(cfg, dim, n_classes, mk2)
             model, key, floss, _ = _train_task(
-                model, buffer[0], buffer[1], seen_mask, cfg, tk
+                model, buffer[0], buffer[1], train_mask, cfg, tk
             )
         else:
             key, tk = jax.random.split(key)
             model, key, floss, _ = _train_task(
-                model, Xt, yt, seen_mask, cfg, tk, extra_loss=extra, buffer=buf,
+                model, Xt, yt, train_mask, cfg, tk, extra_loss=extra, buffer=buf,
                 aux=aux, derpp=der,
             )
         diag["final_loss"].append(floss)
