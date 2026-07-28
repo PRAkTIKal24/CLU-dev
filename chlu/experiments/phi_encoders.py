@@ -284,7 +284,11 @@ class ConvEncoderReadIn:
         key, tk = jax.random.split(key)
         trunk = ConvTrunk(self.shape[0], tuple(_p(cfg, "enc_channels")),
                           int(_p(cfg, "enc_pool")), int(_p(cfg, "enc_groups")), tk)
-        X = jnp.asarray(np.asarray(fit_pool, np.float32).reshape((-1,) + self.shape))
+        # match the parameter dtype: under ``jax_enable_x64`` (some suites turn it on
+        # globally) eqx builds float64 weights and a float32 image would crash the conv
+        self.dtype = jnp.result_type(trunk.convs[0].weight)
+        X = jnp.asarray(np.asarray(fit_pool, np.float32).reshape((-1,) + self.shape),
+                        self.dtype)
         self.n_fit = int(X.shape[0])
         self.steps_run = 0
         self.loss_first = None
@@ -373,7 +377,7 @@ class ConvEncoderReadIn:
     # -- reading ---------------------------------------------------------
     def _features(self, X):
         X = np.asarray(X, np.float32).reshape((-1,) + self.shape)
-        out = [np.asarray(self._trunk(jnp.asarray(X[i:i + self.chunk])))
+        out = [np.asarray(self._trunk(jnp.asarray(X[i:i + self.chunk], self.dtype)))
                for i in range(0, len(X), self.chunk)]
         return np.concatenate(out) if out else np.zeros((0, self.h_dim), np.float32)
 
