@@ -247,3 +247,166 @@ def test_trained_well_widths_accepts_wrapped_potential(cfg):
     out = trained_well_widths(V, targets)
     assert np.isclose(out["w_atom"], cfg.atom_init_width, rtol=1e-5)
     assert np.isclose(out["all_atom_width_median"], cfg.atom_init_width, rtol=1e-5)
+
+
+# ---------------------------------------------------------------------------
+# w26 (r2-excursion-reach): the read-out excursion levers
+# ---------------------------------------------------------------------------
+
+
+def test_payload_codebook_holds_min_separation_and_cuts_excursion():
+    """⭐ Fairness condition 1: the m-channel code keeps the codeword MINIMUM
+    SEPARATION of the 1-channel codebook (same K, same delta => same bits at the same
+    per-axis noise) while cutting the per-item EXCURSION (the reach demand)."""
+    import copy
+
+    from chlu.experiments.exp_designed_mechanism import payload_codebook
+
+    base = get_default_config().experiment_designed_mechanism
+    for K in (16, 32):
+        delta = 2.0 / (K - 1)
+        prev_max = None
+        for m in (1, 2, 4):
+            c = copy.copy(base)
+            c.n_payload_channels = m
+            c.payload_code = "grid"
+            w = np.asarray(payload_codebook(K, c))
+            assert w.shape == (K, m)
+            dd = np.sqrt(((w[:, None, :] - w[None, :, :]) ** 2).sum(-1))
+            np.fill_diagonal(dd, np.inf)
+            assert np.isclose(dd.min(), delta, rtol=1e-5)  # precision preserved
+            mx = float(np.linalg.norm(w, axis=1).max())
+            if prev_max is not None:
+                assert mx < prev_max  # excursion strictly falls with m
+            prev_max = mx
+        assert prev_max < 0.2  # m=4 cuts the reach demand by >5x
+
+
+def test_multichannel_payload_geometry_and_designed_arm():
+    """m payload channels live at q[d:d+m]; the DESIGNED arm reads the same code
+    (fairness condition 4) and still retrieves it."""
+    import copy
+
+    from chlu.experiments.exp_designed_mechanism import build_designed_model, score_cell
+
+    c = copy.copy(get_default_config().experiment_designed_mechanism)
+    c.n_payload_channels, c.payload_code = 2, "grid"
+    d, K = 2, 4
+    centers, payloads, targets, _ = ball_setup(d, K, c)
+    assert payloads.shape == (K, 2)
+    assert targets.shape == (K, d + 2)
+    np.testing.assert_allclose(np.asarray(targets[:, d:]), np.asarray(payloads), atol=1e-6)
+    model = build_designed_model(centers, payloads, c)
+    assert model.potential_net.dim == d + 2
+    r = score_cell(model, centers, payloads, c, d, seed=0)
+    assert r["strict_success_rate"] > 0.9  # the designed arm reads the vector code
+
+
+def test_anneal_schedule_ends_sharp_and_inflation_is_a_gaussian_blur(cfg):
+    """s_eff^2 = s^2 + s_extra^2, the schedule always ends at s_extra = 0, and
+    s_extra = 0 is the identity."""
+    import copy
+
+    from chlu.experiments.exp_designed_mechanism import (
+        anneal_widths,
+        inflate_potential,
+    )
+
+    c = copy.copy(cfg)
+    assert anneal_widths(c) == [0.0]  # default = the shipped single-stage read
+    c.read_anneal_stages, c.read_anneal_s0 = 4, 0.3
+    sch = anneal_widths(c)
+    assert len(sch) == 4 and sch[0] == 0.3 and sch[-1] == 0.0
+    assert all(a >= b for a, b in zip(sch[:-1], sch[1:], strict=True))
+
+    V = build_learned_V(2, 4, c, jax.random.PRNGKey(0))
+    assert inflate_potential(V, 0.0) is V
+    s = np.exp(np.asarray(V.learned.log_width))
+    for mode in ("amplitude", "mass"):
+        Vi = inflate_potential(V, 0.4, mode=mode)
+        s_eff = np.exp(np.asarray(Vi.learned.log_width))
+        np.testing.assert_allclose(s_eff**2, s**2 + 0.4**2, rtol=1e-5)
+        A0 = np.asarray(V.learned.amp) ** 2
+        A1 = np.asarray(Vi.learned.amp) ** 2
+        dim = V.learned.centers.shape[1]
+        if mode == "amplitude":
+            np.testing.assert_allclose(A1, A0, rtol=1e-6)  # depth held
+        else:  # mass mode preserves the integral A * s^dim
+            np.testing.assert_allclose(A1 * s_eff**dim, A0 * s**dim, rtol=1e-4)
+
+
+def test_staged_read_is_equal_compute(cfg):
+    """⭐ The annealed read must integrate exactly as many Verlet steps as the
+    baseline: splitting the SAME landscape into L stages reproduces the one-stage
+    address read bit-for-bit (deterministic Verlet, restarted from the exact state)."""
+    from chlu.experiments.exp_designed_mechanism import _two_phase, make_ball_queries
+
+    d, K = 2, 4
+    centers, payloads, _, _ = ball_setup(d, K, cfg)
+    model = build_designed_model(centers, payloads, cfg)
+    Q0, P0, _ = make_ball_queries(jax.random.PRNGKey(0), centers, 4, cfg)
+    x1, _ = _two_phase(model, Q0, P0, cfg, d)
+    x2, _ = _two_phase(model, Q0, P0, cfg, d, stage_models=[model, model])
+    np.testing.assert_allclose(x1, x2, atol=1e-5)
+
+
+def test_localized_atom_init_is_address_only_and_off_by_default(cfg):
+    """Stage A's lever: group j's atoms start near item j's ADDRESS site; the payload
+    axis keeps the scattered init (N46 -- localizing it would hand the writer the
+    answer). Default OFF reproduces the historical scatter bit-for-bit."""
+    import copy
+
+    d, K = 3, 4
+    c = copy.copy(cfg)
+    centers, _, _, _ = ball_setup(d, K, c)
+    key = jax.random.PRNGKey(0)
+    V_off = build_learned_V(d, K, c, key, centers=centers)
+    V_none = build_learned_V(d, K, c, key)
+    np.testing.assert_array_equal(
+        np.asarray(V_off.learned.centers), np.asarray(V_none.learned.centers)
+    )
+    c.atom_init_local, c.atom_init_local_mult = True, 2.0
+    V_on = build_learned_V(d, K, c, key, centers=centers)
+    A = np.asarray(V_on.learned.centers)
+    radius = c.atom_init_local_mult * c.atom_init_width
+    owner = np.asarray(V_on.learned.n_groups)
+    assert int(owner) == K
+    n_at = A.shape[0]
+    for g in range(K):
+        rows = np.asarray(V_on.learned.group_rows(g))
+        dist = np.linalg.norm(A[rows, :d] - np.asarray(centers)[g][None, :], axis=1)
+        assert dist.max() <= radius + 1e-5
+    # the payload axis is NOT localized (it keeps the N(0, init_scale) spread)
+    assert np.std(A[:, d]) > 0.5
+    assert n_at == _atoms_for(c, K, d)
+
+
+def test_payload_read_noise_and_decode_metric(cfg):
+    """⭐ Fairness condition 3. Launch noise perturbs the payload channel at t=0;
+    observation noise perturbs the read value; the decode metric is nearest-codeword
+    and is strictly harsher than the absolute-tolerance metric once the codebook
+    spacing falls below payload_tol."""
+    import copy
+
+    from chlu.experiments.exp_designed_mechanism import make_ball_queries, score_cell
+
+    d, K = 2, 4
+    c = copy.copy(cfg)
+    centers, payloads, _, _ = ball_setup(d, K, c)
+    Q0, _, _ = make_ball_queries(jax.random.PRNGKey(0), centers, 4, c)
+    assert float(np.abs(np.asarray(Q0[:, d])).max()) == 0.0  # the shipped guard
+    c.payload_launch_sigma = 0.2
+    Q1, _, _ = make_ball_queries(jax.random.PRNGKey(0), centers, 4, c)
+    assert float(np.abs(np.asarray(Q1[:, d])).max()) > 0.0
+    np.testing.assert_allclose(np.asarray(Q0[:, :d]), np.asarray(Q1[:, :d]), atol=1e-6)
+
+    c.payload_launch_sigma = 0.0
+    model = build_designed_model(centers, payloads, c)
+    clean = score_cell(model, centers, payloads, c, d, seed=0)
+    assert clean["strict_tol"] == clean["strict_decode"]  # exact read: metrics agree
+    c.payload_obs_sigma = 5.0  # swamp the value channel
+    c.pass_metric = "decode"
+    noisy = score_cell(model, centers, payloads, c, d, seed=0)
+    assert noisy["strict_success_rate"] == noisy["strict_decode"]
+    assert noisy["strict_decode"] < clean["strict_decode"]
+    assert noisy["basin_success_rate"] == clean["basin_success_rate"]  # address intact
