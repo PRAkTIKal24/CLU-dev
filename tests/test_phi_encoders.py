@@ -91,6 +91,7 @@ def test_l2_normalize_flag_normalises_addresses():
 
 def test_whitened_head_equalises_feature_scales():
     cfg = _cfg(phi_dim=4)
+    cfg.enc_l2_normalize = False  # this test is about the head, not the normalisation
     X = _images(n=40)
     cfg.enc_head = "pca_whiten"
     Fw = np.asarray(build_read_in("randconv", "cifar10", X, X, cfg, 0)[0](X))

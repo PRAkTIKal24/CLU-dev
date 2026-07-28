@@ -49,13 +49,13 @@ ENCODER_DEFAULTS = {
     "enc_channels": (32, 64, 128),
     "enc_pool": 2,             # side of the final average-pooled map (h = C·pool²)
     "enc_groups": 8,           # GroupNorm groups (0 ⇒ no normalisation)
-    "enc_steps": 1500,
+    "enc_steps": 8000,
     "enc_batch": 128,          # images per step (simclr sees 2× that many views)
     "enc_lr": 1e-3,
     "enc_temperature": 0.5,    # NT-Xent τ
     "enc_proj_dim": 64,        # projection head width (discarded after fitting)
-    "enc_head": "pca_whiten",  # h → φ: pca | pca_whiten | none
-    "enc_l2_normalize": False,  # L2-normalise φ (⚠ changes the store geometry)
+    "enc_head": "pca",         # h → φ: pca | pca_whiten | none
+    "enc_l2_normalize": True,  # cosine addresses (⚠ changes the store geometry)
     "enc_aug_crop_pad": 4,
     "enc_aug_zoom_p": 0.5,
     "enc_aug_zoom_size": 20,

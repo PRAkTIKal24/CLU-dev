@@ -2428,13 +2428,13 @@ class ExperimentPhiStreamConfig:
     enc_channels: List[int] = field(default_factory=lambda: [32, 64, 128])
     enc_pool: int = 2
     enc_groups: int = 8
-    enc_steps: int = 2000
+    enc_steps: int = 8000
     enc_batch: int = 128
     enc_lr: float = 1e-3
     enc_temperature: float = 0.5
     enc_proj_dim: int = 64
-    enc_head: str = "pca_whiten"  # pca | pca_whiten | none
-    enc_l2_normalize: bool = False
+    enc_head: str = "pca"  # pca | pca_whiten | none
+    enc_l2_normalize: bool = True
     enc_aug_crop_pad: int = 4
     enc_aug_zoom_p: float = 0.5
     enc_aug_zoom_size: int = 20
@@ -2519,13 +2519,16 @@ class ExperimentClEntryConfig:
     enc_channels: List[int] = field(default_factory=lambda: [32, 64, 128])
     enc_pool: int = 2  # side of the final average-pooled map (h_dim = C·pool²)
     enc_groups: int = 8  # GroupNorm groups (0 ⇒ no normalisation); stateless by design
-    enc_steps: int = 2000  # optimizer steps for the φ fit (NOT stream training)
+    # ⭐ measured on the w26 CIFAR gate (seed 0, `cl-encoder`): the read-out choices
+    # below are NOT free — at 8 000 steps the gate metric moves 0.298 (whitened,
+    # unnormalised) → 0.350 (plain PCA + cosine), and 2 000 steps only reaches 0.285.
+    enc_steps: int = 8000  # optimizer steps for the φ fit (NOT stream training)
     enc_batch: int = 128  # images per step; simclr sees 2× that many views
     enc_lr: float = 1e-3
     enc_temperature: float = 0.5  # NT-Xent τ
     enc_proj_dim: int = 64  # projection head width (discarded after fitting)
-    enc_head: str = "pca_whiten"  # h → φ: pca | pca_whiten | none
-    enc_l2_normalize: bool = False  # ⚠ L2-normalising φ changes the store geometry
+    enc_head: str = "pca"  # h → φ: pca | pca_whiten | none (whitening measured WORSE)
+    enc_l2_normalize: bool = True  # cosine addresses; ⚠ this changes the store geometry
     enc_aug_crop_pad: int = 4
     enc_aug_zoom_p: float = 0.5
     enc_aug_zoom_size: int = 20
