@@ -1111,7 +1111,14 @@ def run_byte_frontier(cfg, seeds=None, verbose: bool = True, data=None):
                 "admitted_fraction_per_task": res["admitted_fraction_per_task"],
                 "refused_spacing_per_task": [p["refused_spacing"] for p in res["per_task"]],
                 "refused_full": res["refused_full"],
-                "saturated": bool(res["memory_items"] < n_clu),
+                # ⭐ saturation = the spacing gate, not the budget, became binding.
+                # The 0.98 tolerance ignores the one slot the store keeps in hand
+                # (capacity = budget + 1); a genuinely saturated store sits well
+                # below its budget because the address space, not the allowance,
+                # ran out. Where this fires is a RESULT — the packing law showing
+                # up inside a benchmark.
+                "fill_fraction": float(res["memory_items"]) / max(1, n_clu),
+                "saturated": bool(res["memory_items"] < 0.98 * n_clu),
                 "geometry": res["geometry"],
             })
             if verbose:
