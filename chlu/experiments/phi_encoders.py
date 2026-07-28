@@ -225,10 +225,11 @@ def nt_xent(z, tau):
     sim = (z @ z.T) / tau
     sim = sim - jnp.eye(n2) * 1e9  # mask self-similarity
     pos = jnp.concatenate([jnp.arange(n, n2), jnp.arange(0, n)])
-    return float_mean_ce(sim, pos)
+    return _mean_ce(sim, pos)
 
 
-def float_mean_ce(logits, targets):
+def _mean_ce(logits, targets):
+    """Mean cross-entropy of ``logits`` against integer ``targets`` (one row per view)."""
     logp = jax.nn.log_softmax(logits, axis=1)
     return -jnp.mean(logp[jnp.arange(logits.shape[0]), targets])
 
