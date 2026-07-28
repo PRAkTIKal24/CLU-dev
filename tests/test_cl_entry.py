@@ -21,6 +21,7 @@ These pin the things whose silent breakage would flip the entry's verdict:
   * the whole pipeline runs end-to-end on tiny synthetic labelled data.
 """
 
+import jax.numpy as jnp
 import numpy as np
 import pytest
 
@@ -28,7 +29,15 @@ from chlu.config import get_default_config
 from chlu.core.controller import Controller
 from chlu.core.memory_potentials import AtomStorePotential, GaussianMemoryPotential
 from chlu.experiments import exp_cl_entry as cle
-from chlu.experiments.cl_baselines import cl_metrics
+from chlu.experiments.cl_baselines import (
+    _train_task,
+    cl_metrics,
+    fixed_state_floats,
+    floats_per_stored_item,
+    items_for_budget,
+    make_net,
+    run_baseline_stream,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +231,9 @@ def test_clu_entry_runs_and_produces_a_lower_triangular_matrix():
     assert 0.0 <= res["metrics_clu"]["ACC"] <= 1.0
     # the store never exceeds its item budget and stores no exemplar
     assert res["memory_items"] <= cfg.memory_items
-    assert res["memory_floats"] == res["memory_items"] * cfg.phi_dim
+    # ⚠ w26: memory_floats uses the PINNED per-item accounting (address + payload
+    # + amp + active + the controller's record scalars), not the address alone
+    assert res["memory_floats"] == res["memory_items"] * (cfg.phi_dim + 3 + 6)
     # the laundering lines are always computed alongside (N89 is not optional)
     assert "metrics_knn_same_keys" in res and "metrics_knn_ringbuffer" in res
     # every task reports its admission accounting (per-admitted needs the fraction)
@@ -307,3 +318,179 @@ def test_end_to_end_driver_writes_metrics_and_the_verdict(tmp_path):
     v = res["verdict"]
     assert "wins_rehearsal_free_class" in v and "laundered" in v
     assert "beats replay" not in str(v).lower().replace("'beats replay' is never claimed", "")
+
+
+# ---------------------------------------------------------------------------
+# ⭐ w26 — the matched-BYTES forgetting frontier (`matched-bytes-frontier`)
+#
+# What must never break silently here: the BYTE ACCOUNTING (a referee checks it
+# first), the item budget every method is actually held to (an over-running
+# baseline makes the frontier a lie), and the anti-degeneracy clause (a method
+# that never learned never forgets).
+# ---------------------------------------------------------------------------
+def test_byte_accounting_is_pinned():
+    """PREREG §1 — the floats-per-stored-item table, held to its published values."""
+    cfg = _toy_cfg()
+    cfg.phi_dim = 32
+    per = floats_per_stored_item(cfg, dim=784, n_classes=10)
+    # CLU: 32 address + payload + amp + active + 6 controller record scalars
+    assert per["clu_entry"] == 41
+    assert per["knn_phi_same_keys"] == 41
+    # the launder is deliberately CHEAPER per item ⇒ it gets MORE keys than the
+    # store gets wells at the same bytes. Under-resourcing it would rig the control.
+    assert per["knn_phi_ringbuffer"] == 34
+    assert per["er"] == per["gdumb"] == per["icarl"] == 785
+    assert per["derpp"] == 795  # + the stored logit vector it distils against
+    assert all(per[m] == 0 for m in ("finetune", "ewc", "si", "lwf", "joint"))
+    # the landscape-only (secondary) accounting drops the controller's scalars
+    cfg.count_controller_record_floats = False
+    assert floats_per_stored_item(cfg, 784, 10)["clu_entry"] == 35
+
+
+def test_matched_byte_budget_converts_to_the_published_item_counts():
+    cfg = _toy_cfg()
+    cfg.phi_dim = 32
+    n = items_for_budget(cfg, 157000, dim=784, n_classes=10)
+    assert n["er"] == 200 and n["gdumb"] == 200 and n["icarl"] == 200
+    assert n["derpp"] == 197
+    assert n["clu_entry"] == 3829  # 19.1x the raw-exemplar item count
+    assert n["knn_phi_ringbuffer"] == 4617  # 1.21x MORE keys than CLU has wells
+    # nobody may exceed the budget they were given
+    per = floats_per_stored_item(cfg, 784, 10)
+    for m, cnt in n.items():
+        assert cnt * per[m] <= 157000
+
+
+def test_fixed_state_is_counted_and_the_entry_has_no_backbone():
+    """The CLU entry runs zero gradient steps: its only fixed state is φ."""
+    cfg = _toy_cfg()
+    cfg.phi_dim = 32
+    cfg.mlp_width, cfg.mlp_depth, cfg.backbone = 400, 2, "mlp"
+    fx = fixed_state_floats(cfg, dim=784, n_classes=10)
+    assert fx["er"] == 478410  # 784-400-400-10 MLP
+    assert fx["ewc"] == 3 * 478410 and fx["lwf"] == 2 * 478410
+    assert fx["clu_entry"] == 32 * 784 + 784  # PCA components + mean
+    assert fx["clu_entry"] < fx["er"]
+
+
+def test_icarl_never_exceeds_its_item_budget():
+    """Regression (w26): the old ``max(1, budget // n_classes)`` rule kept ONE
+    exemplar per class even when the budget was smaller than the class count, so
+    iCaRL silently ran 2.5x over budget at the smallest frontier point."""
+    cfg = _toy_cfg()
+    cfg.baselines = ["icarl"]
+    cfg.memory_items = 4  # < the 10 classes of the stream
+    st = cle.build_cl_stream(cfg, seed=0, data=_toy_data())
+    _, diag = run_baseline_stream("icarl", st, cfg, seed=0)
+    assert diag["memory_items"] <= cfg.memory_items
+    assert diag["memory_floats"] <= cfg.memory_items * (st["dim"] + 1)
+
+
+def test_derpp_runs_stays_in_budget_and_stores_logits():
+    cfg = _toy_cfg()
+    cfg.memory_items = 8
+    st = cle.build_cl_stream(cfg, seed=0, data=_toy_data())
+    A, diag = run_baseline_stream(
+        "derpp", st, cfg, seed=0, hyper={"derpp_alpha": 0.5, "derpp_beta": 0.5}
+    )
+    assert A.shape == (cfg.n_tasks, cfg.n_tasks)
+    assert diag["memory_items"] <= cfg.memory_items
+    # DER++ pays for the logit vector it distils against — 10 extra floats/item
+    assert diag["floats_per_item"] == st["dim"] + 1 + cfg.n_tasks * cfg.classes_per_task
+
+
+def test_lwf_distils_on_the_current_minibatch():
+    """w26 retune: the regularizer is handed the CURRENT minibatch as a third
+    argument, instead of one fixed sub-batch stored in ``aux`` and reused for every
+    step of the task (the w25 bug that cost LwF ~4 pp against the published value).
+
+    Pins the *contract*, which is what a silent revert would break: ``extra_loss``
+    is called as ``f(model, aux, xb)`` with ``xb`` the live minibatch — a two-arg
+    regularizer no longer runs at all.
+    """
+    import jax
+
+    cfg = _toy_cfg()
+    st = cle.build_cl_stream(cfg, seed=0, data=_toy_data())
+    shapes = []
+
+    def spy(m, aux, xb):
+        shapes.append(tuple(xb.shape))
+        return 0.0 * jnp.sum(xb)
+
+    model = make_net(cfg, st["dim"], 10, jax.random.PRNGKey(0))
+    mask = np.zeros(10, bool)
+    mask[:2] = True
+    _train_task(model, st["train_X"][0], st["train_y"][0], mask, cfg,
+                jax.random.PRNGKey(1), extra_loss=spy, aux={})
+    bs = min(cfg.baseline_batch, len(st["train_X"][0]))
+    assert shapes and shapes[0] == (bs, st["dim"])
+
+    with pytest.raises(TypeError):
+        _train_task(model, st["train_X"][0], st["train_y"][0], mask, cfg,
+                    jax.random.PRNGKey(1), extra_loss=lambda m, aux: 0.0, aux={})
+
+    # and LwF itself still runs end-to-end under the new contract
+    A, _ = run_baseline_stream("lwf", st, cfg, seed=0, hyper={"lwf_alpha": 2.0})
+    assert A.shape == (cfg.n_tasks, cfg.n_tasks)
+
+
+def test_constant_predictor_is_the_zero_forgetting_control():
+    """A method that never learns never forgets — the frontier carries this line
+    so that a low-forgetting number cannot be read as a merit on its own."""
+    cfg = _toy_cfg()
+    st = cle.build_cl_stream(cfg, seed=0, data=_toy_data())
+    m = cle.constant_predictor_row(st, cfg)
+    assert m["forgetting"] == pytest.approx(0.0, abs=1e-12)
+    assert m["BWT"] == pytest.approx(0.0, abs=1e-12)
+    assert m["ACC"] < 0.5  # and it is useless, which is the point
+
+
+def test_byte_frontier_runs_and_holds_every_method_to_the_same_bytes():
+    cfg = _toy_cfg()
+    cfg.frontier_budgets_floats = [2000, 8000]
+    cfg.frontier_seeds = [0]
+    cfg.frontier_methods = ["er", "derpp", "icarl", "gdumb"]
+    cfg.frontier_fixed_methods = ["finetune"]
+    cfg.tune_baselines = False
+    fr = cle.run_byte_frontier(cfg, verbose=False, data=_toy_data())
+    assert fr["table"] and fr["store_saturation"]
+    for r in fr["rows"]:
+        if r["budget_floats"] is None:
+            continue
+        assert r["memory_floats"] <= r["budget_floats"], (
+            f"{r['method']} exceeded its byte budget"
+        )
+    # the launder gets MORE keys than the store gets wells at the same bytes
+    for B in cfg.frontier_budgets_floats:
+        clu = [r for r in fr["rows"] if r["method"] == "clu_entry"
+               and r["budget_floats"] == B][0]
+        ring = [r for r in fr["rows"] if r["method"] == "knn_phi_ringbuffer"
+                and r["budget_floats"] == B][0]
+        assert ring["memory_items"] >= clu["memory_items"]
+    v = fr["verdict"]
+    assert "reading" in v and "per_budget" in v
+    assert set(v["per_budget"]) == {str(b) for b in cfg.frontier_budgets_floats}
+
+
+def test_frontier_dominance_requires_the_anti_degeneracy_clause():
+    """A degenerate method with zero forgetting must NOT be scored as dominant."""
+    cfg = _toy_cfg()
+    tab = [
+        {"budget_floats": 100, "method": "clu_entry", "class": "clu",
+         "forgetting": 0.0, "forgetting_sd": 0.0, "ACC": 0.2, "LA": 0.2},
+        {"budget_floats": 100, "method": "er", "class": "replay",
+         "forgetting": 0.30, "forgetting_sd": 0.01, "ACC": 0.8, "LA": 0.9},
+        {"budget_floats": 100, "method": "knn_phi_ringbuffer", "class": "launder",
+         "forgetting": 0.25, "forgetting_sd": 0.01, "ACC": 0.75, "LA": 0.85},
+    ]
+    v = cle.frontier_verdict(tab, cfg)
+    assert v["per_budget"]["100"]["la_within_band"] is False
+    assert v["dominates_at_budgets"] == []
+    # the same numbers with a healthy LA DO count as a dominance region
+    for r in tab:
+        if r["method"] == "clu_entry":
+            r["LA"] = 0.88
+    v2 = cle.frontier_verdict(tab, cfg)
+    assert v2["dominates_at_budgets"] == ["100"]
+    assert "CONTESTED WIN" in v2["reading"]
