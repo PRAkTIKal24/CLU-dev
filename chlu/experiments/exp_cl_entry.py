@@ -50,6 +50,7 @@ Runnable: ``uv run python -m chlu.experiments.exp_cl_entry --quick`` or via the 
 import copy
 import json
 import os
+import time
 from typing import Optional
 
 import jax
@@ -62,6 +63,9 @@ from chlu.experiments.cl_baselines import (
     REHEARSAL_FREE,
     REPLAY,
     cl_metrics,
+    fixed_state_floats,
+    floats_per_stored_item,
+    items_for_budget,
     run_baseline_stream,
 )
 from chlu.experiments.exp_hopfield_capacity import (
@@ -408,17 +412,31 @@ def _schedule_for(cfg, n_offered_this_task: int, decay_on: bool):
 
 
 def run_clu_entry(cfg, stream, regime: str, seed: int, decay_on: bool = False,
-                  collect_store: bool = False):
+                  collect_store: bool = False, ring_budget: Optional[int] = None,
+                  phi=None):
     """Walk the stream once with the designed store; return the Class-IL accuracy
-    matrix, the controller's per-task statistics and (optionally) the live store."""
-    phi, prov = build_phi(regime, stream, cfg, seed)
+    matrix, the controller's per-task statistics and (optionally) the live store.
+
+    ``ring_budget`` (w26) gives the kNN-in-φ ring-buffer launder its **own** item
+    budget. At matched *items* it is ``cfg.memory_items`` (the w25 default, kept
+    when the argument is ``None``); on the matched-**BYTES** frontier the launder
+    stores 34 floats/key against the store's 41 floats/well, so it is handed
+    ``41/34 = 1.21×`` MORE keys than the store has wells. Under-resourcing the
+    launder would rig the control.
+    ``phi`` lets a caller reuse an already-fitted read-in across budget points
+    (identical object ⇒ identical addresses; only the budget varies).
+    """
+    if phi is None:
+        phi, prov = build_phi(regime, stream, cfg, seed)
+    else:
+        prov = {"regime": regime, "reused_read_in": True}
     T = cfg.n_tasks
     A = np.zeros((T, T))
     A_knn_same = np.zeros((T, T))
     A_ring = np.zeros((T, T))
     store = PhiStore(cfg, cfg.phi_dim, seed)
     out_mid = None
-    ring = RingBufferKNN(cfg.memory_items)
+    ring = RingBufferKNN(cfg.memory_items if ring_budget is None else ring_budget)
     per_task, retention_rows = [], []
     key = jax.random.PRNGKey(seed + 5150)
     ticks = 0
@@ -492,7 +510,12 @@ def run_clu_entry(cfg, stream, regime: str, seed: int, decay_on: bool = False,
         "metrics_knn_ringbuffer": cl_metrics(A_ring),
         "per_task": per_task, "geometry": diag,
         "memory_items": int(len(centers)),
-        "memory_floats": int(len(centers) * cfg.phi_dim),
+        "memory_floats": int(len(centers) * _clu_floats_per_item(cfg, stream)),
+        "ring_items": int(len(ring.keys)),
+        "budget_items": int(cfg.memory_items),
+        "ring_budget_items": int(ring.budget),
+        "refused_full": int(store.ctrl.stats["refused_full"]),
+        "admitted_fraction_per_task": [p["admitted_fraction"] for p in per_task],
         "retention_rows": retention_rows,
     }
     if collect_store:
@@ -847,6 +870,27 @@ def tune_baselines(cfg, stream, seed: int):
             "method": method, "hyper": name, "grid": grid,
             "ACC_per_value": accs, "chosen": grid[best],
             "tuning_seed": int(seed),
+            "at_grid_edge": bool(best in (0, len(grid) - 1)),
+        })
+    if "derpp" in cfg.baselines and cfg.tune_derpp:
+        # DER++ is defined by TWO coefficients (Buzzega et al. 2020), so N78's
+        # "one defining hyper-parameter" is a small 2-D grid here; it is swept on
+        # the same single seed and then fixed for every seed AND every budget.
+        pairs, accs = [], []
+        for a in cfg.derpp_alpha_grid:
+            for b in cfg.derpp_beta_grid:
+                A, _ = run_baseline_stream(
+                    "derpp", stream, cfg, seed,
+                    hyper={"derpp_alpha": a, "derpp_beta": b},
+                )
+                pairs.append((float(a), float(b)))
+                accs.append(cl_metrics(A)["ACC"])
+        best = int(np.argmax(accs))
+        chosen["derpp"] = {"derpp_alpha": pairs[best][0], "derpp_beta": pairs[best][1]}
+        log.append({
+            "method": "derpp", "hyper": "derpp_alpha x derpp_beta",
+            "grid": [list(p) for p in pairs], "ACC_per_value": accs,
+            "chosen": list(pairs[best]), "tuning_seed": int(seed),
         })
     return chosen, log
 
@@ -927,6 +971,319 @@ def entry_verdict(table, cfg):
 
 
 # ---------------------------------------------------------------------------
+# ⭐ Item 6 (w26) — the matched-BYTES forgetting frontier
+# ---------------------------------------------------------------------------
+#
+# Standing ruling: a win-by-construction (the incumbents fail the class) is a
+# SUPPLEMENTARY claim. Replay does NOT fail by construction — it is the strongest
+# anti-forgetting method there is — so *forgetting at matched BYTES* against tuned
+# ER / DER++ / GDumb / iCaRL is a contested axis. Accuracy at matched *items* was
+# laundered in w25; this measures the other axis, and it runs the launder at
+# matched BYTES too (the ring buffer gets its full 1.21× key allowance).
+
+
+def _clu_floats_per_item(cfg, stream) -> int:
+    return floats_per_stored_item(cfg, int(stream["dim"]),
+                                  cfg.n_tasks * cfg.classes_per_task)["clu_entry"]
+
+
+def _cfg_with(cfg, **over):
+    c = copy.deepcopy(cfg)
+    for k, v in over.items():
+        setattr(c, k, v)
+    return c
+
+
+def constant_predictor_row(stream, cfg):
+    """⭐ The **degenerate-forgetting control** (PREREG §2), computed analytically.
+
+    A predictor that always emits one fixed class never forgets: its accuracy
+    matrix is constant in ``t``, so ``BWT = forgetting = 0`` exactly. It is on the
+    frontier so that "low forgetting" cannot be read as a merit on its own — any
+    method must beat this line on ``ACC``/``LA`` before its forgetting means
+    anything. The class emitted is the most frequent one in task 1's stream data.
+    """
+    y0 = np.asarray(stream["train_y"][0])
+    c = int(np.bincount(y0).argmax())
+    T = cfg.n_tasks
+    A = np.zeros((T, T))
+    for t in range(T):
+        for i in range(t + 1):
+            A[t, i] = float(np.mean(np.asarray(stream["test_y"][i]) == c))
+    return cl_metrics(A)
+
+
+def run_byte_frontier(cfg, seeds=None, verbose: bool = True, data=None):
+    """Sweep the **byte** budget; give every method the same bytes at every point.
+
+    Each method converts the budget to items at its own per-item cost
+    (``cl_baselines.floats_per_stored_item``): raw-exemplar replay ``B/785``, the
+    CLU store ``B/41`` wells, the φ ring-buffer launder ``B/34`` keys. Methods with
+    no episodic memory (finetune/EWC/SI/LwF/joint) are budget-independent and are
+    run **once per seed**, then drawn as horizontal lines.
+    """
+    seeds = list(seeds or cfg.frontier_seeds)
+    cfg_f = _cfg_with(
+        cfg,
+        n_test_per_task=(cfg.frontier_n_test_per_task or cfg.n_test_per_task),
+    )
+    budgets = [int(b) for b in cfg.frontier_budgets_floats]
+    rows, store_diag, tuning_log, tuned = [], [], [], {}
+    n_classes = cfg.n_tasks * cfg.classes_per_task
+    t0 = time.time()
+
+    for sd in seeds:
+        stream = build_cl_stream(cfg_f, sd, data=data)
+        dim = int(stream["dim"])
+        per_item = floats_per_stored_item(cfg_f, dim, n_classes)
+        fixed = fixed_state_floats(cfg_f, dim, n_classes)
+        # the φ read-in depends only on (stream, seed) — fit once, reuse at every
+        # budget so the addresses are identical and ONLY the budget varies
+        phi, phi_prov = build_phi(PHI_PRIMARY, stream, cfg_f, sd)
+
+        # ---- hyper-tuning: once, on the first seed, at the operating point ----
+        if cfg_f.tune_baselines and not tuning_log:
+            n_op = items_for_budget(cfg_f, cfg_f.frontier_tuning_budget or budgets[-2],
+                                    dim, n_classes)
+            cfg_t = _cfg_with(
+                cfg_f, memory_items=max(1, n_op["er"]),
+                baselines=list(cfg_f.frontier_methods) + list(cfg_f.frontier_fixed_methods),
+            )
+            tuned, tuning_log = tune_baselines(cfg_t, stream, sd)
+
+        # ---- budget-independent methods: no episodic memory ⇒ run once --------
+        for m in cfg_f.frontier_fixed_methods:
+            A, diag = run_baseline_stream(m, stream, cfg_f, sd, hyper=tuned.get(m))
+            rows.append({
+                "method": m, "class": ("upper-bound" if m == "joint"
+                                       else "rehearsal-free"),
+                "seed": sd, "budget_floats": None, "metrics": cl_metrics(A),
+                "memory_items": 0, "memory_floats": 0,
+                "floats_per_item": 0, "fixed_state_floats": fixed.get(m, 0),
+                "budget_independent": True,
+            })
+            if verbose:
+                print(f"[frontier] seed {sd} {m:9s} (budget-free) "
+                      f"ACC {cl_metrics(A)['ACC']:.3f} "
+                      f"forget {cl_metrics(A)['forgetting']:.3f} "
+                      f"[{time.time() - t0:.0f}s]", flush=True)
+        rows.append({
+            "method": "constant_predictor", "class": "degenerate-control",
+            "seed": sd, "budget_floats": None,
+            "metrics": constant_predictor_row(stream, cfg_f),
+            "memory_items": 1, "memory_floats": 1, "floats_per_item": 1,
+            "fixed_state_floats": 0, "budget_independent": True,
+        })
+
+        # ---- the sweep --------------------------------------------------------
+        for B in budgets:
+            n_items = items_for_budget(cfg_f, B, dim, n_classes)
+            n_clu = max(3, n_items["clu_entry"])
+            if cfg_f.frontier_max_clu_items:
+                n_clu = min(n_clu, int(cfg_f.frontier_max_clu_items))
+            cfg_b = _cfg_with(cfg_f, memory_items=n_clu,
+                              s_init_items=min(cfg_f.s_init_items, n_clu))
+            res = run_clu_entry(
+                cfg_b, stream, PHI_PRIMARY, sd, phi=phi,
+                ring_budget=max(3, n_items["knn_phi_ringbuffer"]),
+            )
+            for name, key, klass, items, fl in (
+                ("clu_entry", "metrics_clu", "clu", res["memory_items"],
+                 per_item["clu_entry"]),
+                ("knn_phi_same_keys", "metrics_knn_same_keys", "launder",
+                 res["memory_items"], per_item["knn_phi_same_keys"]),
+                ("knn_phi_ringbuffer", "metrics_knn_ringbuffer", "launder",
+                 res["ring_items"], per_item["knn_phi_ringbuffer"]),
+            ):
+                rows.append({
+                    "method": name, "class": klass, "seed": sd,
+                    "budget_floats": B, "metrics": res[key],
+                    "memory_items": int(items), "memory_floats": int(items * fl),
+                    "floats_per_item": int(fl),
+                    "fixed_state_floats": fixed.get(name, 0),
+                    "budget_independent": False,
+                })
+            store_diag.append({
+                "seed": sd, "budget_floats": B, "budget_items": n_clu,
+                "n_live_end": res["memory_items"],
+                "ring_items": res["ring_items"],
+                "ring_budget_items": res["ring_budget_items"],
+                "admitted_fraction_per_task": res["admitted_fraction_per_task"],
+                "refused_spacing_per_task": [p["refused_spacing"] for p in res["per_task"]],
+                "refused_full": res["refused_full"],
+                "saturated": bool(res["memory_items"] < n_clu),
+                "geometry": res["geometry"],
+            })
+            if verbose:
+                print(f"[frontier] seed {sd} B={B:7d} clu n={res['memory_items']}"
+                      f"/{n_clu} ACC {res['metrics_clu']['ACC']:.3f} "
+                      f"forget {res['metrics_clu']['forgetting']:.3f} | "
+                      f"ring n={res['ring_items']} "
+                      f"forget {res['metrics_knn_ringbuffer']['forgetting']:.3f} "
+                      f"[{time.time() - t0:.0f}s]", flush=True)
+
+            for m in cfg_f.frontier_methods:
+                cfg_m = _cfg_with(cfg_f, memory_items=max(1, n_items[m]))
+                A, diag = run_baseline_stream(m, stream, cfg_m, sd, hyper=tuned.get(m))
+                met = cl_metrics(A)
+                rows.append({
+                    "method": m, "class": "replay", "seed": sd, "budget_floats": B,
+                    "metrics": met, "memory_items": diag["memory_items"],
+                    "memory_floats": diag["memory_floats"],
+                    "floats_per_item": diag["floats_per_item"],
+                    "fixed_state_floats": diag["fixed_state_floats"],
+                    "budget_independent": False,
+                })
+                if verbose:
+                    print(f"[frontier] seed {sd} B={B:7d} {m:6s} "
+                          f"n={diag['memory_items']:4d} ACC {met['ACC']:.3f} "
+                          f"forget {met['forgetting']:.3f} "
+                          f"[{time.time() - t0:.0f}s]", flush=True)
+
+    table = frontier_table(rows)
+    return {
+        "budgets_floats": budgets,
+        "bytes_per_float": int(cfg.bytes_per_float),
+        "seeds": [int(s) for s in seeds],
+        "byte_accounting": {
+            "floats_per_stored_item": per_item,
+            "fixed_state_floats": fixed,
+            "note": (
+                "per-item floats are the frontier's x-axis (the field's 'buffer "
+                "size'); fixed state is reported and carried into the secondary "
+                "all-fixed-charged frontier. The CLU entry runs ZERO gradient "
+                "steps: it has no backbone, so charging its φ while not charging "
+                "the baselines' backbone would be a double standard."
+            ),
+        },
+        "phi_provenance": phi_prov,
+        "rows": rows,
+        "table": table,
+        "store_saturation": store_diag,
+        "baseline_tuning": tuning_log,
+        "verdict": frontier_verdict(table, cfg),
+        "wall_clock_s": float(time.time() - t0),
+    }
+
+
+def frontier_table(rows):
+    """(budget, method) → mean ± sd over seeds of ACC / BWT / forgetting / LA."""
+    out = []
+    keys = sorted({(r["budget_floats"], r["method"]) for r in rows},
+                  key=lambda k: (-1 if k[0] is None else k[0], k[1]))
+    for B, m in keys:
+        sel = [r for r in rows if r["budget_floats"] == B and r["method"] == m]
+        e = {"budget_floats": B, "method": m, "class": sel[0]["class"],
+             "n_seeds": len(sel),
+             "memory_items": float(np.mean([r["memory_items"] for r in sel])),
+             "memory_floats": float(np.mean([r["memory_floats"] for r in sel])),
+             "fixed_state_floats": sel[0]["fixed_state_floats"],
+             "budget_independent": sel[0]["budget_independent"]}
+        for k in ("ACC", "BWT", "forgetting", "LA"):
+            v = _mean_std([r["metrics"][k] for r in sel])
+            e[k], e[f"{k}_sd"] = v[0], v[1]
+        out.append(e)
+    return out
+
+
+def _beats_on_forgetting(clu, group):
+    """Compare the CLU row against the best (lowest-forgetting) row of ``group``."""
+    if not group:
+        return None
+    best = min(group, key=lambda r: r["forgetting"])
+    sep = (clu["forgetting"] + clu["forgetting_sd"]
+           < best["forgetting"] - best["forgetting_sd"])
+    return {
+        "best_method": best["method"],
+        "best_forgetting": best["forgetting"],
+        "best_forgetting_sd": best["forgetting_sd"],
+        "clu_minus_best": clu["forgetting"] - best["forgetting"],
+        "clu_lower": bool(clu["forgetting"] < best["forgetting"]),
+        "separated_by_sd": bool(sep),
+    }
+
+
+def frontier_verdict(table, cfg):
+    """Apply the PREREG §5 outcome readings to the measured frontier, verbatim.
+
+    Dominance at a budget point requires (i) CLU's forgetting strictly below every
+    compared method's, (ii) separation by at least one pooled sd, and (iii) the
+    **anti-degeneracy clause**: CLU's LA within ``frontier_la_band`` of the best LA
+    at that point (a method that never learned never forgets).
+    """
+    per_budget = {}
+    for B in sorted({r["budget_floats"] for r in table if r["budget_floats"]}):
+        at = [r for r in table if r["budget_floats"] == B]
+        clu = next((r for r in at if r["method"] == "clu_entry"), None)
+        if clu is None:
+            continue
+        replay = [r for r in at if r["class"] == "replay"]
+        launder = [r for r in at if r["class"] == "launder"]
+        best_la = max(r["LA"] for r in at)
+        la_ok = bool(clu["LA"] >= best_la - cfg.frontier_la_band)
+        vs_all = _beats_on_forgetting(clu, replay + launder)
+        per_budget[str(B)] = {
+            "clu_forgetting": clu["forgetting"],
+            "clu_forgetting_sd": clu["forgetting_sd"],
+            "clu_ACC": clu["ACC"], "clu_LA": clu["LA"], "best_LA_here": best_la,
+            "vs_replay": _beats_on_forgetting(clu, replay),
+            "vs_launder": _beats_on_forgetting(clu, launder),
+            "vs_all_memory_methods": vs_all,
+            "la_within_band": la_ok,
+            "dominates": bool(la_ok and vs_all and vs_all["clu_lower"]),
+            "dominates_with_sd_separation": bool(
+                la_ok and vs_all and vs_all["separated_by_sd"]
+            ),
+        }
+    dom = [b for b, d in per_budget.items() if d["dominates_with_sd_separation"]]
+    dom_replay_only = [
+        b for b, d in per_budget.items()
+        if d["vs_replay"] and d["vs_replay"]["separated_by_sd"]
+        and d["la_within_band"] and not d["dominates_with_sd_separation"]
+    ]
+    launder_everywhere = all(
+        (d["vs_launder"] is None) or (not d["vs_launder"]["clu_lower"])
+        for d in per_budget.values()
+    )
+    if dom:
+        reading = (
+            "CONTESTED WIN — CLU has the strictly lowest forgetting of every "
+            f"byte-matched method (replay AND both launders) at budgets {dom}, "
+            "with sd separation and LA within the pre-registered band."
+        )
+    elif launder_everywhere and dom_replay_only:
+        reading = (
+            "THE PRE-REGISTERED FALSIFIER FIRED — CLU beats the raw-exemplar "
+            f"replay methods on forgetting at budgets {dom_replay_only}, but the "
+            "matched-BYTES kNN-in-φ launder is never beaten. The frontier region "
+            "is real and it is φ's and the buffer's: SUPPLEMENTARY, not primary."
+        )
+    elif dom_replay_only:
+        reading = (
+            f"PARTIAL — CLU beats replay at budgets {dom_replay_only} but does not "
+            "clear both launders anywhere with sd separation."
+        )
+    else:
+        reading = (
+            "CLAIM DEAD on this axis — CLU dominates no region of the "
+            "forgetting-vs-bytes frontier."
+        )
+    return {
+        "per_budget": per_budget,
+        "dominates_at_budgets": dom,
+        "beats_replay_only_at_budgets": dom_replay_only,
+        "launder_never_beaten": bool(launder_everywhere),
+        "reading": reading,
+        "rules": (
+            "PREREG §5. Dominance = strictly lowest forgetting among ALL "
+            "byte-matched methods, separated by ≥1 sd, with LA within "
+            f"{cfg.frontier_la_band} of the best LA at that budget (the "
+            "anti-degeneracy clause: a method that never learned never forgets)."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Figures
 # ---------------------------------------------------------------------------
 
@@ -994,6 +1351,71 @@ def _plots(results, save_dir):
         fig.savefig(p, dpi=140)
         plt.close(fig)
         paths.append(p)
+
+    fr = results.get("frontier", {})
+    if fr.get("table"):
+        tab = fr["table"]
+        methods = sorted({r["method"] for r in tab})
+        style = {"clu_entry": ("black", "o", 2.4), "knn_phi_ringbuffer": ("tab:red", "s", 1.6),
+                 "knn_phi_same_keys": ("tab:pink", "v", 1.2), "er": ("tab:orange", "^", 1.2),
+                 "derpp": ("tab:purple", "D", 1.2), "icarl": ("tab:brown", "P", 1.2),
+                 "gdumb": ("tab:olive", "X", 1.2), "constant_predictor": ("grey", None, 1.0)}
+        fig, axes = plt.subplots(1, 3, figsize=(15, 4.4))
+        bpf = fr.get("bytes_per_float", 4)
+        for m in methods:
+            sel = sorted([r for r in tab if r["method"] == m and r["budget_floats"]],
+                         key=lambda r: r["budget_floats"])
+            col, mk, lw = style.get(m, ("tab:blue", ".", 1.0))
+            if sel:
+                x = [r["budget_floats"] * bpf / 1024 for r in sel]
+                for ax, k in ((axes[0], "forgetting"), (axes[1], "ACC"), (axes[2], "LA")):
+                    ax.errorbar(x, [r[k] for r in sel], yerr=[r[f"{k}_sd"] for r in sel],
+                                marker=mk, color=col, lw=lw, capsize=2, label=m)
+            else:  # budget-independent ⇒ a horizontal line
+                r = [q for q in tab if q["method"] == m][0]
+                for ax, k in ((axes[0], "forgetting"), (axes[1], "ACC"), (axes[2], "LA")):
+                    ax.axhline(r[k], color=col, ls=":", lw=lw, label=m)
+        for ax, k in ((axes[0], "forgetting (lower = better)"), (axes[1], "ACC"),
+                      (axes[2], "LA (learning accuracy)")):
+            ax.set_xscale("log")
+            ax.set_xlabel("matched memory budget (KiB)")
+            ax.set_ylabel(k)
+        axes[0].set_title(f"Split-{ds.upper()} Class-IL: forgetting vs BYTES")
+        axes[1].set_title("ACC carried alongside (not the claim)")
+        axes[2].set_title("anti-degeneracy readout")
+        axes[0].legend(fontsize=6, ncol=2)
+        fig.tight_layout()
+        p = os.path.join(save_dir, f"cl_entry_byte_frontier_{ds}.png")
+        fig.savefig(p, dpi=140)
+        plt.close(fig)
+        paths.append(p)
+
+        sat = fr.get("store_saturation", [])
+        if sat:
+            fig, ax = plt.subplots(figsize=(6, 4.2))
+            bs = sorted({s["budget_floats"] for s in sat})
+            live = [np.mean([s["n_live_end"] for s in sat if s["budget_floats"] == b])
+                    for b in bs]
+            budg = [np.mean([s["budget_items"] for s in sat if s["budget_floats"] == b])
+                    for b in bs]
+            ax.plot(bs, budg, "k--", label="budget (items)")
+            ax.plot(bs, live, "ko-", label="live wells at end of stream")
+            adm = [np.mean([np.mean(s["admitted_fraction_per_task"])
+                            for s in sat if s["budget_floats"] == b]) for b in bs]
+            ax2 = ax.twinx()
+            ax2.plot(bs, adm, "tab:red", marker="s", label="admitted fraction")
+            ax2.set_ylabel("admitted fraction (gate)")
+            ax.set_xscale("log")
+            ax.set_yscale("log")
+            ax.set_xlabel("budget (floats)")
+            ax.set_ylabel("items")
+            ax.set_title("where the store saturates (capacity law in a benchmark)")
+            ax.legend(fontsize=7, loc="upper left")
+            fig.tight_layout()
+            p = os.path.join(save_dir, f"cl_entry_store_saturation_{ds}.png")
+            fig.savefig(p, dpi=140)
+            plt.close(fig)
+            paths.append(p)
 
     ret = results.get("retention", {}).get("law", {})
     if ret:
@@ -1115,6 +1537,12 @@ def run_experiment_cl_entry(
             })
             retention["law"] = retention_law_check(res_d["retention_rows"], cfg)
 
+    frontier = {}
+    if "frontier" in items:
+        frontier = run_byte_frontier(
+            cfg, seeds=([seed] if seed is not None else None), data=data
+        )
+
     table = baseline_table(rows, cfg) if rows else []
     results = {
         "seeds": [int(s) for s in seeds],
@@ -1154,7 +1582,12 @@ def run_experiment_cl_entry(
                 "retry_tau", "retry_tau_grid", "retry_boost", "retry_step_frac",
                 "retry_mask_p", "retry_mask_levels", "ticks_per_task",
                 "leak_slow", "leak_fast", "amp_floor", "permanent_per_task",
-                "laundering_tie_band",
+                "laundering_tie_band", "derpp_alpha", "derpp_beta",
+                "frontier_budgets_floats", "frontier_methods",
+                "frontier_fixed_methods", "frontier_seeds",
+                "frontier_n_test_per_task", "frontier_max_clu_items",
+                "frontier_la_band", "count_controller_record_floats",
+                "bytes_per_float",
             )
         },
         "entry_runs": entry_runs,
@@ -1164,12 +1597,16 @@ def run_experiment_cl_entry(
         "verdict": entry_verdict(table, cfg) if table else {},
         "retry_native": retry_out,
         "retention": retention,
+        "frontier": frontier,
     }
     results["figures"] = _plots(results, save_dir)
 
     results_dir = os.path.join(os.path.dirname(os.path.abspath(save_dir)), "results")
     os.makedirs(results_dir, exist_ok=True)
-    out_path = os.path.join(results_dir, f"exp_cl_entry_{cfg.dataset}_metrics.json")
+    tag = "_frontier" if items == ["frontier"] else ""
+    out_path = os.path.join(
+        results_dir, f"exp_cl_entry_{cfg.dataset}{tag}_metrics.json"
+    )
     with open(out_path, "w") as f:
         json.dump(results, f, indent=2, default=float)
     results["metrics_path"] = out_path
@@ -1188,8 +1625,12 @@ def apply_quick(config: CHLUConfig) -> None:
     cfg.phi_dim = 16
     cfg.clu_steps = 40
     cfg.baseline_iters = 30
-    cfg.baselines = ["finetune", "ewc", "si", "lwf", "er", "icarl", "gdumb", "joint"]
+    cfg.baselines = ["finetune", "ewc", "si", "lwf", "er", "derpp", "icarl",
+                     "gdumb", "joint"]
     cfg.tune_baselines = False
+    cfg.frontier_budgets_floats = [800, 3200, 12800]
+    cfg.frontier_seeds = [0]
+    cfg.frontier_n_test_per_task = 40
     cfg.retry_ladder = [0, 1, 2]
     cfg.retry_mask_levels = [0.5]
     cfg.retry_tau_grid = [0.99, 1.0]
@@ -1236,7 +1677,13 @@ def main():
     parser.add_argument("--seed", type=int, help="Single seed (overrides cfg.seeds)")
     parser.add_argument("--quick", action="store_true", help="Quick smoke mode")
     parser.add_argument("--dataset", choices=["mnist", "cifar10"], help="Override dataset")
-    parser.add_argument("--items", help="Comma-separated: entry,retry,retention")
+    parser.add_argument(
+        "--items", help="Comma-separated: entry,retry,retention,frontier"
+    )
+    parser.add_argument(
+        "--budgets",
+        help="Comma-separated matched-BYTE budgets in floats (frontier item)",
+    )
     parser.add_argument("--baselines", help="Comma-separated baseline override")
     args = parser.parse_args()
 
@@ -1260,6 +1707,10 @@ def main():
             apply_cifar10(config)
     if args.baselines:
         config.experiment_cl_entry.baselines = args.baselines.split(",")
+    if args.budgets:
+        config.experiment_cl_entry.frontier_budgets_floats = [
+            int(b) for b in args.budgets.split(",")
+        ]
 
     res = run_experiment_cl_entry(
         config=config, save_dir=save_dir, models_dir=models_dir, seed=args.seed,
@@ -1268,8 +1719,9 @@ def main():
     print(json.dumps({
         "baseline_table": res["baseline_table"],
         "verdict": res["verdict"],
+        "frontier_verdict": res.get("frontier", {}).get("verdict", {}),
         "metrics_path": res["metrics_path"],
-    }, indent=2, default=float)[:8000])
+    }, indent=2, default=float)[:12000])
 
 
 if __name__ == "__main__":

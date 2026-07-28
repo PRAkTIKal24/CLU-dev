@@ -2508,8 +2508,8 @@ class ExperimentClEntryConfig:
 
     # ---- baselines (cl_baselines.py) ----
     baselines: List[str] = field(
-        default_factory=lambda: ["finetune", "ewc", "si", "lwf", "er", "icarl",
-                                 "gdumb", "joint"]
+        default_factory=lambda: ["finetune", "ewc", "si", "lwf", "er", "derpp",
+                                 "icarl", "gdumb", "joint"]
     )
     backbone: str = "mlp"  # mlp (MNIST) | cnn (CIFAR-10)
     cnn_channels: List[int] = field(default_factory=lambda: [16, 32, 32])
@@ -2533,7 +2533,46 @@ class ExperimentClEntryConfig:
         default_factory=lambda: [100.0, 1000.0, 10000.0]
     )
     si_c_grid: List[float] = field(default_factory=lambda: [0.1, 1.0, 10.0])
-    lwf_alpha_grid: List[float] = field(default_factory=lambda: [0.5, 1.0, 2.0])
+    # ⚠ w26 LwF retune (matched-bytes-frontier item 5): w25's winner sat at the
+    # OLD grid's upper edge (2.0) with ACC 4.3 pp below the published Split-MNIST
+    # Class-IL value, so the grid was mis-specified. Extended upward.
+    lwf_alpha_grid: List[float] = field(
+        default_factory=lambda: [0.5, 1.0, 2.0, 5.0, 10.0]
+    )
+    # ---- DER++ (Buzzega et al. 2020), the strongest cheap replay baseline ----
+    derpp_alpha: float = 0.5  # weight on the stored-logit MSE term
+    derpp_beta: float = 0.5  # weight on the buffer cross-entropy term
+    tune_derpp: bool = True
+    derpp_alpha_grid: List[float] = field(default_factory=lambda: [0.2, 0.5, 1.0])
+    derpp_beta_grid: List[float] = field(default_factory=lambda: [0.5, 1.0])
+
+    # ---- ⭐ w26: the matched-BYTES forgetting frontier (`items=["frontier"]`) ----
+    # Every method is given the SAME byte budget and converts it to items at its own
+    # per-item cost (``cl_baselines.floats_per_stored_item``): raw-exemplar replay
+    # gets B/785 items, the CLU store B/41 wells, the kNN-in-φ ring-buffer launder
+    # B/34 keys. The grid below spans exactly 50× and its P5 point (157 000 floats)
+    # is the w25 operating point: exactly 200 raw exemplars, label included.
+    frontier_budgets_floats: List[int] = field(
+        default_factory=lambda: [6280, 19625, 39250, 78500, 157000, 314000]
+    )
+    frontier_methods: List[str] = field(
+        default_factory=lambda: ["er", "derpp", "icarl", "gdumb"]
+    )
+    frontier_fixed_methods: List[str] = field(
+        default_factory=lambda: ["finetune", "ewc", "si", "lwf", "joint"]
+    )
+    frontier_seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    frontier_n_test_per_task: int = 0  # 0 ⇒ inherit n_test_per_task
+    frontier_max_clu_items: int = 0  # 0 ⇒ uncapped; a binding cap is reported
+    frontier_tuning_budget: int = 0  # 0 ⇒ the second-largest grid point
+    # anti-degeneracy clause (PREREG §2): a forgetting win is only counted where
+    # CLU's learning accuracy is within this band of the best LA at that budget —
+    # a method that never learned never forgets.
+    frontier_la_band: float = 0.10
+    # per-item accounting: count the controller's ItemRecord scalars against the
+    # store (conservative — it makes CLU's per-item cost LARGER). See PREREG §1.
+    count_controller_record_floats: bool = True
+    bytes_per_float: int = 4
 
     # ---- Item 3: the R3-native retry ladder ----
     retry_ladder: List[int] = field(default_factory=lambda: [0, 1, 2, 4, 8])
