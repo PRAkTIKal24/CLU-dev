@@ -520,6 +520,13 @@ class AtomDictionaryPotential(eqx.Module):
     amp: jnp.ndarray  # (n_atoms,) -> amp**2 -> depth
     confine: float = eqx.field(static=True)
     n_groups: int = eqx.field(static=True)
+    # ⭐ w26: optional PER-AXIS width multiplier, a read-time knob. Axis ``i``'s
+    # effective width is ``axis_width_scale[i] * s_j``, i.e. each atom is convolved
+    # with an anisotropic Gaussian. ``None`` (default) is the isotropic shipped
+    # potential, bit-identical. Held as a tuple of PYTHON floats, so it is inert
+    # under ``eqx.is_inexact_array`` and can never be picked up by the write's
+    # ``trainable_filter``; it is a read-time knob only.
+    axis_width_scale: Optional[tuple] = None
 
     def __init__(
         self,
@@ -533,6 +540,7 @@ class AtomDictionaryPotential(eqx.Module):
         n_groups: int = 1,
         group_centers=None,
         local_radius: float = 0.0,
+        axis_width_scale=None,
     ):
         """
         Args:
@@ -590,6 +598,10 @@ class AtomDictionaryPotential(eqx.Module):
         self.amp = jnp.full((n_atoms,), float(depth_init) ** 0.5)
         self.confine = confine
         self.n_groups = max(1, int(n_groups))
+        self.axis_width_scale = (
+            None if axis_width_scale is None
+            else tuple(float(x) for x in axis_width_scale)
+        )
 
     @property
     def n_atoms(self) -> int:
@@ -613,7 +625,10 @@ class AtomDictionaryPotential(eqx.Module):
 
     def __call__(self, q: jnp.ndarray) -> float:
         s = jnp.exp(self.log_width)
-        d2 = jnp.sum((q[None, :] - self.centers) ** 2, axis=-1)
+        diff = q[None, :] - self.centers
+        if self.axis_width_scale is not None:
+            diff = diff / jnp.asarray(self.axis_width_scale, dtype=diff.dtype)[None, :]
+        d2 = jnp.sum(diff**2, axis=-1)
         depth = self.amp**2
         v = -jnp.sum(depth * jnp.exp(-d2 / (2.0 * s**2 + 1e-9)))
         return v + self.confine * jnp.sum(q**2)

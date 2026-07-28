@@ -410,3 +410,56 @@ def test_payload_read_noise_and_decode_metric(cfg):
     assert noisy["strict_success_rate"] == noisy["strict_decode"]
     assert noisy["strict_decode"] < clean["strict_decode"]
     assert noisy["basin_success_rate"] == clean["basin_success_rate"]  # address intact
+
+
+def test_anisotropic_anneal_widens_only_the_payload_axis(cfg):
+    """⭐ The isotropic blur cannot buy reach without merging neighbouring wells in
+    the ADDRESS space. ``read_anneal_axes="payload"`` widens only the payload
+    channels, ends at multiplier exactly 1 (the stored landscape), is invisible to
+    the write, and strictly increases the force a far-payload well exerts at the
+    payload-zero launch manifold."""
+    import copy
+
+    import jax.tree_util as tu
+
+    from chlu.experiments.exp_designed_mechanism import (
+        anneal_axis_mults,
+        anneal_stage_models,
+    )
+    from chlu.experiments.goldstone_harness import clu_with_potential
+    from chlu.training.train_memory import trainable_filter
+
+    d, K = 2, 4
+    c = copy.copy(cfg)
+    assert anneal_axis_mults(c, d, d + 1) is None  # default off
+    c.read_anneal_stages, c.read_anneal_axes, c.read_anneal_payload_mult = 4, "payload", 3.0
+    mults = anneal_axis_mults(c, d, d + 1)
+    assert len(mults) == 4
+    for mu in mults:
+        assert mu[:d] == (1.0,) * d  # address axes untouched
+    assert mults[0][d] == 3.0 and mults[-1][d] == 1.0  # ends on the stored landscape
+
+    centers, payloads, _, _ = ball_setup(d, K, c)
+    V = build_learned_V(d, K, c, jax.random.PRNGKey(0))
+    # plant one deep atom at (site_0, payload=1) so there is a far-payload well
+    V = eqx.tree_at(
+        lambda p: (p.learned.centers, p.learned.amp),
+        V,
+        (
+            V.learned.centers.at[0, :d].set(centers[0]).at[0, d].set(1.0),
+            V.learned.amp.at[0].set(1.0),
+        ),
+    )
+    model = clu_with_potential(
+        V, dim=d + 1, kinetic_mode="newtonian_learned", inertia=jnp.ones(d + 1)
+    )
+    stages = anneal_stage_models(model, c, d=d)
+    assert len(stages) == 4
+    # the write can never see the knob (it is not an inexact array)
+    spec = trainable_filter(stages[0].potential_net)
+    assert sum(1 for x in tu.tree_leaves(spec) if x is True) == 3  # centers/width/amp
+
+    q = jnp.zeros(d + 1).at[:d].set(centers[0])  # ON the payload-zero manifold
+    f0 = float(jnp.abs(jax.grad(lambda x: model.potential_net(x))(q)[d]))
+    f1 = float(jnp.abs(jax.grad(lambda x: stages[0].potential_net(x))(q)[d]))
+    assert f1 > 3.0 * f0  # reach along the payload axis, bought at the launch point

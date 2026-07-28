@@ -1625,6 +1625,14 @@ class ExperimentDesignedMechanismConfig:
     # "both" anneals the address relaxation and the value read; "read" anneals only
     # the second phase.
     read_anneal_phases: str = "both"
+    # ⭐ the ANISOTROPIC variant. Isotropic blurring has a built-in conflict: widening
+    # enough to reach a payload at |a| = 1 also merges neighbouring wells in the
+    # ADDRESS space (d=4 K=32: site separation 0.710 vs payload excursion 1.000).
+    # "payload" widens ONLY the payload channels, by a multiplicative factor falling
+    # from read_anneal_payload_mult to exactly 1 — reach without address damage.
+    # "all" (default) is the isotropic blur.
+    read_anneal_axes: str = "all"
+    read_anneal_payload_mult: float = 1.0
 
     # ---- write objective (static, per-item minimum-digging) ----
     write_steps: int = 600  # global write (matched to potential-function-class)

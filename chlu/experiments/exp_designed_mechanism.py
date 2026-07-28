@@ -408,7 +408,36 @@ def anneal_widths(cfg):
     return [s0 * ((L - 1 - i) / (L - 1)) ** p for i in range(L)]
 
 
-def inflate_potential(V, s_extra: float, mode: str = "amplitude"):
+def anneal_axis_mults(cfg, d: int, dim: int):
+    """The ANISOTROPIC schedule: per-stage ``(dim,)`` width multipliers, or ``None``.
+
+    ⭐ The isotropic blur has a built-in conflict, measured in w26: widening enough to
+    reach a payload at ``|a| = 1`` also merges neighbouring wells in the ADDRESS
+    space (at d=4, K=32 the site separation is 0.710 while the payload excursion is
+    1.0). ``read_anneal_axes="payload"`` widens **only** the payload channels, by a
+    multiplicative factor ``kappa(l)`` falling from ``read_anneal_payload_mult`` to
+    exactly 1, so reach is bought without touching address discrimination. Still
+    read-only, still equal-compute, still item-independent.
+    """
+    if str(getattr(cfg, "read_anneal_axes", "all")) != "payload":
+        return None
+    k0 = float(getattr(cfg, "read_anneal_payload_mult", 1.0))
+    L = max(1, int(getattr(cfg, "read_anneal_stages", 1)))
+    if k0 <= 1.0 or L == 1:
+        return None
+    p = float(getattr(cfg, "read_anneal_power", 1.0))
+    m = n_pay_channels(cfg)
+    out = []
+    for i in range(L):
+        k = 1.0 + (k0 - 1.0) * ((L - 1 - i) / (L - 1)) ** p
+        sc = [1.0] * dim
+        for j in range(d, min(d + m, dim)):
+            sc[j] = k
+        out.append(tuple(sc))
+    return out
+
+
+def inflate_potential(V, s_extra: float, mode: str = "amplitude", axis_mult=None):
     """Blur a stored landscape: ``s_j -> sqrt(s_j^2 + s_extra^2)`` (Gaussian x Gaussian).
 
     ``mode="amplitude"`` keeps the well depth ``A_j`` (the force at the payload-zero
@@ -419,6 +448,17 @@ def inflate_potential(V, s_extra: float, mode: str = "amplitude"):
     designed :class:`BallRegisterPotential`, so the baseline arm is annealed by the
     SAME operator (fairness condition 4).
     """
+    if axis_mult is not None and not all(x == 1.0 for x in axis_mult):
+        atoms = V.learned if hasattr(V, "learned") else V
+        if isinstance(atoms, BallRegisterPotential):
+            # the designed register's payload channel is a harmonic SPRING, not a
+            # Gaussian well: its reach does not decay, so there is nothing to widen.
+            return V
+        new = eqx.tree_at(
+            lambda a: a.axis_width_scale, atoms, replace=tuple(axis_mult),
+            is_leaf=lambda x: x is None,
+        )
+        V = eqx.tree_at(lambda p: p.learned, V, replace=new) if hasattr(V, "learned") else new
     if s_extra <= 0.0:
         return V
     if isinstance(V, BallRegisterPotential):
@@ -446,12 +486,22 @@ def inflate_potential(V, s_extra: float, mode: str = "amplitude"):
     return new
 
 
-def anneal_stage_models(model, cfg):
+def anneal_stage_models(model, cfg, d=None):
     """``[model_0, ..., model_{L-1}]`` — the same CLU with progressively sharper wells."""
     mode = str(getattr(cfg, "read_anneal_mode", "amplitude"))
+    sch = anneal_widths(cfg)
+    axm = None
+    if d is not None:
+        dim = d + n_pay_channels(cfg)
+        axm = anneal_axis_mults(cfg, d, dim)
+        if axm is not None and len(sch) != len(axm):
+            sch = [0.0] * len(axm)
     out = []
-    for s_extra in anneal_widths(cfg):
-        V = inflate_potential(model.potential_net, s_extra, mode=mode)
+    for i, s_extra in enumerate(sch):
+        V = inflate_potential(
+            model.potential_net, s_extra, mode=mode,
+            axis_mult=None if axm is None else axm[i],
+        )
         out.append(eqx.tree_at(lambda m: m.potential_net, model, replace=V))
     return out
 
@@ -656,8 +706,10 @@ def evaluate_arm_cell(arm: str, d: int, K: int, seed: int, cfg):
         raise ValueError(f"unknown arm {arm!r}")
     write_seconds = time.perf_counter() - t0
 
-    sw = anneal_stage_models(mw, cfg) if len(anneal_widths(cfg)) > 1 else None
-    sb = anneal_stage_models(mb, cfg) if len(anneal_widths(cfg)) > 1 else None
+    n_stage = max(len(anneal_widths(cfg)),
+                  len(anneal_axis_mults(cfg, d, dim) or [0]))
+    sw = anneal_stage_models(mw, cfg, d=d) if n_stage > 1 else None
+    sb = anneal_stage_models(mb, cfg, d=d) if n_stage > 1 else None
     written = score_cell(mw, centers, payloads, cfg, d, seed, stage_models=sw)
     blank = score_cell(mb, centers, payloads, cfg, d, seed, stage_models=sb)
     # ⚠ A blank landscape returns ~0 for every item, so it LEGITIMATELY "retrieves"
@@ -1221,6 +1273,7 @@ def run_experiment_designed_mechanism(
                 "payload_code", "payload_launch_sigma", "payload_obs_sigma",
                 "pass_metric", "read_anneal_stages", "read_anneal_s0",
                 "read_anneal_power", "read_anneal_mode", "read_anneal_phases",
+                "read_anneal_axes", "read_anneal_payload_mult",
                 "write_steps", "local_write_steps", "write_lr", "write_n_perturb",
                 "write_sigma_addr", "write_sigma_pay", "write_margin",
                 "write_barrier", "dims", "k_ladder", "k_cap", "learned_arm",
