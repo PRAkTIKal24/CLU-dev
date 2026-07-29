@@ -1972,6 +1972,15 @@ class ExperimentControllerMvpConfig:
     # K in {16,32,64,128} (theorist's sizing rule).
     canonical_radius_mult: float = 1.0
 
+    # ---- gated-stiffness payload channel (option (d), w27 readout-channel-theory) ----
+    # OFF by default: the shipped payload channel 0.5*kappa*(y - S(q))^2 is unchanged, and
+    # every published designed-store number stands. ON replaces it with
+    # 0.5*kappa*G(q)*(y - abar(q))^2, G = g0 + sum m A e (floored), abar unfloored -- the
+    # fix for mia-D3 (retention correlates r = -0.846 with a_i^2 on the baseline).
+    payload_gate: bool = False
+    payload_gate_g0: float = 0.05  # == amp_floor: payload-independent but step-shaped
+    payload_gate_eps: float = 1e-6
+
     # ---- eviction/decay demo (item: permanent + leaky wells in one store) ----
     decay_demo_K: int = 8
     decay_demo_leak: float = 0.35  # ~half-life 2 ticks; a permanent item survives all

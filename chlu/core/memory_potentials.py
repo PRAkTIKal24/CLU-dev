@@ -1038,6 +1038,10 @@ class AtomStorePotential(eqx.Module):
              + 0.5 * k_spec * |q_spec|^2                         # spectators
         S(q_addr) = sum_i m_i * a_i * exp(-|q_addr - c_i|^2 / 2 s_pay^2)
 
+    With ``payload_gate=True`` (w27, option (d)) the payload term is instead
+    ``0.5 * kappa * G(q) * (q_pay - abar(q))^2`` with ``G = g0 + sum_i m_i A_i e_i`` and
+    ``abar = sum_i m_i A_i a_i e_i / (eps + sum_i m_i A_i e_i)`` -- see ``payload_gate``.
+
     ``q_addr = q[:2]``, ``q_pay = q[2]``, ``q_spec = q[3:]`` -- identical index
     convention to :class:`RingRegisterPotential`, so the same queries, the same
     anti-decoration guard (``q2(0) = 0``) and the same reads apply.
@@ -1067,6 +1071,9 @@ class AtomStorePotential(eqx.Module):
     dim: int = eqx.field(static=True)
     addr_dim: int = eqx.field(static=True)
     spectator_k: float = eqx.field(static=True)
+    payload_gate: bool = eqx.field(static=True)
+    payload_g0: float = eqx.field(static=True)
+    payload_eps: float = eqx.field(static=True)
 
     def __init__(
         self,
@@ -1078,6 +1085,9 @@ class AtomStorePotential(eqx.Module):
         kappa: float = 1.0,
         spectator_k: float = 1.0,
         addr_dim: int = 2,
+        payload_gate: bool = False,
+        payload_g0: float = 0.05,
+        payload_eps: float = 1e-6,
     ):
         """An EMPTY store. Items are added with :meth:`with_item`.
 
@@ -1095,6 +1105,24 @@ class AtomStorePotential(eqx.Module):
                 entry addresses the store by ``φ(x) ∈ R^{phi_dim}``, so the store
                 must support an address block of arbitrary dimension; nothing else
                 about the object changes.
+            payload_gate: ⭐ **option (d), the gated-stiffness payload channel** (w27,
+                ``readout-channel-theory`` §3.3). ``False`` (default) = the shipped
+                channel, **byte-identical behaviour**. ``True`` replaces
+                ``0.5κ(y − S(q))²`` by ``0.5κG(q)(y − ā(q))²`` with a *floored* stiffness
+                ``G = g₀ + Σ mᵢAᵢeᵢ`` and an **unfloored** normaliser
+                ``ā = Σ mᵢAᵢaᵢeᵢ / (ε + Σ mᵢAᵢeᵢ)``. This is the fix for mia-D3
+                (payload-dependent lifetimes): the hill/well a site puts on the payload
+                axis becomes amplitude-independent while ``ā(cᵢ) = aᵢ`` stays exact at
+                every amplitude. ⚠ Flooring the normaliser too (``ā = Aa/(g₀+A)``)
+                destroys the value at small ``A`` and measures worse than the baseline —
+                the theorist did that first and refuted their own proposal; do not.
+            payload_g0: the stiffness floor ``g₀``. ``= amp_floor`` makes retention flat
+                (payload-independent but step-shaped, the TTL shape); ``g₀ ≪ amp_floor``
+                keeps retention graded at the price of a longer read
+                (``ω = √(κ(g₀+A))`` ⇒ the read must cover a payload oscillation period).
+                Only used when ``payload_gate=True``.
+            payload_eps: regulariser in the *unfloored* normaliser, so ``ā`` is finite far
+                from every site (where it tends to 0, the payload's neutral value).
         """
         if addr_dim < 1:
             raise ValueError(f"addr_dim must be >= 1, got {addr_dim}")
@@ -1114,6 +1142,9 @@ class AtomStorePotential(eqx.Module):
         self.s_pay = s if s_pay is None else s_pay
         self.kappa = kappa
         self.spectator_k = spectator_k
+        self.payload_gate = bool(payload_gate)
+        self.payload_g0 = float(payload_g0)
+        self.payload_eps = float(payload_eps)
 
     @property
     def capacity(self) -> int:
@@ -1199,8 +1230,18 @@ class AtomStorePotential(eqx.Module):
 
         v = self.alpha * jnp.sum(addr**2)
         v = v - jnp.sum(self.amps * w_addr)
-        s_of_q = jnp.sum(self.payloads * w_pay)
-        v = v + 0.5 * self.kappa * (q[a] - s_of_q) ** 2
+        if self.payload_gate:
+            # option (d): stiffness is FLOORED (so the far field still confines the
+            # payload axis), the normaliser is NOT (so a decayed site still returns a_i
+            # exactly). Both sums are amplitude-weighted, which is what makes the
+            # hill/well the site puts on the payload axis amplitude-independent.
+            gw = self.amps * w_pay
+            gate = self.payload_g0 + jnp.sum(gw)
+            a_bar = jnp.sum(self.payloads * gw) / (self.payload_eps + jnp.sum(gw))
+            v = v + 0.5 * self.kappa * gate * (q[a] - a_bar) ** 2
+        else:
+            s_of_q = jnp.sum(self.payloads * w_pay)
+            v = v + 0.5 * self.kappa * (q[a] - s_of_q) ** 2
         if self.dim > a + 1:
             v = v + 0.5 * self.spectator_k * jnp.sum(q[a + 1 :] ** 2)
         return v
