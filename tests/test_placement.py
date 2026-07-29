@@ -49,10 +49,11 @@ def _store(capacity):
     return AtomStorePotential(dim=3, capacity=capacity, alpha=0.02, s=0.35, kappa=1.0)
 
 
-def _ctrl(capacity, radius, leak=0.0, budget=None):
+def _ctrl(capacity, radius, leak=0.0, budget=None, waitlist=True):
     return Controller(
         _store(capacity), d_safe=D_SAFE, budget=budget, amp=1.0, leak=leak,
         evict_policy="depth", placement="canonical", lattice_radius=radius,
+        waitlist=waitlist,
     )
 
 
@@ -75,10 +76,11 @@ def _same(a, b):
     return all(x.tobytes() == y.tobytes() for x, y in zip(a, b, strict=True))
 
 
-def _build(items, order, radius, capacity=None, leak=0.0, deletes=(), ticks=0):
+def _build(items, order, radius, capacity=None, leak=0.0, deletes=(), ticks=0,
+           waitlist=True):
     """Offer ``items`` in ``order``, optionally tick/delete, return the controller."""
     cap = len(items) if capacity is None else capacity
-    c = _ctrl(cap, radius, leak=leak)
+    c = _ctrl(cap, radius, leak=leak, waitlist=waitlist)
     for i in order:
         item_id, anchor, pay = items[i]
         c.offer(item_id=item_id, q_new=anchor, payload=pay)
@@ -245,6 +247,114 @@ def test_cascade_cost_smoke_at_full_load():
 
 
 # ---------------------------------------------------------------------------
+# ⭐ P2 — the waitlist: exactness AT OVERFLOW (w27)
+# ---------------------------------------------------------------------------
+def _overflow_case(n_over=2, seed=31):
+    """A lattice deliberately smaller than the offered set."""
+    R = radius_for_capacity(8, D_SAFE)          # 7 cells, the mia geometry
+    n_cells = n_cells_for(R, D_SAFE)
+    items = _items(n_cells + n_over, seed=seed, radius=R * 0.8)
+    return R, n_cells, items
+
+
+def test_P2_waitlist_makes_deletion_exact_at_overflow():
+    """⭐ The acceptance mechanism: a key refused while the victim was resident RETURNS.
+
+    Without the waitlist the post-delete store is NOT the store that never held the
+    victim (w26 rung P1); with it, byte-identity is restored at overflow.
+    """
+    R, n_cells, items = _overflow_case()
+    victim = max((it[0] for it in items), key=prio)      # highest priority => seated
+    survivors = [it for it in items if it[0] != victim]
+    for waitlist, expect in ((True, True), (False, False)):
+        with_v = _build(items, range(len(items)), R, capacity=len(items),
+                        deletes=(victim,), waitlist=waitlist)
+        never = _build(survivors, range(len(survivors)), R, capacity=len(items),
+                       waitlist=waitlist)
+        assert _same(_arrays(with_v), _arrays(never)) is expect
+        if waitlist:
+            assert with_v.n_live == n_cells        # the freed cell was re-taken
+        else:
+            assert with_v.n_live == n_cells - 1    # ... and stayed empty (the defect)
+
+
+def test_P2_waitlisted_key_is_reseated_by_priority_not_by_arrival():
+    R, n_cells, items = _overflow_case(n_over=2)
+    c = _build(items, range(len(items)), R, capacity=len(items))
+    waiting = sorted(c.waiting)
+    assert len(waiting) == 2 and c.n_live == n_cells
+    # the waiting keys are the LOWEST-priority offers, whatever the arrival order
+    live = [r.item_id for r in c.records.values()]
+    assert max(prio(k) for k in waiting) < min(prio(k) for k in live)
+    victim = max(live, key=prio)
+    c.delete(victim)
+    reseated = [k for k in waiting if k not in c.waiting]
+    assert reseated == [max(waiting, key=prio)]          # priority order, not FIFO
+    assert c.n_live == n_cells
+
+
+def test_P2_delete_of_a_waitlisted_item_is_a_noop_on_the_store():
+    """The counterfactual for an unseated offer: the store never held it."""
+    R, n_cells, items = _overflow_case(n_over=1)
+    c = _build(items, range(len(items)), R, capacity=len(items))
+    waiting_id = next(iter(c.waiting))
+    before = _arrays(c)
+    row = c.delete(waiting_id)
+    assert row["was_waiting"] and row["moves"] == 0
+    assert _same(_arrays(c), before) and c.n_waiting == 0
+
+
+def test_P2_exactness_survives_decay_of_a_waiting_item():
+    """⭐ Theorem 4 with the waitlist: a re-seated item carries the depth the history
+    that never refused it would have produced — bit-identically, not approximately."""
+    R, n_cells, items = _overflow_case(n_over=1)
+    victim = max((it[0] for it in items), key=prio)
+    survivors = [it for it in items if it[0] != victim]
+    c = _build(items, range(len(items)), R, capacity=len(items), leak=0.35, ticks=3)
+    c.delete(victim)
+    for _ in range(2):
+        c.tick()
+    never = _build(survivors, range(len(survivors)), R, capacity=len(items),
+                   leak=0.35, ticks=5)
+    assert _same(_arrays(c), _arrays(never))
+    amps = np.asarray(c.store.amps)[: c.n_live]
+    np.testing.assert_allclose(amps, np.float32(np.exp(-0.35 * 5)), rtol=1e-6)
+
+
+def test_P2_write_delete_interleavings_agree_under_overflow():
+    """T3 at overflow: any interleaving reaching the same OFFERED set gives one store."""
+    R, n_cells, items = _overflow_case(n_over=3, seed=77)
+    doomed = {items[0][0], items[3][0]}
+    survivors = [it for it in items if it[0] not in doomed]
+    ref = _arrays(_build(survivors, range(len(survivors)), R, capacity=len(items)))
+    rng = np.random.default_rng(5)
+    for _ in range(10):
+        c = _ctrl(len(items), R)
+        pending = set(doomed)
+        for i in rng.permutation(len(items)):
+            item_id, anchor, pay = items[i]
+            c.offer(item_id=item_id, q_new=anchor, payload=pay)
+            for d in list(pending):
+                if (d in {r.item_id for r in c.records.values()} or d in c.waiting) \
+                        and rng.random() < 0.4:
+                    c.delete(d)
+                    pending.discard(d)
+        for d in pending:
+            c.delete(d)
+        assert _same(_arrays(c), ref)
+        assert c.n_live == n_cells
+
+
+def test_P2_below_capacity_nothing_waits_and_nothing_changes():
+    """The flag is inert below capacity — every w26 number is untouched there."""
+    R = radius_for_cells(8, D_SAFE)
+    items = _items(8, seed=5, radius=R * 0.8)
+    on = _build(items, range(8), R, deletes=(3,), waitlist=True)
+    off = _build(items, range(8), R, deletes=(3,), waitlist=False)
+    assert on.n_waiting == 0 and _same(_arrays(on), _arrays(off))
+
+
+# ---------------------------------------------------------------------------
 # packing regression (the sizing rule the engineer must honour)
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("K", [16, 32, 64, 128])
@@ -297,6 +407,88 @@ def test_evict_scrub_does_not_move_V():
     qs = rng.normal(size=(64, 3)) * 1.5
     dv = [float(masked(jnp.asarray(q))) - float(scrubbed(jnp.asarray(q))) for q in qs]
     assert max(abs(x) for x in dv) == 0.0
+
+
+# ---------------------------------------------------------------------------
+# ⭐ option (d) — the gated-stiffness payload channel (w27, mia-D3)
+# ---------------------------------------------------------------------------
+def _gated(g0=0.05, capacity=4):
+    return AtomStorePotential(dim=3, capacity=capacity, alpha=0.02, s=0.35, kappa=1.0,
+                              payload_gate=True, payload_g0=g0)
+
+
+def test_payload_gate_is_off_by_default_and_inert_when_off():
+    """⛔ B1.4: the flag defaults OFF and the shipped V is bit-identical."""
+    import jax.numpy as jnp
+
+    def fill(V):
+        return V.with_item([0.7, -0.3], 0.5, amp=1.0).with_item([-1.9, 0.4], -0.5)
+
+    V = fill(_store(4))                                        # shipped default
+    off = fill(AtomStorePotential(dim=3, capacity=4, alpha=0.02, s=0.35, kappa=1.0,
+                                  payload_gate=False, payload_g0=0.5))
+    on = fill(_gated(g0=0.05))
+    assert V.payload_gate is False
+    rng = np.random.default_rng(0)
+    n_diff = 0
+    for q in rng.normal(size=(32, 3)) * 1.5:
+        q = jnp.asarray(q)
+        assert float(V(q)) == float(off(q))                    # bit-identical when off
+        n_diff += float(V(q)) != float(on(q))
+    assert n_diff == 32                                        # ... and live when on
+
+
+@pytest.mark.parametrize("A", [1.0, 0.2, 0.06, 0.001])
+def test_payload_gate_returns_a_i_exactly_at_every_amplitude(A):
+    """⭐ The whole point of NOT flooring the normaliser: abar(c_i) = a_i for all A.
+
+    (The theorist's first implementation floored it, destroying the value at small A and
+    refuting their own proposal — this test pins the corrected form.)
+    """
+    import equinox as eqx
+    import jax.numpy as jnp
+
+    V = _gated().with_item([0.7, -0.3], 0.5, amp=A).with_item([-1.9, 0.4], -0.5, amp=A)
+    q_at = jnp.array([0.7, -0.3, 0.5])                 # y == a_i at the site
+    grad = float(eqx.filter_grad(lambda q: V(q))(q_at)[2])
+    assert abs(grad) < 1e-4                            # the payload spring is at rest
+    # ... and the payload hill scales with the gated stiffness kappa*(g0 + A), so it
+    # SHRINKS with the well instead of standing over it (that is the D3 fix)
+    hill = float(V(jnp.array([0.7, -0.3, 0.0]))) - float(V(q_at))
+    assert hill == pytest.approx(0.5 * (0.05 + A) * 0.5 ** 2, rel=0.02)
+
+
+def test_payload_gate_fixes_the_D3_hill_over_well_inversion():
+    """⭐ mia-D3 in one assertion, for the worst codeword |a| = 1 at the amp floor.
+
+    Baseline: the payload hill is ``0.5*kappa*a^2 = 0.5`` at EVERY amplitude, against an
+    address well of depth ``A`` — at ``A = 0.051`` the site is a net *maximum* of ``V``
+    on the payload axis (measured mia §5: s5 = -0.113 at the floor, retention 0.25 for
+    ``a = +1``). Gated: the hill decays with the well, so it never inverts.
+    """
+    import jax.numpy as jnp
+
+    def hill(V, A):
+        W = V.with_item([0.7, -0.3], 1.0, amp=A)
+        at = jnp.array([0.7, -0.3, 1.0])
+        return float(W(jnp.array([0.7, -0.3, 0.0]))) - float(W(at))
+
+    A = 0.051
+    assert hill(_store(4), A) == pytest.approx(0.5, rel=0.02)     # >> A: inverted
+    assert hill(_store(4), A) > 9 * A
+    assert hill(_gated(g0=0.05), A) == pytest.approx(0.5 * (0.05 + A), rel=0.02)
+    assert hill(_gated(g0=0.05), A) <= A                          # never inverts
+
+
+def test_payload_gate_survives_the_canonical_rebuild():
+    """`Controller._canonical_sync` rebuilds the store — the gate must travel with it."""
+    R = radius_for_cells(4, D_SAFE)
+    c = Controller(_gated(g0=0.005, capacity=4), d_safe=D_SAFE, evict_policy="depth",
+                   placement="canonical", lattice_radius=R)
+    c.offer(item_id=0, q_new=np.array([0.3, 0.1]), payload=0.5)
+    c.offer(item_id=1, q_new=np.array([-1.4, 0.6]), payload=-0.5)
+    assert c.store.payload_gate is True
+    assert c.store.payload_g0 == pytest.approx(0.005)
 
 
 # ---------------------------------------------------------------------------
