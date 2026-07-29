@@ -381,7 +381,7 @@ class Controller:
                 self.placer.delete(item_id)
                 self.stats["decayed_out"] += 1
             else:
-                self.waiting_amps[item_id] = float(np.float32(a))
+                self.waiting_amps[item_id] = self._amp_cast(a)
         if not self.records:
             return
         amps = np.asarray(self.store.amps, dtype=float).copy()
@@ -426,6 +426,17 @@ class Controller:
                 return r
         return None
 
+    def _amp_cast(self, x: float) -> float:
+        """Round a waitlisted amplitude through the STORE's dtype.
+
+        A live well's depth is rounded to the store array's dtype on every
+        :meth:`tick` (``with_amps`` casts); a waiting record must follow the *same*
+        rounding path or a re-seated item lands one ULP away from the never-refused
+        history and byte-identity fails. Reading the dtype from the store (rather than
+        hard-coding float32) keeps that true under ``jax_enable_x64``.
+        """
+        return float(np.asarray(x, dtype=np.asarray(self.store.amps).dtype))
+
     def _empty_store(self) -> AtomStorePotential:
         s = self.store
         return AtomStorePotential(
@@ -469,7 +480,7 @@ class Controller:
                     recs.remove(r)
                     self.waiting[r.item_id] = r
                     self.waiting_amps[r.item_id] = amp_by_id.pop(
-                        r.item_id, float(np.float32(self.amp)))
+                        r.item_id, self._amp_cast(self.amp))
                     self.stats["waitlisted"] += 1
             for key in placed:
                 if key in self.waiting:
@@ -550,7 +561,7 @@ class Controller:
             if self.waitlist:
                 # P2: offered but unseated — remembered, so a later delete re-seats it
                 self.waiting[int(item_id)] = rec
-                self.waiting_amps[int(item_id)] = float(np.float32(self.amp))
+                self.waiting_amps[int(item_id)] = self._amp_cast(self.amp)
                 self.stats["waitlisted"] += 1
             if moves or dropped or self.waitlist:
                 self._canonical_sync()
