@@ -74,15 +74,74 @@ from chlu.training.train_memory import train_memory_landscape
 # ---------------------------------------------------------------------------
 
 
+def n_pay_channels(cfg) -> int:
+    """``m`` — the number of read-out (payload) channels (w26 arm (a)); 1 = shipped."""
+    return max(1, int(getattr(cfg, "n_payload_channels", 1)))
+
+
+def payload_codebook(K: int, cfg):
+    """(K, m) stored codewords. ``m=1`` + ``"linspace"`` = the shipped codebook.
+
+    ⭐ w26 arm (a) — the **min-separation-preserving grid code** (fairness condition
+    1). The 1-channel codebook is ``linspace(-1, 1, K)``, whose minimum pairwise
+    separation is ``delta = 2/(K-1)`` and whose maximum excursion is ``1``. The
+    ``m``-channel code places the K codewords on the ``delta``-spaced integer lattice
+    in ``R^m``, keeping the K lattice points of SMALLEST NORM (ties broken
+    deterministically), and then applies the same fixed permutation
+    :func:`designed_payloads` uses, so the code stays non-monotone in the site index.
+
+    Consequences, and they are the whole point:
+
+    * minimum codeword separation is **exactly delta at every m** => at a given
+      per-channel read noise the K codewords are exactly as distinguishable, i.e.
+      the item carries the same ``log2 K`` bits (condition 1);
+    * the maximum excursion falls from ``1`` to ``~delta*sqrt(m)*(K^(1/m)-1)/2``,
+      i.e. the *reach demand* drops while the *precision* does not;
+    * the total noise entering the value test grows as ``sqrt(m)`` at fixed per-axis
+      sigma, so the multi-channel arm is if anything penalised, never flattered.
+    """
+    m = n_pay_channels(cfg)
+    code = getattr(cfg, "payload_code", "linspace")
+    if m == 1 and code == "linspace":
+        return np.asarray(designed_payloads(K, seed=cfg.payload_seed))[:, None]
+    if code not in ("linspace", "grid"):
+        raise ValueError(f"payload_code must be 'linspace' or 'grid', got {code!r}")
+    delta = 2.0 / max(K - 1, 1)
+    n_side = int(np.ceil(K ** (1.0 / m)))
+    while n_side**m < K:
+        n_side += 1
+    axis = (np.arange(n_side) - (n_side - 1) / 2.0) * delta
+    grid = np.stack(
+        np.meshgrid(*([axis] * m), indexing="ij"), axis=-1
+    ).reshape(-1, m)
+    # keep the K smallest-norm lattice points (deterministic tie-break on the
+    # lexicographic index, which np.argsort(kind="stable") supplies)
+    order = np.argsort(np.sum(grid**2, axis=1), kind="stable")
+    words = grid[order[:K]]
+    rng = np.random.default_rng(cfg.payload_seed)
+    return np.asarray(rng.permutation(words), dtype=np.float32)
+
+
 def ball_setup(d: int, K: int, cfg, payloads=None):
-    """Centers (K,d), payloads (K,), targets (K,d+1), min site separation."""
+    """Centers (K,d), payloads, targets (K,d+m), min site separation.
+
+    ``payloads`` keeps the shipped **(K,)** shape at ``m = 1`` (so every w20-w25
+    caller is unaffected) and is **(K,m)** for the w26 multi-channel code.
+    """
     centers = designed_sites(d, K, R=cfg.R, seed=cfg.site_seed)
+    m = n_pay_channels(cfg)
     if payloads is None:
-        payloads = designed_payloads(K, seed=cfg.payload_seed)
+        payloads = payload_codebook(K, cfg)
     payloads = jnp.asarray(payloads, dtype=jnp.float32)
-    dim = d + 1
+    if m == 1:
+        payloads = payloads.reshape(-1)
+    elif payloads.ndim == 1:
+        payloads = payloads[:, None]
+    dim = d + m
     targets = jnp.zeros((K, dim))
-    targets = targets.at[:, :d].set(centers).at[:, d].set(payloads)
+    targets = targets.at[:, :d].set(centers).at[:, d : d + m].set(
+        payloads.reshape(K, m)
+    )
     return centers, payloads, targets, site_separation(centers)
 
 
@@ -134,7 +193,7 @@ def build_designed_model(centers, payloads, cfg) -> CHLU:
     )
 
 
-def build_learned_V(d: int, K: int, cfg, key) -> DesignFreedomPotential:
+def build_learned_V(d: int, K: int, cfg, key, centers=None) -> DesignFreedomPotential:
     """A LEARNED atom dictionary on the (d+1)-dim latent, K groups, K-scaled atoms.
 
     Returned as a ``DesignFreedomPotential(rung="free_mlp", learned_family="atoms")``
@@ -146,11 +205,24 @@ def build_learned_V(d: int, K: int, cfg, key) -> DesignFreedomPotential:
     Starts FLAT (``depth_init`` tiny, ``A = amp**2``) so the writer digs the wells;
     partitioned into ``K`` contiguous atom blocks so a masked write is local in
     parameter space (one block per item slot). ``.learned`` is the atom dictionary.
+
+    ⭐ w26 Stage A: with ``cfg.atom_init_local`` and ``centers`` supplied, group j's
+    atoms are initialised in a ball of radius ``atom_init_local_mult *
+    atom_init_width`` around item j's ADDRESS site (the N98 localized init, ported
+    from ``exp_sharded_store``). Address axes only — see the N46 note on
+    :class:`AtomDictionaryPotential`. ``centers=None`` or the flag off reproduces the
+    historical scatter bit-for-bit.
     """
     n_atoms = _atoms_for(cfg, K, d)
+    local = bool(getattr(cfg, "atom_init_local", False)) and centers is not None
+    radius = (
+        float(getattr(cfg, "atom_init_local_mult", 2.0)) * float(cfg.atom_init_width)
+        if local
+        else 0.0
+    )
     return DesignFreedomPotential(
         rung="free_mlp",
-        dim=d + 1,
+        dim=d + n_pay_channels(cfg),
         payloads=jnp.zeros((K,)),  # unused: the free_mlp rung has designed=None
         key=key,
         learned_family="atoms",
@@ -160,6 +232,8 @@ def build_learned_V(d: int, K: int, cfg, key) -> DesignFreedomPotential:
         atom_depth_init=cfg.atom_depth_init,
         atom_groups=K,
         atom_init_scale=cfg.atom_init_scale,
+        atom_group_centers=jnp.asarray(centers) if local else None,
+        atom_local_radius=radius,
     )
 
 
@@ -224,13 +298,18 @@ def _n_params(V) -> int:
 
 
 def _loss_kwargs(cfg, d: int) -> dict:
+    m = n_pay_channels(cfg)
+    # payload channel(s) are q[d:d+m] in the ball geometry. An ARRAY index leaves the
+    # write objective untouched (`scale.at[idx].set` / `q_jit.at[..., idx].set` are
+    # index-agnostic); m=1 keeps the plain int so the shipped path is bit-identical.
+    idx = d if m == 1 else jnp.arange(d, d + m)
     return dict(
         n_perturb=cfg.write_n_perturb,
         sigma_addr=cfg.write_sigma_addr,
         sigma_pay=cfg.write_sigma_pay,
         margin=cfg.write_margin,
         barrier=cfg.write_barrier,
-        payload_index=d,  # payload channel is q[d] in the ball geometry
+        payload_index=idx,
     )
 
 
@@ -288,42 +367,199 @@ def make_ball_queries(key, centers, n_per_item: int, cfg):
     ``fixed_norm`` jitter (``sigma/sqrt(d)`` per axis) so the query NORM is
     ``query_sigma`` at every ``d`` — precision held constant, only the address
     dimension varies (the apples-to-apples generalization of the ring).
+
+    ⭐ w26 fairness condition 3: with ``payload_launch_sigma > 0`` the payload
+    channels launch at ``N(0, sigma)`` instead of *exactly* 0 — the anti-decoration
+    guard is preserved (the launch distribution is item-independent and centred on
+    the payload-zero manifold), but the value channel is no longer noise-free, which
+    is what made shrinking the excursion free in w25.
     """
     K, d = centers.shape
-    dim = d + 1
-    k_x, k_p = jax.random.split(key, 2)
+    m = n_pay_channels(cfg)
+    dim = d + m
+    k_x, k_p, k_y = jax.random.split(key, 3)
     n = K * n_per_item
     labels = np.repeat(np.arange(K), n_per_item)
     scale = cfg.query_sigma / np.sqrt(d)
     x0 = jnp.repeat(jnp.asarray(centers), n_per_item, axis=0)
     x0 = x0 + jax.random.normal(k_x, (n, d)) * scale
     Q0 = jnp.zeros((n, dim)).at[:, :d].set(x0)
+    s_launch = float(getattr(cfg, "payload_launch_sigma", 0.0))
+    if s_launch > 0.0:
+        Q0 = Q0.at[:, d : d + m].set(jax.random.normal(k_y, (n, m)) * s_launch)
     P0 = jnp.zeros((n, dim)).at[:, :d].set(
         jax.random.normal(k_p, (n, d)) * cfg.query_sigma_p
     )
     return Q0, P0, labels
 
 
-def _two_phase(model, Q0, P0, cfg, d: int, masses=None):
+# ---------------------------------------------------------------------------
+# ⭐ w26 arm (b): the annealed / continuation read
+# ---------------------------------------------------------------------------
+
+
+def anneal_widths(cfg):
+    """The read schedule ``[s_extra(0), ..., s_extra(L-1)]``, always ending at 0."""
+    L = max(1, int(getattr(cfg, "read_anneal_stages", 1)))
+    s0 = float(getattr(cfg, "read_anneal_s0", 0.0))
+    if L == 1 or s0 <= 0.0:
+        return [0.0]
+    p = float(getattr(cfg, "read_anneal_power", 1.0))
+    return [s0 * ((L - 1 - i) / (L - 1)) ** p for i in range(L)]
+
+
+def anneal_axis_mults(cfg, d: int, dim: int):
+    """The ANISOTROPIC schedule: per-stage ``(dim,)`` width multipliers, or ``None``.
+
+    ⭐ The isotropic blur has a built-in conflict, measured in w26: widening enough to
+    reach a payload at ``|a| = 1`` also merges neighbouring wells in the ADDRESS
+    space (at d=4, K=32 the site separation is 0.710 while the payload excursion is
+    1.0). ``read_anneal_axes="payload"`` widens **only** the payload channels, by a
+    multiplicative factor ``kappa(l)`` falling from ``read_anneal_payload_mult`` to
+    exactly 1, so reach is bought without touching address discrimination. Still
+    read-only, still equal-compute, still item-independent.
+    """
+    if str(getattr(cfg, "read_anneal_axes", "all")) != "payload":
+        return None
+    k0 = float(getattr(cfg, "read_anneal_payload_mult", 1.0))
+    L = max(1, int(getattr(cfg, "read_anneal_stages", 1)))
+    if k0 <= 1.0 or L == 1:
+        return None
+    p = float(getattr(cfg, "read_anneal_power", 1.0))
+    m = n_pay_channels(cfg)
+    out = []
+    for i in range(L):
+        k = 1.0 + (k0 - 1.0) * ((L - 1 - i) / (L - 1)) ** p
+        sc = [1.0] * dim
+        for j in range(d, min(d + m, dim)):
+            sc[j] = k
+        out.append(tuple(sc))
+    return out
+
+
+def inflate_potential(V, s_extra: float, mode: str = "amplitude", axis_mult=None):
+    """Blur a stored landscape: ``s_j -> sqrt(s_j^2 + s_extra^2)`` (Gaussian x Gaussian).
+
+    ``mode="amplitude"`` keeps the well depth ``A_j`` (the force at the payload-zero
+    launch manifold then *grows*, which is the reach lever); ``mode="mass"`` is the
+    exact convolution, ``A_j *= (s_j/s_eff)^dim``, which preserves the integral of
+    the well and lets the depth fall. Handles both the learned
+    :class:`AtomDictionaryPotential` (inside a ``DesignFreedomPotential``) and the
+    designed :class:`BallRegisterPotential`, so the baseline arm is annealed by the
+    SAME operator (fairness condition 4).
+    """
+    if axis_mult is not None and not all(x == 1.0 for x in axis_mult):
+        atoms = V.learned if hasattr(V, "learned") else V
+        if isinstance(atoms, BallRegisterPotential):
+            # the designed register's payload channel is a harmonic SPRING, not a
+            # Gaussian well: its reach does not decay, so there is nothing to widen.
+            return V
+        new = eqx.tree_at(
+            lambda a: a.axis_width_scale, atoms, replace=tuple(axis_mult),
+            is_leaf=lambda x: x is None,
+        )
+        V = eqx.tree_at(lambda p: p.learned, V, replace=new) if hasattr(V, "learned") else new
+    if s_extra <= 0.0:
+        return V
+    if isinstance(V, BallRegisterPotential):
+        w_eff = float(np.sqrt(V.w**2 + s_extra**2))
+        b = float(V.b) * (
+            (float(V.w) / w_eff) ** V.dim if mode == "mass" else 1.0
+        )
+        return BallRegisterPotential(
+            V.payloads, V.centers, R=V.R, w=w_eff, b=b, kappa=V.kappa,
+            c_conf=V.c_conf, dim=V.dim, spectator_k=V.spectator_k,
+        )
+    atoms = V.learned if hasattr(V, "learned") else V
+    s = jnp.exp(atoms.log_width)
+    s_eff = jnp.sqrt(s**2 + s_extra**2)
+    new = eqx.tree_at(lambda a: a.log_width, atoms, replace=jnp.log(s_eff))
+    if mode == "mass":
+        dim = int(atoms.centers.shape[1])
+        new = eqx.tree_at(
+            lambda a: a.amp, new, replace=atoms.amp * (s / s_eff) ** (dim / 2.0)
+        )
+    elif mode != "amplitude":
+        raise ValueError(f"read_anneal_mode must be amplitude|mass, got {mode!r}")
+    if hasattr(V, "learned"):
+        return eqx.tree_at(lambda p: p.learned, V, replace=new)
+    return new
+
+
+def anneal_stage_models(model, cfg, d=None):
+    """``[model_0, ..., model_{L-1}]`` — the same CLU with progressively sharper wells."""
+    mode = str(getattr(cfg, "read_anneal_mode", "amplitude"))
+    sch = anneal_widths(cfg)
+    axm = None
+    if d is not None:
+        dim = d + n_pay_channels(cfg)
+        axm = anneal_axis_mults(cfg, d, dim)
+        if axm is not None and len(sch) != len(axm):
+            sch = [0.0] * len(axm)
+    out = []
+    for i, s_extra in enumerate(sch):
+        V = inflate_potential(
+            model.potential_net, s_extra, mode=mode,
+            axis_mult=None if axm is None else axm[i],
+        )
+        out.append(eqx.tree_at(lambda m: m.potential_net, model, replace=V))
+    return out
+
+
+def _two_phase(model, Q0, P0, cfg, d: int, masses=None, stage_models=None):
     """query -> [gamma_address relax] -> address -> [gamma_read rollout] -> traj.
 
-    Returns ``(addr_x (n,d), payload_tail (n, n_subsample))``, chunked so the jit
+    Returns ``(addr_x (n,d), payload_tail (n, n_subsample, m))``, chunked so the jit
     compiles once and the full trajectory is never materialized outside it.
     ``masses`` (n, dim) supplies a per-query inertial mass (the address-side key);
     ``None`` uses identity mass.
+
+    ⭐ w26 arm (b): ``stage_models`` (from :func:`anneal_stage_models`) runs the read
+    as ``L`` consecutive segments on progressively sharper landscapes.
+    ``address_steps`` and ``read_steps`` are **split** across the segments, so the
+    annealed read integrates exactly as many Verlet steps as the baseline (equal
+    compute by construction), and the value tail is always sampled inside the FINAL
+    segment, whose landscape is the stored one (``s_extra = 0``).
     """
-    dim = d + 1
-    steps = cfg.read_steps
-    start = int((1.0 - cfg.tail_frac) * steps)
-    tail_idx = jnp.asarray(np.linspace(start, steps - 1, cfg.n_subsample).astype(int))
+    m_pay = n_pay_channels(cfg)
+    dim = d + m_pay
+    stages = list(stage_models) if stage_models else [model]
+    L = len(stages)
+    anneal_addr = str(getattr(cfg, "read_anneal_phases", "both")) == "both"
+    a_steps = max(1, cfg.address_steps // L) if anneal_addr else cfg.address_steps
+    addr_stages = stages if anneal_addr else [stages[-1]]
+    r_steps = max(1, cfg.read_steps // L)
+    start = int((1.0 - cfg.tail_frac) * r_steps)
+    tail_idx = jnp.asarray(np.linspace(start, r_steps - 1, cfg.n_subsample).astype(int))
     ones = jnp.ones(dim)
 
     @eqx.filter_jit
-    def one(q, p, m):
-        tr1 = model(q, p, cfg.address_steps, cfg.dt, cfg.gamma_address, m)
-        aq, ap = tr1[-1, :dim], tr1[-1, dim:]
-        tr2 = model(aq, ap, cfg.read_steps, cfg.dt, cfg.gamma_read, m)
-        return tr2[-1, :d], tr2[tail_idx, d]
+    def _addr(mdl, q, p, m):
+        def one(q, p, m):
+            tr = mdl(q, p, a_steps, cfg.dt, cfg.gamma_address, m)
+            return tr[-1, :dim], tr[-1, dim:]
+
+        return jax.vmap(one)(q, p, m)
+
+    @eqx.filter_jit
+    def _read(mdl, q, p, m):
+        def one(q, p, m):
+            tr = mdl(q, p, r_steps, cfg.dt, cfg.gamma_read, m)
+            return tr[-1, :dim], tr[-1, dim:], tr[tail_idx, d : d + m_pay]
+
+        return jax.vmap(one)(q, p, m)
+
+    def run(q, p, m):
+        for mdl in addr_stages:
+            q, p = _addr(mdl, q, p, m)
+        f = None
+        for mdl in stages:
+            q, p, f = _read(mdl, q, p, m)
+        # ⚠ the single-channel return shape is the SHIPPED contract (n, n_subsample)
+        # -- `exp_sharded_store`'s monolithic-equivalence test compares against it
+        # element-wise, so squeezing here (rather than at the call site) keeps every
+        # w20-w25 caller working unchanged.
+        return q[:, :d], (f[..., 0] if m_pay == 1 else f)
 
     n = Q0.shape[0]
     chunk = min(cfg.rollout_chunk, n)
@@ -336,7 +572,7 @@ def _two_phase(model, Q0, P0, cfg, d: int, masses=None):
             q = jnp.concatenate([q, jnp.zeros((pad,) + q.shape[1:])], axis=0)
             p = jnp.concatenate([p, jnp.zeros((pad,) + p.shape[1:])], axis=0)
             m = jnp.concatenate([m, jnp.ones((pad,) + m.shape[1:])], axis=0)
-        x, f = jax.vmap(one)(q, p, m)
+        x, f = run(q, p, m)
         if pad > 0:
             x, f = x[: chunk - pad], f[: chunk - pad]
         xs.append(np.asarray(x))
@@ -344,17 +580,22 @@ def _two_phase(model, Q0, P0, cfg, d: int, masses=None):
     return np.concatenate(xs, axis=0), np.concatenate(feats, axis=0)
 
 
-def score_cell(model, centers, payloads, cfg, d: int, seed: int, masses_fn=None):
+def score_cell(model, centers, payloads, cfg, d: int, seed: int, masses_fn=None,
+               stage_models=None):
     """Run the loop on ONE landscape and score it (the unit of measurement).
 
     ``masses_fn(labels) -> (n, dim)`` optionally supplies a per-query mass keyed by
     the query's item label (the per-item mass arm); ``None`` = identity mass.
+    ``stage_models`` runs the w26 annealed read (:func:`anneal_stage_models`).
 
     Returns strict/basin/payload/selectivity + the classification reads (for the
-    blank control).
+    blank control). Under ``pass_metric="decode"`` the headline ``strict`` is
+    nearest-CODEWORD decoding rather than the absolute ``payload_tol`` test; both are
+    always reported (``strict_tol`` / ``strict_decode``).
     """
     K = len(payloads)
-    dim = d + 1
+    m_pay = n_pay_channels(cfg)
+    dim = d + m_pay
     key = jax.random.PRNGKey(seed)
     n_per = int(
         np.clip(cfg.max_total_queries // K, cfg.min_query_per_item, cfg.n_query_per_item)
@@ -364,7 +605,9 @@ def score_cell(model, centers, payloads, cfg, d: int, seed: int, masses_fn=None)
     if masses_fn is not None:
         masses = masses_fn(labels, dim)
 
-    addr_x, feat = _two_phase(model, Q0, P0, cfg, d, masses=masses)
+    addr_x, feat = _two_phase(
+        model, Q0, P0, cfg, d, masses=masses, stage_models=stage_models
+    )
     finite = bool(np.all(np.isfinite(addr_x)) and np.all(np.isfinite(feat)))
 
     c = np.asarray(centers)
@@ -372,29 +615,59 @@ def score_cell(model, centers, payloads, cfg, d: int, seed: int, masses_fn=None)
     basin = np.argmin(d2, axis=1)
     basin_ok = basin == labels
 
-    read_val = feat.mean(axis=1)
+    read_val = feat.mean(axis=1)  # (n,) at m=1 (shipped shape), else (n, m)
+    if read_val.ndim == 1:
+        read_val = read_val[:, None]
     pay = np.asarray(payloads)
-    err = np.abs(read_val - pay[labels])
-    strict_ok = basin_ok & (err < cfg.payload_tol)
+    if pay.ndim == 1:
+        pay = pay[:, None]
+    # ⭐ w26 condition 3: observation noise on the read-out value. The store cannot
+    # denoise this one, so it is what makes a codebook spacing (hence an excursion)
+    # cost something.
+    s_obs = float(getattr(cfg, "payload_obs_sigma", 0.0))
+    if s_obs > 0.0:
+        rng_obs = np.random.default_rng(seed + 104729)
+        read_val = read_val + rng_obs.normal(scale=s_obs, size=read_val.shape)
+    err = np.linalg.norm(read_val - pay[labels], axis=-1)
+    strict_tol = basin_ok & (err < cfg.payload_tol)
+    # nearest-codeword decode (blind to the item index: it only sees the value)
+    dec = np.argmin(
+        ((read_val[:, None, :] - pay[None, :, :]) ** 2).sum(-1), axis=1
+    )
+    decode_ok = np.all(np.isclose(pay[dec], pay[labels]), axis=-1)
+    strict_dec = basin_ok & decode_ok
+    metric = str(getattr(cfg, "pass_metric", "tol"))
+    strict_ok = strict_dec if metric == "decode" else strict_tol
 
+    flat = feat.reshape(feat.shape[0], -1)
     rng = np.random.default_rng(seed)
-    perm = rng.permutation(feat.shape[0])
-    half = feat.shape[0] // 2
+    perm = rng.permutation(flat.shape[0])
+    half = flat.shape[0] // 2
     tr, te = perm[:half], perm[half:]
-    acc_cb, _ = linear_codebook_read(feat[tr], labels[tr], feat[te], labels[te], pay)
-    acc_nc = nearest_centroid_read(feat[tr], labels[tr], feat[te], labels[te], K)
+    acc_nc = nearest_centroid_read(flat[tr], labels[tr], flat[te], labels[te], K)
+    if m_pay == 1:
+        acc_cb, _ = linear_codebook_read(
+            flat[tr], labels[tr], flat[te], labels[te], pay[:, 0]
+        )
+    else:
+        # the scalar-codebook linear read is undefined for a vector code; the
+        # nearest-centroid read (also linear) carries the classification blank.
+        acc_cb = acc_nc
 
     return {
         "K": K,
         "finite": finite,
         "basin_success_rate": float(np.mean(basin_ok)),
         "strict_success_rate": float(np.mean(strict_ok)),
+        "strict_tol": float(np.mean(strict_tol)),
+        "strict_decode": float(np.mean(strict_dec)),
+        "decode_rate": float(np.mean(decode_ok)),
         "selectivity": float(np.mean(basin_ok)),
         "payload_abs_err_mean": float(np.mean(err)),
         "acc_payload_codebook_read": float(acc_cb),
         "acc_payload_nearest_centroid": float(acc_nc),
         "chance": 1.0 / K,
-        "n_queries": int(feat.shape[0]),
+        "n_queries": int(flat.shape[0]),
     }
 
 
@@ -417,36 +690,51 @@ def evaluate_arm_cell(arm: str, d: int, K: int, seed: int, cfg):
     n_params = 0
     t0 = time.perf_counter()
 
+    dim = d + n_pay_channels(cfg)
     if arm == "designed":
         mw = build_designed_model(centers, payloads, cfg)
         mb = build_designed_model(centers, blank_pay, cfg)
     elif arm in ("learned_local", "learned_global"):
         mode = "local" if arm == "learned_local" else "global"
         k_w, k_b = jax.random.split(jax.random.PRNGKey(seed + 7919), 2)
-        Vw = build_learned_V(d, K, cfg, k_w)
+        Vw = build_learned_V(d, K, cfg, k_w, centers=centers)
         Vw, hist = write_learned(Vw, targets, cfg, k_w, d, mode=mode)
-        Vb = build_learned_V(d, K, cfg, k_b)
+        Vb = build_learned_V(d, K, cfg, k_b, centers=centers)
         Vb, _ = write_learned(Vb, blank_targets, cfg, k_b, d, mode=mode)
         n_params = _n_params(Vw)
         mw = clu_with_potential(
-            Vw, dim=d + 1, kinetic_mode="newtonian_learned", inertia=jnp.ones(d + 1)
+            Vw, dim=dim, kinetic_mode="newtonian_learned", inertia=jnp.ones(dim)
         )
         mb = clu_with_potential(
-            Vb, dim=d + 1, kinetic_mode="newtonian_learned", inertia=jnp.ones(d + 1)
+            Vb, dim=dim, kinetic_mode="newtonian_learned", inertia=jnp.ones(dim)
         )
     else:
         raise ValueError(f"unknown arm {arm!r}")
     write_seconds = time.perf_counter() - t0
 
-    written = score_cell(mw, centers, payloads, cfg, d, seed)
-    blank = score_cell(mb, centers, payloads, cfg, d, seed)
+    n_stage = max(len(anneal_widths(cfg)),
+                  len(anneal_axis_mults(cfg, d, dim) or [0]))
+    sw = anneal_stage_models(mw, cfg, d=d) if n_stage > 1 else None
+    sb = anneal_stage_models(mb, cfg, d=d) if n_stage > 1 else None
+    written = score_cell(mw, centers, payloads, cfg, d, seed, stage_models=sw)
+    blank = score_cell(mb, centers, payloads, cfg, d, seed, stage_models=sb)
     # ⚠ A blank landscape returns ~0 for every item, so it LEGITIMATELY "retrieves"
     # any item whose real payload happens to lie within payload_tol of 0. At large K
     # the linspace(-1,1,K) codebook has several such near-zero values, so a valid
     # blank scores up to this trivial ceiling on strict — gating at a flat
     # blank_strict_max would spuriously disqualify the DESIGNED arm at large K.
     pay_np = np.asarray(payloads)
-    trivial_ceiling = float(np.mean(np.abs(pay_np) < cfg.payload_tol))
+    if pay_np.ndim == 1:
+        pay_np = pay_np[:, None]
+    if str(getattr(cfg, "pass_metric", "tol")) == "decode":
+        # a blank landscape reads ~0 for every item, so it trivially "decodes" every
+        # item whose codeword is the one nearest the origin
+        near0 = int(np.argmin((pay_np**2).sum(-1)))
+        trivial_ceiling = float(
+            np.mean(np.all(np.isclose(pay_np, pay_np[near0]), axis=-1))
+        )
+    else:
+        trivial_ceiling = float(np.mean(np.linalg.norm(pay_np, axis=-1) < cfg.payload_tol))
     blank_ceiling = max(cfg.blank_strict_max, trivial_ceiling + 0.02)
     value_blank_ok = bool(blank["strict_success_rate"] <= blank_ceiling)
     class_blank = max(
@@ -690,8 +978,9 @@ def item2_mass(cfg):
         k_w = jax.random.PRNGKey(seed + 111)
         V = build_learned_V(d, K, cfg, k_w)
         V, _ = write_learned(V, targets, cfg, k_w, d, mode="local")
+        dim = d + n_pay_channels(cfg)
         model = clu_with_potential(
-            V, dim=d + 1, kinetic_mode="newtonian_learned", inertia=jnp.ones(d + 1)
+            V, dim=dim, kinetic_mode="newtonian_learned", inertia=jnp.ones(dim)
         )
         coupling = _hessian_coupling(V, centers, d)
 
@@ -768,8 +1057,9 @@ def _corruption(arm_mode: str, d: int, seed: int, cfg):
                 update_mask_fn=atom_write_mask_fn(V.learned.group_rows(i)),
             )
     V_A = V
+    dim = d + n_pay_channels(cfg)
     m_A = clu_with_potential(
-        V_A, dim=d + 1, kinetic_mode="newtonian_learned", inertia=jnp.ones(d + 1)
+        V_A, dim=dim, kinetic_mode="newtonian_learned", inertia=jnp.ones(dim)
     )
     before = score_cell(m_A, c_A, pay_A, cfg, d, seed)
 
@@ -788,7 +1078,7 @@ def _corruption(arm_mode: str, d: int, seed: int, cfg):
             update_mask_fn=atom_write_mask_fn(V_A.learned.group_rows(K - 1)),
         )
     m_B = clu_with_potential(
-        V_B, dim=d + 1, kinetic_mode="newtonian_learned", inertia=jnp.ones(d + 1)
+        V_B, dim=dim, kinetic_mode="newtonian_learned", inertia=jnp.ones(dim)
     )
     after = score_cell(m_B, c_A, pay_A, cfg, d, seed)
 
@@ -985,6 +1275,11 @@ def run_experiment_designed_mechanism(
                 "atoms_per_item", "min_atoms", "min_atoms_base", "min_atoms_c",
                 "atom_init_scale", "atom_init_width",
                 "atom_depth_init", "learned_confine", "bits_per_param",
+                "atom_init_local", "atom_init_local_mult", "n_payload_channels",
+                "payload_code", "payload_launch_sigma", "payload_obs_sigma",
+                "pass_metric", "read_anneal_stages", "read_anneal_s0",
+                "read_anneal_power", "read_anneal_mode", "read_anneal_phases",
+                "read_anneal_axes", "read_anneal_payload_mult",
                 "write_steps", "local_write_steps", "write_lr", "write_n_perturb",
                 "write_sigma_addr", "write_sigma_pay", "write_margin",
                 "write_barrier", "dims", "k_ladder", "k_cap", "learned_arm",

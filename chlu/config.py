@@ -1551,6 +1551,88 @@ class ExperimentDesignedMechanismConfig:
     atom_depth_init: float = 1e-4  # flat start; the writer digs the wells (A=amp^2)
     learned_confine: float = 0.05  # coercivity alpha*|q|^2
     bits_per_param: int = 32  # for the reported B_total = P * bits_per_param
+    # ⭐ w26 (r2-excursion-reach) STAGE A — the N98 localized atom init, ported from
+    # ExperimentShardedStoreConfig so the 2x2 init x width factorial runs on the w23
+    # designed-mechanism harness (value-blank controlled). Group j's atoms start in a
+    # ball of radius atom_init_local_mult * atom_init_width around item j's ADDRESS
+    # site (address axes only -- localizing the payload axis would hand the writer the
+    # answer AND destroy the basin-reach property, see AtomDictionaryPotential N46
+    # note). False = the historical scatter, bit-identical. ⛔ NOT a default (Head
+    # ruling B1.4: the factorial measures, it does not promote).
+    atom_init_local: bool = False
+    atom_init_local_mult: float = 2.0
+
+    # ---- ⭐ w26 arm (a): the MULTI-CHANNEL PAYLOAD read-out code ----
+    # The stored value occupies channels q[d:d+n_payload_channels]. m=1 with
+    # payload_code="linspace" is the shipped w20-w25 harness, bit-identical.
+    #
+    # ⚠ The five binding fairness conditions (Head ruling B1.3) live here:
+    #  1. BITS PER ITEM CONSTANT. Every arm stores one of K codewords whose MINIMUM
+    #     PAIRWISE SEPARATION is the same delta = 2/(K-1) as the 1-channel linspace
+    #     codebook. Same K, same delta, same per-axis noise => same discriminability
+    #     => same bits. The grid code only lowers the per-axis EXCURSION
+    #     (max |a_j| ~ delta*(K^(1/m)-1)/2), which is the reach demand -- never the
+    #     precision.
+    #  2. BYTE ACCOUNTING. m channels cost m-1 extra latent coordinates, i.e.
+    #     n_atoms*(m-1) extra learned floats; n_learned_params is reported per cell and
+    #     the `spectator` control (m channels allocated, code in channel 0 only)
+    #     separates "extra dimensions" from "the code".
+    #  3. PAYLOAD READ NOISE (payload_launch_sigma / payload_obs_sigma below).
+    #  4. The DESIGNED arm reads the SAME code (BallRegisterPotential takes (K,m)).
+    #  5. The laundering control (designed arm) travels with every number.
+    n_payload_channels: int = 1
+    # "linspace" = designed_payloads (the shipped non-monotone permuted grid on
+    # [-1,1]); "grid" = the m-dimensional min-separation-preserving lattice code.
+    payload_code: str = "linspace"
+
+    # ---- ⭐ w26 condition 3: PAYLOAD READ NOISE (the crux) ----
+    # w25's harness launched every query at EXACTLY payload = 0 with a noise-free
+    # value channel, which is precisely why shrinking the excursion was free there
+    # (r2-geometry-revival §4.1) and why no K_learned may be quoted at pscale != 1
+    # without this switched on.
+    # payload_launch_sigma: the query's payload channel starts at N(0, sigma) instead
+    #   of exactly 0 (the store must DENOISE it -- this is the reach test proper).
+    # payload_obs_sigma: additive observation noise on the read-out value, per
+    #   channel, before the value test (the store cannot denoise this one).
+    payload_launch_sigma: float = 0.0
+    payload_obs_sigma: float = 0.0
+    # Value criterion. "tol" = the shipped absolute test ||read - a_i|| < payload_tol.
+    # "decode" = nearest-codeword decoding (the honest test under noise: an absolute
+    # error tolerance is blind to the codebook spacing, so it neither rewards nor
+    # punishes a change of excursion, while a decode does both). "decode" is STRICTER
+    # than "tol" wherever the codebook spacing is below payload_tol (K >= 32 at m=1).
+    pass_metric: str = "tol"
+
+    # ---- ⭐ w26 arm (b): the ANNEALED / CONTINUATION read ----
+    # Widen every well during settling and shrink the extra width to zero on a
+    # schedule: s_eff(t) = sqrt(s^2 + s_extra(t)^2), s_extra(t) -> 0. Analytically a
+    # Gaussian blur of the stored landscape (a Gaussian convolved with a Gaussian is a
+    # Gaussian), so it changes the READ ONLY -- the stored payload format, the write
+    # objective and the atom budget are untouched. read_anneal_stages=1 (default) is
+    # the shipped single-stage read, bit-identical.
+    # ⚠ Equal-compute by construction: address_steps / read_steps are SPLIT across the
+    # stages, so an annealed read integrates exactly as many Verlet steps as the
+    # baseline read, and the value tail is always sampled in the FINAL stage, where
+    # s_extra = 0 (i.e. the value is always read off the true stored landscape).
+    read_anneal_stages: int = 1
+    read_anneal_s0: float = 0.0  # extra width at stage 0 (0 disables annealing)
+    # s_extra(l) = s0 * ((L-1-l)/(L-1))**power
+    read_anneal_power: float = 1.0
+    # "amplitude" keeps the well DEPTH A_j and only widens (force at the launch
+    # manifold grows); "mass" is the exact Gaussian convolution, A_j *=
+    # (s_j/s_eff)^dim (total well mass preserved, depth falls).
+    read_anneal_mode: str = "amplitude"
+    # "both" anneals the address relaxation and the value read; "read" anneals only
+    # the second phase.
+    read_anneal_phases: str = "both"
+    # ⭐ the ANISOTROPIC variant. Isotropic blurring has a built-in conflict: widening
+    # enough to reach a payload at |a| = 1 also merges neighbouring wells in the
+    # ADDRESS space (d=4 K=32: site separation 0.710 vs payload excursion 1.000).
+    # "payload" widens ONLY the payload channels, by a multiplicative factor falling
+    # from read_anneal_payload_mult to exactly 1 — reach without address damage.
+    # "all" (default) is the isotropic blur.
+    read_anneal_axes: str = "all"
+    read_anneal_payload_mult: float = 1.0
 
     # ---- write objective (static, per-item minimum-digging) ----
     write_steps: int = 600  # global write (matched to potential-function-class)
