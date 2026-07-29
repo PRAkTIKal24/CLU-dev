@@ -47,6 +47,7 @@ import numpy as np
 
 from chlu.core.admission import admit_site, min_separation
 from chlu.core.memory_potentials import AtomStorePotential
+from chlu.core.placement import CanonicalPlacer
 
 
 @dataclass
@@ -95,6 +96,22 @@ class Controller:
             a **registry, not an optimizer**: no gradient and no optimizer state
             crosses a shard boundary, only the list of where things were written.
             ``None`` (default) => single-store behaviour, unchanged.
+        placement: ``"relocate"`` (default, **unchanged w23 behaviour**) or
+            ``"canonical"``. Under ``"canonical"`` the allocator is
+            :class:`~chlu.core.placement.CanonicalPlacer` (PGCP): items live on a hex
+            lattice of spacing ``d_safe`` inside a disk of radius ``lattice_radius``,
+            each taking the first cell of its own probe order not claimed by a
+            higher-priority item. Placement is then a **set function** of the live
+            records — no arrival order, no relocation draws — which is what makes
+            :meth:`delete` exact (Theorem 2) and closes the allocator-trace membership
+            channel that refuse-and-relocate leaks at ``AUC 0.99985``. Admission becomes
+            "did it get a cell"; the spacing gate is a lattice *invariant* (Theorem 3),
+            not a per-write test.
+        lattice_radius: address-disk radius the canonical lattice is clipped to
+            (**required** when ``placement="canonical"``, ignored otherwise). The hard
+            admission capacity is the resulting cell count, not the packing bound —
+            ``chlu.core.placement.n_cells_for`` reports it, and the sizing rule
+            ``R(K)·1.05`` gives ``n_cells >= K`` for K in {16,32,64,128}.
 
     The controller owns its store: every method returns nothing and mutates
     ``self.store`` (a new frozen PyTree each time) and ``self.records``.
@@ -112,9 +129,42 @@ class Controller:
         n_candidates: int = 400,
         allow_relocation: bool = True,
         peer_addresses_fn: Optional[Callable] = None,
+        placement: str = "relocate",
+        lattice_radius: Optional[float] = None,
     ):
         if evict_policy not in ("staleness", "depth"):
             raise ValueError(f"evict_policy must be staleness|depth, got {evict_policy}")
+        if placement not in ("relocate", "canonical"):
+            raise ValueError(f"placement must be relocate|canonical, got {placement}")
+        self.placement = placement
+        self.placer: Optional[CanonicalPlacer] = None
+        if placement == "canonical":
+            # --- the guards the deletion claim's scope requires (theorist §4c) ---
+            if evict_policy == "staleness":
+                raise ValueError(
+                    "placement='canonical' forbids evict_policy='staleness': LRU is "
+                    "intrinsically history-dependent (last_used is query history), so a "
+                    "store that can LRU-evict is NOT order-independent and the exact "
+                    "store-level deletion claim does not cover it. Use "
+                    "evict_policy='depth' (amp = base*exp(-leak*age) is item-intrinsic)."
+                )
+            if lattice_radius is None:
+                raise ValueError(
+                    "placement='canonical' requires lattice_radius (the address-disk "
+                    "radius the canonical hex lattice is clipped to)"
+                )
+            if not allow_relocation:
+                raise ValueError(
+                    "placement='canonical' is incompatible with allow_relocation=False: "
+                    "canonical placement quantizes every address onto the lattice (up to "
+                    "the covering radius d_safe/sqrt(3)), so an address-IS-content store "
+                    "(q = phi(x)) must not use it until that quantization cost is measured."
+                )
+            if peer_addresses_fn is not None:
+                raise ValueError(
+                    "placement='canonical' does not support peer_addresses_fn: a sharded "
+                    "canonical allocator needs one global lattice, which is not built."
+                )
         self.store = store
         self.addr_dim = int(getattr(store, "addr_dim", 2))
         self.allow_relocation = bool(allow_relocation)
@@ -128,6 +178,13 @@ class Controller:
         self.evict_policy = evict_policy
         self.n_candidates = int(n_candidates)
         self.peer_addresses_fn = peer_addresses_fn
+        if placement == "canonical":
+            if self.addr_dim != 2:
+                raise ValueError(
+                    f"placement='canonical' needs a 2-D address plane (the lattice is "
+                    f"planar), got addr_dim={self.addr_dim}"
+                )
+            self.placer = CanonicalPlacer(float(lattice_radius), self.d_safe)
 
         self.records: Dict[int, ItemRecord] = {}  # slot -> record (live only)
         self.t = 0
@@ -139,6 +196,8 @@ class Controller:
             "refused_full": 0,
             "evicted": 0,
             "decayed_out": 0,
+            "deleted": 0,
+            "moves": 0,
         }
         self.log: List[dict] = []
 
@@ -202,6 +261,8 @@ class Controller:
         ``decision in {"admit", "relocate"}`` and no capacity alarm fired.
         A refusal is a *correct* controller output, reported and never retried.
         """
+        if self.placement == "canonical":
+            return self._offer_canonical(item_id, q_new, payload, permanent, leak)
         self.stats["offered"] += 1
         q2 = np.asarray(q_new, dtype=float).reshape(-1)[: self.addr_dim]
         stored = self.stored_addresses()
@@ -287,9 +348,14 @@ class Controller:
                 if amps[slot] < self.amp_floor:
                     spent.append(slot)
         self.store = self.store.with_amps(amps)
-        for slot in spent:
-            self._evict(slot, reason="decay")
-            self.stats["decayed_out"] += 1
+        # evict by ITEM ID, not by slot: under canonical placement a removal re-packs the
+        # slots (the fix-up cascade), so a pre-computed slot list goes stale after the
+        # first eviction. Under "relocate" slots are stable and this is a no-op change.
+        for item_id in [self.records[s].item_id for s in spent]:
+            r = self._record_for_id(item_id)
+            if r is not None:
+                self._evict(r.slot, reason="decay")
+                self.stats["decayed_out"] += 1
 
     def _admit_no_relocate(self, q_new, stored) -> dict:
         """Spacing gate WITHOUT relocation (``allow_relocation=False``).
@@ -309,6 +375,191 @@ class Controller:
             "n_candidates_examined": 0,
         }
 
+    # -- canonical placement (PGCP) ------------------------------------------
+    def _record_for_id(self, item_id: int) -> Optional[ItemRecord]:
+        for r in self.records.values():
+            if r.item_id == int(item_id):
+                return r
+        return None
+
+    def _empty_store(self) -> AtomStorePotential:
+        s = self.store
+        return AtomStorePotential(
+            dim=s.dim, capacity=s.capacity, alpha=s.alpha, s=s.s, s_pay=s.s_pay,
+            kappa=s.kappa, spectator_k=s.spectator_k, addr_dim=s.addr_dim,
+        )
+
+    def _canonical_sync(
+        self, new_record: Optional[ItemRecord] = None, new_amp: Optional[float] = None
+    ) -> None:
+        """Rewrite the store so its slots follow the placer's canonical layout.
+
+        This is what makes ``Store(S)`` a *bit-identical* set function and not merely a
+        set of atoms: the slot order is the canonical (descending-priority) order, so two
+        histories reaching the same live set produce byte-equal ``centers/payloads/amps/
+        active`` arrays (theorist H7, verified on this very PyTree). It is O(n)
+        ``with_item`` calls per op — the cheap in-place slot move is an optimization, not
+        a requirement, at MVC-0 sizes.
+
+        Amplitudes travel with the *record*, not the slot (Theorem 4: decay factorizes
+        per item), so decay and placement commute across a rebuild. ``new_record`` is the
+        one record of an insert that has no slot yet; it enters at depth ``new_amp``.
+        """
+        amps = np.asarray(self.store.amps, dtype=float)
+        recs = list(self.records.values())
+        amp_by_id = {r.item_id: float(amps[r.slot]) for r in recs}
+        if new_record is not None:
+            recs.append(new_record)
+            amp_by_id[new_record.item_id] = float(new_amp)
+        by_id = {r.item_id: r for r in recs}
+        store = self._empty_store()
+        new_records: Dict[int, ItemRecord] = {}
+        for slot, (key, center) in enumerate(self.placer.layout()):
+            r = by_id[int(key)]
+            store = store.with_item(center, r.payload, amp=amp_by_id[r.item_id])
+            r.slot = slot
+            r.center = np.asarray(center, dtype=float)
+            new_records[slot] = r
+        self.store = store
+        self.records = new_records
+
+    def _offer_canonical(self, item_id, q_new, payload, permanent, leak) -> dict:
+        """``offer`` under ``placement="canonical"``: admission == "it got a cell".
+
+        No spacing test is run per write — the lattice guarantees ``>= d_safe`` by
+        construction (Theorem 3). The item's offered address is its *anchor*: it takes the
+        nearest cell of the lattice that no higher-priority live item has claimed, and
+        higher-priority items are never disturbed. A write can displace lower-priority
+        items (the cascade), and on a full lattice the lowest-priority key loses its cell
+        — priority eviction, a set-function policy (theorist §4b). ⚠ A key dropped this
+        way is **forgotten**, not waitlisted (rung P1): counterfactual exactness over the
+        *offered* stream under overflow needs the P2 waitlist, which is not built.
+        """
+        self.stats["offered"] += 1
+        if self._record_for_id(item_id) is not None:
+            raise ValueError(
+                f"item_id {item_id} is already live; canonical placement keys the "
+                f"lattice by item_id, so ids must be unique among live items"
+            )
+        q2 = np.asarray(q_new, dtype=float).reshape(-1)[: self.addr_dim]
+        stored = self.stored_addresses()
+        d0 = min_separation(q2, stored)
+
+        # 1. BUDGET — make room first, so the lattice sees the true live set
+        evicted_id = None
+        if self.n_live >= self.budget:
+            victim = self._pick_victim()
+            if victim is None:
+                self.stats["refused_full"] += 1
+                row = self._row(item_id, "refuse_full", self._dec(d0), None)
+                self.log.append(row)
+                return row
+            evicted_id = self.records[victim].item_id
+            self._evict(victim, reason="budget")
+
+        # 2. PLACEMENT == ADMISSION (Theorems 1/3)
+        placed = self.placer.insert(item_id, q2)
+        moves = list(self.placer.moves_last_op)
+        dropped = [int(k) for k in self.placer.dropped_last_op if int(k) != int(item_id)]
+        for key in dropped:  # priority eviction under overflow
+            r = self._record_for_id(key)
+            if r is not None:
+                self.records.pop(r.slot, None)
+                self.stats["evicted"] += 1
+        if not placed:
+            self.stats["refused_spacing"] += 1
+            if moves or dropped:
+                self._canonical_sync()
+            row = self._row(item_id, "refuse_spacing", self._dec(d0), None)
+            self.log.append(row)
+            return row
+
+        item_leak = 0.0 if permanent else (self.leak if leak is None else float(leak))
+        center = self.placer.center_of(item_id)
+        rec = ItemRecord(
+            item_id=int(item_id), slot=-1, center=center, payload=float(payload),
+            base_amp=self.amp, leak=item_leak, permanent=bool(permanent),
+            born=self.t, last_used=self.t,
+        )
+        self._canonical_sync(new_record=rec, new_amp=self.amp)
+
+        self.stats["admitted"] += 1
+        self.stats["moves"] += len(moves)
+        probe = int(
+            np.where(self.placer.probe_order(item_id) == self.placer.cell_of(item_id))[0][0]
+        )
+        if probe > 0:
+            self.stats["relocated"] += 1
+        others = np.stack(
+            [r.center for r in self.records.values() if r.item_id != int(item_id)]
+        ) if self.n_live > 1 else np.zeros((0, self.addr_dim))
+        dec = self._dec(
+            d0, written=True, probe=probe,
+            d_written=min_separation(center, others),
+            quant=float(np.linalg.norm(center - q2[:2])),
+        )
+        row = self._row(item_id, "admit" if probe == 0 else "relocate", dec, rec.slot,
+                        evicted_id=evicted_id)
+        row["moves"] = len(moves)
+        self.log.append(row)
+        return row
+
+    def delete(self, item_id: int) -> dict:
+        """⭐ **Exact store-level deletion (scoped)** — Theorem 2. Canonical placement only.
+
+        Removes the item and restores canonical placement over the survivors, so the
+        resulting store is **bit-identical** to the store that holds exactly the remaining
+        records and never held this one — including each survivor's scheduled decay and
+        permanence (Theorem 4: deletion and decay commute). Any interleaving of writes and
+        deletes reaching the same live set yields the same store.
+
+        The price, stated: deleting an item legitimately *moves* lower-priority survivors
+        (mean ~2.8 moves/delete at full lattice load, 0.2 at half load) — to exactly where
+        the never-written store would have placed them. Reads must therefore use the
+        record's current ``center``, which the controller updates here.
+
+        ⛔ Scope: the **store** only, and only below capacity / under set-function
+        eviction. A key that was refused because the lattice was full does not return when
+        something is deleted (no P2 waitlist). This is not unlearning: the encoder and any
+        learned-landscape residue are separate channels. No ``(eps, delta)`` claim.
+
+        Returns a log row with the number of survivor moves; raises ``KeyError`` if the
+        item is not live.
+        """
+        if self.placement != "canonical":
+            raise ValueError(
+                "Controller.delete requires placement='canonical'. Under "
+                "refuse-and-relocate, placement is history-dependent: removing an item "
+                "does NOT reproduce the store that never held it (the allocator trace "
+                "alone identifies membership at AUC 0.99985), so there is no exact "
+                "deletion verb to offer. Use evict_item() for the non-exact removal."
+            )
+        r = self._record_for_id(item_id)
+        if r is None:
+            raise KeyError(f"item_id {item_id} is not live")
+        self._evict(r.slot, reason="delete")
+        n_moves = len(self.placer.moves_last_op)
+        self.stats["deleted"] += 1
+        row = {
+            "t": self.t, "item_id": int(item_id), "decision": "delete",
+            "slot": None, "moves": n_moves, "n_live": self.n_live,
+        }
+        self.log.append(row)
+        return row
+
+    def _dec(self, d0, written: bool = False, probe: int = 0,
+             d_written: float = float("nan"), quant: float = 0.0) -> dict:
+        """Decision record in :func:`admit_site`'s schema, for the canonical path."""
+        return {
+            "decision": "admit" if written else "refuse",
+            "site": None,
+            "d_min_proposed": d0,
+            "d_min_written": d_written,
+            "n_candidates_examined": probe,
+            "probe_index": probe,
+            "quantization": quant,
+        }
+
     # -- eviction internals ---------------------------------------------------
     def _pick_victim(self) -> Optional[int]:
         cand = [s for s, r in self.records.items() if not r.permanent]
@@ -321,8 +572,18 @@ class Controller:
         return min(cand, key=lambda s: amps[s])
 
     def _evict(self, slot: int, reason: str) -> None:
-        self.store = self.store.evict(slot)
-        self.records.pop(slot, None)
+        if self.placement == "canonical":
+            # under canonical placement removal must go through the placer, or the
+            # invariant ("slots ARE the canonical layout") breaks: the survivors' cells
+            # and slots both change (Theorem 2's fix-up cascade).
+            r = self.records.pop(slot, None)
+            if r is not None:
+                self.placer.delete(r.item_id)
+                self.stats["moves"] += len(self.placer.moves_last_op)
+                self._canonical_sync()
+        else:
+            self.store = self.store.evict(slot)
+            self.records.pop(slot, None)
         if reason == "budget":
             self.stats["evicted"] += 1
 

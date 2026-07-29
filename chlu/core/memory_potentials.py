@@ -1124,16 +1124,29 @@ class AtomStorePotential(eqx.Module):
         return eqx.tree_at(lambda t: t.active, new, new.active.at[slot].set(1.0))
 
     def evict(self, slot: int):
-        """Clear one slot (``active -> 0``, ``amp -> 0``). Returns a NEW potential.
+        """Clear one slot **entirely** (``active``, ``amp``, ``center``, ``payload`` -> 0).
 
         Eviction is the controller's budget verb (MVC-0 §3.C / C5): a full store
         makes room by *removing* an item, never by silently overwriting (which
         :meth:`with_item` forbids). A zero-amplitude, inactive slot contributes
         nothing to ``V`` and its address is free to be re-used by a later write.
+
+        ⚠ **The row is scrubbed, not just masked (w26, ``mia-decay-measurement`` D1).**
+        Until w26 this method cleared ``active`` and ``amps`` only, so ``centers[slot]``
+        and ``payloads[slot]`` retained the written address and value verbatim (measured
+        max error 5.6e-8 / 0.0 over 3 072 evictions): an adversary with state-read access
+        recovered ``(c_i, a_i)`` exactly *after* the item was "gone". **No physics number
+        moves** — ``V`` multiplies both the well and the payload bump by ``active``, so a
+        masked row contributes exactly 0 either way (pinned by
+        ``test_evict_scrub_does_not_move_V``) — but "the slot is freed" now also means
+        "the row is cleared".
         """
         new = eqx.tree_at(lambda t: t.active, self, self.active.at[slot].set(0.0))
         new = eqx.tree_at(lambda t: t.amps, new, new.amps.at[slot].set(0.0))
-        return new
+        new = eqx.tree_at(
+            lambda t: t.centers, new, new.centers.at[slot].set(jnp.zeros((self.addr_dim,)))
+        )
+        return eqx.tree_at(lambda t: t.payloads, new, new.payloads.at[slot].set(0.0))
 
     def with_amps(self, amps):
         """Return a NEW potential with per-slot amplitudes replaced.

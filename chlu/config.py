@@ -1879,6 +1879,16 @@ class ExperimentControllerMvpConfig:
     # "sized" geometry arm: grow the disk radius so the packing bound >= K, to
     # show the controller wins per-offered too once the address space fits the load.
     run_sized_geometry: bool = True
+    # ---- canonical placement (PGCP, w26) ----
+    # Adds a "canon_sized" arm: the same sized geometry, but allocated by
+    # chlu.core.placement.CanonicalPlacer instead of refuse-and-relocate. Admission
+    # becomes deterministic (= the lattice cell count) and the store gains the exact
+    # deletion verb. OFF by default so the shipped rematch chart is unchanged.
+    run_canonical_placement: bool = False
+    # Radius multiplier for the canonical arm's lattice. 1.0 = radius_for_capacity(K)
+    # verbatim (61 cells at K=64, the un-inflated sizing); 1.05 gives n_cells >= K for
+    # K in {16,32,64,128} (theorist's sizing rule).
+    canonical_radius_mult: float = 1.0
 
     # ---- eviction/decay demo (item: permanent + leaky wells in one store) ----
     decay_demo_K: int = 8
