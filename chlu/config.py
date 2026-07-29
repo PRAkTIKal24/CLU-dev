@@ -1596,12 +1596,19 @@ class ExperimentDesignedMechanismConfig:
     #   channel, before the value test (the store cannot denoise this one).
     payload_launch_sigma: float = 0.0
     payload_obs_sigma: float = 0.0
-    # Value criterion. "tol" = the shipped absolute test ||read - a_i|| < payload_tol.
+    # Value criterion. "tol" = the pre-w27 absolute test ||read - a_i|| < payload_tol.
     # "decode" = nearest-codeword decoding (the honest test under noise: an absolute
     # error tolerance is blind to the codebook spacing, so it neither rewards nor
     # punishes a change of excursion, while a decode does both). "decode" is STRICTER
     # than "tol" wherever the codebook spacing is below payload_tol (K >= 32 at m=1).
-    pass_metric: str = "tol"
+    # ⭐ w27 CORRECTNESS FIX (Head ruling, r2-d-sweep-close stage 1), NOT a lever
+    # promotion. "tol" is VACUOUS at m > 1: the whole grid codebook lives inside
+    # payload_tol whenever max|a| < 0.1 (m=4, K=32: max||a|| = 0.0912), so a
+    # VALUE-BLANK landscape scores strict = 1.0000 on "tol" while scoring exactly
+    # chance (1/K) on "decode" -- measured, r2-excursion-reach §4/§7. The default is
+    # therefore "decode"; "tol" stays selectable for bit-exact reproduction of
+    # pre-w27 (w20-w26) runs, which were all m = 1.
+    pass_metric: str = "decode"
 
     # ---- ⭐ w26 arm (b): the ANNEALED / CONTINUATION read ----
     # Widen every well during settling and shrink the extra width to zero on a

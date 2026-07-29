@@ -463,3 +463,50 @@ def test_anisotropic_anneal_widens_only_the_payload_axis(cfg):
     f0 = float(jnp.abs(jax.grad(lambda x: model.potential_net(x))(q)[d]))
     f1 = float(jnp.abs(jax.grad(lambda x: stages[0].potential_net(x))(q)[d]))
     assert f1 > 3.0 * f0  # reach along the payload axis, bought at the launch point
+
+
+def test_value_blank_is_rejected_at_m_gt_1_only_under_decode(cfg):
+    """⭐ w27 stage 1 (Head ruling: a CORRECTNESS fix, not a lever promotion).
+
+    ``pass_metric="tol"`` is VACUOUS at ``m > 1``: the whole grid codebook lives inside
+    ``payload_tol`` (m=4, K=32: ``max||a|| = 0.0912 < 0.1``), so a landscape written with
+    ZERO payloads -- which stores no value at all -- scores ``strict = 1.0000`` on ``tol``
+    *and* slips past the value-blank gate, because the trivial ceiling
+    ``mean(||a|| < payload_tol)`` is itself 1.0. Nearest-codeword ``decode`` scores the same
+    blank at exactly chance ``1/K``. Hence the w27 default.
+    """
+    import copy
+
+    from chlu.experiments.exp_designed_mechanism import build_designed_model, score_cell
+
+    assert get_default_config().experiment_designed_mechanism.pass_metric == "decode"
+
+    c = copy.copy(cfg)
+    c.n_payload_channels, c.payload_code = 4, "grid"
+    c.max_total_queries = 128  # keep the unit test cheap; the designed arm is exact here
+    d, K = 4, 32
+    centers, payloads, _, _ = ball_setup(d, K, c)
+    assert float(np.linalg.norm(np.asarray(payloads), axis=1).max()) < c.payload_tol
+
+    blank = jnp.zeros_like(payloads)
+    r_blank = score_cell(build_designed_model(centers, blank, c), centers, payloads, c, d, 0)
+    r_true = score_cell(build_designed_model(centers, payloads, c), centers, payloads, c, d, 0)
+
+    # the blank store settles into the right BASIN (the addresses are still there) ...
+    assert r_blank["basin_success_rate"] > 0.99
+    # ... and the absolute-tolerance criterion then hands it a perfect score
+    assert r_blank["strict_tol"] == pytest.approx(1.0)
+    # while the decode criterion puts it at exactly chance
+    assert r_blank["strict_decode"] == pytest.approx(1.0 / K, abs=1e-6)
+
+    # the DEFAULT metric is the one that rejects it
+    c.pass_metric = "decode"
+    r = score_cell(build_designed_model(centers, blank, c), centers, payloads, c, d, 0)
+    assert r["strict_success_rate"] == r_blank["strict_decode"]
+    assert r["strict_success_rate"] < c.pass_strict  # a blank store does NOT pass
+    assert r_true["strict_decode"] > c.pass_strict  # a real store still does
+
+    # "tol" stays selectable for pre-w27 reproduction -- and is shown to be vacuous
+    c.pass_metric = "tol"
+    r = score_cell(build_designed_model(centers, blank, c), centers, payloads, c, d, 0)
+    assert r["strict_success_rate"] >= c.pass_strict  # ⛔ the blank "passes" under tol
