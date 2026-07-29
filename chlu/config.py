@@ -1971,6 +1971,14 @@ class ExperimentControllerMvpConfig:
     # verbatim (61 cells at K=64, the un-inflated sizing); 1.05 gives n_cells >= K for
     # K in {16,32,64,128} (theorist's sizing rule).
     canonical_radius_mult: float = 1.0
+    # ⭐ P2 waitlist (w27). Under canonical placement, an offer the lattice cannot seat is
+    # kept in Controller.waiting (offered, not stored) and re-seated by priority as soon as
+    # a cell frees, instead of being forgotten. This is what removes the "below capacity"
+    # qualifier from the exact-deletion claim: without it, a background item refused while
+    # the target was resident does not counterfactually return when the target is deleted
+    # (8 offers into a 7-cell lattice: post-delete AUC(n_live) = 1.000, byte-equality
+    # 0/3072). No shipped number moves at or below capacity, where nothing ever waits.
+    canonical_waitlist: bool = True
 
     # ---- gated-stiffness payload channel (option (d), w27 readout-channel-theory) ----
     # OFF by default: the shipped payload channel 0.5*kappa*(y - S(q))^2 is unchanged, and
