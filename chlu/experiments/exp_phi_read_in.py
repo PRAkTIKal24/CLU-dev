@@ -64,6 +64,7 @@ from chlu.experiments.exp_hopfield_capacity import (
     score_retrieval,
 )
 from chlu.experiments.goldstone_harness import clu_with_potential
+from chlu.experiments.phi_encoders import ENCODER_ARMS, build_encoder_read_in
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +194,9 @@ def build_read_in(arm, dataset, store_pool, fit_pool, cfg, seed):
             "arm": "ae", "k": cfg.phi_dim, "hidden": cfg.ae_hidden,
             "epochs": cfg.ae_epochs, "recon_mse": phi.final_loss, "frozen": True,
         }
+    elif arm in ENCODER_ARMS:
+        # w26 (cl-encoder): the CL-capable conv arms — additive, see phi_encoders.py
+        return build_encoder_read_in(arm, dataset, store_pool, fit_pool, cfg, seed)
     raise ValueError(f"unknown φ arm {arm!r}")
 
 

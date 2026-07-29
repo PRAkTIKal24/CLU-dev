@@ -2433,6 +2433,26 @@ class ExperimentPhiStreamConfig:
     ae_lr: float = 1e-3
     ae_batch: int = 512
 
+    # ---- w26 (cl-encoder): the conv arms, ``phi_arms`` ∈ randconv|convae|simclr.
+    # Inert unless such an arm is selected; see chlu/experiments/phi_encoders.py.
+    enc_channels: List[int] = field(default_factory=lambda: [32, 64, 128])
+    enc_pool: int = 2
+    enc_groups: int = 8
+    enc_steps: int = 8000
+    enc_batch: int = 128
+    enc_lr: float = 1e-3
+    enc_temperature: float = 0.5
+    enc_proj_dim: int = 64
+    enc_head: str = "pca"  # pca | pca_whiten | none
+    enc_l2_normalize: bool = True
+    enc_aug_crop_pad: int = 4
+    enc_aug_zoom_p: float = 0.5
+    enc_aug_zoom_size: int = 20
+    enc_aug_flip_p: float = 0.5
+    enc_aug_color_p: float = 0.8
+    enc_aug_color_strength: float = 0.4
+    enc_aug_gray_p: float = 0.2
+
     # CLU designed register in φ-space (GaussianMemoryPotential + damped Verlet)
     clu_s_frac: float = 0.3  # s = clu_s_frac * median-NN(φ keys) — one fixed rule
     clu_b: float = 1.0
@@ -2493,12 +2513,39 @@ class ExperimentClEntryConfig:
     phi_regimes: List[str] = field(
         default_factory=lambda: ["task1_only", "generic_frozen"]
     )
-    phi_arm: str = "pca"  # pca | ae
+    phi_arm: str = "pca"  # pca | ae | randconv | convae | simclr
     phi_dim: int = 32  # ⚠ must be >= 16 (binding)
     ae_hidden: int = 256
     ae_epochs: int = 400
     ae_lr: float = 1e-3
     ae_batch: int = 512
+
+    # ---- w26 (cl-encoder): the CL-capable CONV read-in arms -------------------
+    # ``phi_arm ∈ {randconv, convae, simclr}`` selects a small conv trunk fit on the
+    # regime's own (unsupervised, task-1-only for the PRIMARY arm) pool; ``h`` is
+    # reduced to ``phi_dim`` by a PCA head so the address dimension keeps its meaning.
+    # Every knob is inert while ``phi_arm ∈ {pca, ae}`` (w24/w25 callers unchanged).
+    # See chlu/experiments/phi_encoders.py for the arm definitions.
+    enc_channels: List[int] = field(default_factory=lambda: [32, 64, 128])
+    enc_pool: int = 2  # side of the final average-pooled map (h_dim = C·pool²)
+    enc_groups: int = 8  # GroupNorm groups (0 ⇒ no normalisation); stateless by design
+    # ⭐ measured on the w26 CIFAR gate (seed 0, `cl-encoder`): the read-out choices
+    # below are NOT free — at 8 000 steps the gate metric moves 0.298 (whitened,
+    # unnormalised) → 0.350 (plain PCA + cosine), and 2 000 steps only reaches 0.285.
+    enc_steps: int = 8000  # optimizer steps for the φ fit (NOT stream training)
+    enc_batch: int = 128  # images per step; simclr sees 2× that many views
+    enc_lr: float = 1e-3
+    enc_temperature: float = 0.5  # NT-Xent τ
+    enc_proj_dim: int = 64  # projection head width (discarded after fitting)
+    enc_head: str = "pca"  # h → φ: pca | pca_whiten | none (whitening measured WORSE)
+    enc_l2_normalize: bool = True  # cosine addresses; ⚠ this changes the store geometry
+    enc_aug_crop_pad: int = 4
+    enc_aug_zoom_p: float = 0.5
+    enc_aug_zoom_size: int = 20
+    enc_aug_flip_p: float = 0.5
+    enc_aug_color_p: float = 0.8
+    enc_aug_color_strength: float = 0.4
+    enc_aug_gray_p: float = 0.2
 
     # ---- the designed store + MVC-0 controller ----
     memory_items: int = 200  # matched memory budget (items) for every method
