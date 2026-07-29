@@ -295,10 +295,15 @@ def setup_experiment_parsers(subparsers):
                                help='Quick mode (1 seed, tiny stream/store)')
     exp_cl_parser.add_argument('--dataset', choices=['mnist', 'cifar10'],
                                help='Override dataset (cifar10 also selects the CNN)')
-    exp_cl_parser.add_argument('--items',
-                               help='Comma-separated items: entry,retry,retention')
+    exp_cl_parser.add_argument(
+        '--items',
+        help='Comma-separated items: entry,retry,retention,frontier '
+             '(frontier = the w26 matched-BYTES forgetting sweep)')
     exp_cl_parser.add_argument('--baselines',
                                help='Override the baseline list (comma-separated)')
+    exp_cl_parser.add_argument(
+        '--budgets',
+        help='Comma-separated matched-BYTE budgets in floats (frontier item)')
     exp_cl_parser.set_defaults(func=cmd_exp_cl_entry)
 
     # exp-retry-compute
@@ -1295,6 +1300,10 @@ def cmd_exp_cl_entry(args):
             apply_cl_entry_cifar10(config)
     if getattr(args, 'baselines', None):
         config.experiment_cl_entry.baselines = args.baselines.split(',')
+    if getattr(args, 'budgets', None):
+        config.experiment_cl_entry.frontier_budgets_floats = [
+            int(b) for b in args.budgets.split(',')
+        ]
 
     try:
         res = run_experiment_cl_entry(
