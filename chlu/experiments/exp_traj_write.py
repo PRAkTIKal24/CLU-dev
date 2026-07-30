@@ -188,6 +188,108 @@ def to_cell(rec: dict, arm: str, lam: float, liveness: Optional[Liveness] = None
 
 
 # --------------------------------------------------------------------------
+# ⭐ liveness / the perturbing anchor — gate ruling (ii) and its counterweight
+# --------------------------------------------------------------------------
+#: PRE-REGISTERED liveness bars (PREREG §1.3 / §2 / P3), fixed before any run.
+ANCHOR_METRIC_DROP = 0.20   # "visibly perturbs the write, even destructively"
+LIVENESS_DELTA = 0.05       # trajectory decodability gain over the lambda=0 store
+
+
+def _term_of(arm: str) -> Optional[str]:
+    base = arm.split("@")[0]
+    return None if base == "endpoint_write" else base
+
+
+def annotate_liveness(cells: Sequence[RaceCell]) -> List[RaceCell]:
+    """Fill each cell's :class:`~chlu.eval.race.Liveness` from the measured card.
+
+    ⭐ **This is the counterweight to gate ruling (ii), and it is the difference
+    between a legitimate <=0 vote and an under-powered grid.** The bars are the
+    PRE-REGISTERED ones, applied to the card; nothing here is chosen after the
+    fact:
+
+    * **the perturbing anchor** — the grid must contain at least one coefficient
+      at which the term *visibly perturbs the write, even destructively*. Met
+      when the family's primary metric drops by ``ANCHOR_METRIC_DROP`` against
+      the ``endpoint_write`` control, **or** when the term drives the write
+      itself inadmissible (``lambda_min < 0`` / non-convergence) — the most
+      visible perturbation there is. It is a **grid-level** property, so it is
+      stamped on every cell of that ``(family, term)``.
+    * **liveness** — the P-A bar: the trajectory-written store's trajectory must
+      carry more decodable information than the ``lambda=0`` store's, by
+      ``LIVENESS_DELTA``, against the **capacity-matched** ``endpoints``
+      baseline and the blank store.
+
+    ⚠ The ``endpoint_write`` control has no term, so liveness is **not
+    applicable** to it; it is stamped ``perturbing_anchor=True`` with
+    ``detail["applicable"]=False`` so it grades on its dividend alone rather
+    than being mislabelled an under-powered grid.
+    """
+    cells = list(cells)
+    ctrl_full: Dict[str, List[float]] = {}
+    ctrl_traj: Dict[str, List[float]] = {}
+    for c in cells:
+        if _term_of(c.arm) is None:
+            ctrl_full.setdefault(c.family, []).append(c.full)
+            ctrl_traj.setdefault(c.family, []).append(c.trajectory_launder.full)
+
+    def _m(d, fam):
+        v = [x for x in d.get(fam, []) if np.isfinite(x)]
+        return float(np.mean(v)) if v else float("nan")
+
+    groups: Dict[Tuple[str, str], List[RaceCell]] = {}
+    for c in cells:
+        t = _term_of(c.arm)
+        if t is not None:
+            groups.setdefault((c.family, t), []).append(c)
+
+    anchors: Dict[Tuple[str, str], Tuple[bool, List[float], float]] = {}
+    for (fam, term), grp in groups.items():
+        base = _m(ctrl_full, fam)
+        by_lam: Dict[float, List[RaceCell]] = {}
+        for c in grp:
+            by_lam.setdefault(float(c.arm.split("@")[1]), []).append(c)
+        hit, anchor_lam = False, float("nan")
+        for lam in sorted(by_lam):
+            vals = [c.full for c in by_lam[lam] if np.isfinite(c.full)]
+            drop = (base - float(np.mean(vals))) if (vals and np.isfinite(base)) else 0.0
+            broke = any(not c.write.admissible() for c in by_lam[lam])
+            if drop >= ANCHOR_METRIC_DROP or broke:
+                hit, anchor_lam = True, lam
+                break
+        anchors[(fam, term)] = (hit, sorted(by_lam), anchor_lam)
+
+    for c in cells:
+        term = _term_of(c.arm)
+        if term is None:
+            c.liveness = Liveness(
+                passed=False, perturbing_anchor=True, grid=(0.0,),
+                detail={"applicable": False,
+                        "why": "control arm (lambda=0): no objective term to be live"})
+            continue
+        hit, grid, anchor_lam = anchors[(c.family, term)]
+        lam = float(c.arm.split("@")[1])
+        tl = c.trajectory_launder
+        base_tl = _m(ctrl_traj, c.family)
+        bar = float(np.nanmax([tl.endpoints, tl.blank_store, tl.bar]))
+        gain = (tl.full - base_tl) if np.isfinite(base_tl) else float("nan")
+        c.liveness = Liveness(
+            passed=bool(np.isfinite(gain) and gain >= LIVENESS_DELTA
+                        and np.isfinite(tl.full) and tl.full > bar),
+            coefficient=lam, value=tl.full, baseline=base_tl, bar=bar,
+            perturbing_anchor=bool(hit), grid=tuple(grid),
+            detail={"anchor_coefficient": anchor_lam,
+                    "anchor_rule": (f"family metric drops >= {ANCHOR_METRIC_DROP} "
+                                    "vs endpoint_write, or the term drives the "
+                                    "write inadmissible"),
+                    "liveness_rule": (f"trajectory-launder `full` gain >= "
+                                      f"{LIVENESS_DELTA} over the lambda=0 store, "
+                                      "AND above max(endpoints, blank, bar)"),
+                    "gain_over_lambda0": gain})
+    return cells
+
+
+# --------------------------------------------------------------------------
 # the experiment
 # --------------------------------------------------------------------------
 def run_experiment_traj_write(
@@ -239,6 +341,7 @@ def run_experiment_traj_write(
                       f"adm={cell.gate_admissible} ({rec['wall_s']:.0f}s)", flush=True)
                 _dump(save_dir, cells, records, out_json)
 
+    cells = annotate_liveness(cells)
     verdicts = score_card(cells)
     out = {
         "wall_s": time.time() - t_all,

@@ -318,21 +318,31 @@ def _ridge_write(system, gcfg: GymConfig, ccfg: CluSystemConfig, slot: int,
     z[:, : ccfg.addr_dim] = np.asarray(address)[: ccfg.addr_dim]
     z[:, ccfg.addr_dim: ccfg.addr_dim + ccfg.payload_dim] = payload
     z[:, j] = grid
+    loss_kwargs = dict(n_perturb=int(ccfg.write_n_perturb),
+                       sigma_addr=float(ccfg.write_sigma_addr),
+                       sigma_pay=float(ccfg.write_sigma_pay),
+                       margin=float(ccfg.write_margin),
+                       barrier=0.0,  # the ridge's own rows must NOT repel
+                       payload_index=int(ccfg.addr_dim))
+    train_kwargs = dict(steps=int(ccfg.write_steps), lr=float(ccfg.write_lr),
+                        weight_decay=float(ccfg.write_weight_decay))
+    # ⭐ C2W2: the ridge write must SEE `lambda_path`. This is the one write in
+    # the gym that is applied directly (a ridge is not a controller verb), so
+    # without this line the very arm the path term was designed for would run
+    # with the term switched off — and its `lambda_min = -0.5946` saddle would be
+    # "measured" against an objective that never contained the fix.
+    wo = getattr(system, "write_objective", {}) or {}
+    loss_kwargs.update(wo.get("loss_kwargs", {}))
+    train_kwargs.update(wo.get("train_kwargs", {}))
     V, hist = train_memory_landscape(
         system.store.V, jnp.asarray(z), key,
-        steps=int(ccfg.write_steps), lr=float(ccfg.write_lr),
-        weight_decay=float(ccfg.write_weight_decay),
-        loss_kwargs=dict(n_perturb=int(ccfg.write_n_perturb),
-                         sigma_addr=float(ccfg.write_sigma_addr),
-                         sigma_pay=float(ccfg.write_sigma_pay),
-                         margin=float(ccfg.write_margin),
-                         barrier=0.0,  # the ridge's own rows must NOT repel
-                         payload_index=int(ccfg.addr_dim)),
+        loss_kwargs=loss_kwargs,
         update_mask_fn=atom_write_mask_fn(system.store.group_rows(int(slot))),
+        **train_kwargs,
     )
     system.store = eqx.tree_at(lambda s: s.V, system.store, V)
     return {"n_targets": n, "final_loss": (float(hist[-1]) if hist else float("nan")),
-            "slot": int(slot),
+            "slot": int(slot), "write_objective": (wo or None),
             "note": ("a ridge write is NOT a controller verb; it is applied here "
                      "directly to the item's own atom mask to measure the blocker")}
 
