@@ -224,7 +224,7 @@ def implicit_settle(model, q0: jnp.ndarray, p0: jnp.ndarray, spec: SettleSpec,
 # --------------------------------------------------------------------------
 def truncated_rollout(model, q0: jnp.ndarray, p0: jnp.ndarray, steps: int,
                       dt: float, gamma: float, *, retain: Optional[int] = None,
-                      stride: int = 1) -> jnp.ndarray:
+                      stride: int = 1, return_endpoint: bool = False):
     """Strided trajectory whose gradient is truncated to the last ``retain`` steps.
 
     ⚠ **The trajectory read is not at a fixed point, so the implicit theorem does
@@ -241,7 +241,10 @@ def truncated_rollout(model, q0: jnp.ndarray, p0: jnp.ndarray, steps: int,
 
     Returns a ``(n_points, 2*dim)`` buffer strided by ``stride``, matching the
     layout of :attr:`chlu.core.clu_system.ReadResult.traj` (which strides
-    ``tr[:, ::stride, :]`` of the ``(steps, 2*dim)`` rollout).
+    ``tr[:, ::stride, :]`` of the ``(steps, 2*dim)`` rollout). With
+    ``return_endpoint=True`` also returns ``(q_end, p_end)`` — the state after
+    the **last** step, which in general is *not* the last strided point
+    (``CluSystem.read`` takes ``tr[:, -1, :]`` for ``q_addr``/``q_star``).
     """
     steps = int(steps)
     retain = steps if retain is None else int(max(0, min(retain, steps)))
@@ -263,7 +266,9 @@ def truncated_rollout(model, q0: jnp.ndarray, p0: jnp.ndarray, steps: int,
         # keep the stride phase continuous across the seam
         off = (-n_free) % stride if n_free > 0 else 0
         parts.append(tr2[off::stride])
-    return jnp.concatenate(parts, axis=0) if len(parts) > 1 else parts[0]
+        q, p = tr2[-1, :d], tr2[-1, d:]
+    traj = jnp.concatenate(parts, axis=0) if len(parts) > 1 else parts[0]
+    return (traj, q, p) if return_endpoint else traj
 
 
 # --------------------------------------------------------------------------
