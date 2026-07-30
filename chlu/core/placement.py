@@ -28,12 +28,20 @@ Consequences (Theorems 1–4 of the theorist report, ported here as executable c
 * **T4** decay/permanence commute with deletion (amplitudes factorize per record), so this
   module never needs to know about amplitudes at all.
 
-⚠ **Scope.** Exactness is claimed **below capacity** (``|S| <= n_cells``) or under
-set-function eviction (priority / item-intrinsic attribute). Under overflow this
-implementation drops the lowest-priority key *and forgets it* (rung P1): a key refused
-because the store was full does not counterfactually return when something is deleted.
-Recency (LRU) eviction is intrinsically historical and is excluded — the controller
-hard-errors on that combination.
+⚠ **Scope.** Exactness is claimed under set-function eviction (priority /
+item-intrinsic attribute). Recency (LRU) eviction is intrinsically historical and is
+excluded — the controller hard-errors on that combination.
+
+⭐ **Overflow: the P2 waitlist (w27).** With ``waitlist=False`` (the w26 rung P1) a key the
+lattice cannot seat is dropped *and forgotten*, so exactness held only **below capacity**:
+a background key refused while the target was resident did not counterfactually return
+when the target was deleted (measured: post-delete ``AUC(n_live) = 1.000``, byte-equality
+0/3072, at 8 offers into a 7-cell lattice). With ``waitlist=True`` an unseated key keeps
+its place in the *offered* set with ``pos[k] = None``; every op re-runs the greedy over the
+priority suffix, so a freed cell is taken by the highest-priority waiting key. The placed
+set is then exactly "the seatable prefix of the offered set in priority order" — still a
+pure set function, now **at any load**, which is what makes :meth:`delete` exact under
+overflow too.
 
 Pure numpy (float64), no JAX: this is bookkeeping, not physics.
 """
@@ -131,17 +139,26 @@ class CanonicalPlacer:
         d_safe: lattice spacing == the admission radius (T3).
         anchor_dim: dimension of an anchor point; only the first 2 coordinates index the
             lattice (the store's address plane).
+        waitlist: ⭐ **P2 (w27)**. ``False`` (the w26 rung P1) forgets a key the lattice
+            cannot seat. ``True`` keeps it in the offered set, unplaced
+            (``pos[k] is None``), so it is re-considered by every later greedy pass and
+            takes the first cell that frees — the condition under which deletion stays
+            exact **at overflow** as well as below capacity.
 
     Every mutating verb leaves the object in the *canonical* configuration for its current
     key set, and records the displacement moves it had to apply in :attr:`moves_last_op`
     (``(key, old_cell, new_cell)``) — the delete-time churn the theorist priced at ~2.84
-    moves/delete at full load.
+    moves/delete at full load — plus, under the waitlist, which keys entered
+    (:attr:`entered_last_op`) and which lost their cell (:attr:`unplaced_last_op`).
     """
 
-    def __init__(self, radius: float, d_safe: float, anchor_dim: int = 2):
+    def __init__(
+        self, radius: float, d_safe: float, anchor_dim: int = 2, waitlist: bool = False
+    ):
         self.radius = float(radius)
         self.d_safe = float(d_safe)
         self.anchor_dim = int(anchor_dim)
+        self.waitlist = bool(waitlist)
         self.cells = hex_cells(self.radius, self.d_safe)
         self.n_cells = int(len(self.cells))
         self.anchors: Dict[int, np.ndarray] = {}
@@ -149,12 +166,22 @@ class CanonicalPlacer:
         self._probe: Dict[int, np.ndarray] = {}
         self.moves_last_op: List[Tuple[int, Optional[int], int]] = []
         self.dropped_last_op: List[int] = []
+        self.entered_last_op: List[int] = []
+        self.unplaced_last_op: List[int] = []
 
     # -- introspection --------------------------------------------------------
     @property
     def keys(self) -> List[int]:
         """Placed keys, in canonical (descending-priority) order."""
-        return self._sorted_keys()
+        return self.placed_keys()
+
+    def placed_keys(self) -> List[int]:
+        """Keys holding a cell, in canonical order (waiting keys excluded)."""
+        return [k for k in self._sorted_keys() if self.pos[k] is not None]
+
+    def waiting_keys(self) -> List[int]:
+        """Offered keys the lattice could not seat, in canonical order (waitlist only)."""
+        return [k for k in self._sorted_keys() if self.pos[k] is None]
 
     def cell_of(self, key: int) -> Optional[int]:
         return self.pos.get(int(key))
@@ -165,7 +192,7 @@ class CanonicalPlacer:
 
     def min_spacing(self) -> float:
         """Achieved min pairwise spacing — a lattice invariant, ``>= d_safe`` (T3)."""
-        idx = [self.pos[k] for k in self._sorted_keys()]
+        idx = [self.pos[k] for k in self.placed_keys()]
         if len(idx) < 2:
             return float("inf")
         c = self.cells[np.asarray(idx)]
@@ -195,6 +222,7 @@ class CanonicalPlacer:
         """
         moves: List[Tuple[int, Optional[int], int]] = []
         dropped: List[int] = []
+        unplaced: List[int] = []
         occupied = set()
         for k in self._sorted_keys():
             if prio(k) > pivot_prio and self.pos[k] is not None:
@@ -207,19 +235,26 @@ class CanonicalPlacer:
                 if int(c) not in occupied:
                     newpos = int(c)
                     break
+            old = self.pos.get(k)
             if newpos is None:
                 dropped.append(k)
+                if old is not None:
+                    unplaced.append(k)
+                    # P2: the key keeps its seat in the OFFERED set, loses its cell
+                    self.pos[k] = None
                 continue
-            old = self.pos.get(k)
             if old != newpos:
                 moves.append((k, old, newpos))
             self.pos[k] = newpos
             occupied.add(newpos)
-        for k in dropped:
-            self.pos.pop(k, None)
-            self.anchors.pop(k, None)
-            self._probe.pop(k, None)
+        if not self.waitlist:
+            for k in dropped:
+                self.pos.pop(k, None)
+                self.anchors.pop(k, None)
+                self._probe.pop(k, None)
         self.moves_last_op = [m for m in moves if m[1] is not None]
+        self.entered_last_op = [m[0] for m in moves if m[1] is None]
+        self.unplaced_last_op = unplaced
         self.dropped_last_op = dropped
         return self.moves_last_op, dropped
 
@@ -228,7 +263,9 @@ class CanonicalPlacer:
         """Offer a key (with its address ``anchor``). Returns whether it is placed.
 
         ``anchor=None`` uses the deterministic :func:`hash_point` of the key — the
-        content-free rung used by the theorist's harness.
+        content-free rung used by the theorist's harness. Under ``waitlist=True`` a
+        ``False`` return means "offered but waiting", not "forgotten": the key stays in the
+        offered set and is seated by the first later op that frees a reachable cell.
         """
         key = int(key)
         if key in self.pos:
@@ -242,14 +279,17 @@ class CanonicalPlacer:
         self._probe.pop(key, None)
         self.pos[key] = None
         self._replace_from(prio(key))
-        return key in self.pos
+        return self.pos.get(key) is not None
 
     def delete(self, key: int) -> List[Tuple[int, Optional[int], int]]:
         """Exact deletion (**T2**): drop the key, then restore canonical placement.
 
         Returns the displacement moves applied to the *survivors* — deleting ``i``
         legitimately relocates lower-priority items, to exactly where the store that never
-        held ``i`` would have put them.
+        held ``i`` would have put them. Under ``waitlist=True`` the freed cell is taken by
+        the highest-priority *waiting* key (reported in :attr:`entered_last_op`), which is
+        exactly what the never-held-``i`` store did with it; a waiting key may itself be
+        deleted (it is in the offered set), which is a no-op on the placement.
         """
         key = int(key)
         if key not in self.pos:
@@ -264,23 +304,25 @@ class CanonicalPlacer:
     # -- the bit-identity object ---------------------------------------------
     def layout(self) -> List[Tuple[int, np.ndarray]]:
         """``[(key, center)]`` in canonical priority order — the store's slot layout."""
-        return [(k, self.cells[self.pos[k]].copy()) for k in self._sorted_keys()]
+        return [(k, self.cells[self.pos[k]].copy()) for k in self.placed_keys()]
 
     def centers(self) -> np.ndarray:
         """(n_placed, 2) occupied sites in canonical priority order."""
-        ks = self._sorted_keys()
+        ks = self.placed_keys()
         if not ks:
             return np.zeros((0, 2))
         return np.stack([self.cells[self.pos[k]] for k in ks])
 
 
-def canonical_layout(radius: float, d_safe: float, items) -> List[Tuple[int, np.ndarray]]:
+def canonical_layout(
+    radius: float, d_safe: float, items, waitlist: bool = False
+) -> List[Tuple[int, np.ndarray]]:
     """``Store(S)`` built fresh from a set of ``(key, anchor)`` pairs.
 
     The reference object every incremental history is compared against: feeding the same
     set in any order (or reaching it by any write/delete interleaving) must give this.
     """
-    pl = CanonicalPlacer(radius, d_safe)
+    pl = CanonicalPlacer(radius, d_safe, waitlist=waitlist)
     for key, anchor in sorted(items, key=lambda it: (-prio(it[0]), int(it[0]))):
         pl.insert(key, anchor)
     return pl.layout()

@@ -107,6 +107,16 @@ class Controller:
             channel that refuse-and-relocate leaks at ``AUC 0.99985``. Admission becomes
             "did it get a cell"; the spacing gate is a lattice *invariant* (Theorem 3),
             not a per-write test.
+        waitlist: ⭐ **the P2 waitlist (w27)**, canonical placement only. When an offer
+            cannot be seated (the lattice is full of higher-priority keys) the record is
+            kept in a side dict instead of being forgotten, and the *first later op that
+            frees a reachable cell re-seats the highest-priority waiting key*. This is what
+            extends exact deletion from "below capacity" to **any load**: without it, a
+            background item refused while the target was resident does not counterfactually
+            return when the target is deleted, and the post-delete store is NOT the store
+            that never held the target (measured at 8 offers into a 7-cell lattice:
+            ``AUC(n_live) = 1.000``, byte-equality 0/3072). ``False`` restores the w26
+            rung-P1 behaviour. Ignored under ``placement="relocate"``.
         lattice_radius: address-disk radius the canonical lattice is clipped to
             (**required** when ``placement="canonical"``, ignored otherwise). The hard
             admission capacity is the resulting cell count, not the packing bound —
@@ -131,12 +141,14 @@ class Controller:
         peer_addresses_fn: Optional[Callable] = None,
         placement: str = "relocate",
         lattice_radius: Optional[float] = None,
+        waitlist: bool = True,
     ):
         if evict_policy not in ("staleness", "depth"):
             raise ValueError(f"evict_policy must be staleness|depth, got {evict_policy}")
         if placement not in ("relocate", "canonical"):
             raise ValueError(f"placement must be relocate|canonical, got {placement}")
         self.placement = placement
+        self.waitlist = bool(waitlist) and placement == "canonical"
         self.placer: Optional[CanonicalPlacer] = None
         if placement == "canonical":
             # --- the guards the deletion claim's scope requires (theorist §4c) ---
@@ -184,9 +196,20 @@ class Controller:
                     f"placement='canonical' needs a 2-D address plane (the lattice is "
                     f"planar), got addr_dim={self.addr_dim}"
                 )
-            self.placer = CanonicalPlacer(float(lattice_radius), self.d_safe)
+            self.placer = CanonicalPlacer(
+                float(lattice_radius), self.d_safe, waitlist=self.waitlist
+            )
 
         self.records: Dict[int, ItemRecord] = {}  # slot -> record (live only)
+        # P2: item_id -> record of an offer the lattice could not seat. It is NOT in the
+        # store (it contributes nothing to V) but it is still in the *offered* set, so a
+        # freed cell re-seats it by priority. Empty unless placement="canonical" +
+        # waitlist=True. `waiting_amps` carries each waiting record's depth through the
+        # SAME per-tick arithmetic the live wells get (Theorem 4: amplitudes factorize per
+        # record), so a re-seated item lands bit-identically on the depth the history that
+        # never refused it would have produced.
+        self.waiting: Dict[int, ItemRecord] = {}
+        self.waiting_amps: Dict[int, float] = {}
         self.t = 0
         self.stats = {
             "offered": 0,
@@ -198,6 +221,8 @@ class Controller:
             "decayed_out": 0,
             "deleted": 0,
             "moves": 0,
+            "waitlisted": 0,
+            "reseated": 0,
         }
         self.log: List[dict] = []
 
@@ -205,6 +230,11 @@ class Controller:
     @property
     def n_live(self) -> int:
         return len(self.records)
+
+    @property
+    def n_waiting(self) -> int:
+        """Offers the lattice could not seat, still in the offered set (P2 waitlist)."""
+        return len(self.waiting)
 
     def live_slots(self) -> List[int]:
         return sorted(self.records)
@@ -338,6 +368,20 @@ class Controller:
         as a physical amplitude decay rather than a bookkeeping delete.
         """
         self.t += 1
+        # a waitlisted leaky record ages on its own clock (Theorem 4): once the depth it
+        # WOULD have had falls below the floor, the never-refused history had already
+        # self-evicted it, so it leaves the offered set too.
+        for item_id, r in list(self.waiting.items()):
+            if r.leak <= 0.0:
+                continue
+            a = self.waiting_amps[item_id] * float(np.exp(-r.leak))   # same arithmetic
+            if a < self.amp_floor:                                    # as the live wells
+                self.waiting.pop(item_id)
+                self.waiting_amps.pop(item_id)
+                self.placer.delete(item_id)
+                self.stats["decayed_out"] += 1
+            else:
+                self.waiting_amps[item_id] = self._amp_cast(a)
         if not self.records:
             return
         amps = np.asarray(self.store.amps, dtype=float).copy()
@@ -382,11 +426,24 @@ class Controller:
                 return r
         return None
 
+    def _amp_cast(self, x: float) -> float:
+        """Round a waitlisted amplitude through the STORE's dtype.
+
+        A live well's depth is rounded to the store array's dtype on every
+        :meth:`tick` (``with_amps`` casts); a waiting record must follow the *same*
+        rounding path or a re-seated item lands one ULP away from the never-refused
+        history and byte-identity fails. Reading the dtype from the store (rather than
+        hard-coding float32) keeps that true under ``jax_enable_x64``.
+        """
+        return float(np.asarray(x, dtype=np.asarray(self.store.amps).dtype))
+
     def _empty_store(self) -> AtomStorePotential:
         s = self.store
         return AtomStorePotential(
             dim=s.dim, capacity=s.capacity, alpha=s.alpha, s=s.s, s_pay=s.s_pay,
             kappa=s.kappa, spectator_k=s.spectator_k, addr_dim=s.addr_dim,
+            payload_gate=s.payload_gate, payload_g0=s.payload_g0,
+            payload_eps=s.payload_eps,
         )
 
     def _canonical_sync(
@@ -411,6 +468,25 @@ class Controller:
         if new_record is not None:
             recs.append(new_record)
             amp_by_id[new_record.item_id] = float(new_amp)
+        if self.waitlist:
+            # ⭐ P2, both directions. A record whose key lost its cell to a
+            # higher-priority key goes to the waitlist (offered, not stored); a waiting
+            # record whose key just took a freed cell re-enters at the amplitude the
+            # never-refused history would have given it — amplitudes are item-intrinsic
+            # (Theorem 4: base_amp * exp(-leak * age)), so this is still a set function.
+            placed = set(self.placer.placed_keys())
+            for r in list(recs):
+                if r.item_id not in placed:
+                    recs.remove(r)
+                    self.waiting[r.item_id] = r
+                    self.waiting_amps[r.item_id] = amp_by_id.pop(
+                        r.item_id, self._amp_cast(self.amp))
+                    self.stats["waitlisted"] += 1
+            for key in placed:
+                if key in self.waiting:
+                    recs.append(self.waiting.pop(key))
+                    amp_by_id[key] = self.waiting_amps.pop(key)
+                    self.stats["reseated"] += 1
         by_id = {r.item_id: r for r in recs}
         store = self._empty_store()
         new_records: Dict[int, ItemRecord] = {}
@@ -431,11 +507,18 @@ class Controller:
         nearest cell of the lattice that no higher-priority live item has claimed, and
         higher-priority items are never disturbed. A write can displace lower-priority
         items (the cascade), and on a full lattice the lowest-priority key loses its cell
-        — priority eviction, a set-function policy (theorist §4b). ⚠ A key dropped this
-        way is **forgotten**, not waitlisted (rung P1): counterfactual exactness over the
-        *offered* stream under overflow needs the P2 waitlist, which is not built.
+        — priority eviction, a set-function policy (theorist §4b). ⭐ Under
+        ``waitlist=True`` (w27, rung P2) a key that loses its cell — or never gets one —
+        is **waitlisted, not forgotten**: it stays in the offered set and is re-seated by
+        the first op that frees a reachable cell, which is what makes deletion exact under
+        overflow as well as below capacity.
         """
         self.stats["offered"] += 1
+        if int(item_id) in self.waiting:
+            raise ValueError(
+                f"item_id {item_id} is already offered (waitlisted); canonical placement "
+                f"keys the lattice by item_id, so ids must be unique among offered items"
+            )
         if self._record_for_id(item_id) is not None:
             raise ValueError(
                 f"item_id {item_id} is already live; canonical placement keys the "
@@ -461,26 +544,33 @@ class Controller:
         placed = self.placer.insert(item_id, q2)
         moves = list(self.placer.moves_last_op)
         dropped = [int(k) for k in self.placer.dropped_last_op if int(k) != int(item_id)]
-        for key in dropped:  # priority eviction under overflow
-            r = self._record_for_id(key)
-            if r is not None:
-                self.records.pop(r.slot, None)
-                self.stats["evicted"] += 1
-        if not placed:
-            self.stats["refused_spacing"] += 1
-            if moves or dropped:
-                self._canonical_sync()
-            row = self._row(item_id, "refuse_spacing", self._dec(d0), None)
-            self.log.append(row)
-            return row
-
+        if not self.waitlist:
+            for key in dropped:  # priority eviction under overflow (rung P1: forgotten)
+                r = self._record_for_id(key)
+                if r is not None:
+                    self.records.pop(r.slot, None)
+                    self.stats["evicted"] += 1
         item_leak = 0.0 if permanent else (self.leak if leak is None else float(leak))
-        center = self.placer.center_of(item_id)
         rec = ItemRecord(
-            item_id=int(item_id), slot=-1, center=center, payload=float(payload),
+            item_id=int(item_id), slot=-1, center=q2.copy(), payload=float(payload),
             base_amp=self.amp, leak=item_leak, permanent=bool(permanent),
             born=self.t, last_used=self.t,
         )
+        if not placed:
+            self.stats["refused_spacing"] += 1
+            if self.waitlist:
+                # P2: offered but unseated — remembered, so a later delete re-seats it
+                self.waiting[int(item_id)] = rec
+                self.waiting_amps[int(item_id)] = self._amp_cast(self.amp)
+                self.stats["waitlisted"] += 1
+            if moves or dropped or self.waitlist:
+                self._canonical_sync()
+            row = self._row(item_id, "refuse_spacing", self._dec(d0), None)
+            row["waitlisted"] = bool(self.waitlist)
+            self.log.append(row)
+            return row
+
+        rec.center = self.placer.center_of(item_id)
         self._canonical_sync(new_record=rec, new_amp=self.amp)
 
         self.stats["admitted"] += 1
@@ -495,8 +585,8 @@ class Controller:
         ) if self.n_live > 1 else np.zeros((0, self.addr_dim))
         dec = self._dec(
             d0, written=True, probe=probe,
-            d_written=min_separation(center, others),
-            quant=float(np.linalg.norm(center - q2[:2])),
+            d_written=min_separation(rec.center, others),
+            quant=float(np.linalg.norm(rec.center - q2[:2])),
         )
         row = self._row(item_id, "admit" if probe == 0 else "relocate", dec, rec.slot,
                         evicted_id=evicted_id)
@@ -518,13 +608,19 @@ class Controller:
         the never-written store would have placed them. Reads must therefore use the
         record's current ``center``, which the controller updates here.
 
-        ⛔ Scope: the **store** only, and only below capacity / under set-function
-        eviction. A key that was refused because the lattice was full does not return when
-        something is deleted (no P2 waitlist). This is not unlearning: the encoder and any
-        learned-landscape residue are separate channels. No ``(eps, delta)`` claim.
+        ⛔ Scope: the **store** only, and only under set-function eviction. With
+        ``waitlist=True`` (default) the claim no longer needs the "below capacity"
+        qualifier: a key refused because the lattice was full **does** return when
+        something is deleted, so the post-delete store equals the never-held-it store at
+        any load. With ``waitlist=False`` the below-capacity qualifier is load-bearing.
+        This is not unlearning: the encoder and any learned-landscape residue are separate
+        channels. No ``(eps, delta)`` claim.
+
+        Deleting a **waitlisted** item (offered, never seated) is legal and is a no-op on
+        the store — which is exactly the counterfactual: the store never held it.
 
         Returns a log row with the number of survivor moves; raises ``KeyError`` if the
-        item is not live.
+        item is neither live nor waiting.
         """
         if self.placement != "canonical":
             raise ValueError(
@@ -535,14 +631,25 @@ class Controller:
                 "deletion verb to offer. Use evict_item() for the non-exact removal."
             )
         r = self._record_for_id(item_id)
-        if r is None:
-            raise KeyError(f"item_id {item_id} is not live")
-        self._evict(r.slot, reason="delete")
+        waiting = int(item_id) in self.waiting
+        if r is None and not waiting:
+            raise KeyError(f"item_id {item_id} is neither live nor waiting")
+        if waiting:
+            # offered but never seated: drop it from the offered set. The placer's greedy
+            # over the lower-priority suffix cannot change (the key held no cell), so the
+            # store is untouched — which IS the never-offered counterfactual.
+            self.waiting.pop(int(item_id))
+            self.waiting_amps.pop(int(item_id), None)
+            self.placer.delete(int(item_id))
+            self._canonical_sync()
+        else:
+            self._evict(r.slot, reason="delete")
         n_moves = len(self.placer.moves_last_op)
         self.stats["deleted"] += 1
         row = {
             "t": self.t, "item_id": int(item_id), "decision": "delete",
             "slot": None, "moves": n_moves, "n_live": self.n_live,
+            "was_waiting": bool(waiting),
         }
         self.log.append(row)
         return row
