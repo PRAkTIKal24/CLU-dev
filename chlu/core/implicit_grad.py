@@ -222,9 +222,23 @@ def implicit_settle(model, q0: jnp.ndarray, p0: jnp.ndarray, spec: SettleSpec,
 # --------------------------------------------------------------------------
 # truncated backprop over the trajectory read
 # --------------------------------------------------------------------------
+def _maybe_float(x):
+    """``float(x)`` for a concrete Python/NumPy scalar, else pass the value through.
+
+    ``gamma`` used to be cast unconditionally, which forced concreteness and made
+    a **per-particle friction** (charter §A4.3: phi's head emits ``gamma``)
+    untraceable. Python/NumPy scalars still take the identical path — the cast is
+    bit-preserving — so every existing caller is unchanged.
+    """
+    if isinstance(x, (int, float, np.integer, np.floating)):
+        return float(x)
+    return x
+
+
 def truncated_rollout(model, q0: jnp.ndarray, p0: jnp.ndarray, steps: int,
-                      dt: float, gamma: float, *, retain: Optional[int] = None,
-                      stride: int = 1, return_endpoint: bool = False):
+                      dt: float, gamma, *, retain: Optional[int] = None,
+                      stride: int = 1, return_endpoint: bool = False,
+                      mass_override: Optional[jnp.ndarray] = None):
     """Strided trajectory whose gradient is truncated to the last ``retain`` steps.
 
     ⚠ **The trajectory read is not at a fixed point, so the implicit theorem does
@@ -245,6 +259,12 @@ def truncated_rollout(model, q0: jnp.ndarray, p0: jnp.ndarray, steps: int,
     ``return_endpoint=True`` also returns ``(q_end, p_end)`` — the state after
     the **last** step, which in general is *not* the last strided point
     (``CluSystem.read`` takes ``tr[:, -1, :]`` for ``q_addr``/``q_star``).
+
+    ``gamma`` may be a **traced scalar** and ``mass_override`` a **traced
+    ``(dim,)`` vector** (C2W2, charter §A4.3): they are the two particle
+    attributes phi's widened head emits, and they must carry gradient. ``None``
+    /Python-float keeps the historical path bit-for-bit (``CHLU.__call__``
+    branches on ``mass_override is None`` at the Python level).
     """
     steps = int(steps)
     retain = steps if retain is None else int(max(0, min(retain, steps)))
@@ -253,16 +273,23 @@ def truncated_rollout(model, q0: jnp.ndarray, p0: jnp.ndarray, steps: int,
     frozen = eqx.combine(jax.lax.stop_gradient(params), static)
     d = q0.shape[-1]
 
+    g = _maybe_float(gamma)
     parts = []
     q, p = q0, p0
     if n_free > 0:
+        # the free window is a pure forward pass: state, params AND the two
+        # particle attributes enter it through `stop_gradient` (spike R-2 — the
+        # truncation direction is load-bearing and must be visible here).
+        g_free = g if isinstance(g, float) else jax.lax.stop_gradient(g)
+        m_free = (None if mass_override is None
+                  else jax.lax.stop_gradient(mass_override))
         tr = frozen(jax.lax.stop_gradient(q), jax.lax.stop_gradient(p),
-                    n_free, float(dt), float(gamma))
+                    n_free, float(dt), g_free, m_free)
         tr = jax.lax.stop_gradient(tr)
         parts.append(tr[::stride])
         q, p = tr[-1, :d], tr[-1, d:]
     if retain > 0:
-        tr2 = model(q, p, retain, float(dt), float(gamma))
+        tr2 = model(q, p, retain, float(dt), g, mass_override)
         # keep the stride phase continuous across the seam
         off = (-n_free) % stride if n_free > 0 else 0
         parts.append(tr2[off::stride])
