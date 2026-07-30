@@ -257,3 +257,191 @@ def test_every_monitor_declares_its_false_trip_mode():
     reg = default_registry(loud=False)
     for m in reg.monitors:
         assert getattr(m, "false_trip", None), f"{m.name} has no false-trip mode"
+
+
+# ==========================================================================
+# C2W2 repairs (`phi-particle-head` D4): #6 dead-band, #10 tier (a), #7 scope
+# ==========================================================================
+def test_monitor6_dead_band_does_not_trip_on_a_numerically_zero_slope():
+    """⭐ gym R2: **29 of #6's 58 first-ever trips fired at
+    ``slope_write_loss = -5.2e-17``.** A loss that "fell" by 1e-17 has not
+    diverged from anything; it has hit the floating-point floor.
+    """
+    from chlu.core.monitors import ObjectiveDivergenceMonitor
+
+    m = ObjectiveDivergenceMonitor(window=3)
+    # a converged write: the loss is constant to float64 round-off
+    loss = 0.19260269403457642
+    acq = 1.0
+    r = None
+    for i in range(4):
+        r = m.observe(MonitorContext(self_probe={
+            "write_loss": loss * (1.0 - 1e-16 * i), "acq": acq * (1.0 - 1e-16 * i)}))
+    assert r.applicable
+    assert abs(r.detail["slope_write_loss"]) < 1e-15
+    assert not r.tripped, "the dead-band did not close the epsilon artefact"
+    # ...and the pre-repair predicate is recorded, so the diff is auditable
+    assert r.detail["tripped_pre_repair"] is True
+
+
+def test_monitor6_still_trips_on_a_genuine_divergence():
+    """The other ~29 are real (e.g. ``overload/base@s2``: slope_acq -0.214,
+    slope_loss -0.055) and must survive the repair."""
+    from chlu.core.monitors import ObjectiveDivergenceMonitor
+
+    m = ObjectiveDivergenceMonitor(window=3)
+    r = None
+    for i in range(4):
+        r = m.observe(MonitorContext(self_probe={"write_loss": 1.0 - 0.055 * i,
+                                                 "acq": 1.0 - 0.214 * i}))
+    assert r.tripped
+    assert r.detail["slope_write_loss"] == pytest.approx(-0.055, rel=1e-6)
+    assert r.detail["tripped_pre_repair"] is True  # this one was never an artefact
+
+
+def test_monitor6_eps_zero_reproduces_the_pre_repair_predicate_exactly():
+    """``eps_rel = 0`` is the pre-repair monitor — that is how the before/after
+    re-score is done without a second stochastic run."""
+    from chlu.core.monitors import ObjectiveDivergenceMonitor
+
+    old = ObjectiveDivergenceMonitor(window=3, eps_rel=0.0)
+    r = None
+    for i in range(4):
+        r = old.observe(MonitorContext(self_probe={"write_loss": 0.5 - 1e-17 * i,
+                                                   "acq": 1.0 - 1e-17 * i}))
+    assert r.tripped  # the artefact, reproduced on demand
+
+
+def test_objective_divergence_predicate_is_a_pure_function():
+    from chlu.core.monitors import objective_divergence_predicate
+
+    assert objective_divergence_predicate(-0.05, -0.2, 0.0)
+    assert objective_divergence_predicate(-0.05, -0.2, 1e-9)
+    assert objective_divergence_predicate(-5.2e-17, -5.9e-17, 0.0)  # pre-repair
+    assert not objective_divergence_predicate(-5.2e-17, -5.9e-17, 1e-9)  # repaired
+    assert not objective_divergence_predicate(-0.05, +0.2, 0.0)  # acq rising
+
+
+def test_monitor10_tier_a_catches_a_declared_but_never_read_knob():
+    """⭐ doctrine I-8: the O(1) plumbing tier. N19/N20/N58 are all
+    "the field is wired to nothing"."""
+    from dataclasses import dataclass
+
+    from chlu.core.monitors import (
+        ConfigAccessProxy,
+        DeadAxisMonitor,
+        DeadKnobError,
+        assert_knobs_live,
+    )
+
+    @dataclass
+    class Cfg:
+        used: float = 1.0
+        never_read: float = 2.0
+
+    proxy = ConfigAccessProxy(Cfg())
+    _ = proxy.used  # the only read
+    assert proxy.never_read() == ["never_read"]
+    with pytest.raises(DeadKnobError):
+        assert_knobs_live(proxy)
+    # and the monitor sees the same thing through ctx.extras
+    r = DeadAxisMonitor().observe(MonitorContext(extras=proxy.knob_extras()))
+    assert r.tripped and r.detail["never_read"] == ["never_read"]
+
+
+def test_monitor10_tier_a_is_clear_when_every_knob_is_read():
+    from dataclasses import dataclass
+
+    from chlu.core.monitors import ConfigAccessProxy, DeadAxisMonitor, assert_knobs_live
+
+    @dataclass
+    class Cfg:
+        a: float = 1.0
+        b: float = 2.0
+
+    proxy = ConfigAccessProxy(Cfg())
+    _ = (proxy.a, proxy.b)
+    assert assert_knobs_live(proxy) == []
+    r = DeadAxisMonitor().observe(MonitorContext(extras=proxy.knob_extras()))
+    assert not r.tripped
+    assert proxy.knob_extras()["knob_tier_a_implemented"] is True
+
+
+def test_config_access_proxy_delegates_reads_and_writes():
+    from chlu.core.clu_system import CluSystemConfig
+    from chlu.core.monitors import ConfigAccessProxy
+
+    proxy = ConfigAccessProxy(CluSystemConfig(addr_dim=4))
+    assert proxy.addr_dim == 4
+    assert proxy.counts["addr_dim"] == 1
+    proxy.reset()
+    assert proxy.counts["addr_dim"] == 0
+    assert proxy.unwrap().addr_dim == 4
+    # a derived property still works through the proxy
+    assert int(proxy.dim) == 5
+
+
+@pytest.mark.parametrize("kinetic_mode", ["newtonian_identity", "newtonian_learned",
+                                          "relativistic"])
+def test_mass_gauge_is_parameterised_by_kinetic_mode(kinetic_mode):
+    """⭐ doctrine I-7/R2: the gauge is **Newtonian-only**. The relativistic cell is
+    recorded as a SCOPE, not a pass — under the relativistic kinetic the gauge
+    breaks as O(1/c^2), and N76 then does not forbid mass as a channel."""
+    import jax.numpy as jnp
+
+    from chlu.core.memory_potentials import AtomStorePotential
+    from chlu.core.monitors import GAUGE_SCOPE
+    from chlu.experiments.goldstone_harness import clu_with_potential
+
+    store = AtomStorePotential(dim=3, capacity=4, addr_dim=2)
+    store = store.with_item(np.array([0.6, 0.2]), 0.4)
+    store = store.with_item(np.array([-0.5, 0.3]), -0.3)
+    model = clu_with_potential(store, dim=3, kinetic_mode=kinetic_mode,
+                               inertia=jnp.ones(3))
+    q0 = jnp.array([0.3, 0.1, 0.0])
+    p0 = jnp.array([0.05, -0.02, 0.0])
+    res = gauge_orbit_residual(model, q0, p0, steps=200, dt=0.05, gamma=0.05, lam=2.0)
+    assert kinetic_mode in GAUGE_SCOPE
+    if kinetic_mode == "newtonian_learned":
+        assert res < 1e-5, f"mass is not gauge under {kinetic_mode}: {res}"
+    elif kinetic_mode == "newtonian_identity":
+        # ⚠ C2W2 SHARPENING of I-7: with T = 0.5 p^2 the mass is not in the
+        # dynamics, so (M,V,p0) -> (lam M, lam V, lam p0) rescales V and p0 with
+        # NOTHING to compensate them. It is not a gauge orbit here at all.
+        assert res > 1e-2, f"unexpectedly gauge under {kinetic_mode}: {res}"
+        assert "not a gauge" in GAUGE_SCOPE[kinetic_mode].lower()
+    else:
+        # SCOPE, not a pass: record the size of the break rather than assert it away
+        assert np.isfinite(res)
+        assert "BREAKS" in GAUGE_SCOPE[kinetic_mode]
+
+
+def test_mass_gauge_compares_the_whole_trajectory_not_the_endpoint():
+    """doctrine I-7: an endpoint-only comparison passes VACUOUSLY once both runs
+    settle (9.1e-2 -> 3.6e-3 by doubling N alone). Under a mass rescaling the
+    trajectories differ *in time* even when the endpoints agree, so a
+    trajectory-wise residual on a NON-gauge perturbation must be large while the
+    endpoint residual is small."""
+    import jax.numpy as jnp
+
+    from chlu.core.memory_potentials import AtomStorePotential
+    from chlu.experiments.goldstone_harness import clu_with_potential, log_mass_for_inertia
+
+    store = AtomStorePotential(dim=3, capacity=4, addr_dim=2)
+    store = store.with_item(np.array([0.6, 0.2]), 0.4)
+    model = clu_with_potential(store, dim=3, kinetic_mode="newtonian_learned",
+                               inertia=jnp.ones(3))
+    q0 = jnp.array([0.3, 0.1, 0.0])
+    p0 = jnp.array([0.05, -0.02, 0.0])
+    import equinox as eqx
+
+    # M -> 2M WITHOUT rescaling V and p0: not the gauge orbit, so the trajectory
+    # must move even though both runs settle into the same minimum.
+    other = eqx.tree_at(lambda m: m.log_mass, model,
+                        replace=log_mass_for_inertia(jnp.full((3,), 2.0)))
+    a = np.asarray(model(q0, p0, 400, 0.05, 0.05))
+    b = np.asarray(other(q0, p0, 400, 0.05, 0.05))
+    traj_res = float(np.max(np.abs(a[:, :3] - b[:, :3])) / np.max(np.abs(a[:, :3])))
+    end_res = float(np.max(np.abs(a[-1, :3] - b[-1, :3])) / np.max(np.abs(a[-1, :3])))
+    assert traj_res > 100 * end_res, (
+        f"the endpoint comparison is vacuous here: traj {traj_res} vs end {end_res}")
