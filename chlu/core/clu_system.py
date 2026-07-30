@@ -701,14 +701,23 @@ class CluSystem:
             "c3_ratio": self._c3_ratio,
             "oldest_retention_drop": self._oldest_drop,
             "min_sep_minus_2s": (sep - 2.0 * s_max) if np.isfinite(sep) else float("nan"),
+            # ⚠ Monitor #10 tier (a) — the O(1) access-counting config proxy — is
+            # NOT implemented in v0; only tier (b) (the semantic sweep) runs. The
+            # declared-knob list is therefore the swept set, and tier (a) is
+            # reported as a gap rather than silently passing.
             "knob_reads": self._knob_reads or None,
             "knobs_declared": sorted(self._knob_reads) if self._knob_reads else None,
+            "knob_tier_a_implemented": False,
         }
         ex.update(self._reach_extras())
         if certificates is not None:
             ex["certificates"] = certificates
         if extras:
             ex.update(extras)
+        if ex.get("knob_sweep") and not ex.get("knobs_declared"):
+            # tier (b) is live: every swept dial is "declared active this run"
+            ex["knobs_declared"] = sorted(ex["knob_sweep"])
+            ex["knob_reads"] = {k: 1 for k in ex["knob_sweep"]}
         ctx = MonitorContext(stage=stage, t=self._t, system=self, reads=reads,
                              self_probe=self_probe, blank=blank,
                              write_log=self._write_log, controller=self.controller,
