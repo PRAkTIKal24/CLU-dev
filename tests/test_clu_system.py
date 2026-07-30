@@ -17,14 +17,12 @@ CLU rather than of a lookup table:
 * the settle exposes a **fixed-point residual** for an implicit/DEQ gradient.
 """
 
-import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
 
 from chlu.core.clu_system import (
-    CluSystem,
     CluSystemConfig,
     LearnedVStore,
     build_system,
@@ -39,6 +37,26 @@ from chlu.eval.dividend import (
     same_keys_null,
     settle_deleted_launder,
 )
+
+
+@pytest.fixture(autouse=True)
+def float32_dynamics():
+    """Pin float32 for the whole module, restoring the global flag after.
+
+    ⚠ Repo-wide test-isolation hazard (handover §7.2, and it bit this file):
+    several test modules enable ``jax_enable_x64`` at MODULE import, so x64 is
+    globally ON in a full-suite run even though it is off when this file runs
+    alone. The harness stores and reads in float32 by construction, and the
+    settle residual it asserts on is a float32 quantity — under x64 the same
+    assertion compares a different number and
+    ``test_fixed_point_residual_is_small_at_a_settled_point`` failed in the full
+    suite while passing in isolation. Same fixture as
+    ``test_hopfield_capacity`` / ``test_retry_compute`` / ``test_phi_stream``.
+    """
+    was = jax.config.read("jax_enable_x64")
+    jax.config.update("jax_enable_x64", False)
+    yield
+    jax.config.update("jax_enable_x64", was)
 
 
 def _tiny_cfg(**kw):
