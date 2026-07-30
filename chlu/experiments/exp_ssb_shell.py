@@ -799,21 +799,28 @@ def plot_from_json(path: str, save: Optional[str] = None) -> str:
 
     # (1) dividend by arm, per family
     a = ax[0, 0]
-    for fam, mk in zip(("manifold", "overload", "aggregate"), "os^", strict=True):
-        arms = list(dict.fromkeys(r["shell_arm"]["arm"] for r in recs
-                                  if r["family"] == fam))
-        if not arms:
-            continue
-        mu, se = [], []
-        for arm in arms:
+    # ONE arm ordering shared by every family, so the x ticks cannot mislabel a
+    # family that ran a different number of arms.
+    order = [x for x in (list(DEFAULT_ARMS[:4]) + [f"shell_tilt_{e:g}" for e in
+             EPS_GRID if e] + [f"shell_tiltd_{e:g}" for e in EPS_GRID if e])
+             if any(r["shell_arm"]["arm"] == x for r in recs)]
+    fams = list(dict.fromkeys(r.get("race_family", r["family"]) for r in recs))
+    for fam, mk in zip(fams, "os^dv<>", strict=False):
+        xs, mu, se = [], [], []
+        for i, arm in enumerate(order):
             v = [r["dividend"]["dividend"] for r in recs
-                 if r["family"] == fam and r["shell_arm"]["arm"] == arm]
+                 if r.get("race_family", r["family"]) == fam
+                 and r["shell_arm"]["arm"] == arm]
+            if not v:
+                continue
+            xs.append(i)
             mu.append(float(np.mean(v)))
             se.append(float(np.std(v, ddof=1) / np.sqrt(len(v))) if len(v) > 1 else 0.0)
-        a.errorbar(range(len(arms)), mu, yerr=se, marker=mk, ls="--", capsize=3,
-                   label=fam)
-        a.set_xticks(range(len(arms)))
-        a.set_xticklabels(arms, rotation=60, ha="right", fontsize=7)
+        if xs:
+            a.errorbar(xs, mu, yerr=se, marker=mk, ls="--", capsize=3, label=fam)
+    a.set_xticks(range(len(order)))
+    a.set_xticklabels(order, rotation=60, ha="right", fontsize=7)
+    a.set_ylim(-3.0, 0.6)
     a.axhline(0, color="k", lw=0.8)
     a.set_ylabel("dividend = full − settle-deleted launder")
     a.set_title("(1) dividend by arm (3 seeds, ±SE) — ⛔ none clears 0 by 2 SE")
@@ -868,19 +875,18 @@ def plot_from_json(path: str, save: Optional[str] = None) -> str:
 
     # (4) the byte ledger
     a = ax[1, 1]
-    for fam, mk in zip(("manifold", "overload", "aggregate"), "os^", strict=True):
+    for fam, mk in zip(fams, "os^dv<>", strict=False):
         pts = {}
         for r in recs:
-            if r["family"] != fam:
+            if r.get("race_family", r["family"]) != fam:
                 continue
             pts.setdefault(r["shell_arm"]["arm"], []).append(
                 (r["byte_ledger"]["ratio"], r["dividend"]["dividend"]))
-        for arm, v in pts.items():
-            v = np.asarray(v)
-            a.scatter(v[:, 0].mean(), v[:, 1].mean(), marker=mk,
-                      s=40, alpha=0.8)
-            a.annotate(arm, (v[:, 0].mean(), v[:, 1].mean()), fontsize=5)
+        xy = np.asarray([[np.mean([p[0] for p in v]), np.mean([p[1] for p in v])]
+                         for v in pts.values()])
+        a.scatter(xy[:, 0], xy[:, 1], marker=mk, s=40, alpha=0.8, label=fam)
     a.axhline(0, color="k", lw=0.8)
+    a.set_ylim(-1.2, 0.3)
     a.axvline(2.20, color="r", ls="--", lw=1, label="2.20× architectural floor")
     a.set_xscale("log")
     a.set_xlabel("byte ratio (full/launder) — matched = False everywhere")
