@@ -272,8 +272,121 @@ def byte_account(system, keys: np.ndarray, payloads: np.ndarray) -> ByteAccount:
     )
 
 
+# ==========================================================================
+# GYM-SIDE CALLERS (`memory-gym-v0`, appended — the signatures above are FROZEN)
+#
+# Why these exist. The three harness-native controls are the *frozen* ones and
+# they travel with every gym number, but for a **non-metric-native** query they
+# are not the strongest classical method, and reporting only them would be a
+# laundering by omission. Each gym family therefore also carries the strongest
+# classical substitute that fits in its own byte budget — and three of the four
+# cost **zero extra bytes**, because a table's row order and the query itself are
+# free information. A positive dividend that a +0 B substitute matches is not a
+# dynamics dividend; it is an artefact of the frozen control's byte allocation.
+# ==========================================================================
+def knn_mean_launder(keys: np.ndarray, payloads: np.ndarray, queries: np.ndarray,
+                     *, k: int = 2, weighting: str = "uniform") -> np.ndarray:
+    """The aggregate family's strong control: a **k-NN mean at +0 B**.
+
+    A table cannot *compute* a mean, but a reader with the same bytes can average
+    the ``k`` nearest rows — and that is the honest classical ceiling for an
+    aggregate query (intervention §6 criterion 4). ``weighting``:
+
+    * ``"uniform"`` — the plain ``k``-NN mean;
+    * ``"inverse_distance"`` — IDW, which additionally recovers the *mixing
+      fraction* and is the strongest zero-byte substitute we know how to build.
+
+    Returns the retrieved values, ``(n_queries, m)``.
+    """
+    q = np.asarray(queries, dtype=float)
+    ky = np.asarray(keys, dtype=float)
+    pays = np.asarray(payloads, dtype=float)
+    if pays.ndim == 1:
+        pays = pays[:, None]
+    kk = int(min(max(k, 1), ky.shape[0]))
+    d = np.linalg.norm(q[:, None, :] - ky[None, :, :], axis=-1)
+    idx = np.argsort(d, axis=1)[:, :kk]
+    sel = pays[idx]  # (n, k, m)
+    if weighting == "uniform":
+        return np.asarray(sel.mean(axis=1))
+    if weighting != "inverse_distance":
+        raise ValueError(f"unknown weighting {weighting!r}")
+    dk = np.take_along_axis(d, idx, axis=1)
+    w = 1.0 / np.maximum(dk, 1e-9)
+    w = w / np.sum(w, axis=1, keepdims=True)
+    return np.asarray(np.sum(sel * w[:, :, None], axis=1))
+
+
+def order_aware_launder(keys: np.ndarray, order: np.ndarray, queries: np.ndarray,
+                        *, k: int = 2, newest: bool = True) -> np.ndarray:
+    """⛔ The recency family's strong control: **insertion order at +0 B**.
+
+    A table's **row order already encodes insertion order** — no timestamp column
+    is needed, so this substitute costs *nothing* and answers "which of the two
+    nearest keys is more recent" exactly. It is the reason a positive recency
+    dividend against the frozen (payload-only) launder is a laundering artefact
+    rather than a dynamics dividend, and it must be reported beside it.
+
+    Returns the chosen key index per query, ``(n_queries,)``.
+    """
+    q = np.asarray(queries, dtype=float)
+    ky = np.asarray(keys, dtype=float)
+    ordr = np.asarray(order, dtype=float).reshape(-1)
+    kk = int(min(max(k, 1), ky.shape[0]))
+    d = np.linalg.norm(q[:, None, :] - ky[None, :, :], axis=-1)
+    idx = np.argsort(d, axis=1)[:, :kk]
+    cand = ordr[idx]
+    pick = np.argmax(cand, axis=1) if newest else np.argmin(cand, axis=1)
+    return np.asarray(np.take_along_axis(idx, pick[:, None], axis=1).ravel())
+
+
+def echo_launder(launch_values: np.ndarray) -> np.ndarray:
+    """⛔ The manifold family's strong control: **echo the query, at +0 B**.
+
+    "Retain a manifold of settled states" is a capability no lookup table has —
+    and a reader that simply returns the coordinate it launched from attains it
+    *exactly*, for free. So a positive manifold dividend is by-construction
+    (intervention §8.3) and is reported as a **capability measurement**, never as
+    a dividend. This function exists so that fact is measured, not assumed.
+    """
+    return np.array(np.asarray(launch_values, dtype=float), copy=True)
+
+
+def fit_shared_metric(keys: np.ndarray, queries: np.ndarray, labels: np.ndarray,
+                      *, ridge: float = 1e-6, normalize: bool = True
+                      ) -> np.ndarray:
+    """Fit the ``O(d^2)`` shared Mahalanobis metric :func:`shared_metric_launder` needs.
+
+    ``M = (Cov[q - c_{label(q)}] + ridge*I)^{-1}``, i.e. the inverse covariance of
+    the **query law's own residual** — the Bayes-optimal *shared* metric for a
+    Gaussian query law, fitted on a held-out split. Normalised to ``det(M) = 1``
+    so it is a pure *shape*, not a rescaling (a rescaling cannot change an
+    arg-min ranking, and reporting one as a stronger launder would be vacuous).
+
+    Cost, for the byte ledger: ``d(d+1)/2`` floats. ⚠ With an **isotropic** query
+    law the fit returns ``M ≈ I`` and the shared-metric launder necessarily
+    **ties** plain arg-min; it is still run, because doctrine I-12 asks for it and
+    it had never been run anywhere before this task.
+    """
+    q = np.asarray(queries, dtype=float)
+    ky = np.asarray(keys, dtype=float)
+    lab = np.asarray(labels, dtype=int).reshape(-1)
+    r = q - ky[lab]
+    d = r.shape[1]
+    cov = np.cov(r, rowvar=False) if r.shape[0] > d else np.eye(d) * float(np.var(r))
+    cov = np.atleast_2d(cov) + float(ridge) * np.eye(d)
+    M = np.linalg.inv(cov)
+    if normalize:
+        det = float(np.linalg.det(M))
+        if det > 0:
+            M = M / det ** (1.0 / d)
+    return np.asarray(M)
+
+
 __all__ = [
     "ByteAccount", "DividendReport", "dividend", "settle_deleted_launder",
     "shared_metric_launder", "same_keys_null", "blank_store_control",
     "trajectory_launder", "count_bytes", "byte_account",
+    # gym-side callers (memory-gym-v0)
+    "knn_mean_launder", "order_aware_launder", "echo_launder", "fit_shared_metric",
 ]
