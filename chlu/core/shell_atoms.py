@@ -146,7 +146,18 @@ class ShellAtomDictionaryPotential(eqx.Module):
     n_groups: int = eqx.field(static=True)
     radius_scale: float = eqx.field(static=True)
     tilt_eps: float = eqx.field(static=True)
-    axis_width_scale: Optional[tuple] = eqx.field(static=True, default=None)
+    #: how the per-atom angular tilt is weighted within a group.
+    #: ``"envelope"`` (the charter-literal local form) weights by ``g_j/Σg``,
+    #: which carries the envelope's own curvature ``~1/s²``; ``"depth"`` weights
+    #: by the q-INDEPENDENT ``A_j/ΣA``, which removes that amplification at the
+    #: cost of making the tilt non-local. Both are measured; see the report.
+    tilt_weight: str = eqx.field(static=True, default="envelope")
+    # ⚠ NOT a static field, exactly as in ``AtomDictionaryPotential``: the
+    # annealed read installs it with ``eqx.tree_at(..., is_leaf=x is None)``,
+    # which needs it to be a pytree node. Held as a tuple of PYTHON floats, so
+    # it is inert under ``eqx.is_inexact_array`` and can never be picked up by
+    # the write's ``trainable_filter``; it is a read-time knob only.
+    axis_width_scale: Optional[tuple] = None
 
     def __init__(
         self,
@@ -166,6 +177,7 @@ class ShellAtomDictionaryPotential(eqx.Module):
         r_init: float = 0.5,
         tilt_eps: float = 0.0,
         tilt_key: Optional[jax.random.PRNGKey] = None,
+        tilt_weight: str = "envelope",
     ):
         base = AtomDictionaryPotential(
             dim,
@@ -188,6 +200,9 @@ class ShellAtomDictionaryPotential(eqx.Module):
         self.axis_width_scale = base.axis_width_scale
         self.radius_scale = float(radius_scale)
         self.tilt_eps = float(tilt_eps)
+        if tilt_weight not in ("envelope", "depth"):
+            raise ValueError(f"tilt_weight must be 'envelope' or 'depth', got {tilt_weight!r}")
+        self.tilt_weight = str(tilt_weight)
         raw0 = float(np.log(np.expm1(max(float(r_init), 1e-6))))
         self.radius_raw = jnp.full((int(n_atoms),), raw0, dtype=self.centers.dtype)
         if self.tilt_eps == 0.0:
@@ -212,6 +227,7 @@ class ShellAtomDictionaryPotential(eqx.Module):
         r_init: float = 0.5,
         tilt_eps: float = 0.0,
         tilt_key: Optional[jax.random.PRNGKey] = None,
+        tilt_weight: str = "envelope",
     ) -> "ShellAtomDictionaryPotential":
         """Wrap an *already constructed* Gaussian atom dictionary.
 
@@ -232,6 +248,7 @@ class ShellAtomDictionaryPotential(eqx.Module):
             r_init=r_init,
             tilt_eps=tilt_eps,
             tilt_key=tilt_key,
+            tilt_weight=tilt_weight,
         )
         return eqx.tree_at(
             lambda t: [t.centers, t.log_width, t.amp],
@@ -282,31 +299,94 @@ class ShellAtomDictionaryPotential(eqx.Module):
         #     path at trace time, so the emitted HLO is identical and the
         #     *written store* is bit-identical too — which is the leg of the
         #     charter's gate that the arithmetic alone cannot carry.
+        rho = jnp.sqrt(d2 + RHO_EPS)
         if self.radius_scale == 0.0:
             u2 = d2
+            r = jnp.zeros_like(d2)
         else:
             r = self.radii()
-            rho = jnp.sqrt(d2 + RHO_EPS)
             u2 = d2 - 2.0 * rho * r + r * r
         env = jnp.exp(-u2 / denom)
         depth = self.amp**2
         v = -jnp.sum(depth * env)
         v = v + self.confine * jnp.sum(q**2)
         if self.tilt_eps != 0.0 and self.tilt_dir is not None:
-            v = v + self._tilt(raw, env)
+            v = v + self._tilt(raw, rho, r, env)
         return v
 
-    def _tilt(self, raw: jnp.ndarray, env: jnp.ndarray) -> jnp.ndarray:
-        """``(ε/2) Σ_j w_j (û_{o(j)}·(q − c_j))²`` with per-group normalised ``w``."""
+    def _tilt(self, raw: jnp.ndarray, rho: jnp.ndarray, r: jnp.ndarray,
+              env: jnp.ndarray) -> jnp.ndarray:
+        """``(ε/2) Σ_j w_j r_j² (û_{o(j)} · n̂_j)²`` — the **angular** tilt.
+
+        ⚠ This form was chosen after the obvious one was MEASURED to fail.
+        The naive term ``(ε/2) Σ_j w_j (û·(q − c_j))²`` grows quadratically away
+        from the atom, so at a real written site (where the group's atoms are
+        scattered, i.e. ``û·(q − c_j) = O(1)``) its Hessian is dominated by
+        ``(û·δ)² Hess g`` — a term of size ``−ε(û·δ)²/(2s²)``, which is
+        **negative**. Measured on a real store: ``λ_min`` went
+        ``+0.080 → −0.42 → −5.2 → −53`` across ``ε = 0 → 0.1 → 1 → 10``, i.e. the
+        "tilt" turned every site into a saddle — exactly the ridge write's
+        failure mode in a new costume.
+
+        Using the **unit direction** ``n̂_j = (q − c_j)/‖q − c_j‖`` makes the
+        angular factor bounded in ``[0, 1]``, and scaling by ``r_j²`` restores the
+        units, so at a vacuum on the shell (``û·n̂ = 0``, ``g = 1``):
+
+            ∇(û·n̂) = û/r   ⇒   Hess V_tilt = ε r² · (ûûᵀ/r²) = **ε ûûᵀ**
+
+        — the constant of proportionality is still exactly 1, and the dangerous
+        ``Hess g`` term now carries a factor ``(û·n̂)²`` that **vanishes at the
+        vacuum**. At ``r_j = 0`` the term is identically zero: with no designed
+        orbit there is nothing to break.
+        """
         oh = jnp.asarray(_owner_onehot(self.n_atoms, self.n_groups), dtype=raw.dtype)
         u = self.tilt_dir / (
             jnp.linalg.norm(self.tilt_dir, axis=-1, keepdims=True) + 1e-12
         )
         u_per_atom = oh @ u  # (n_atoms, dim)
-        proj = jnp.sum(raw * u_per_atom, axis=-1)  # (n_atoms,)
-        grp = env @ oh  # (n_groups,) per-group envelope mass
-        w = env / (oh @ (grp + TILT_NORM_EPS))
-        return 0.5 * self.tilt_eps * jnp.sum(w * proj**2)
+        cos = jnp.sum(raw * u_per_atom, axis=-1) / rho  # û · n̂, in [-1, 1]
+        if self.tilt_weight == "depth":
+            # q-INDEPENDENT weights: the tilt then carries no envelope curvature
+            # at all, at the price of being non-local (bounded by (eps/2) max r²
+            # everywhere). This is the variant that gives §A4.2's mechanism its
+            # best shot on a store whose atoms are scattered.
+            a = self.amp**2
+            w = a / (oh @ (a @ oh + TILT_NORM_EPS))
+        else:
+            grp = env @ oh  # (n_groups,) per-group envelope mass
+            w = env / (oh @ (grp + TILT_NORM_EPS))
+        return 0.5 * self.tilt_eps * jnp.sum(w * (r * cos) ** 2)
+
+    def tilt_vacuum_residual(self, q: jnp.ndarray) -> jnp.ndarray:
+        """``Σ_j w_j (û_{o(j)}·n̂_j)²`` at ``q`` — the pseudo-Goldstone **vacuum
+        condition**, and the statistic that decides whether the tilt tilts.
+
+        §A4.2's ``λ_soft = ε`` holds at a point where this is **0** (the site
+        lies on its atoms' shells, perpendicular to ``û``). At a randomly
+        oriented scatter in ``dim`` dimensions its expectation is ``1/dim``.
+        A measured value near ``1/dim`` means the site is *not* a common vacuum
+        and the tilt couples to the envelope's curvature instead.
+        """
+        if self.tilt_dir is None:
+            return jnp.asarray(float("nan"))
+        raw = q[None, :] - self.centers
+        d2 = jnp.sum(raw**2, axis=-1)
+        rho = jnp.sqrt(d2 + RHO_EPS)
+        s = jnp.exp(self.log_width)
+        r = self.radii()
+        u2 = d2 - 2.0 * rho * r + r * r
+        env = jnp.exp(-u2 / (2.0 * s**2 + 1e-9))
+        oh = jnp.asarray(_owner_onehot(self.n_atoms, self.n_groups), dtype=raw.dtype)
+        u = self.tilt_dir / (
+            jnp.linalg.norm(self.tilt_dir, axis=-1, keepdims=True) + 1e-12
+        )
+        cos = jnp.sum(raw * (oh @ u), axis=-1) / rho
+        if self.tilt_weight == "depth":
+            a = self.amp**2
+            w = a / (oh @ (a @ oh + TILT_NORM_EPS))
+        else:
+            w = env / (oh @ ((env @ oh) + TILT_NORM_EPS))
+        return jnp.sum(w * cos**2) / jnp.maximum(jnp.sum(w), 1e-12)
 
     # -- ledger ------------------------------------------------------------
     def byte_ledger(self) -> dict:

@@ -214,7 +214,7 @@ def test_tilt_gives_lambda_soft_equal_to_epsilon(eps):
     s = ShellAtomDictionaryPotential.from_gaussian(
         g, radius_scale=1.0, r_init=r, tilt_eps=eps)
     # tilt direction defaults to the LAST axis; sit on the shell perpendicular
-    # to it, i.e. û·(q − c) = 0.
+    # to it, i.e. û·n̂ = 0 — the pseudo-Goldstone vacuum.
     z = jnp.asarray([r, 0.0, 0.0], dtype=jnp.float32)
     w, _, info = shell_hessian_spectrum(s, z, tilt_dir=np.asarray(s.tilt_dir[0]),
                                         axis=dim - 1)
@@ -222,6 +222,37 @@ def test_tilt_gives_lambda_soft_equal_to_epsilon(eps):
     assert float(w[1]) == pytest.approx(eps, rel=0.05, abs=1e-6)
     assert abs(float(w[0])) < 1e-4
     assert info["lambda_max"] > 1.0  # the radial mode is massive
+    assert info["participation_tilt"] < 0.05  # softest = the UNtilted tangent
+
+
+@pytest.mark.parametrize("eps", [1e-2, 1.0, 10.0])
+def test_tilt_never_makes_the_vacuum_a_saddle(eps):
+    """⚠ The regression the naive ``(û·(q−c))²`` tilt failed: away from the atom
+    it grew quadratically and its ``Hess g`` term drove ``λ_min`` to −53 at
+    ε = 10. The angular form is bounded, so even the destructive anchor tilts
+    rather than destabilises."""
+    dim, r = 3, 0.5
+    key = jax.random.PRNGKey(0)
+    g = AtomDictionaryPotential(dim, 1, key, n_groups=1, confine=0.0)
+    g = eqx.tree_at(lambda t: [t.centers, t.amp, t.log_width], g,
+                    replace=[jnp.zeros((1, dim)), jnp.ones((1,)),
+                             jnp.full((1,), float(np.log(0.3)))])
+    s = ShellAtomDictionaryPotential.from_gaussian(
+        g, radius_scale=1.0, r_init=r, tilt_eps=eps)
+    z = jnp.asarray([r, 0.0, 0.0], dtype=jnp.float32)
+    w, _, _ = shell_hessian_spectrum(s, z)
+    assert float(w[0]) > -1e-4
+
+
+def test_tilt_is_identically_zero_without_a_shell():
+    """``r = 0`` ⇒ no designed orbit ⇒ nothing to break."""
+    g, _ = _pair(radius_scale=0.0)
+    s0 = ShellAtomDictionaryPotential.from_gaussian(g, radius_scale=0.0, r_init=0.5)
+    s1 = ShellAtomDictionaryPotential.from_gaussian(
+        g, radius_scale=0.0, r_init=0.5, tilt_eps=10.0)
+    qs = jax.random.normal(jax.random.PRNGKey(31), (16, DIM))
+    assert np.max(np.abs(np.asarray(jax.vmap(s1)(qs))
+                         - np.asarray(jax.vmap(s0)(qs)))) == 0.0
 
 
 def test_tilt_eps_zero_is_bit_identical_to_no_tilt():
