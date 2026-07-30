@@ -38,16 +38,25 @@ carried here so the code and the doctrine cannot drift apart:
      fire and certify nothing). Adds the validity leg and packing utilisation.
  4   confirmed; chance comes from the empirical marginal, not ``1/K``.
  5   confirmed (self-probe, label-free).
- 6   **SHARPENED**: retrieval leg = the self-probe acquisition rate.
+ 6   **SHARPENED**: retrieval leg = the self-probe acquisition rate. **+ C2W2
+     REPAIR (gym R2): a DEAD-BAND** — ``slope_loss < -eps and slope_acq <= 0``,
+     ``eps = 1e-9 * max|loss|``. 29 of the monitor's 58 first-ever trips fired
+     at ``slope_write_loss = -5.2e-17``: a monitor that trips on the
+     floating-point floor is a monitor that gets disabled.
  7   **SHARPENED (scope)**: a ``pytest`` gauge over the *trajectory*, and the
-     gauge is **Newtonian-only** (relativistic breaks as O(1/c^2)).
+     gauge is **Newtonian-only** (relativistic breaks as O(1/c^2)). C2W2:
+     :data:`GAUGE_SCOPE` names the scope per ``kinetic_mode`` and ``pytest``
+     is parameterised over all three.
  8   **SHARPENED**: ``kappa = 5`` indexes ``spacing/sigma``, not ``margin/sigma``
      (99% needs ``margin >= 2.576 sigma``); ``delta_read`` is basin-conditioned.
  9   **REPLACED**: ``|corr(retention, |a|)| > 0.30`` trips at *every* excursion
      tested. Trip on the retention **effect size** instead; corr is a direction
      indicator only.
 10   **SHARPENED**: an O(1) plumbing tier (declared-but-never-read config field)
-     plus the expensive semantic sweep.
+     plus the expensive semantic sweep. **C2W2 REPAIR: tier (a) is now
+     IMPLEMENTED** — :class:`ConfigAccessProxy` + :func:`assert_knobs_live`
+     fail at startup on a declared-but-never-read field (doctrine I-8; C1W27
+     declared ``knob_tier_a_implemented: false`` rather than silently passing).
 11   confirmed — the saddle criterion on ``L = sqrt(|c|^2 + a^2)``, zero free
      parameters.
 12   **SHARPENED**: C3 ratio on the k nearest items, plus allocation fairness
@@ -641,18 +650,41 @@ class ObjectiveDivergenceMonitor:
     consecutive windows.** Leading indicator (curriculum-blind):
     ``min_i (sep_i - 2 s_i)`` trending down while the loss falls.
     Verb: ``stop`` the write objective -> ``consolidate`` -> resume.
+
+    ⭐ **DEAD-BAND (C2W2 repair, `memory-gym-v0` R2).** The shipped predicate was
+    ``slope_loss < 0 and slope_acq <= 0``, with **no dead-band**, so a converged
+    write whose loss is flat to round-off trips: **29 of the monitor's 58
+    first-ever trips fired at ``slope_write_loss = -5.2e-17``,
+    ``slope_acq = -5.9e-17``** — half its trips were an epsilon artefact. The
+    predicate is now
+
+        ``slope_loss < -eps and slope_acq <= 0``,  ``eps = eps_rel * scale``
+
+    with ``scale = max(|loss|)`` over the window (so the band is relative to the
+    objective's own magnitude, not to an absolute number that would be wrong the
+    moment the loss is rescaled) and ``eps_rel = 1e-9``. ``eps_rel = 0.0``
+    restores the pre-repair predicate exactly, which is how the before/after
+    re-score is done without re-running the store.
+
+    A "loss fell by 1e-17" is not divergence; it is the floating-point floor.
     """
 
     name = "objective_divergence"
     mode = 6
-    false_trip = "a curriculum change (harder items) legitimately flattens retrieval as loss falls"
+    false_trip = ("a curriculum change (harder items) legitimately flattens retrieval "
+                  "as loss falls; and (pre-C2W2) a converged write whose slope is "
+                  "numerically zero — the dead-band closes the second one")
 
-    def __init__(self, window: int = 3):
+    def __init__(self, window: int = 3, eps_rel: float = 1e-9,
+                 eps_floor: float = 1e-30):
         self.window = int(window)
+        self.eps_rel = float(eps_rel)
+        self.eps_floor = float(eps_floor)
         self._hist: List[tuple] = []
 
     def observe(self, ctx: MonitorContext) -> MonitorReading:
-        band = f"sign agreement over {self.window} windows (w25/w26 violation)"
+        band = (f"sign agreement over {self.window} windows (w25/w26 violation), "
+                f"dead-band eps = {self.eps_rel:g} * max|loss| (gym R2)")
         loss = ctx.get("self_probe", "write_loss")
         acq = ctx.get("self_probe", "acq")
         if loss is None or acq is None:
@@ -667,11 +699,19 @@ class ObjectiveDivergenceMonitor:
         x = np.arange(n, dtype=float)
         slope_loss = float(np.polyfit(x, h[:, 0], 1)[0])
         slope_acq = float(np.polyfit(x, h[:, 1], 1)[0])
-        tripped = bool(slope_loss < 0.0 and slope_acq <= 0.0)
+        scale = float(np.max(np.abs(h[:, 0])))
+        eps = max(self.eps_rel * scale, self.eps_floor if self.eps_rel > 0 else 0.0)
+        tripped = objective_divergence_predicate(slope_loss, slope_acq, eps)
         return MonitorReading(
             name=self.name, mode=self.mode, value=slope_acq, band=band, tripped=tripped,
             lever="write objective", verb="stop|consolidate",
             detail={"slope_write_loss": slope_loss, "slope_acq": slope_acq,
+                    "eps_dead_band": eps, "loss_scale": scale,
+                    "eps_rel": self.eps_rel,
+                    # the pre-repair predicate, carried so a trip-state diff can
+                    # be re-scored offline from the artifact (gym R2)
+                    "tripped_pre_repair": objective_divergence_predicate(
+                        slope_loss, slope_acq, 0.0),
                     "leading_indicator_min_sep_minus_2s":
                         ctx.extras.get("min_sep_minus_2s", float("nan")),
                     "false_trip_mode": self.false_trip},
@@ -1030,6 +1070,148 @@ class GuardLivenessMonitor:
 # --------------------------------------------------------------------------
 # Free functions used by monitors and by ``pytest``
 # --------------------------------------------------------------------------
+def objective_divergence_predicate(slope_loss: float, slope_acq: float,
+                                   eps: float = 0.0) -> bool:
+    """Monitor #6's trip predicate, as a free function so a recorded reading can
+    be **re-scored offline** at any ``eps`` (the C2W2 before/after diff).
+
+    ``eps = 0.0`` is the pre-repair predicate (``slope_loss < 0 and
+    slope_acq <= 0``); ``eps > 0`` is the dead-band (gym R2).
+    """
+    return bool(float(slope_loss) < -float(eps) and float(slope_acq) <= 0.0)
+
+
+class ConfigAccessProxy:
+    """⭐ Monitor #10 **tier (a)**: the O(1) access-counting config proxy
+    (doctrine I-8; C2W1 shipped ``knob_tier_a_implemented: false``).
+
+    Wraps a dataclass config and counts every attribute read, so a knob that is
+    **declared but never read** is caught at startup — before any expensive
+    semantic sweep. It catches N19, N20 and N58 exactly, all three of which are
+    "the field is wired to nothing".
+
+    Usage::
+
+        cfg = ConfigAccessProxy(CluSystemConfig(addr_dim=4))
+        system = build_system(cfg.unwrap(), ...)   # or pass the proxy itself
+        ...
+        assert_knobs_live(cfg, exempt={"quick"})   # raises at startup
+        ctx.extras.update(cfg.knob_extras())       # feeds monitor #10
+
+    Notes and limits, stated rather than discovered later:
+
+    * attribute **reads** are counted (``__getattr__``/``__getattribute__``),
+      including reads made by ``dataclasses.fields``-driven code such as
+      ``as_flag_table``; call :meth:`reset` after any such bulk pass or every
+      knob will look live;
+    * ``dataclasses.replace(proxy, ...)`` does **not** work (it dispatches on
+      ``type``) — use ``replace(proxy.unwrap(), ...)``;
+    * it is a guard, never a loss: nothing here may enter an objective.
+    """
+
+    __slots__ = ("_obj", "_counts", "_declared")
+
+    def __init__(self, obj, declared: Optional[Sequence[str]] = None):
+        object.__setattr__(self, "_obj", obj)
+        if declared is None:
+            try:
+                from dataclasses import fields as _fields
+
+                declared = [f.name for f in _fields(obj)]
+            except Exception:
+                declared = [k for k in vars(obj) if not k.startswith("_")]
+        object.__setattr__(self, "_declared", tuple(str(k) for k in declared))
+        object.__setattr__(self, "_counts", {k: 0 for k in declared})
+
+    # -- delegation ---------------------------------------------------------
+    def __getattr__(self, name):
+        obj = object.__getattribute__(self, "_obj")
+        counts = object.__getattribute__(self, "_counts")
+        if name in counts:
+            counts[name] += 1
+        return getattr(obj, name)
+
+    def __setattr__(self, name, value):
+        setattr(object.__getattribute__(self, "_obj"), name, value)
+
+    def __repr__(self):
+        return f"ConfigAccessProxy({object.__getattribute__(self, '_obj')!r})"
+
+    # -- the tier-(a) API ---------------------------------------------------
+    def unwrap(self):
+        """The wrapped config (no counting)."""
+        return object.__getattribute__(self, "_obj")
+
+    @property
+    def counts(self) -> Dict[str, int]:
+        return dict(object.__getattribute__(self, "_counts"))
+
+    @property
+    def declared(self) -> List[str]:
+        return list(object.__getattribute__(self, "_declared"))
+
+    def reset(self) -> None:
+        """Zero every counter (call after a bulk ``fields()``-driven pass)."""
+        counts = object.__getattribute__(self, "_counts")
+        for k in counts:
+            counts[k] = 0
+
+    def never_read(self, exempt: Sequence[str] = ()) -> List[str]:
+        counts = object.__getattribute__(self, "_counts")
+        ex = set(exempt)
+        return sorted(k for k, v in counts.items() if v == 0 and k not in ex)
+
+    def knob_extras(self, exempt: Sequence[str] = ()) -> Dict[str, Any]:
+        """The two ``ctx.extras`` keys :class:`DeadAxisMonitor` reads."""
+        counts = self.counts
+        declared = [k for k in self.declared if k not in set(exempt)]
+        return {"knob_reads": {k: counts.get(k, 0) for k in declared},
+                "knobs_declared": declared,
+                "knob_tier_a_implemented": True}
+
+
+class DeadKnobError(RuntimeError):
+    """A declared config field was never read — monitor #10 tier (a), at startup."""
+
+
+def assert_knobs_live(proxy: "ConfigAccessProxy", exempt: Sequence[str] = (),
+                      raise_on_dead: bool = True) -> List[str]:
+    """**Fail at startup** on any declared-but-never-read field (doctrine I-8).
+
+    Returns the dead list; raises :class:`DeadKnobError` unless
+    ``raise_on_dead=False``. A dead axis makes every band statement about that
+    axis vacuous, so this is a *stop*, not a warning.
+    """
+    dead = proxy.never_read(exempt)
+    if dead and raise_on_dead:
+        raise DeadKnobError(
+            f"{len(dead)} declared config field(s) never read: {dead}. "
+            "Monitor #10 tier (a) (doctrine I-8): a knob wired to nothing makes "
+            "every band statement about that knob vacuous (N19/N20/N58)."
+        )
+    return dead
+
+
+#: Kinetic modes the #7 gauge is *stated* for, and its scope in each.
+#: `controller-doctrine` I-7 / R2: the gauge is **Newtonian-only**; under the
+#: relativistic kinetic it breaks as O(1/c^2) (9.1e-2 relative at the paper's
+#: c = 5), so a relativistic residual is a reported SCOPE, never a pass/fail.
+#: ⚠ C2W2 measurement (this is a SHARPENING of I-7's "the gauge is
+#: Newtonian-only"): under ``newtonian_identity`` the transformation is **not a
+#: gauge at all** — ``T = 0.5 p^2`` ignores ``M``, so scaling ``(M, V, p0)``
+#: rescales ``V`` and ``p0`` with nothing to compensate them and the trajectory
+#: moves (measured residual **0.25** on the atom store). The gauge is exact in
+#: ``newtonian_learned`` only. N76's "mass stores nothing" still holds trivially
+#: in identity mode, because the mass is not in the dynamics at all.
+GAUGE_SCOPE = {
+    "newtonian_identity": ("N/A — M does not enter T, so (M,V,p0)->(lam M, lam V, "
+                           "lam p0) is NOT a gauge orbit here (measured residual "
+                           "0.25); mass stores nothing trivially"),
+    "newtonian_learned": "exact (the gauge the theorem is stated for)",
+    "relativistic": "BREAKS as O(1/c^2) — SCOPE, not a pass (doctrine R2)",
+}
+
+
 def gauge_orbit_residual(model, q0, p0, steps: int, dt: float, gamma: float,
                          lam: float = 2.0) -> float:
     """Monitor #7's gauge test: max relative **trajectory** deviation under
@@ -1218,4 +1400,7 @@ __all__ = [
     "GuardLivenessMonitor",
     "gauge_orbit_residual", "saddle_reach_threshold", "kappa_stat",
     "erf_margin_accuracy",
+    # C2W2 repairs (#6 dead-band, #10 tier (a), #7 scope)
+    "objective_divergence_predicate", "ConfigAccessProxy", "DeadKnobError",
+    "assert_knobs_live", "GAUGE_SCOPE",
 ]
