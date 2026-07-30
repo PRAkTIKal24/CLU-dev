@@ -134,6 +134,24 @@ class GymConfig:
     lam_hi: float = 0.65
     #: occupancy kernel radius as a fraction of ``sep`` (trajectory read-out)
     occupancy_radius_frac: float = 0.5
+    #: ⛔ **C2W2 D4 — the recency-family harness DEFECT fix** (default ``False``
+    #: = shipped behaviour, bit-for-bit; a regression test asserts it).
+    #:
+    #: ``queries_recency`` asks *"which of THESE TWO items was written more
+    #: recently"* and :func:`score_index` grades it against a **2-way chance of
+    #: 0.5** — but every CLU-side arm (``argmax`` occupancy, ``point_assign``)
+    #: and the frozen settle-deleted launder answer an unrestricted ``K``-way
+    #: question over all live sites, while only ``order_aware_launder(k=2)`` is
+    #: restricted to the pair. Measured (seed 0, K=5, 9 pairs, 72 queries): the
+    #: CLU's answer falls **outside its own pair 19.4 %** of the time, and
+    #: restricting it lifts trajectory accuracy **0.4306 -> 0.5556** and the
+    #: launder **0.4861 -> 0.5139**. The gym's sub-chance ``0.3019`` was that
+    #: category error, not a null.
+    #:
+    #: With this ``True``, every index-family arm chooses **between the query's
+    #: own two candidates**, which is the question the labels and the chance
+    #: rate both assume.
+    restrict_index_to_pair: bool = False
     #: manifold family: spectator launch grid
     n_manifold_launch: int = 12
     manifold_launch_span: float = 0.6
@@ -624,6 +642,28 @@ def readout_occupancy(res, centers: np.ndarray, radius: float,
     return np.asarray(np.mean(w, axis=1))
 
 
+def restrict_to_pair(scores: np.ndarray, pairs: np.ndarray, *,
+                     higher_is_better: bool = True) -> np.ndarray:
+    """⛔ **C2W2 D4 harness fix**: choose between the query's OWN two candidates.
+
+    ``scores`` is ``(n_queries, K)`` (occupancy, or negated distance); ``pairs``
+    is ``(n_queries, 2)`` from ``QuerySet.meta``. Returns the chosen **global**
+    item index per query, so the result is scored by the unchanged
+    :func:`score_index` against the unchanged 2-way chance of 0.5.
+
+    Why this is a fix and not a thumb on the scale: the recency question, its
+    labels and its chance rate are all 2-way, and the +0 B ``order_aware``
+    substitute was **already** restricted this way (``k=2``). Leaving the CLU
+    arms unrestricted graded a 6-way answer on a 2-way curve — which is how a
+    working store measured *below* chance.
+    """
+    sc = np.asarray(scores, dtype=float)
+    pr = np.asarray(pairs, dtype=int)
+    take = np.take_along_axis(sc, pr, axis=1)
+    pick = np.argmax(take, axis=1) if higher_is_better else np.argmin(take, axis=1)
+    return np.asarray(np.take_along_axis(pr, pick[:, None], axis=1).ravel())
+
+
 def readout_point_assign(res, centers: np.ndarray) -> np.ndarray:
     """The **point** arm of the ablation: nearest stored site to ``q*``."""
     d = int(centers.shape[1])
@@ -701,7 +741,7 @@ __all__ = [
     "gym_config", "byte_ratio_law", "make_gym_stream",
     "queries_overload", "queries_aggregate", "queries_recency", "queries_manifold",
     "readout_settled", "readout_tail_mean", "readout_spectator",
-    "readout_occupancy", "readout_point_assign",
+    "readout_occupancy", "readout_point_assign", "restrict_to_pair",
     "score", "score_value", "score_index", "score_coord", "SCORERS",
     "PRIMARY_METRIC",
 ]

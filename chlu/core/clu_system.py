@@ -484,6 +484,9 @@ class CluSystem:
         self._t = 0
         self._write_log: List[dict] = []
         self._losses: List[float] = []
+        #: endpoint-only write loss per write (C2W2 gate ruling (i)); equals
+        #: ``_losses`` exactly when no Route-1 coefficient is set.
+        self._endpoint_losses: List[float] = []
         self._prev_store: Optional[LearnedVStore] = None
         self._c3_ratio = float("nan")
         self._oldest_drop = float("nan")
@@ -929,6 +932,22 @@ class CluSystem:
             **train_kwargs,
         )
         self.store = eqx.tree_at(lambda s: s.V, self.store, V)
+        # ⭐ C2W2: the ENDPOINT-ONLY write loss, re-evaluated on the written V with
+        # the Route-1 coefficients OFF. Without it a Route-1 arm looks unconverged
+        # merely for carrying its own extra term (its recorded total includes
+        # `lambda * L_term`, which is not required to reach zero), and the gate's
+        # convergence ruling would exclude exactly the arms under test. One extra
+        # loss evaluation per write.
+        try:
+            from chlu.training.train_memory import write_loss as _wl
+
+            base_kwargs = {k: v for k, v in loss_kwargs.items()
+                           if k not in ("lambda_traj", "lambda_path",
+                                        "traj_kwargs", "path_kwargs")}
+            self._endpoint_losses.append(
+                float(_wl(V, jnp.asarray(z), key, **base_kwargs)))
+        except Exception:  # never let a diagnostic break a write
+            self._endpoint_losses.append(float("nan"))
         return float(hist[-1]) if hist else float("nan")
 
     def _relaxed_sites(self) -> Optional[np.ndarray]:

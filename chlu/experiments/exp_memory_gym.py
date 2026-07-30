@@ -76,6 +76,7 @@ from chlu.experiments.memory_gym import (
     readout_settled,
     readout_spectator,
     readout_tail_mean,
+    restrict_to_pair,
     score,
 )
 
@@ -155,14 +156,27 @@ def _build_queries(gcfg: GymConfig, ccfg: CluSystemConfig, stream, system,
 
 
 def _clu_predictions(gcfg: GymConfig, ccfg: CluSystemConfig, res,
-                     centers: np.ndarray, sep: float) -> Dict[str, np.ndarray]:
-    """The CLU's own read-outs. ⭐ Point vs trajectory is an *internal ablation*."""
+                     centers: np.ndarray, sep: float,
+                     pairs: Optional[np.ndarray] = None) -> Dict[str, np.ndarray]:
+    """The CLU's own read-outs. ⭐ Point vs trajectory is an *internal ablation*.
+
+    ``pairs`` (C2W2 D4): when ``gcfg.restrict_index_to_pair`` is set, the index
+    family's arms choose between the query's **own two candidates** instead of
+    arg-maxing over all ``K`` live sites — the question the labels and the 2-way
+    chance rate both assume. Default off => shipped behaviour.
+    """
     fam = gcfg.family
     if fam == "manifold":
         return {"clu": readout_spectator(res, ccfg)}
     if fam == "recency":
         radius = float(gcfg.occupancy_radius_frac) * (sep if np.isfinite(sep) else 1.0)
         occ = readout_occupancy(res, centers, radius)
+        if gcfg.restrict_index_to_pair and pairs is not None:
+            q = np.asarray(res.state.q_star)[:, : centers.shape[1]]
+            neg_d = -np.linalg.norm(q[:, None, :] - centers[None, :, :], axis=-1)
+            return {"clu": restrict_to_pair(occ, pairs),          # trajectory
+                    "clu_point": restrict_to_pair(neg_d, pairs),  # settled point
+                    "_occupancy": occ}
         return {"clu": np.argmax(occ, axis=1),               # trajectory read-out
                 "clu_point": readout_point_assign(res, centers),  # settled point
                 "_occupancy": occ}
@@ -172,7 +186,9 @@ def _clu_predictions(gcfg: GymConfig, ccfg: CluSystemConfig, res,
 
 def _launder_predictions(qs: QuerySet, centers: np.ndarray, pays: np.ndarray,
                          born: np.ndarray, rng: np.random.Generator,
-                         shared_M: Optional[np.ndarray]) -> Dict[str, np.ndarray]:
+                         shared_M: Optional[np.ndarray],
+                         restrict_pairs: Optional[np.ndarray] = None
+                         ) -> Dict[str, np.ndarray]:
     """Every control's prediction, scored later by the SAME family scorer.
 
     The first two keys are the frozen harness-native controls and are present on
@@ -200,6 +216,13 @@ def _launder_predictions(qs: QuerySet, centers: np.ndarray, pays: np.ndarray,
         out["same_keys_null"] = settle_deleted_launder(centers, pays[perm], qs.keys,
                                                        metric="assign")
         out["order_aware_+0B"] = order_aware_launder(centers, born, qs.keys, k=2)
+        if restrict_pairs is not None:
+            # C2W2 D4: the frozen launder must answer the SAME 2-way question the
+            # CLU arm now answers, or the fix would just be a thumb on the scale.
+            neg_dk = -np.linalg.norm(
+                qs.keys[:, None, :] - centers[None, :, :], axis=-1)
+            out["settle_deleted"] = restrict_to_pair(neg_dk, restrict_pairs)
+            out["same_keys_null"] = restrict_to_pair(neg_dk, restrict_pairs)
     else:  # coord
         n = len(qs)
         # a table stores ONE point per item, and the spectator coordinate it
@@ -208,6 +231,69 @@ def _launder_predictions(qs: QuerySet, centers: np.ndarray, pays: np.ndarray,
         out["same_keys_null"] = np.zeros((n, 1), dtype=float)
         out["echo_+0B"] = echo_launder(qs.target)
     return out
+
+
+# --------------------------------------------------------------------------
+# ⭐ C2W2: the MANDATORY trajectory launder, on every psi that sees the address
+# --------------------------------------------------------------------------
+class _TrajView:
+    """A read-result shim carrying a substituted trajectory buffer.
+
+    Doctrine I-2 / charter §A5-C2W2.1: the trajectory buffer **contains**
+    ``q0 = phi(x)``, so a trajectory read-out over the raw buffer could be a
+    classifier on the query embedding and nothing else. Every trajectory psi
+    therefore reports four scores — ``full`` / ``q0_only`` / ``endpoints`` /
+    ``blank_store`` — and ``endpoints`` is the **capacity-matched** baseline
+    ``[q0, q_addr, q*]`` (⛔ never ``q0_only``: beating a strictly smaller read
+    is not evidence).
+    """
+
+    def __init__(self, res, traj):
+        self.state = res.state
+        self.traj = traj
+        self.phase = np.full((int(np.asarray(traj).shape[1]),), 2, dtype=int)
+
+
+def _pt(q, p):
+    import jax.numpy as jnp
+
+    return jnp.concatenate([q, p], axis=-1)[:, None, :]
+
+
+def trajectory_launder_scores(gcfg: GymConfig, ccfg: CluSystemConfig, qs: QuerySet,
+                              res, b_res, centers: np.ndarray, sep: float,
+                              restrict_pairs: Optional[np.ndarray],
+                              metric: str) -> Dict[str, float]:
+    """The four trajectory-launder numbers + the leak bar, scored by the family's
+    OWN scorer (so they are comparable to the cell's ``full``)."""
+    import jax.numpy as jnp
+
+    st = res.state
+    q0 = _pt(st.q0, st.p0)
+    ends = jnp.concatenate([q0, _pt(st.q_addr, st.p_addr), _pt(st.q_star, st.p_star)],
+                           axis=1)
+
+    def _score(r):
+        pr = _clu_predictions(gcfg, ccfg, r, centers, sep, restrict_pairs)
+        pr.pop("_occupancy", None)
+        key = "clu_traj_tail" if "clu_traj_tail" in pr else "clu"
+        return float(score(qs, pr[key])[metric]), key
+
+    full, used = _score(res)
+    q0_only, _ = _score(_TrajView(res, jnp.broadcast_to(q0, res.traj.shape)))
+    endpoints, _ = _score(_TrajView(res, ends))
+    blank, _ = _score(b_res)
+    chance = float(score(qs, _clu_predictions(gcfg, ccfg, res, centers, sep,
+                                              restrict_pairs)["clu"]
+                         ).get("chance", float("nan")))
+    n = max(len(qs), 1)
+    # leak bar: 3 SE above the harder of {blank store, chance}, on the metric's
+    # own scale (a binomial SE for accuracy-like metrics, else the empirical one)
+    base = np.nanmax([blank, chance]) if np.isfinite(chance) else blank
+    se = float(np.sqrt(max(min(abs(base), 1.0) * (1.0 - min(abs(base), 1.0)), 1e-6) / n))
+    return {"full": full, "q0_only": q0_only, "endpoints": endpoints,
+            "blank_store": blank, "chance": chance, "bar": float(base + 3.0 * se),
+            "psi": used, "n_queries": int(n)}
 
 
 def _ridge_write(system, gcfg: GymConfig, ccfg: CluSystemConfig, slot: int,
@@ -280,8 +366,15 @@ def _hessian_spectrum(system, centers: np.ndarray, pays: np.ndarray,
 # --------------------------------------------------------------------------
 def run_cell(family: str, arm: str = "base", seed: int = 0,
              gym_overrides: Optional[dict] = None, quick: bool = False,
-             loud: bool = True) -> dict:
-    """Run one gym cell end-to-end and return its record (dividend + controls)."""
+             loud: bool = True,
+             write_objective: Optional[dict] = None) -> dict:
+    """Run one gym cell end-to-end and return its record (dividend + controls).
+
+    ``write_objective`` (C2W2 seam (a), additive): an objective spec handed to
+    every write of this cell — this is how the Route-1 arms (``traj_write`` /
+    ``path_write`` / ``traj+path``) reuse the gym unchanged. ``None`` (the
+    default) is the shipped ``endpoint_write`` control, bit-for-bit.
+    """
     import jax
 
     over = dict(gym_overrides or {})
@@ -297,7 +390,8 @@ def run_cell(family: str, arm: str = "base", seed: int = 0,
     label = f"{family}/{arm}@s{seed}"
 
     t0 = time.time()
-    system = build_system(ccfg, key=jax.random.PRNGKey(seed), loud=loud)
+    system = build_system(ccfg, key=jax.random.PRNGKey(seed), loud=loud,
+                          write_objective=write_objective)
     stream = make_gym_stream(gcfg, ccfg)
 
     # --- the write stream, with consolidation windows interleaved -----------
@@ -359,7 +453,10 @@ def run_cell(family: str, arm: str = "base", seed: int = 0,
     res = system.read(qs.q0)
     read_s = time.time() - t1
 
-    preds = _clu_predictions(gcfg, ccfg, res, centers, sep)
+    restrict_pairs = (np.asarray(qs.meta.get("pairs"))
+                      if (gcfg.restrict_index_to_pair and qs.kind == "index"
+                          and qs.meta.get("pairs") is not None) else None)
+    preds = _clu_predictions(gcfg, ccfg, res, centers, sep, restrict_pairs)
     occupancy = preds.pop("_occupancy", None)
 
     # ⭐ SECOND READ VARIANT, at zero extra bytes and (to within one step) the same
@@ -375,7 +472,7 @@ def run_cell(family: str, arm: str = "base", seed: int = 0,
     try:
         system.controller.anneal([4.0, 2.0, 1.0])
         res_a = system.read(qs.q0)
-        preds_a = _clu_predictions(gcfg, ccfg, res_a, centers, sep)
+        preds_a = _clu_predictions(gcfg, ccfg, res_a, centers, sep, restrict_pairs)
         occupancy_a = preds_a.pop("_occupancy", None)
     except Exception as exc:  # a refused verb is reported, never silently skipped
         anneal_error = repr(exc)
@@ -398,13 +495,15 @@ def run_cell(family: str, arm: str = "base", seed: int = 0,
                       "note": ("isotropic query law => M ~ I => this launder "
                                "necessarily TIES plain arg-min; run because "
                                "doctrine I-12 asks for it and it had never run")}
-    launders = _launder_predictions(qs, centers, pays, born, rng, shared_M)
+    launders = _launder_predictions(qs, centers, pays, born, rng, shared_M,
+                                    restrict_pairs)
 
     # --- the blank / empty-store control (harness-native #3 of 3) ----------
     blank_sys = build_system(replace(ccfg, seed=ccfg.seed + 991),
-                             key=jax.random.PRNGKey(seed + 991), loud=False)
+                             key=jax.random.PRNGKey(seed + 991), loud=False,
+                             write_objective=write_objective)
     b_res = blank_sys.read(qs.q0)
-    b_preds = _clu_predictions(gcfg, ccfg, b_res, centers, sep)
+    b_preds = _clu_predictions(gcfg, ccfg, b_res, centers, sep, restrict_pairs)
     b_preds.pop("_occupancy", None)
     blank_primary = score(qs, b_preds["clu"])[PRIMARY_METRIC[family]]
     # the auxiliary, family-independent decode the harness uses (comparable to
@@ -497,9 +596,17 @@ def run_cell(family: str, arm: str = "base", seed: int = 0,
                      "substitute defined for this family")),
     }
 
+    try:
+        traj_launder = trajectory_launder_scores(gcfg, ccfg, qs, res, b_res, centers,
+                                                 sep, restrict_pairs, metric)
+    except Exception as exc:  # reported, never silently skipped
+        traj_launder = {"error": repr(exc)}
+
     rec = {
         "cell": label, "family": family, "arm": arm, "seed": seed,
+        "trajectory_launder": traj_launder,
         "degenerate": False,
+        "write_objective": (write_objective or None),
         "gym_config_non_default": gcfg.as_flag_table(),
         "clu_config_non_default": ccfg.as_flag_table(),
         "n_offered": len(stream.offered), "n_stream_rows": len(stream.items),
@@ -507,6 +614,11 @@ def run_cell(family: str, arm: str = "base", seed: int = 0,
         "overload_factor": gcfg.overload_factor,
         "admitted": admitted, "refused": refused, "evicted": evicted,
         "deleted": deleted, "write_losses": losses,
+        # ⭐ C2W2 gate ruling (i): the write's ENDPOINT part, with the Route-1
+        # coefficients off — the quantity convergence must be judged on.
+        "endpoint_write_losses": list(system._endpoint_losses),
+        "endpoint_write_loss": (float(system._endpoint_losses[-1])
+                                if system._endpoint_losses else float("nan")),
         "n_consolidations": len(consolidations), "consolidations": consolidations,
         "n_queries": int(len(qs)), "primary_metric": metric,
         "scores": {k: {m: float(v) for m, v in s.items()} for k, s in scores.items()},

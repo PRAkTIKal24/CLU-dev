@@ -587,6 +587,30 @@ def setup_experiment_parsers(subparsers):
                                help='Override the per-cell seed list')
     exp_gym_parser.set_defaults(func=cmd_exp_memory_gym)
 
+    # exp-traj-write  (C2W2 Route 1: the trajectory/path write objective)
+    exp_tw_parser = subparsers.add_parser(
+        'exp-traj-write',
+        help='C2W2 Route 1: ask the WRITE to put information in the trajectory '
+             '(lambda_traj / lambda_path, both default 0) and score the frozen '
+             'race card'
+    )
+    exp_tw_parser.add_argument('--project', help='Project name to use')
+    exp_tw_parser.add_argument('--seed', type=int, help='Base seed offset')
+    exp_tw_parser.add_argument('--quick', action='store_true',
+                               help='Quick smoke mode (plumbing only, not a result)')
+    exp_tw_parser.add_argument('--families', nargs='+',
+                               help='Run only these families '
+                                    '(overload|aggregate|manifold)')
+    exp_tw_parser.add_argument('--arms', nargs='+',
+                               help='Run only these race arms (endpoint_write|'
+                                    'traj_write|path_write|traj+path)')
+    exp_tw_parser.add_argument('--seeds', nargs='+', type=int, default=[0, 1, 2],
+                               help='Seeds per cell (the gate needs {0,1,2})')
+    exp_tw_parser.add_argument('--coeffs', nargs='+', type=float,
+                               help='Coefficient grid (default: the PRE-REGISTERED '
+                                    '0.03 0.3 3.0 30.0)')
+    exp_tw_parser.set_defaults(func=cmd_exp_traj_write)
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -1663,6 +1687,55 @@ def cmd_exp_memory_gym(args):
             )
         untested = sorted(n for n, r in res['monitor_table'].items() if r['untested'])
         console.print(f"  monitors still UNTESTED (never fired): {untested or 'none'}")
+        return 0
+    except Exception as e:  # pragma: no cover - CLI plumbing
+        console.print(f"[red]Error: {e}[/red]")
+        import traceback
+
+        traceback.print_exc()
+        return 1
+
+
+def cmd_exp_traj_write(args):
+    """Run the C2W2 Route-1 race card (the trajectory/path write objective)."""
+    console.print(
+        "[bold cyan]Running Experiment TRAJ-WRITE (C2W2 Route 1): the write is "
+        "asked to put information in the trajectory; the dividend is still the "
+        "sole KPI and the gate's verdict is the Hub's[/bold cyan]"
+    )
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+    config.project.save_dir = str(paths['plots'])
+    try:
+        from ..experiments.exp_traj_write import (
+            COEFF_GRID,
+            run_experiment_traj_write,
+        )
+
+        res = run_experiment_traj_write(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+            families=getattr(args, 'families', None),
+            arms=getattr(args, 'arms', None),
+            seeds=tuple(getattr(args, 'seeds', None) or (0, 1, 2)),
+            coeffs=tuple(getattr(args, 'coeffs', None) or COEFF_GRID),
+            quick=getattr(args, 'quick', False),
+        )
+        console.print(f"✓ Experiment TRAJ-WRITE completed ({res['n_cells']} cells)")
+        for fam, row in res['coverage_per_family'].items():
+            console.print(
+                f"  admissible-cell coverage [{fam}]: "
+                f"{row['n_admissible']}/{row['n_cells']} ({row['coverage']:.0%})"
+                + (f"  reasons: {row['reasons']}" if row['reasons'] else "")
+            )
+        g = res['gate']
+        console.print(f"  cleared 2 SE: {g['cleared_two_se'] or 'none'}")
+        console.print(f"  <=0 votes:    {g['le_zero_votes'] or 'none'}")
+        console.print(f"  abstained:    {g['abstained'] or 'none'}")
+        console.print(f"  under-powered grids: {g['under_powered_grids'] or 'none'}")
         return 0
     except Exception as e:  # pragma: no cover - CLI plumbing
         console.print(f"[red]Error: {e}[/red]")
