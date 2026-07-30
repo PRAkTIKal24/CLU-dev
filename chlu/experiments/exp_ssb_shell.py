@@ -423,6 +423,73 @@ def group_geometry(system) -> Dict[str, Any]:
     return out
 
 
+def liveness_table(records: Sequence[dict]) -> Dict[tuple, dict]:
+    """⭐ Gate ruling (ii): per-``(family, arm)`` DIAL LIVENESS, with the grid's
+    perturbing anchor.
+
+    Declared observable (PREREG P2 / P-B): ``O`` = median ``λ_min(Hess V)`` over
+    the written sites. Baseline = the ``gauss`` control of the same family; noise
+    = the control's own sample sd over its 3 seeds; **bar = 3 × noise** (monitor
+    #10's own bar). An arm is *live* when ``|ΔO| > bar``.
+
+    ``perturbing_anchor`` is a property of the GRID, not of one arm, so it is set
+    on **every** cell of a family once some arm in that family both moves ``O``
+    past the bar **and** degrades the family metric past the control's 2 SE —
+    i.e. an ε that visibly perturbs the store, even destructively. Without it an
+    inert-everywhere result would be an under-powered grid rather than a ≤0 vote
+    (Head, verbatim: *"a term that never moves anything at any tested setting
+    hasn't been asked; it's been whispered at"*).
+    """
+    ok = [r for r in records if not r.get("degenerate") and not r.get("error")]
+    fams = dict.fromkeys(r.get("race_family", r["family"]) for r in ok)
+    out: Dict[tuple, dict] = {}
+    for fam in fams:
+        rows = [r for r in ok if r.get("race_family", r["family"]) == fam]
+        metric = PRIMARY_METRIC[rows[0]["family"]]
+
+        def obs(r):
+            return float(r.get("spectra", {}).get("lambda_min_median", np.nan))
+
+        ctrl = [r for r in rows if r["shell_arm"]["arm"] == "gauss"]
+        base = float(np.mean([obs(r) for r in ctrl])) if ctrl else float("nan")
+        noise = (float(np.std([obs(r) for r in ctrl], ddof=1))
+                 if len(ctrl) > 1 else float("nan"))
+        bar = 3.0 * noise
+        c_score = np.asarray([r["scores"]["clu"][metric] for r in ctrl], dtype=float)
+        c_mu = float(np.mean(c_score)) if ctrl else float("nan")
+        c_2se = (2.0 * float(np.std(c_score, ddof=1)) / np.sqrt(max(len(ctrl), 1))
+                 if len(ctrl) > 1 else float("nan"))
+        arms = dict.fromkeys(r["shell_arm"]["arm"] for r in rows)
+        per = {}
+        anchor = False
+        for arm in arms:
+            v = [r for r in rows if r["shell_arm"]["arm"] == arm]
+            mu = float(np.mean([obs(r) for r in v]))
+            sc = float(np.mean([r["scores"][ 'clu'][metric] for r in v]))
+            live = bool(np.isfinite(bar) and abs(mu - base) > bar)
+            hurts = bool(np.isfinite(c_2se) and (c_mu - sc) > max(c_2se, 1e-9))
+            per[arm] = dict(value=mu, live=live, score=sc, destructive=live and hurts)
+            anchor = anchor or (live and hurts)
+        for arm, p in per.items():
+            out[(fam, arm)] = {
+                "passed": p["live"], "coefficient": float(
+                    ARMS[arm].tilt_eps if arm in ARMS else float("nan")),
+                "value": p["value"], "baseline": base, "bar": float(base + bar),
+                "perturbing_anchor": anchor,
+                "grid": list(EPS_GRID),
+                "detail": {
+                    "observable": "median lambda_min(Hess V) at written sites",
+                    "control": "gauss (same family, same seeds)",
+                    "control_noise_sd": noise,
+                    "bar_rule": "3x the control's own seed-to-seed sd (monitor #10)",
+                    "arm_score": p["score"], "control_score": c_mu,
+                    "control_2se": c_2se,
+                    "this_arm_is_the_destructive_anchor": p["destructive"],
+                },
+            }
+    return out
+
+
 def emit_race_from_json(path: str, out_path: Optional[str] = None) -> Optional[dict]:
     """Re-emit the race card from a saved metrics JSON.
 
@@ -436,7 +503,11 @@ def emit_race_from_json(path: str, out_path: Optional[str] = None) -> Optional[d
         return None
     with open(path) as fh:
         blob = json.load(fh)
-    cells = [to_race_cell(r, race) for r in blob["records"]
+    live = liveness_table(blob["records"])
+    cells = [to_race_cell(r, race,
+                          liveness=live.get((r.get("race_family", r["family"]),
+                                             r["shell_arm"]["arm"])))
+             for r in blob["records"]
              if not r.get("degenerate") and not r.get("error")]
     verdicts = race.score_card(cells)
     blob["race_cells"] = [c.as_dict() for c in cells]
@@ -457,14 +528,28 @@ def emit_race_from_json(path: str, out_path: Optional[str] = None) -> Optional[d
 # ==========================================================================
 def run_shell_cell(family: str, arm_name: str, seed: int = 0, *,
                    gym_overrides: Optional[dict] = None, quick: bool = False,
-                   loud: bool = False, dial: bool = False) -> Dict[str, Any]:
-    """One race cell: ``exp_memory_gym.run_cell`` on a shell store + the spectra."""
+                   loud: bool = False, dial: bool = False,
+                   gym_arm: str = "base",
+                   family_label: Optional[str] = None) -> Dict[str, Any]:
+    """One race cell: ``exp_memory_gym.run_cell`` on a shell store + the spectra.
+
+    ``gym_arm`` selects the GYM's own arm (e.g. ``load1x_shipped``, the 478x
+    shipped-atom-budget anchor — the only gym cell where the store actually
+    works); ``family_label`` renames the family on the race card so an escalated
+    budget is never silently averaged into the base family's verdict.
+    """
     arm = ARMS[arm_name]
     sink: List[Any] = []
     t0 = time.time()
     with shell_rig(arm, sink=sink, tilt_seed=seed + 4242):
-        rec = gym_exp.run_cell(family, arm="base", seed=seed,
+        rec = gym_exp.run_cell(family, arm=gym_arm, seed=seed,
                                gym_overrides=gym_overrides, quick=quick, loud=loud)
+    rec["gym_arm"] = gym_arm
+    # ⚠ NOT `rec["family"]` — that key drives the gym's own metric/scorer lookup.
+    # The race card's family label is separate, so an escalated budget is never
+    # silently averaged into the base family's verdict.
+    if family_label:
+        rec["race_family"] = family_label
     rec["shell_arm"] = arm.as_flags()
     rec["route"] = ROUTE
     rec["wall_cell_s"] = time.time() - t0
@@ -507,6 +592,7 @@ def to_race_cell(rec: Dict[str, Any], race, *, liveness: Optional[dict] = None):
     """Map one cell record onto the shared race-card schema (route ``route2``)."""
     family = rec["family"]
     metric = PRIMARY_METRIC[family]
+    family = rec.get("race_family", family)
     sc = rec.get("scores", {})
     div = rec.get("dividend", {})
     ledger = rec.get("byte_ledger", {})
@@ -614,6 +700,8 @@ def run_experiment_ssb_shell(
     dial_family: str = "manifold",
     loud: bool = False,
     low_confine_dial: Optional[float] = 0.005,
+    gym_arm: str = "base",
+    family_label: Optional[str] = None,
 ) -> Dict[str, Any]:
     os.makedirs(save_dir, exist_ok=True)
     race = _race()
@@ -630,7 +718,8 @@ def run_experiment_ssb_shell(
               f"{' +dial' if want_dial else ''}", flush=True)
         try:
             rec = run_shell_cell(fam, arm, seed, quick=quick, loud=loud,
-                                 dial=want_dial)
+                                 dial=want_dial, gym_arm=gym_arm,
+                                 family_label=family_label)
         except Exception as exc:  # a failed cell is reported, never dropped
             rec = {"cell": f"{fam}/{arm}@s{seed}", "family": fam, "seed": seed,
                    "shell_arm": ARMS[arm].as_flags(), "error": repr(exc),
@@ -671,12 +760,19 @@ def run_experiment_ssb_shell(
         "families": list(families), "seeds": list(seeds),
         "arms": sorted({a for _, a, _ in todo}),
         "eps_grid": list(EPS_GRID), "r_designed": R_DESIGNED,
+        "gym_arm": gym_arm, "family_label": family_label,
         "n_cells": len(records), "wall_s": time.time() - t0,
         "records": records,
         "low_confine_dial": low_dial,
         "race_card_available": race is not None,
     }
     if race is not None and cells:
+        live = liveness_table(records)
+        cells = [to_race_cell(r, race,
+                              liveness=live.get((r.get("race_family", r["family"]),
+                                                 r["shell_arm"]["arm"])))
+                 for r in records
+                 if not r.get("degenerate") and not r.get("error")]
         verdicts = race.score_card(cells)
         out["race_cells"] = [c.as_dict() for c in cells]
         out["verdicts"] = [v.as_dict() for v in verdicts]
@@ -686,6 +782,116 @@ def run_experiment_ssb_shell(
         race.save_cells(os.path.join(save_dir, "race_cells_route2.json"), cells)
     with open(os.path.join(save_dir, "exp_ssb_shell_metrics.json"), "w") as fh:
         json.dump(out, fh, indent=2, default=_json_default)
+    return out
+
+
+def plot_from_json(path: str, save: Optional[str] = None) -> str:
+    """Four panels: the per-family dividend by arm, ``λ_min(ε)`` for both tilt
+    implementations, ``τ(ε)`` against the predicted knee, and the byte ledger."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    with open(path) as fh:
+        d = json.load(fh)
+    recs = [r for r in d["records"] if not r.get("degenerate") and not r.get("error")]
+    fig, ax = plt.subplots(2, 2, figsize=(15, 10))
+
+    # (1) dividend by arm, per family
+    a = ax[0, 0]
+    for fam, mk in zip(("manifold", "overload", "aggregate"), "os^", strict=True):
+        arms = list(dict.fromkeys(r["shell_arm"]["arm"] for r in recs
+                                  if r["family"] == fam))
+        if not arms:
+            continue
+        mu, se = [], []
+        for arm in arms:
+            v = [r["dividend"]["dividend"] for r in recs
+                 if r["family"] == fam and r["shell_arm"]["arm"] == arm]
+            mu.append(float(np.mean(v)))
+            se.append(float(np.std(v, ddof=1) / np.sqrt(len(v))) if len(v) > 1 else 0.0)
+        a.errorbar(range(len(arms)), mu, yerr=se, marker=mk, ls="--", capsize=3,
+                   label=fam)
+        a.set_xticks(range(len(arms)))
+        a.set_xticklabels(arms, rotation=60, ha="right", fontsize=7)
+    a.axhline(0, color="k", lw=0.8)
+    a.set_ylabel("dividend = full − settle-deleted launder")
+    a.set_title("(1) dividend by arm (3 seeds, ±SE) — ⛔ none clears 0 by 2 SE")
+    a.legend(fontsize=8)
+
+    # (2) lambda_min(eps) from the dial probes
+    a = ax[0, 1]
+    for r in recs:
+        if "dial" not in r or not r["dial"].get("applicable"):
+            continue
+        rows = r["dial"]["rows"]
+        e = np.array([x["eps"] for x in rows])
+        lm = np.array([x["lambda_min_median"] for x in rows])
+        lab = f"tilt weight = {r['shell_arm']['tilt_weight']}"
+        a.plot(np.maximum(e, 3e-4), lm, "o-", label=lab)
+    lo = d.get("low_confine_dial") or {}
+    if lo.get("dial", {}).get("rows"):
+        rows = lo["dial"]["rows"]
+        a.plot(np.maximum([x["eps"] for x in rows], 3e-4),
+               [x["lambda_min_median"] for x in rows], "s--",
+               label=f"confine={lo['confine']} (extra)")
+    e = np.logspace(-3, 1, 50)
+    a.plot(e, 0.0994 + e, "k:", lw=1, label="§A4.2 prediction: λ = λ₀ + ε")
+    a.axhline(0, color="r", lw=0.8)
+    a.set_xscale("log")
+    a.set_yscale("symlog", linthresh=1e-2)
+    a.set_xlabel("ε (tilt strength)")
+    a.set_ylabel("median λ_min(Hess V) at written sites")
+    a.set_title("(2) ⛔ the tilt REDUCES λ_min at every ε — §A4.2 refuted here")
+    a.legend(fontsize=7)
+
+    # (3) tau(eps) vs the predicted knee
+    a = ax[1, 0]
+    for r in recs:
+        if "dial" not in r or not r["dial"].get("applicable"):
+            continue
+        rows = r["dial"]["rows"]
+        a.plot(np.maximum([x["eps"] for x in rows], 3e-4),
+               [x.get("tau_tau_time", np.nan) for x in rows], "o-",
+               label=f"weight={r['shell_arm']['tilt_weight']}")
+    e = np.logspace(-3, 1, 50)
+    a.plot(e, np.maximum(0.4 / e, 5.0), "k:", lw=1,
+           label="PREREG P4: τ = Γ/ε (Γ=0.4), floor 2/Γ = 5.0")
+    a.axvline(0.04, color="g", ls="--", lw=1, label="registered knee ε* = Γ²/4")
+    a.set_xscale("log")
+    a.set_yscale("log")
+    a.set_xlabel("ε")
+    a.set_ylabel("drift timescale τ (time units)")
+    a.set_title("(3) τ(ε): flat at the registered floor 5.0 — the −1 branch is\n"
+                "unreachable because 2α floors λ_soft above the knee")
+    a.legend(fontsize=7)
+
+    # (4) the byte ledger
+    a = ax[1, 1]
+    for fam, mk in zip(("manifold", "overload", "aggregate"), "os^", strict=True):
+        pts = {}
+        for r in recs:
+            if r["family"] != fam:
+                continue
+            pts.setdefault(r["shell_arm"]["arm"], []).append(
+                (r["byte_ledger"]["ratio"], r["dividend"]["dividend"]))
+        for arm, v in pts.items():
+            v = np.asarray(v)
+            a.scatter(v[:, 0].mean(), v[:, 1].mean(), marker=mk,
+                      s=40, alpha=0.8)
+            a.annotate(arm, (v[:, 0].mean(), v[:, 1].mean()), fontsize=5)
+    a.axhline(0, color="k", lw=0.8)
+    a.axvline(2.20, color="r", ls="--", lw=1, label="2.20× architectural floor")
+    a.set_xscale("log")
+    a.set_xlabel("byte ratio (full/launder) — matched = False everywhere")
+    a.set_ylabel("dividend")
+    a.set_title("(4) every cell is ≥17×; the shell adds +12.5 %/+14.3 %")
+    a.legend(fontsize=8)
+
+    fig.tight_layout()
+    out = save or os.path.join(os.path.dirname(path), "exp_ssb_shell.png")
+    fig.savefig(out, dpi=130)
+    plt.close(fig)
     return out
 
 
@@ -708,10 +914,15 @@ def main():
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--loud", action="store_true")
     ap.add_argument("--dial-family", default="manifold")
+    ap.add_argument("--gym-arm", default="base",
+                    help="the GYM's own arm, e.g. load1x_shipped (478x anchor)")
+    ap.add_argument("--family-label", default=None,
+                    help="rename the family on the race card (escalation cells)")
     a = ap.parse_args()
     res = run_experiment_ssb_shell(
         families=a.families, seeds=a.seeds, arms=a.arms, save_dir=a.save_dir,
-        quick=a.quick, dial_family=a.dial_family, loud=a.loud)
+        quick=a.quick, dial_family=a.dial_family, loud=a.loud,
+        gym_arm=a.gym_arm, family_label=a.family_label)
     print(f"\n{res['n_cells']} cells in {res['wall_s'] / 60:.1f} min "
           f"(race card: {'yes' if res['race_card_available'] else 'NOT AVAILABLE'})")
     if "verdict_markdown" in res:
