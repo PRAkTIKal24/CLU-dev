@@ -118,6 +118,166 @@ def atom_crowding_penalty(V: eqx.Module, sites: jnp.ndarray, d_safe: float):
     return jnp.mean(depth * jnp.sum(pen, axis=-1))
 
 
+def _damped_verlet_path(V: eqx.Module, q0: jnp.ndarray, p0: jnp.ndarray,
+                        steps: int, dt: float, gamma: float, stride: int):
+    """Strided damped-Verlet path of ``V`` from ``(q0, p0)`` — ``(n_pts, dim)``.
+
+    ⚠ **Declared deviation.** The read runs on a CHLU unit
+    (``kinetic_mode="newtonian_learned"``, ``inertia=ones``); ``write_loss`` only
+    ever sees ``V``, so rather than drag the whole read path (and a
+    ``kinetic_mode``) into the write objective this reimplements the *same*
+    integrator for identity mass: with ``H = |p|^2/2 + V(q)`` the shipped
+    :func:`~chlu.core.integrators.velocity_verlet_step` reduces exactly to the
+    three lines below plus the post-step ``(1 - gamma)`` damping. The trajectory
+    the write is asked to shape is therefore the trajectory the read traverses,
+    up to the learned inertia.
+
+    Fully traceable (``lax.scan``), so the term is differentiable in ``theta``.
+    """
+    gradV = jax.grad(lambda z: V(z))
+
+    def body(carry, _):
+        q, p = carry
+        p_half = p - 0.5 * dt * gradV(q)
+        q_next = q + dt * p_half
+        p_next = (1.0 - gamma) * (p_half - 0.5 * dt * gradV(q_next))
+        return (q_next, p_next), q_next
+
+    _, qs = jax.lax.scan(body, (q0, p0), None, length=int(steps))
+    return qs[:: int(max(stride, 1))]
+
+
+def _nearest_other(targets: jnp.ndarray, others: jnp.ndarray) -> jnp.ndarray:
+    """For each target, the nearest **other** row of ``others`` — ``(K, dim)``."""
+    d2 = jnp.sum((targets[:, None, :] - others[None, :, :]) ** 2, axis=-1)
+    d2 = jnp.where(d2 < 1e-12, jnp.inf, d2)  # exclude the target itself
+    return others[jnp.argmin(d2, axis=1)]
+
+
+def trajectory_margin_penalty(
+    V: eqx.Module,
+    targets: jnp.ndarray,
+    key: jax.random.PRNGKey,
+    *,
+    payload_index: int,
+    payload_dim: int = 1,
+    crowd_targets: Optional[jnp.ndarray] = None,
+    rollout_steps: int = 60,
+    stride: int = 6,
+    gamma: float = 0.05,
+    dt: float = 0.05,
+    n_launch: int = 4,
+    sigma_addr: float = 0.25,
+    margin: float = 0.15,
+) -> jnp.ndarray:
+    """⭐ **C2W2 Route 1, the trajectory-information term** (``lambda_traj``).
+
+    **The diagnosis this implements** (charter §A2.1, ratified): today's
+    ``write_loss`` constrains only **isolated settled endpoints** — ``L_grad``
+    and ``L_min`` at ``z_i``, ``L_bar`` at pairwise midpoints. Nothing in it
+    mentions the *path* the read actually traverses, so every read that touches
+    the in-between regions loses by construction and *the charter's actual
+    hypothesis has never been tested*. This term asks the write, explicitly, to
+    make the **path** discriminative.
+
+    Form (a **triplet margin on a strided-trajectory read-out**; the two
+    alternatives — path-vs-path contrastive and an InfoNCE surrogate — are
+    declared NOT-RUN in the PREREG):
+
+    .. code-block:: text
+
+        q(0) = (c_i + xi, 0),  xi ~ N(0, sigma_addr^2),  p(0) = 0
+        m_i  = mean over the strided path of the payload channels
+        L    = mean_xi relu( margin + |m_i - a_i| - |m_i - a_nn(i)| )
+
+    i.e. the path's own mean read-out must be closer to this item's payload than
+    to its nearest neighbour's, by ``margin``. ``a_nn(i)`` comes from
+    ``crowd_targets`` (the FULL stored set) because the write is sequential.
+
+    ⚠ Returns ``0.0`` (no-op, no gradient) when there is no competitor — so the
+    term is **structurally inert on the first write of a stream**. That is a
+    declared property, and it is why the liveness check is run on a written
+    stream and not on a single item.
+    """
+    others = targets if crowd_targets is None else jnp.asarray(crowd_targets)
+    if others.shape[0] < 2:
+        return jnp.asarray(0.0)
+    K, dim = targets.shape
+    pay = slice(int(payload_index), int(payload_index) + int(payload_dim))
+
+    nb = _nearest_other(targets, others)  # (K, dim)
+    a_own = targets[:, pay]  # (K, m)
+    a_nb = nb[:, pay]
+
+    # launch on the QUERY manifold: payload channels pinned to 0, address
+    # jittered exactly as the queries will be (same convention as ``write_loss``)
+    k = jax.random.fold_in(key, 0x7A1)  # own stream => lambda_traj=0 is untouched
+    jit = jax.random.normal(k, (K, int(n_launch), dim)) * float(sigma_addr)
+    q0 = targets[:, None, :] + jit
+    q0 = q0.at[:, :, pay].set(0.0)
+    p0 = jnp.zeros_like(q0)
+
+    def path_mean(qa, pa):
+        qs = _damped_verlet_path(V, qa, pa, rollout_steps, dt, gamma, stride)
+        return jnp.mean(qs[:, pay], axis=0)  # (m,)
+
+    m = jax.vmap(jax.vmap(path_mean))(q0, p0)  # (K, n_launch, m)
+    d_own = jnp.linalg.norm(m - a_own[:, None, :], axis=-1)
+    d_nb = jnp.linalg.norm(m - a_nb[:, None, :], axis=-1)
+    return jnp.mean(jax.nn.relu(float(margin) + d_own - d_nb))
+
+
+def path_equal_depth_penalty(
+    V: eqx.Module,
+    targets: jnp.ndarray,
+    *,
+    crowd_targets: Optional[jnp.ndarray] = None,
+    n_interp: int = 7,
+    w_tangent: float = 1.0,
+) -> jnp.ndarray:
+    """⭐ **C2W2 Route 1, the path / equal-depth term** (``lambda_path``).
+
+    **The blocker this implements** (memory gym §3.5, measured): a multi-target
+    ridge write produces a **saddle** — ``lambda_min = -0.5946`` at the ridge
+    item with spectator participation ``1.000`` — *because ``write_loss``
+    minimises ``V`` at each target independently* and ``L_bar`` actively raises
+    the connecting midpoint. A ridge needs the opposite: the connecting path
+    constrained to **equal depth with zero gradient along the tangent**.
+
+    .. code-block:: text
+
+        z(s) = (1-s) z_i + s z_j,   s = 1/(S+1) .. S/(S+1)
+        t_hat = (z_j - z_i)/|z_j - z_i|
+        L = mean_s [ (V(z_s) - (V(z_i)+V(z_j))/2)^2 + w_tangent*(grad V(z_s).t_hat)^2 ]
+
+    ``j`` = each target's nearest other stored site (matching the shipped
+    ``barrier_pairs="nn"``). Returns ``0.0`` when no pair exists.
+
+    ⚠ Acceptance for this term is **spectral, not accuracy-based**: the
+    pre-registered question is whether ``lambda_min`` at the ridge item moves
+    from ``-0.5946`` toward/through 0 with the tangent as the softest mode.
+    """
+    others = targets if crowd_targets is None else jnp.asarray(crowd_targets)
+    if others.shape[0] < 2:
+        return jnp.asarray(0.0)
+    gradV = jax.grad(lambda z: V(z))
+    nb = _nearest_other(targets, others)  # (K, dim)
+    t = nb - targets
+    t_hat = t / jnp.maximum(jnp.linalg.norm(t, axis=-1, keepdims=True), 1e-12)
+
+    S = int(max(n_interp, 1))
+    s = (jnp.arange(1, S + 1, dtype=targets.dtype) / (S + 1.0))[None, :, None]
+    z = targets[:, None, :] * (1.0 - s) + nb[:, None, :] * s  # (K, S, dim)
+
+    v_mid = jax.vmap(jax.vmap(V))(z)  # (K, S)
+    v_ref = 0.5 * (jax.vmap(V)(targets) + jax.vmap(V)(nb))  # (K,)
+    depth = jnp.mean((v_mid - v_ref[:, None]) ** 2, axis=1)
+
+    g = jax.vmap(jax.vmap(gradV))(z)  # (K, S, dim)
+    tang = jnp.mean(jnp.sum(g * t_hat[:, None, :], axis=-1) ** 2, axis=1)
+    return jnp.mean(depth + float(w_tangent) * tang)
+
+
 def write_loss(
     V: eqx.Module,
     targets: jnp.ndarray,
@@ -137,6 +297,12 @@ def write_loss(
     crowd_weight: float = 0.0,
     crowd_d_safe: float = 0.0,
     crowd_targets: Optional[jnp.ndarray] = None,
+    # -- C2W2 Route 1 (both default 0.0 => the shipped objective, bit-for-bit) --
+    lambda_traj: float = 0.0,
+    lambda_path: float = 0.0,
+    traj_kwargs: Optional[dict] = None,
+    path_kwargs: Optional[dict] = None,
+    payload_dim: int = 1,
 ) -> jnp.ndarray:
     """Scalar write loss (see module docstring). ``targets`` is (K, dim).
 
@@ -170,6 +336,24 @@ def write_loss(
         Add ``crowd_weight * atom_crowding_penalty(V, crowd_targets or targets,
         crowd_d_safe)``. ``crowd_targets`` is the FULL stored set, which matters
         for a sequential write where ``targets`` is a single item.
+
+    **⭐ C2W2 Route 1 levers (both default 0.0 = the shipped objective, bit-for-bit).**
+
+    ``lambda_traj`` / ``traj_kwargs``
+        :func:`trajectory_margin_penalty` — asks the *path* from the launch
+        manifold to be discriminative, not only the endpoint. This is the term
+        the whole C2W2 gate turns on: the ratified diagnosis (§A2.1) is that the
+        write constrains only isolated settled endpoints, so *the charter's
+        actual hypothesis has never been tested*.
+    ``lambda_path`` / ``path_kwargs``
+        :func:`path_equal_depth_penalty` — the gym's named blocker (§3.5): a
+        multi-target ridge write today produces a **saddle**
+        (``lambda_min = -0.5946``), because ``V`` is minimised at each target
+        independently. Constrains the connecting path to equal depth with zero
+        gradient along the tangent.
+    ``payload_dim``
+        Width of the payload block starting at ``payload_index`` (1 = the
+        shipped scalar payload). Read by ``lambda_traj`` only.
     """
     K, dim = targets.shape
     gradV = jax.grad(lambda q: V(q))
@@ -237,6 +421,21 @@ def write_loss(
     if crowd_weight > 0.0 and crowd_d_safe > 0.0:
         sites = targets if crowd_targets is None else jnp.asarray(crowd_targets)
         total = total + crowd_weight * atom_crowding_penalty(V, sites, crowd_d_safe)
+    # ⛔ COEFFICIENT-ZERO REGRESSION GATE: the two C2W2 terms are added only when
+    # their coefficient is a *Python* float > 0, so at lambda_traj = lambda_path
+    # = 0 not one extra op is traced, the key stream is untouched (both terms
+    # fold their own sub-key), and the written V is bit-identical to main's.
+    # Asserted in tests/test_traj_write_objective.py — blocking.
+    if lambda_traj > 0.0:
+        total = total + lambda_traj * trajectory_margin_penalty(
+            V, targets, key, payload_index=payload_index, payload_dim=payload_dim,
+            crowd_targets=crowd_targets, sigma_addr=sigma_addr, margin=margin,
+            **dict(traj_kwargs or {}),
+        )
+    if lambda_path > 0.0:
+        total = total + lambda_path * path_equal_depth_penalty(
+            V, targets, crowd_targets=crowd_targets, **dict(path_kwargs or {}),
+        )
     return total
 
 

@@ -26,6 +26,8 @@ from chlu.core.clu_system import (
     CluSystemConfig,
     LearnedVStore,
     build_system,
+    normalize_write_objective,
+    resolve_store_potential_factory,
     settled_point_psi,
     store_relative_trajectory,
     tail_mean_psi,
@@ -301,3 +303,116 @@ def test_consolidate_runs_the_certificates_and_the_monitors():
     rep = sys_.consolidate()
     assert "sep_over_sigma_q" in rep.certificates
     assert rep.readings and rep.self_probe
+
+
+# ==========================================================================
+# C2W2 RACE+SEAM FREEZE — the two seams the wave's other branches build on.
+#
+# ⛔ Both are additive and default-off, and the two "when off it is
+# bit-identical" tests below are BLOCKING: if the shipped write or the shipped
+# store moved by a single bit, every C2W2 number measured against the
+# `endpoint_write` / `gauss` control would be uninterpretable.
+# ==========================================================================
+def _store_leaves(store):
+    import equinox as eqx
+
+    return [np.asarray(x) for x in
+            jax.tree_util.tree_leaves(eqx.filter(store.V, eqx.is_inexact_array))]
+
+
+def test_seam_a_write_objective_defaults_to_the_shipped_write_bit_identically():
+    """⛔ SEAM (a) OFF => the written ``V`` is bit-identical to the shipped one."""
+    a, _, _ = _written_system()
+    cfg = _tiny_cfg()
+    b = build_system(cfg, loud=False, write_objective=None)
+    sites = np.asarray(designed_sites(cfg.addr_dim, 3, R=cfg.ball_radius, seed=0))
+    pays = np.asarray(designed_payloads(3, seed=0))
+    b.write_stream([{"item_id": i, "address": sites[i], "payload": float(pays[i])}
+                    for i in range(3)])
+    for la, lb in zip(_store_leaves(a.store), _store_leaves(b.store), strict=True):
+        assert np.array_equal(la, lb)
+    # and the empty spec is the same object-level no-op as None
+    assert build_system(cfg, loud=False, write_objective={}).write_objective == {}
+
+
+def test_seam_a_forwards_loss_and_train_kwargs_to_the_writer():
+    """The spec reaches ``train_memory_landscape``: fewer steps => shorter history
+    and a different landscape, proving the passthrough is live (not decorative)."""
+    cfg = _tiny_cfg()
+    sys_ = build_system(cfg, loud=False,
+                        write_objective={"train_kwargs": {"steps": 3}})
+    assert sys_.write_objective == {"train_kwargs": {"steps": 3}}
+    site = np.asarray(designed_sites(cfg.addr_dim, 1, R=cfg.ball_radius, seed=0))[0]
+    sys_.write_stream([{"item_id": 0, "address": site, "payload": 0.5}])
+    ref = build_system(cfg, loud=False)
+    ref.write_stream([{"item_id": 0, "address": site, "payload": 0.5}])
+    assert not all(np.array_equal(a, b) for a, b in
+                   zip(_store_leaves(sys_.store), _store_leaves(ref.store), strict=True))
+
+
+def test_seam_a_rejects_an_unknown_key_instead_of_dropping_it():
+    """A silently-dropped coefficient would report as 'the term is inert' — which
+    is exactly the finding the C2W2 gate must not fabricate."""
+    with pytest.raises(ValueError, match="unknown write-objective key"):
+        normalize_write_objective({"lambda_traj": 1.0})
+    assert normalize_write_objective(None) == {}
+    assert normalize_write_objective({"loss_kwargs": {}}) == {}
+
+
+def test_seam_b_store_factory_defaults_to_the_shipped_potential_bit_identically():
+    """⛔ SEAM (b) OFF => the store is bit-identical to the shipped one."""
+    cfg = _tiny_cfg()
+    assert cfg.store_potential_factory is None
+    assert CluSystemConfig().as_flag_table() == {}  # the kwargs default is inert
+    a = LearnedVStore(cfg, jax.random.PRNGKey(0))
+    b = LearnedVStore(cfg, jax.random.PRNGKey(0))
+    for la, lb in zip(_store_leaves(a), _store_leaves(b), strict=True):
+        assert np.array_equal(la, lb)
+    assert type(a.V).__name__ == "DesignFreedomPotential"
+
+
+def test_seam_b_registers_an_external_store_family_from_config_alone():
+    """A factory living in a module ``clu_system.py`` has never heard of is wired
+    in by import path — this is how ``ssb-shell-atoms`` registers shell atoms
+    without editing a file it does not own."""
+    _SEAM_FACTORY_CALLS.clear()
+    cfg = _tiny_cfg(
+        store_potential_factory="tests.test_clu_system:_factory_for_seam_test",
+        store_potential_kwargs={"n_atoms_override": 24},
+    )
+    store = LearnedVStore(cfg, jax.random.PRNGKey(0))
+    assert _SEAM_FACTORY_CALLS == [{"n_atoms_override": 24, "dim": cfg.dim}]
+    # the factory's store — NOT the shipped one — is what the system now runs on
+    assert store.V.learned.centers.shape[0] == 24
+    assert store.group_rows(0).shape[0] == 24
+    assert cfg.as_flag_table()["store_potential_kwargs"] == {"n_atoms_override": 24}
+
+
+#: call log for :func:`_factory_for_seam_test` (the seam is import-path resolved,
+#: so the factory must live at module scope).
+_SEAM_FACTORY_CALLS: list = []
+
+
+def _factory_for_seam_test(*, cfg, key, n_atoms_override: int):
+    """A stand-in external store family — the seam's contract, minimally.
+
+    ``ssb-shell-atoms``'s shell-atom family plugs in exactly here.
+    """
+    from chlu.core.memory_potentials import DesignFreedomPotential
+
+    _SEAM_FACTORY_CALLS.append({"n_atoms_override": int(n_atoms_override),
+                                "dim": int(cfg.dim)})
+    return DesignFreedomPotential(
+        rung="free_mlp", dim=cfg.dim, payloads=jnp.zeros((cfg.capacity,)), key=key,
+        learned_family="atoms", n_atoms=int(n_atoms_override),
+        rbf_init_width=float(cfg.atom_width), confine=float(cfg.confine),
+        atom_depth_init=float(cfg.atom_depth_init), atom_groups=cfg.capacity,
+        atom_init_scale=float(cfg.atom_init_scale),
+    )
+
+
+def test_seam_b_rejects_a_bad_import_path():
+    with pytest.raises(ValueError, match="pkg.module"):
+        resolve_store_potential_factory("notapath")
+    with pytest.raises(TypeError, match="non-callable"):
+        resolve_store_potential_factory("chlu.core.clu_system:WRITE_OBJECTIVE_KEYS")

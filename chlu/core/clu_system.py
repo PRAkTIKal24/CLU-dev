@@ -22,6 +22,22 @@ waves every experiment used settled points only.
 this surface: :class:`CluSystemConfig`, :class:`CluSystem`, :class:`ReadResult`,
 :class:`ReadState`, :class:`LearnedVStore`, :func:`settled_point_psi`.
 
+**RACE+SEAM FREEZE (C2W2).** Two additive seams, both default-off and both
+asserted bit-identical-when-off in ``tests/test_clu_system.py``, so the wave's
+other two engineer branches build on this file without editing it:
+
+* **(a) the write-objective passthrough** — ``CluSystem(write_objective=...)`` /
+  ``build_system(write_objective=...)``, normalised by
+  :func:`normalize_write_objective`, forwarded verbatim to
+  :func:`~chlu.training.train_memory.train_memory_landscape`. This is how the
+  C2W2 Route-1 coefficients reach the write **without changing a single**
+  :class:`CluSystemConfig` **semantic**.
+* **(b) the store-potential factory hook** —
+  ``CluSystemConfig.store_potential_factory`` (an import path, resolved by
+  :func:`resolve_store_potential_factory`) + ``store_potential_kwargs``, so a
+  brand-new store family (``ssb-shell-atoms``'s shell atoms) is registered from
+  config alone.
+
 **Hook for ``trainability-spike``:** :class:`CluSystem` takes
 ``psi: Callable[[Trajectory, ReadState], Array]`` and the settle exposes its
 **fixed-point residual** (:meth:`CluSystem.fixed_point_residual`), so an
@@ -154,6 +170,20 @@ class CluSystemConfig:
     stage_basin_interaction: bool = False
     stage_retry: bool = False
     stage_trajectory_read: bool = False
+
+    # -- C2W2 SEAM (b): the store-potential factory hook -------------------
+    # ⭐ An import path so a NEW store family can be registered from ANOTHER
+    # module without editing this file (C2W2 file-ownership: `ssb-shell-atoms`
+    # registers the shell-atom family through this hook and edits nothing it does
+    # not own). Format ``"pkg.module:factory"`` or ``"pkg.module.factory"``; the
+    # callable is invoked as ``factory(cfg=cfg, key=key, **store_potential_kwargs)``
+    # and must return an ``eqx.Module`` with the ``DesignFreedomPotential``
+    # surface :class:`LearnedVStore` uses: a ``.learned`` subtree exposing
+    # ``centers``, ``amp``, ``log_width``, ``n_groups`` and ``group_rows(slot)``.
+    # ⛔ ``None`` (the default) => the shipped ``DesignFreedomPotential`` path,
+    # **bit-identical** (asserted in ``tests/test_clu_system.py``).
+    store_potential_factory: Optional[str] = None
+    store_potential_kwargs: Dict[str, Any] = field(default_factory=dict)
 
     # -- harness -----------------------------------------------------------
     seed: int = 0
@@ -305,6 +335,11 @@ class LearnedVStore(eqx.Module):
         self.payload_dim = int(cfg.payload_dim)
         self.capacity = int(cfg.capacity)
         self.atoms_per_item = int(cfg.n_atoms // max(cfg.capacity, 1))
+        # -- C2W2 SEAM (b): an externally-registered store family --------------
+        if cfg.store_potential_factory:
+            factory = resolve_store_potential_factory(cfg.store_potential_factory)
+            self.V = factory(cfg=cfg, key=key, **dict(cfg.store_potential_kwargs or {}))
+            return
         # rung "free_mlp" + family "atoms" => designed part is None, so the
         # landscape is ENTIRELY learned (coercivity only). One atom group per
         # item slot makes the write local in parameter space.
@@ -416,6 +451,12 @@ class CluSystem:
         controller: :class:`~chlu.core.clu_controller.CluControllerV0`.
         registry: :class:`~chlu.core.monitors.MonitorRegistry`.
         config: :class:`CluSystemConfig`.
+        write_objective: ⭐ **C2W2 SEAM (a)** — an *objective spec* handed
+            straight to :func:`~chlu.training.train_memory.train_memory_landscape`
+            on every write, **without changing a single**
+            :class:`CluSystemConfig` **semantic**. See
+            :func:`normalize_write_objective`. ``None`` (the default) => the
+            shipped write, bit-identical.
     """
 
     def __init__(
@@ -426,8 +467,10 @@ class CluSystem:
         controller=None,
         registry=None,
         config: Optional[CluSystemConfig] = None,
+        write_objective: Optional[Dict[str, Any]] = None,
     ):
         self.cfg = config or CluSystemConfig()
+        self.write_objective = normalize_write_objective(write_objective)
         self.store = store
         self.phi = phi
         self.psi = psi or settled_point_psi(store.addr_dim, store.payload_dim)
@@ -441,6 +484,9 @@ class CluSystem:
         self._t = 0
         self._write_log: List[dict] = []
         self._losses: List[float] = []
+        #: endpoint-only write loss per write (C2W2 gate ruling (i)); equals
+        #: ``_losses`` exactly when no Route-1 coefficient is set.
+        self._endpoint_losses: List[float] = []
         self._prev_store: Optional[LearnedVStore] = None
         self._c3_ratio = float("nan")
         self._oldest_drop = float("nan")
@@ -860,23 +906,48 @@ class CluSystem:
         crowd[:, self.store.addr_dim: self.store.addr_dim + self.store.payload_dim] = pays
         mask_fn = (atom_write_mask_fn(self.store.group_rows(slot))
                    if cfg.masked_write else None)
-        V, hist = train_memory_landscape(
-            self.store.V, jnp.asarray(z), key,
+        loss_kwargs = dict(
+            n_perturb=int(cfg.write_n_perturb),
+            sigma_addr=float(cfg.write_sigma_addr),
+            sigma_pay=float(cfg.write_sigma_pay),
+            margin=float(cfg.write_margin),
+            barrier=float(cfg.write_barrier),
+            payload_index=int(self.store.addr_dim),
+            barrier_pairs="nn",
+            crowd_targets=jnp.asarray(crowd) if len(ids) > 1 else None,
+        )
+        train_kwargs = dict(
             steps=int(cfg.write_steps), lr=float(cfg.write_lr),
             weight_decay=float(cfg.write_weight_decay),
-            loss_kwargs=dict(
-                n_perturb=int(cfg.write_n_perturb),
-                sigma_addr=float(cfg.write_sigma_addr),
-                sigma_pay=float(cfg.write_sigma_pay),
-                margin=float(cfg.write_margin),
-                barrier=float(cfg.write_barrier),
-                payload_index=int(self.store.addr_dim),
-                barrier_pairs="nn",
-                crowd_targets=jnp.asarray(crowd) if len(ids) > 1 else None,
-            ),
+        )
+        # -- C2W2 SEAM (a): the write-objective passthrough -------------------
+        # Additive only: an empty/absent spec leaves both dicts untouched, so the
+        # shipped write is bit-identical (asserted in tests/test_clu_system.py).
+        loss_kwargs.update(self.write_objective.get("loss_kwargs", {}))
+        train_kwargs.update(self.write_objective.get("train_kwargs", {}))
+        V, hist = train_memory_landscape(
+            self.store.V, jnp.asarray(z), key,
+            loss_kwargs=loss_kwargs,
             update_mask_fn=mask_fn,
+            **train_kwargs,
         )
         self.store = eqx.tree_at(lambda s: s.V, self.store, V)
+        # ⭐ C2W2: the ENDPOINT-ONLY write loss, re-evaluated on the written V with
+        # the Route-1 coefficients OFF. Without it a Route-1 arm looks unconverged
+        # merely for carrying its own extra term (its recorded total includes
+        # `lambda * L_term`, which is not required to reach zero), and the gate's
+        # convergence ruling would exclude exactly the arms under test. One extra
+        # loss evaluation per write.
+        try:
+            from chlu.training.train_memory import write_loss as _wl
+
+            base_kwargs = {k: v for k, v in loss_kwargs.items()
+                           if k not in ("lambda_traj", "lambda_path",
+                                        "traj_kwargs", "path_kwargs")}
+            self._endpoint_losses.append(
+                float(_wl(V, jnp.asarray(z), key, **base_kwargs)))
+        except Exception:  # never let a diagnostic break a write
+            self._endpoint_losses.append(float("nan"))
         return float(hist[-1]) if hist else float("nan")
 
     def _relaxed_sites(self) -> Optional[np.ndarray]:
@@ -1087,6 +1158,73 @@ class CluSystem:
 
 
 # --------------------------------------------------------------------------
+# C2W2 seams (frozen public surface — the other C2W2 branches build on these)
+# --------------------------------------------------------------------------
+#: The only two top-level keys a write-objective spec may carry.
+WRITE_OBJECTIVE_KEYS = ("loss_kwargs", "train_kwargs")
+
+
+def normalize_write_objective(spec: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """⭐ **C2W2 SEAM (a).** Validate/normalise a write-objective spec.
+
+    A spec is a mapping with at most two keys:
+
+    ``loss_kwargs``
+        extra keyword arguments forwarded to
+        :func:`~chlu.training.train_memory.write_loss` — this is where the C2W2
+        Route-1 coefficients (``lambda_traj``, ``lambda_path``, both defaulting
+        to ``0.0``) are handed in **without touching**
+        :class:`CluSystemConfig` **semantics**.
+    ``train_kwargs``
+        optimizer-level overrides for
+        :func:`~chlu.training.train_memory.train_memory_landscape` (``steps``,
+        ``lr``, ``weight_decay``) — the D5 longer-write arm rides here.
+
+    ``None`` or ``{}`` returns ``{}`` and the shipped write runs bit-identical.
+    An unknown top-level key raises rather than being silently dropped: a
+    mis-spelled coefficient that is quietly ignored would report as *"the term
+    is inert"*, which is exactly the finding the gate must not fabricate.
+    """
+    if not spec:
+        return {}
+    spec = dict(spec)
+    unknown = sorted(set(spec) - set(WRITE_OBJECTIVE_KEYS))
+    if unknown:
+        raise ValueError(
+            f"unknown write-objective key(s) {unknown}; a spec carries only "
+            f"{list(WRITE_OBJECTIVE_KEYS)} (a silently-dropped coefficient would "
+            "report as an inert term)"
+        )
+    return {k: dict(spec[k]) for k in WRITE_OBJECTIVE_KEYS if spec.get(k)}
+
+
+def resolve_store_potential_factory(path: str) -> Callable:
+    """⭐ **C2W2 SEAM (b).** Resolve ``"pkg.module:attr"`` / ``"pkg.module.attr"``.
+
+    Lets a store family living in a module this file has never heard of be wired
+    into :class:`LearnedVStore` from config alone (``ssb-shell-atoms``'s shell
+    atoms are registered exactly this way). The resolved object is called as
+    ``factory(cfg=cfg, key=key, **cfg.store_potential_kwargs)``.
+    """
+    import importlib
+
+    p = str(path)
+    if ":" in p:
+        mod_name, attr = p.split(":", 1)
+    elif "." in p:
+        mod_name, attr = p.rsplit(".", 1)
+    else:
+        raise ValueError(
+            f"store_potential_factory {path!r} must be 'pkg.module:attr' "
+            "or 'pkg.module.attr'"
+        )
+    obj = getattr(importlib.import_module(mod_name), attr)
+    if not callable(obj):
+        raise TypeError(f"store_potential_factory {path!r} resolved to a non-callable")
+    return obj
+
+
+# --------------------------------------------------------------------------
 # construction helpers
 # --------------------------------------------------------------------------
 def make_controller(cfg: CluSystemConfig, registry=None,
@@ -1124,14 +1262,20 @@ def make_controller(cfg: CluSystemConfig, registry=None,
 
 
 def build_system(cfg: CluSystemConfig, key=None, phi=None, psi=None,
-                 loud: bool = True) -> CluSystem:
-    """Assemble a full CLU (store + controller + monitors) from a config."""
+                 loud: bool = True,
+                 write_objective: Optional[Dict[str, Any]] = None) -> CluSystem:
+    """Assemble a full CLU (store + controller + monitors) from a config.
+
+    ``write_objective`` is the C2W2 seam-(a) passthrough (see
+    :func:`normalize_write_objective`); ``None`` => the shipped write.
+    """
     key = jax.random.PRNGKey(cfg.seed) if key is None else key
     store = LearnedVStore(cfg, key)
     registry = default_registry(loud=loud)
     controller = make_controller(cfg, registry)
     sys_ = CluSystem(store, phi=phi, psi=psi, controller=controller,
-                     registry=registry, config=cfg)
+                     registry=registry, config=cfg,
+                     write_objective=write_objective)
     controller.store_apply = sys_.store_apply
     return sys_
 
@@ -1236,4 +1380,7 @@ __all__ = [
     "ConsolidationReport", "LearnedVStore", "CluSystem", "build_system",
     "make_controller", "settled_point_psi", "tail_mean_psi",
     "store_relative_trajectory",
+    # C2W2 seams
+    "WRITE_OBJECTIVE_KEYS", "normalize_write_objective",
+    "resolve_store_potential_factory",
 ]
