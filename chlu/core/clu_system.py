@@ -132,6 +132,12 @@ class CluSystemConfig:
 
     # -- control -----------------------------------------------------------
     d_safe_kappa_prime: float = 2.576  # 99% point of the corrected margin law
+    # ⚠ An explicit admission radius, used ONLY to take the gate deliberately out
+    # of its designed band so basins are allowed to interact (intervention §3.3).
+    # When set, the merge certificate `2 s_max + kappa' sigma_q <= d_safe` is
+    # KNOWINGLY violated and monitor #8 is expected to say so — that is the
+    # measurement, not a bug. None = the derived (in-band) radius.
+    d_safe_override: Optional[float] = None
     budget: Optional[int] = None  # live-item budget (None => capacity)
     leak: float = 0.0  # per-tick decay of a non-permanent item
     amp_floor: float = 0.05
@@ -345,22 +351,49 @@ class LearnedVStore(eqx.Module):
         return D, s_eff
 
     def scale_group_amplitude(self, slot: int, factor: float) -> "LearnedVStore":
-        """Multiply that item's atom **depths** by ``factor`` (decay/eviction).
+        """Multiply that item's atom **depths** by ``factor`` (per-item decay).
 
         ``A_j = amp_j^2``, so the amplitude parameter is scaled by
-        ``sqrt(factor)``; ``factor = 0`` is a physical eviction (the item's wells
-        vanish from ``V_theta`` and its rows are zeroed).
+        ``sqrt(factor)``. This is the physical form of a lifetime: the item's own
+        wells shallow, nothing else in ``V_theta`` moves.
         """
         m = jnp.asarray(self.group_rows(slot), dtype=jnp.float32)
         scale = jnp.where(m > 0, jnp.sqrt(jnp.asarray(float(factor))), 1.0)
-        new_amp = self.V.learned.amp * scale
-        V = eqx.tree_at(lambda t: t.learned.amp, self.V, new_amp)
-        if float(factor) == 0.0:
-            # a physically evicted item leaves no trace in its own rows
-            V = eqx.tree_at(
-                lambda t: t.learned.centers, V,
-                V.learned.centers * (1.0 - m)[:, None],
-            )
+        V = eqx.tree_at(lambda t: t.learned.amp, self.V, self.V.learned.amp * scale)
+        return eqx.tree_at(lambda t: t.V, self, V)
+
+    def reinit_group(self, slot: int, key, cfg: "CluSystemConfig") -> "LearnedVStore":
+        """Eviction/deletion: **re-draw** the freed group from the init distribution.
+
+        ⚠ Measured, and it is a mechanism, not a detail. Zeroing the freed rows
+        (the obvious "leave no trace") is wrong twice over:
+
+        1. **It starves the next item in that slot.** Atoms at the origin cannot
+           reach a well whose payload is ``|a_i| ~ 1`` from the payload-zero launch
+           manifold — the ``atom_init_scale`` lesson (0.5 caps strict at 0.500 at
+           d=2 K=4 regardless of atom count). Measured here: every item written
+           into a recycled slot came out with fitted depth ``D = 0.00`` and was
+           unretrievable, dragging self-probe acquisition to 0.33.
+        2. **It is a membership leak.** A zeroed row is *distinguishable* from a
+           never-used row (which holds a scattered draw at ``amp = sqrt(1e-4)``),
+           so "this slot once held something" survives the eviction. Re-drawing
+           from the same distribution a fresh slot uses makes an evicted slot
+           statistically indistinguishable from a never-written one.
+        """
+        m = np.asarray(self.group_rows(slot), dtype=bool)
+        n = int(m.sum())
+        if n == 0:
+            return self
+        k_c, k_a = jax.random.split(key, 2)
+        rows = jnp.asarray(np.nonzero(m)[0])
+        centers = jax.random.normal(k_c, (n, self.dim)) * float(cfg.atom_init_scale)
+        new_centers = self.V.learned.centers.at[rows].set(centers)
+        new_amp = self.V.learned.amp.at[rows].set(float(cfg.atom_depth_init) ** 0.5)
+        new_w = self.V.learned.log_width.at[rows].set(float(np.log(cfg.atom_width)))
+        V = eqx.tree_at(
+            lambda t: [t.learned.centers, t.learned.amp, t.learned.log_width],
+            self.V, replace=[new_centers, new_amp, new_w],
+        )
         return eqx.tree_at(lambda t: t.V, self, V)
 
     def n_bytes(self) -> int:
@@ -412,6 +445,7 @@ class CluSystem:
         self._c3_ratio = float("nan")
         self._oldest_drop = float("nan")
         self._knob_reads: Dict[str, int] = {}
+        self._evict_key = jax.random.PRNGKey(self.cfg.seed + 5150)
         self._wall0 = time.time()
 
     # -- model -------------------------------------------------------------
@@ -479,6 +513,12 @@ class CluSystem:
                 self._write_log.append(row)
                 rep.log.append(row)
                 continue
+            for vr in self.controller.log[-4:]:
+                if vr.verb == "evict" and vr.applied and vr.t == self.controller.t:
+                    ev_id = int(vr.detail.get("item_id", -1))
+                    if ev_id >= 0 and ev_id not in rep.evicted:
+                        rep.evicted.append(ev_id)
+                        self._payloads.pop(ev_id, None)
             slot = self._slot_of(iid)
             self._payloads[iid] = payload
             self._born[iid] = self._t
@@ -596,7 +636,36 @@ class CluSystem:
                           confidence=conf, residual=gs, rho_conv=rho,
                           n_steps=n_steps, retries=retries, diagnostics=diag)
 
-    def consolidate(self, key=None) -> ConsolidationReport:
+    def place_pass(self) -> int:
+        """Re-derive every live address by **relaxation** and re-place it.
+
+        Monitor #8-N3's restoring verb: the recorded site is where the writer was
+        *told* to put the item; the address the read actually lands on is where
+        the dissipative dynamics take it. Committing the latter is the derived
+        address, and it is committed only when ``lambda_min(H) > 0`` — never by a
+        critical-point solver (a Newton re-derivation once wrote a saddle into the
+        codebook).
+        """
+        ids, centers, pays = self.codebook()
+        if len(ids) == 0:
+            return 0
+        q0 = np.zeros((len(ids), self.store.dim), dtype=np.float32)
+        q0[:, : self.store.addr_dim] = centers
+        res = self.read(q0)
+        q_star = np.asarray(res.state.q_star)
+        moved = 0
+        for i, iid in enumerate(ids):
+            site = q_star[i, : self.store.addr_dim]
+            lam = self._lambda_min_at(q_star[i: i + 1])
+            if lam <= 0:
+                continue
+            if np.linalg.norm(site - centers[i]) < 1e-6:
+                continue
+            if self.controller.place(int(iid), site, lambda_min=lam).applied:
+                moved += 1
+        return moved
+
+    def consolidate(self, key=None, place_pass: bool = False) -> ConsolidationReport:
         """Offline maintenance: re-pack, enforce decay, re-check certificates,
         run the label-free **self-probe** pass (the store re-reads its own
         written items), and re-calibrate the gate.
@@ -604,13 +673,14 @@ class CluSystem:
         This is where wake-sleep is repositioned (charter §2.4): consolidation,
         not the trainer.
         """
+        n_moves = self.place_pass() if place_pass else 0
         probe = self.self_probe(key)
         certs = self.certificates()
         reads = probe.get("read").diagnostics if probe.get("read") is not None else None
         readings = self.observe(stage="consolidate", self_probe=probe,
                                 certificates=certs, reads=reads)
         return ConsolidationReport(certificates=certs, readings=readings,
-                                   self_probe=probe, n_moves=0)
+                                   self_probe=probe, n_moves=n_moves)
 
     # -- monitors ----------------------------------------------------------
     def observe(self, stage: str, self_probe: Optional[dict] = None,
@@ -961,14 +1031,14 @@ class CluSystem:
 
     def _delete(self, item_id: int, rep: WriteReport) -> None:
         try:
-            slot = self._slot_of(item_id)
+            self._slot_of(item_id)
         except KeyError:
             return
         res = self.controller.evict(
             item_id, reason="delete", trips=self.controller.policy.evict_persistence_W
         )
         if res.applied:
-            self.store = self.store.scale_group_amplitude(slot, 0.0)
+            pass  # store_apply("evict") already re-drew the freed group
             self._payloads.pop(item_id, None)
             rep.deleted.append(item_id)
         row = {"t": self._t, "item_id": item_id, "verb": "evict",
@@ -1001,7 +1071,8 @@ class CluSystem:
     # -- the store-side sink the controller's verbs reach ------------------
     def store_apply(self, verb: str, payload: dict) -> None:
         if verb == "evict":
-            self.store = self.store.scale_group_amplitude(int(payload["slot"]), 0.0)
+            self._evict_key, k = jax.random.split(self._evict_key)
+            self.store = self.store.reinit_group(int(payload["slot"]), k, self.cfg)
         elif verb == "expand":
             self.cfg.ball_radius = float(self.cfg.ball_radius) * float(payload["factor"])
 
@@ -1023,7 +1094,9 @@ def make_controller(cfg: CluSystemConfig, registry=None,
         dim=cfg.addr_dim + 1, capacity=int(cfg.capacity), s=float(cfg.atom_width),
         addr_dim=int(cfg.addr_dim),
     )
-    d_safe = derived_d_safe(cfg.atom_width, cfg.query_sigma, cfg.d_safe_kappa_prime)
+    d_safe = (float(cfg.d_safe_override) if cfg.d_safe_override is not None
+              else derived_d_safe(cfg.atom_width, cfg.query_sigma,
+                                  cfg.d_safe_kappa_prime))
     alloc = Controller(
         shadow, d_safe=d_safe, budget=int(cfg.capacity), amp=1.0,
         leak=float(cfg.leak), amp_floor=float(cfg.amp_floor),

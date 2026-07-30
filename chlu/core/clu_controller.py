@@ -61,6 +61,7 @@ GUARDS = (
     "admit.merge",          # designed: 2 s_max + kappa' sigma_q <= sep
     "admit.budget",         # designed: never silently overwrite a full store
     "place.lambda_min",     # designed: relaxation-derived, lambda_min > 0
+    "place.injective",      # designed: a re-derived site may not merge two items
     "evict.persistence",    # designed: W consecutive trips + hysteresis
     "evict.class_i",        # designed: never evict while an instrument is invalid
     "evict.set_function",   # designed: priority/attribute, never LRU
@@ -309,6 +310,27 @@ class CluControllerV0:
             if r.item_id == int(item_id):
                 rec = r
                 break
+        # DESIGNED: re-derivation may not destroy INJECTIVITY (certificate N1).
+        # Measured on the first full run: relaxing two items from their recorded
+        # sites landed both on the SAME minimum, and committing that collapsed
+        # `sep` to 0.0 and took N1/N2 down with it. lambda_min > 0 is necessary and
+        # NOT sufficient — a shared minimum is a perfectly good minimum.
+        others = np.stack([np.asarray(r.center, dtype=float)
+                           for r in self.allocator.records.values()
+                           if r.item_id != int(item_id)]) if len(self.allocator.records) > 1 \
+            else np.zeros((0, self.allocator.addr_dim))
+        if others.size:
+            site_ = np.asarray(address, dtype=float).reshape(-1)[: self.allocator.addr_dim]
+            d_min = float(np.min(np.linalg.norm(others - site_[None, :], axis=1)))
+            if d_min < float(self.allocator.d_safe):
+                self._fire("place.injective")
+                return self._record(VerbResult(
+                    "place", False,
+                    f"re-derived site is {d_min:.4f} from another live item "
+                    f"(< d_safe {self.allocator.d_safe:.4f}): committing it would "
+                    f"break injectivity (certificate N1)",
+                    "place.injective",
+                    {"item_id": int(item_id), "d_min": d_min}))
         if rec is None:
             return self._record(VerbResult("place", False, "item not live", "",
                                            {"item_id": int(item_id)}))
