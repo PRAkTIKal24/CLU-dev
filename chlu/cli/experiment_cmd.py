@@ -568,6 +568,25 @@ def setup_experiment_parsers(subparsers):
                                help='Skip the remediation arms (restoring-verb table)')
     exp_cs_parser.set_defaults(func=cmd_exp_clu_system)
 
+    # exp-memory-gym  (C2W1: Track 1, the dividend as the sole KPI)
+    exp_gym_parser = subparsers.add_parser(
+        'exp-memory-gym',
+        help='The internal memory gym: four task families (one per structural '
+             'opening), launder-native, dividend + byte ledger on every cell (C2W1)'
+    )
+    exp_gym_parser.add_argument('--project', help='Project name to use')
+    exp_gym_parser.add_argument('--seed', type=int, help='Base seed offset')
+    exp_gym_parser.add_argument('--quick', action='store_true',
+                               help='Quick smoke mode (plumbing only, not a result)')
+    exp_gym_parser.add_argument('--families', nargs='+',
+                               help='Run only these families '
+                                    '(overload|aggregate|recency|manifold)')
+    exp_gym_parser.add_argument('--arms', nargs='+',
+                               help='Run only these arms (base|tight|ridge|refN|...)')
+    exp_gym_parser.add_argument('--seeds', nargs='+', type=int,
+                               help='Override the per-cell seed list')
+    exp_gym_parser.set_defaults(func=cmd_exp_memory_gym)
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -1602,6 +1621,48 @@ def cmd_exp_clu_system(args):
         tripped = sorted(n for n, row in res['trip_table'].items() if row['ever_tripped'])
         console.print(f"✓ Experiment CLU-SYSTEM completed -> {res['metrics_path']}")
         console.print(f"  monitors that tripped at least once: {tripped or 'none'}")
+        return 0
+    except Exception as e:  # pragma: no cover - CLI plumbing
+        console.print(f"[red]Error: {e}[/red]")
+        import traceback
+
+        traceback.print_exc()
+        return 1
+
+
+def cmd_exp_memory_gym(args):
+    """Run the C2W1 memory gym (four families, launder-native, dividend KPI)."""
+    console.print(
+        "[bold cyan]Running Experiment MEMORY-GYM: Track 1 development currency; "
+        "the dividend is the sole KPI and <=0 at v0 is the honest start[/bold cyan]"
+    )
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+    config.project.save_dir = str(paths['plots'])
+    try:
+        from ..experiments.exp_memory_gym import run_experiment_memory_gym
+
+        res = run_experiment_memory_gym(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+            families=getattr(args, 'families', None),
+            arms=getattr(args, 'arms', None),
+            seeds=getattr(args, 'seeds', None),
+            quick=getattr(args, 'quick', False),
+        )
+        console.print(f"✓ Experiment MEMORY-GYM completed -> {res['metrics_path']}")
+        for key, row in res['aggregate'].items():
+            console.print(
+                f"  {key}: dividend {row['dividend']['mean']:+.4f} "
+                f"± {row['dividend']['se']:.4f} ({row['sign']}, "
+                f"n={row['dividend']['n']}) | bytes "
+                f"{row['byte_ratio']['mean']:.1f}x matched={row['matched_bytes']}"
+            )
+        untested = sorted(n for n, r in res['monitor_table'].items() if r['untested'])
+        console.print(f"  monitors still UNTESTED (never fired): {untested or 'none'}")
         return 0
     except Exception as e:  # pragma: no cover - CLI plumbing
         console.print(f"[red]Error: {e}[/red]")
