@@ -550,6 +550,24 @@ def setup_experiment_parsers(subparsers):
                                     'applied to BOTH below/above T_KT')
     exp_kt_parser.set_defaults(func=cmd_exp_kt)
 
+    # exp-clu-system  (C2W1: the full-CLU synthesis harness)
+    exp_cs_parser = subparsers.add_parser(
+        'exp-clu-system',
+        help='The FULL CLU with every lever live, staged, with all 13 '
+             'anti-collapse monitors as loud runtime guards (C2W1)'
+    )
+    exp_cs_parser.add_argument('--project', help='Project name to use')
+    exp_cs_parser.add_argument('--seed', type=int, help='Random seed')
+    exp_cs_parser.add_argument('--quick', action='store_true',
+                               help='Quick smoke mode (plumbing only, not a result)')
+    exp_cs_parser.add_argument('--stages', nargs='+',
+                               help='Run only these stages (default: all)')
+    exp_cs_parser.add_argument('--offer', type=int,
+                               help='How many items the write stream offers')
+    exp_cs_parser.add_argument('--no-remediate', action='store_true',
+                               help='Skip the remediation arms (restoring-verb table)')
+    exp_cs_parser.set_defaults(func=cmd_exp_clu_system)
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -1556,6 +1574,41 @@ def cmd_exp_write_ceiling(args):
         return 1
 
     return 0
+
+
+def cmd_exp_clu_system(args):
+    """Run the C2W1 full-CLU harness (staged lever activation + 13 monitors)."""
+    console.print(
+        "[bold cyan]Running Experiment CLU-SYSTEM: the full CLU, every lever live, "
+        "staged; acceptance is 'does not collapse', not 'wins'[/bold cyan]"
+    )
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+    config.project.save_dir = str(paths['plots'])
+    try:
+        from ..experiments.exp_clu_system import run_experiment_clu_system
+
+        res = run_experiment_clu_system(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+            stages=getattr(args, 'stages', None),
+            quick=getattr(args, 'quick', False),
+            n_offer=getattr(args, 'offer', None),
+            remediate=not getattr(args, 'no_remediate', False),
+        )
+        tripped = sorted(n for n, row in res['trip_table'].items() if row['ever_tripped'])
+        console.print(f"✓ Experiment CLU-SYSTEM completed -> {res['metrics_path']}")
+        console.print(f"  monitors that tripped at least once: {tripped or 'none'}")
+        return 0
+    except Exception as e:  # pragma: no cover - CLI plumbing
+        console.print(f"[red]Error: {e}[/red]")
+        import traceback
+
+        traceback.print_exc()
+        return 1
 
 
 def cmd_exp_kt(args):
