@@ -592,6 +592,18 @@ def part_stage0(seed: int = 0, quick: bool = False, n_rep: int = 6) -> dict:
                                 row["se_paired"] = _paired_se(
                                     preds["full_pca"][mask], preds["endpoints"][mask],
                                     y[mask], kind=kind, seed=seed)
+                                # ⭐ The STRICTER control, added after the seed-0
+                                # run diagnosed the registered one: `endpoints`
+                                # is a *worse representation of q0* than the
+                                # trajectory is (kNN dilutes q0 with q_addr/q*),
+                                # so "gain over endpoints" can be positive with
+                                # no trajectory information at all. `q0_only` is
+                                # the launder that cannot be gamed this way.
+                                row["gain_full_pca_minus_q0only"] = (
+                                    row["score_full_pca"] - row["score_q0_only"])
+                                if "full_raw" in preds:
+                                    row["gain_full_raw_minus_q0only"] = (
+                                        row["score_full_raw"] - row["score_q0_only"])
                                 # the INSTRUMENT POSITIVE CONTROL
                                 row["control_full_minus_qstar_only"] = (
                                     row["score_full_pca"] - row["score_q_star_only"])
@@ -639,6 +651,118 @@ def part_stage0(seed: int = 0, quick: bool = False, n_rep: int = 6) -> dict:
                  "qualifying": qualifying[:20]},
         "wall_s": time.time() - t0,
     }
+
+
+# ==========================================================================
+# STAGE 0b — the BLANK-STORE probe control (the decisive one)
+# ==========================================================================
+def part_stage0_blank(seed: int = 0, quick: bool = False, n_rep: int = 6) -> dict:
+    """⭐ Is a trajectory-probe gain *memory content*, or a feature expansion?
+
+    Stage 0's only cross-seed-replicating effect is ``full_raw`` beating
+    ``q0_only``. But the trajectory **contains** ``q0`` and the settle is a
+    **nonlinear map of it**, so a 1500-dimensional trajectory is, among other
+    things, a random-feature expansion of the query — and a linear probe on a
+    feature expansion beats a linear probe on the raw query *whether or not
+    anything is stored*.
+
+    The control: run the identical probe on trajectories produced by a store with
+    **nothing written into it** (``chlu.eval.dividend.blank_store_control``'s
+    logic, at probe level). If the blank store reproduces the gain, the axis is
+    not carrying memory content. This is the trajectory-launder discipline
+    applied to Stage 0's own instrument.
+    """
+    import jax
+
+    from chlu.core.clu_system import CluSystemConfig, build_system
+
+    t0 = time.time()
+    system, cfg, info = build_store(seed=seed, quick=quick)
+    ids, centers, pays = system.codebook()
+    q0, meta = ambiguity_queries(centers, cfg.query_sigma, system.store.dim,
+                                 system.store.addr_dim, seed=seed,
+                                 n_rep=1 if quick else int(n_rep))
+    blank = build_system(replace(CluSystemConfig(seed=seed + 991, quick=quick),
+                                 **{k: getattr(cfg, k) for k in
+                                    ("addr_dim", "payload_dim", "ball_radius",
+                                     "capacity", "dt", "gamma_address",
+                                     "address_steps", "read_steps", "query_sigma")}),
+                         key=jax.random.PRNGKey(seed + 991), loud=False)
+    targets = {
+        "competitor_id": (("linear", "knn"), meta["competitor"]),
+        "competitor_payload": (("ridge", "knn_reg"), pays[meta["competitor"], 0]),
+    }
+    regimes = ([(cfg.gamma_read, 400, 800)] if quick
+               else [(0.005, 400, 800), (0.02, 400, 800), (0.0, 400, 800)])
+    rows = []
+    for name, sysx in (("live", system), ("blank", blank)):
+        saved = (sysx.cfg.traj_stride, sysx.cfg.gamma_read)
+        try:
+            sysx.cfg.traj_stride = 1
+            for gr, n_addr, n_read in regimes:
+                sysx.cfg.gamma_read = float(gr)
+                sysx.cfg.address_steps = int(n_addr)
+                sysx.cfg.read_steps = int(n_read)
+                res = sysx.read(q0)
+                traj = np.asarray(res.traj)
+                st = res.state
+                feats, dims = _feature_sets(
+                    traj, np.asarray(st.q0), np.asarray(st.q_addr),
+                    np.asarray(st.q_star), np.asarray(st.p_star),
+                    stride=8, window=None)
+                for tname, (kinds, y) in targets.items():
+                    for kind in kinds:
+                        scores, preds = {}, {}
+                        for fname, (X, npca) in feats.items():
+                            if fname == "full_raw" and X.shape[1] > 4000:
+                                continue
+                            sc, _f, pr = _probe_scores(X, y, kind=kind, seed=seed,
+                                                       n_pca=npca)
+                            scores[fname] = sc
+                            preds[fname] = pr
+                        for band, mask in (
+                            ("all", np.ones_like(meta["t"], dtype=bool)),
+                            ("ambiguous", meta["t"] >= 0.35),
+                        ):
+                            row = {"store": name, "gamma_read": float(gr),
+                                   "address_steps": n_addr, "read_steps": n_read,
+                                   "target": tname, "probe": kind, "band": band,
+                                   "stride": 8, "n": int(mask.sum()), **dims}
+                            for fname in preds:
+                                row[f"score_{fname}"] = _score_from_preds(
+                                    preds[fname][mask], y[mask], kind)
+                            for feat in ("full_pca", "full_raw"):
+                                if f"score_{feat}" in row:
+                                    row[f"gain_{feat}_minus_q0only"] = (
+                                        row[f"score_{feat}"] - row["score_q0_only"])
+                                    row[f"gain_{feat}_minus_endpoints"] = (
+                                        row[f"score_{feat}"] - row["score_endpoints"])
+                            rows.append(row)
+        finally:
+            sysx.cfg.traj_stride, sysx.cfg.gamma_read = saved
+
+    # the verdict: does the blank store reproduce the live store's gain?
+    verdict = []
+    live = {(r["gamma_read"], r["target"], r["probe"], r["band"]): r
+            for r in rows if r["store"] == "live"}
+    for r in rows:
+        if r["store"] != "blank":
+            continue
+        k = (r["gamma_read"], r["target"], r["probe"], r["band"])
+        lv = live.get(k)
+        if lv is None:
+            continue
+        for feat in ("full_pca", "full_raw"):
+            key = f"gain_{feat}_minus_q0only"
+            if key in r and key in lv:
+                verdict.append({
+                    "cell": list(k), "feature": feat,
+                    "live_gain_vs_q0only": lv[key],
+                    "blank_gain_vs_q0only": r[key],
+                    "excess_live_over_blank": lv[key] - r[key],
+                })
+    return {"store": info, "rows": rows, "verdict": verdict,
+            "wall_s": time.time() - t0}
 
 
 # ==========================================================================
@@ -1089,11 +1213,108 @@ def _tree_norm(tree) -> float:
 
 
 # ==========================================================================
+# plots
+# ==========================================================================
+def _plot(out: dict, save_dir: str, seed: int) -> Optional[str]:
+    """Stage-0 axis liveness + gain-vs-stride, and the ablation stride curve.
+
+    Standing rule: **quote the curve, not the endpoint** — so the deliverable is
+    a curve even when it is flat.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    panels = []
+    if "STAGE0" in out:
+        panels += ["axis", "gain"]
+    if "B" in out:
+        panels += ["ablation"]
+    if "E2E" in out:
+        panels += ["trunc"]
+    if not panels:
+        return None
+    fig, axes = plt.subplots(1, len(panels), figsize=(5.2 * len(panels), 4.4),
+                             squeeze=False)
+    axes = axes[0]
+
+    for ax, which in zip(axes, panels, strict=True):
+        if which == "axis":
+            al = out["STAGE0"]["axis_liveness"]
+            for name in sorted({a["psi"] for a in al}):
+                sel = [a for a in al
+                       if a["psi"] == name and a["read_steps"] == 800
+                       and a["address_steps"] == 400 and a["gamma_read"] == 0.02]
+                sel.sort(key=lambda a: a["stride"])
+                ax.semilogy([a["stride"] for a in sel],
+                            [max(a["movement_noise_units"], 1e-9) for a in sel],
+                            "o-", label=name)
+            ax.axhline(3.0, color="r", ls="--", label="3-sigma bar")
+            ax.set_xscale("log", base=2)
+            ax.set_xlabel("traj_stride")
+            ax.set_ylabel("read movement (monitor #10 noise units)")
+            ax.set_title("axis liveness of the shipped psi")
+            ax.legend(fontsize=7)
+        elif which == "gain":
+            rows = [r for r in out["STAGE0"]["rows"]
+                    if r["band"] == "ambiguous" and r["is_reference"]
+                    and r["target"] == "competitor_id" and r["probe"] == "linear"
+                    and r["window"] == "both"]
+            rows.sort(key=lambda r: r["stride"])
+            x = [r["stride"] for r in rows]
+            g = [r["gain_full_pca_minus_endpoints"] for r in rows]
+            e = [3 * r["se_paired"] for r in rows]
+            ax.errorbar(x, g, yerr=e, fmt="o-", capsize=3, label="full - endpoints")
+            ax.axhline(0.0, color="k", lw=0.8)
+            ax.axhline(0.10, color="r", ls="--", label="registered gate (+0.10)")
+            ax.set_xscale("log", base=2)
+            ax.set_xlabel("traj_stride")
+            ax.set_ylabel("competitor-id probe gain (+/- 3 sigma)")
+            ax.set_title("STAGE 0: does the trajectory add anything?")
+            ax.legend(fontsize=7)
+        elif which == "ablation":
+            rows = [r for r in out["B"]["rows"] if r["target"] == "winner_payload"]
+            rows.sort(key=lambda r: r["stride"])
+            x = [r["stride"] for r in rows]
+            for key, style, lab in (("decode_settled_point", "s--", "point psi"),
+                                    ("decode_endpoints", "^:", "endpoints psi"),
+                                    ("decode_trajectory", "o-", "trajectory psi")):
+                ax.plot(x, [r[key] for r in rows], style, label=lab)
+            ax.axhline(rows[0]["chance"], color="k", ls=":", label="chance")
+            ax.set_xscale("log", base=2)
+            ax.set_xlabel("traj_stride")
+            ax.set_ylabel("decode accuracy")
+            ax.set_title("point vs trajectory (matched params)")
+            ax.legend(fontsize=7)
+        elif which == "trunc":
+            tr = out["E2E"]["truncation_study"]
+            k = [r["retain_phase1"] for r in tr]
+            ax.semilogy(k, [max(r["theta_rel_err_vs_full"], 1e-18) for r in tr],
+                        "o-", label="theta grad rel. err vs full")
+            ax.semilogy(k, [max(r["rho_pow_k"], 1e-18) for r in tr], "k:",
+                        label="theory rho^k")
+            ax.semilogy(k, [max(r["phi"], 1e-18) for r in tr], "s--",
+                        label="||d loss / d phi||")
+            ax.set_xlabel("retained phase-1 steps k")
+            ax.set_title("truncation: right for theta, fatal for phi")
+            ax.legend(fontsize=7)
+
+    fig.tight_layout()
+    os.makedirs(save_dir, exist_ok=True)
+    p = os.path.join(save_dir, f"exp_trajectory_read_seed{seed}.png")
+    fig.savefig(p, dpi=140)
+    plt.close(fig)
+    return p
+
+
+# ==========================================================================
 # main
 # ==========================================================================
 def main(argv: Optional[list] = None) -> Dict[str, Any]:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--part", default="a", choices=["a", "e2e", "stage0", "b", "all"])
+    ap.add_argument("--part", default="a",
+                    choices=["a", "e2e", "stage0", "stage0b", "b", "all"])
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--n-rep", dest="n_rep", type=int, default=6,
@@ -1124,8 +1345,21 @@ def main(argv: Optional[list] = None) -> Dict[str, Any]:
         print(f"\n[STAGE 0] gate passed = {g['passed']}  "
               f"({g['n_qualifying_cells']} qualifying cells)")
         print(json.dumps(_jsonable(g["best_ambiguous_cell"]), indent=2))
+    if args.part in ("stage0b", "all"):
+        out["STAGE0B"] = part_stage0_blank(seed=args.seed, quick=args.quick,
+                                           n_rep=args.n_rep)
+        print("\n[STAGE 0b] live vs BLANK-store probe gain over q0_only")
+        for v in out["STAGE0B"]["verdict"]:
+            print(f"  {str(v['cell']):58s} {v['feature']:>9s}  live "
+                  f"{v['live_gain_vs_q0only']:+.4f}  blank "
+                  f"{v['blank_gain_vs_q0only']:+.4f}  excess "
+                  f"{v['excess_live_over_blank']:+.4f}")
     if args.part in ("b", "all"):
         gp = out.get("STAGE0", {}).get("gate", {}).get("passed")
+        if gp is None and args.force_b:
+            # --force-b is only ever used because the gate did NOT pass; record
+            # that in the artifact so the number can never travel unlabelled.
+            gp = False
         if gp is False and not args.force_b:
             print("\n[PART B] ⛔ NOT RUN — Stage 0's gate did not pass. A flat "
                   "ablation over a dead axis is monitor #10 firing, not a result. "
@@ -1148,6 +1382,12 @@ def main(argv: Optional[list] = None) -> Dict[str, Any]:
                       f"leak={lr_['blank_leak']})")
     out["wall_s"] = time.time() - t0
     path = _save(f"exp_trajectory_read_{args.part}_seed{args.seed}.json", out)
+    try:
+        png = _plot(out, OUT_DIR, args.seed)
+        if png:
+            print(f"[exp_trajectory_read] plotted {png}")
+    except Exception as exc:  # plotting must never lose a measured result
+        print(f"[exp_trajectory_read] plot skipped: {exc!r}")
     print(f"\n[exp_trajectory_read] wrote {path}  ({out['wall_s']:.1f} s)")
     return out
 
