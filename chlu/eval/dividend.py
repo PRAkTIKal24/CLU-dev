@@ -68,11 +68,17 @@ class ByteAccount:
     @property
     def ratio(self) -> float:
         """``full / launder``. A dividend claimed at ratio > 1 is not matched."""
-        raise NotImplementedError
+        return float(self.full_bytes) / max(float(self.launder_bytes), 1.0)
 
     def matched(self, tol: float = 0.05) -> bool:
         """Are the two within ``tol`` relative bytes."""
-        raise NotImplementedError
+        return abs(self.ratio - 1.0) <= float(tol)
+
+    def as_dict(self) -> dict:
+        return {"full_bytes": int(self.full_bytes),
+                "launder_bytes": int(self.launder_bytes),
+                "ratio": self.ratio, "matched": self.matched(),
+                "breakdown": dict(self.breakdown)}
 
 
 @dataclass
@@ -91,11 +97,34 @@ class DividendReport:
     notes: str = ""
 
     def as_dict(self) -> dict:
-        raise NotImplementedError
+        return {"metric": self.metric, "full": self.full, "launder": self.launder,
+                "dividend": self.dividend, "se": self.se, "n_seeds": self.n_seeds,
+                "controls": dict(self.controls),
+                "bytes": (self.bytes.as_dict() if self.bytes else None),
+                "flags": dict(self.flags), "notes": self.notes}
 
     def to_markdown(self) -> str:
         """The reported artifact, controls included — never the bare number."""
-        raise NotImplementedError
+        lines = [
+            f"**dividend ({self.metric}) = {self.dividend:+.4f}** "
+            f"= full {self.full:.4f} - settle-deleted launder {self.launder:.4f}"
+            + (f"  (se {self.se:.4f}, {self.n_seeds} seeds)"
+               if np.isfinite(self.se) else f"  ({self.n_seeds} seed)"),
+            "",
+            "| control | value |",
+            "|---|---|",
+        ]
+        for k, v in self.controls.items():
+            lines.append(f"| {k} | {v:.4f} |" if isinstance(v, float) else f"| {k} | {v} |")
+        if self.bytes is not None:
+            lines.append(
+                f"| bytes full / launder | {self.bytes.full_bytes} / "
+                f"{self.bytes.launder_bytes} (ratio {self.bytes.ratio:.1f}x, "
+                f"matched={self.bytes.matched()}) |"
+            )
+        if self.notes:
+            lines += ["", self.notes]
+        return "\n".join(lines)
 
 
 def dividend(full: float, launder: float, *, metric: str = "accuracy",
@@ -107,7 +136,24 @@ def dividend(full: float, launder: float, *, metric: str = "accuracy",
     Higher-is-better metrics only; pass an already-sign-corrected value for
     error-like metrics and say so in ``metric``.
     """
-    raise NotImplementedError
+    return DividendReport(
+        metric=metric, full=float(full), launder=float(launder),
+        dividend=float(full) - float(launder), se=float(se),
+        controls=dict(controls or {}), bytes=bytes_account, flags=dict(flags or {}),
+    )
+
+
+def _argmin_assign(keys: np.ndarray, queries: np.ndarray,
+                   metric_matrix: Optional[np.ndarray] = None) -> np.ndarray:
+    q = np.asarray(queries, dtype=float)
+    k = np.asarray(keys, dtype=float)
+    diff = q[:, None, :] - k[None, :, :]
+    if metric_matrix is None:
+        d2 = np.sum(diff * diff, axis=-1)
+    else:
+        M = np.asarray(metric_matrix, dtype=float)
+        d2 = np.einsum("qkd,de,qke->qk", diff, M, diff)
+    return np.argmin(d2, axis=1)
 
 
 def settle_deleted_launder(keys: np.ndarray, payloads: np.ndarray,
@@ -118,8 +164,12 @@ def settle_deleted_launder(keys: np.ndarray, payloads: np.ndarray,
     Same bytes, same ``phi``, same admitted set — the *only* difference is that
     the dynamics have been removed. This is the control w26 measured beating CLU
     6/6 on both axes, and it is the one the charter binds the dividend to.
+
+    Returns the retrieved payloads (``metric="value"``) or the assignment
+    indices (``metric="assign"``).
     """
-    raise NotImplementedError
+    idx = _argmin_assign(keys, queries)
+    return idx if metric == "assign" else np.asarray(payloads, dtype=float)[idx]
 
 
 def shared_metric_launder(keys: np.ndarray, payloads: np.ndarray,
@@ -131,7 +181,8 @@ def shared_metric_launder(keys: np.ndarray, payloads: np.ndarray,
     launder is stronger still but is **not matched-bytes** (+``K d(d+1)/2``
     floats) and must be reported as such.
     """
-    raise NotImplementedError
+    idx = _argmin_assign(keys, queries, metric_matrix)
+    return np.asarray(payloads, dtype=float)[idx]
 
 
 def same_keys_null(keys: np.ndarray, payloads: np.ndarray, queries: np.ndarray,
@@ -141,18 +192,36 @@ def same_keys_null(keys: np.ndarray, payloads: np.ndarray, queries: np.ndarray,
     Isolates "how much of the score is address structure". A system that scores
     the same here as with the true payloads is reading its own addresses.
     """
-    raise NotImplementedError
+    rng = np.random.default_rng(0) if rng is None else rng
+    pays = np.asarray(payloads, dtype=float)
+    perm = rng.permutation(pays.shape[0])
+    return settle_deleted_launder(keys, pays[perm], queries)
 
 
 def blank_store_control(read_fn: Callable, queries, *,
-                        chance: Optional[float] = None) -> Dict[str, float]:
+                        chance: Optional[float] = None,
+                        labels: Optional[np.ndarray] = None,
+                        metric: str = "decode",
+                        representation: str = "settled_point") -> Dict[str, float]:
     """Read an identically-configured store with **nothing in it**.
 
     ``chance`` defaults to the empirical marginal (not ``1/K``: a skewed label
     distribution makes ``1/K`` the wrong bar). Returns the score and its
     ``chance + 3 se`` bar — monitor #4's input.
     """
-    raise NotImplementedError
+    pred = np.asarray(read_fn(queries))
+    if labels is None:
+        raise ValueError("blank_store_control needs labels to score a decode")
+    labels = np.asarray(labels)
+    score = float(np.mean(pred == labels))
+    if chance is None:
+        _, counts = np.unique(labels, return_counts=True)
+        chance = float(np.max(counts) / labels.size)  # the empirical marginal
+    n = max(labels.size, 1)
+    se = float(np.sqrt(max(chance * (1.0 - chance), 1e-12) / n))
+    return {"score": score, "chance": float(chance), "se": se,
+            "bar": float(chance + 3.0 * se), "metric": metric,
+            "representation": representation}
 
 
 def trajectory_launder(psi: Callable, traj, state) -> Dict[str, float]:
@@ -161,19 +230,46 @@ def trajectory_launder(psi: Callable, traj, state) -> Dict[str, float]:
     The trajectory **contains ``q0 = phi(x)``**. Without this three-way split the
     trajectory pillar's first datum is uninterpretable: a psi over the raw buffer
     could be a classifier on the query embedding and nothing else.
+
+    Returns the three read-outs as arrays under keys ``full``, ``q0_only`` and
+    ``endpoints``; scoring them is the caller's job (the gym does it).
     """
-    raise NotImplementedError
+    import jax.numpy as jnp
+
+    full = psi(traj, state)
+    q0_pt = jnp.concatenate([state.q0, state.p0], axis=-1)[:, None, :]
+    q0_only = psi(jnp.broadcast_to(q0_pt, traj.shape), state)
+    ends = jnp.concatenate(
+        [q0_pt, jnp.concatenate([state.q_star, state.p_star], axis=-1)[:, None, :]],
+        axis=1,
+    )
+    endpoints = psi(ends, state)
+    return {"full": full, "q0_only": q0_only, "endpoints": endpoints}
 
 
 def count_bytes(tree: Any) -> int:
     """Bytes of every inexact array in a PyTree (float32 => 4 B/param)."""
-    raise NotImplementedError
+    import equinox as eqx
+    import jax
+
+    leaves = jax.tree_util.tree_leaves(eqx.filter(tree, eqx.is_inexact_array))
+    return int(sum(int(np.asarray(x).size) for x in leaves) * 4)
 
 
 def byte_account(system, keys: np.ndarray, payloads: np.ndarray) -> ByteAccount:
     """Byte accounting for a :class:`~chlu.core.clu_system.CluSystem` and the
     launder table it is measured against."""
-    raise NotImplementedError
+    keys = np.asarray(keys)
+    pays = np.asarray(payloads)
+    v_bytes = int(system.store.n_bytes())
+    code_bytes = int(keys.size * 4)
+    launder = int((keys.size + pays.size) * 4)
+    return ByteAccount(
+        full_bytes=v_bytes + code_bytes, launder_bytes=launder,
+        breakdown={"V_theta": v_bytes, "codebook_addresses": code_bytes,
+                   "launder_keys": int(keys.size * 4),
+                   "launder_payloads": int(pays.size * 4)},
+    )
 
 
 __all__ = [

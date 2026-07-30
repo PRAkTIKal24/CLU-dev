@@ -38,12 +38,34 @@ without touching the shared config module.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import time
+from dataclasses import dataclass, field, fields
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import equinox as eqx
+import jax
 import jax.numpy as jnp
 import numpy as np
+
+from chlu.core.clu_controller import (
+    CluControllerV0,
+    ControllerPolicy,
+    derived_d_safe,
+)
+from chlu.core.controller import Controller
+from chlu.core.memory_potentials import (
+    DesignFreedomPotential,
+    atom_write_mask_fn,
+)
+from chlu.core.monitors import (
+    MonitorContext,
+    default_registry,
+    erf_margin_accuracy,
+    saddle_reach_threshold,
+)
+from chlu.core.potentials import PotentialMLP  # noqa: F401  (documented family)
+from chlu.experiments.goldstone_harness import clu_with_potential
+from chlu.training.train_memory import train_memory_landscape
 
 #: A strided read trajectory: ``(n_points, 2 * dim)`` = ``[q | p]`` per point.
 Trajectory = jnp.ndarray
@@ -65,14 +87,20 @@ class CluSystemConfig:
     n_spectator: int = 0
     ball_radius: float = 1.0
 
-    # -- the learned V_theta store ---------------------------------------
-    capacity: int = 12
-    atoms_per_item: int = 8
-    atom_width: float = 0.15
-    atom_depth_init: float = 1e-4
-    atom_init_scale: float = 1.0
+    # -- the learned V_theta store (the w22-w26 KNOWN PRODUCTIVE BAND) ----
+    # Every default below is the shipped `ExperimentDesignedMechanismConfig`
+    # value, so stage 0 starts where 26 waves measured the levers, not at a
+    # guess (charter §3.1). Deviations are declared in the report.
+    capacity: int = 8
+    atoms_per_item: int = 32  # shipped: n_atoms = atoms_per_item * K
+    min_atoms: int = 384  # hard floor
+    min_atoms_base: int = 512  # dimension-aware floor: base * c**d
+    min_atoms_c: float = 1.4142135623730951  # sqrt(2), empirically anchored (w23)
+    atom_width: float = 0.3  # atom_init_width (NOT the designed well width 0.15)
+    atom_depth_init: float = 1e-4  # flat start; the writer digs the wells
+    atom_init_scale: float = 1.0  # LOAD-BEARING: 0.5 caps strict at 0.5 (basin reach)
     atom_local_radius: float = 0.0  # N98 localized init; 0.0 = historical scatter
-    confine: float = 0.05
+    confine: float = 0.05  # learned_confine (coercivity alpha)
 
     # -- the write ---------------------------------------------------------
     write_steps: int = 300
@@ -82,18 +110,25 @@ class CluSystemConfig:
     write_sigma_pay: float = 0.6
     write_margin: float = 0.15
     write_barrier: float = 0.2
-    write_n_perturb: int = 16
+    write_n_perturb: int = 32
+    # ⚠ Masked/local writes are REQUIRED by "full CLU" (intervention §4) and are
+    # the only form a stream supports, but they are NOT the learned arm's best
+    # single-shot fidelity write: w22 measured atoms global 1.000 vs local 0.859
+    # at K=4. That gap is a declared property of this configuration, not a bug.
     masked_write: bool = True  # local in parameter space (C3-local)
 
     # -- the read ----------------------------------------------------------
     dt: float = 0.05
-    gamma_address: float = 0.2  # doctrine row 1: measured optimum ~0.2
-    gamma_read: float = 0.2
+    # Shipped two-phase band: phase 2 REQUIRES dissipation (payload err 0.57 at
+    # gamma_read=0 vs ~1e-6 at 0.02 — the payload is launched at 0 and must
+    # dissipate up to a_i).
+    gamma_address: float = 0.05
+    gamma_read: float = 0.02
     address_steps: int = 400
-    read_steps: int = 200
+    read_steps: int = 800
     traj_stride: int = 8  # the strided trajectory buffer
     kinetic_mode: str = "newtonian_learned"
-    query_sigma: float = 0.24  # sigma_q, the doctrine grid's in-band value
+    query_sigma: float = 0.15  # sigma_q (shipped query jitter)
 
     # -- control -----------------------------------------------------------
     d_safe_kappa_prime: float = 2.576  # 99% point of the corrected margin law
@@ -116,7 +151,8 @@ class CluSystemConfig:
 
     # -- harness -----------------------------------------------------------
     seed: int = 0
-    n_query_per_item: int = 8
+    n_query_per_item: int = 8  # shipped harness uses 32; 8 declared for cost
+    payload_tol: float = 0.1
     quick: bool = False
 
     @classmethod
@@ -127,11 +163,35 @@ class CluSystemConfig:
         does not crash a new schema. This is the config-driven override path for
         ``projects/<name>/config/config.yaml`` under a ``clu_system:`` block.
         """
-        raise NotImplementedError
+        known = {f.name for f in fields(cls)}
+        kw = {k: v for k, v in dict(overrides or {}).items() if k in known}
+        return cls(**kw)
 
     def as_flag_table(self) -> Dict[str, Any]:
         """Every non-default flag in effect — the flag-provenance table."""
-        raise NotImplementedError
+        base = CluSystemConfig()
+        out = {}
+        for f in fields(self):
+            v = getattr(self, f.name)
+            if v != getattr(base, f.name):
+                out[f.name] = v
+        return out
+
+    @property
+    def dim(self) -> int:
+        return int(self.addr_dim + self.payload_dim + self.n_spectator)
+
+    @property
+    def n_atoms(self) -> int:
+        """``max(atoms_per_item*K, min_atoms, base*c**d)`` — the w23 dimension-aware
+        atom floor. Scaling the budget with K only starves the write at high ``d``
+        (the fraction of atoms landing near any site decays ~geometrically per
+        added dimension), and a starved cell reads as a capacity result when it is
+        an optimizer artefact."""
+        geo = round(self.min_atoms_base * self.min_atoms_c ** self.addr_dim)
+        n = max(self.atoms_per_item * self.capacity, self.min_atoms, int(geo))
+        # keep it a multiple of the group count so every item owns equal blocks
+        return int(self.capacity * int(np.ceil(n / self.capacity)))
 
 
 class ReadState(eqx.Module):
@@ -217,8 +277,8 @@ class LearnedVStore(eqx.Module):
 
     * the **payload** ``a_i`` lives **only** in the landscape. The read must
       recover it from ``V_theta``; nothing in the read path may consult a stored
-      value. ``payload_of`` exists for **eval/launder/monitors only** and is
-      asserted never-read-by-``read`` in ``tests/test_clu_system.py``.
+      value. The codebook's payload column exists for **eval/launder/monitors
+      only** and is asserted never-read-by-``read`` in ``tests/test_clu_system.py``.
     * the **derived address** ``c_i`` IS retained per live item
       (`controller-doctrine` I-1): without it the same-keys launder cannot be
       constructed and **monitor #2 has no runtime form at all**. It is also the
@@ -234,11 +294,55 @@ class LearnedVStore(eqx.Module):
     atoms_per_item: int = eqx.field(static=True)
 
     def __init__(self, cfg: CluSystemConfig, key):
-        raise NotImplementedError
+        self.dim = int(cfg.dim)
+        self.addr_dim = int(cfg.addr_dim)
+        self.payload_dim = int(cfg.payload_dim)
+        self.capacity = int(cfg.capacity)
+        self.atoms_per_item = int(cfg.n_atoms // max(cfg.capacity, 1))
+        # rung "free_mlp" + family "atoms" => designed part is None, so the
+        # landscape is ENTIRELY learned (coercivity only). One atom group per
+        # item slot makes the write local in parameter space.
+        self.V = DesignFreedomPotential(
+            rung="free_mlp",
+            dim=self.dim,
+            payloads=jnp.zeros((self.capacity,)),
+            key=key,
+            learned_family="atoms",
+            n_atoms=int(cfg.n_atoms),
+            rbf_init_width=float(cfg.atom_width),
+            confine=float(cfg.confine),
+            atom_depth_init=float(cfg.atom_depth_init),
+            atom_groups=self.capacity,
+            atom_init_scale=float(cfg.atom_init_scale),
+        )
+
+    # -- introspection -----------------------------------------------------
+    @property
+    def atoms(self):
+        return self.V.learned
 
     def group_rows(self, slot: int) -> jnp.ndarray:
         """Boolean atom-row mask owned by ``slot`` (the masked-write support)."""
-        raise NotImplementedError
+        return self.V.learned.group_rows(int(slot))
+
+    def group_stats(self, slot: int, center) -> Tuple[float, float]:
+        """``(D_i, s_i)`` of the item's own wells, read off the learned atoms.
+
+        ``D_i`` is the depth its own atoms contribute **at its recorded site**
+        and ``s_i`` the depth-weighted width — the ``(D, s)`` pair the saddle
+        reach criterion needs, taken from the landscape rather than fitted.
+        """
+        m = np.asarray(self.group_rows(slot), dtype=bool)
+        A = np.asarray(self.V.learned.amp, dtype=float)[m] ** 2
+        s = np.exp(np.asarray(self.V.learned.log_width, dtype=float)[m])
+        c = np.asarray(self.V.learned.centers, dtype=float)[m]
+        z = np.zeros((self.dim,), dtype=float)
+        z[: self.addr_dim] = np.asarray(center, dtype=float)[: self.addr_dim]
+        d2 = np.sum((c - z[None, :]) ** 2, axis=-1)
+        w = A * np.exp(-d2 / (2.0 * s**2 + 1e-12))
+        D = float(np.sum(w))
+        s_eff = float(np.sum(w * s) / max(np.sum(w), 1e-12)) if D > 0 else float(np.mean(s))
+        return D, s_eff
 
     def scale_group_amplitude(self, slot: int, factor: float) -> "LearnedVStore":
         """Multiply that item's atom **depths** by ``factor`` (decay/eviction).
@@ -247,11 +351,22 @@ class LearnedVStore(eqx.Module):
         ``sqrt(factor)``; ``factor = 0`` is a physical eviction (the item's wells
         vanish from ``V_theta`` and its rows are zeroed).
         """
-        raise NotImplementedError
+        m = jnp.asarray(self.group_rows(slot), dtype=jnp.float32)
+        scale = jnp.where(m > 0, jnp.sqrt(jnp.asarray(float(factor))), 1.0)
+        new_amp = self.V.learned.amp * scale
+        V = eqx.tree_at(lambda t: t.learned.amp, self.V, new_amp)
+        if float(factor) == 0.0:
+            # a physically evicted item leaves no trace in its own rows
+            V = eqx.tree_at(
+                lambda t: t.learned.centers, V,
+                V.learned.centers * (1.0 - m)[:, None],
+            )
+        return eqx.tree_at(lambda t: t.V, self, V)
 
     def n_bytes(self) -> int:
         """Bytes of learned state (float32) — the matched-bytes denominator."""
-        raise NotImplementedError
+        leaves = jax.tree_util.tree_leaves(eqx.filter(self.V, eqx.is_inexact_array))
+        return int(sum(int(np.asarray(x).size) for x in leaves) * 4)
 
 
 class CluSystem:
@@ -279,7 +394,46 @@ class CluSystem:
         registry=None,
         config: Optional[CluSystemConfig] = None,
     ):
-        raise NotImplementedError
+        self.cfg = config or CluSystemConfig()
+        self.store = store
+        self.phi = phi
+        self.psi = psi or settled_point_psi(store.addr_dim, store.payload_dim)
+        self.registry = registry if registry is not None else default_registry()
+        self.controller = controller if controller is not None else make_controller(
+            self.cfg, self.registry
+        )
+        # eval-only bookkeeping (NEVER read by ``read``)
+        self._payloads: Dict[int, np.ndarray] = {}
+        self._born: Dict[int, int] = {}
+        self._t = 0
+        self._write_log: List[dict] = []
+        self._losses: List[float] = []
+        self._prev_store: Optional[LearnedVStore] = None
+        self._c3_ratio = float("nan")
+        self._oldest_drop = float("nan")
+        self._knob_reads: Dict[str, int] = {}
+        self._wall0 = time.time()
+
+    # -- model -------------------------------------------------------------
+    def model(self, store: Optional[LearnedVStore] = None,
+              payload_width_mult: float = 1.0):
+        """The CLU wired to the learned landscape (optionally width-annealed)."""
+        st = store or self.store
+        V = st.V
+        if payload_width_mult != 1.0:
+            axis = [1.0] * st.dim
+            for j in range(st.addr_dim, st.addr_dim + st.payload_dim):
+                axis[j] = float(payload_width_mult)
+            V = eqx.tree_at(
+                lambda t: t.learned,
+                V,
+                eqx.tree_at(lambda a: a.axis_width_scale, V.learned, tuple(axis),
+                            is_leaf=lambda x: x is None),
+            )
+        return clu_with_potential(
+            V, dim=st.dim, kinetic_mode=self.cfg.kinetic_mode,
+            inertia=jnp.ones(st.dim),
+        )
 
     # -- the three public operations --------------------------------------
     def write_stream(self, items: Sequence[dict], key=None,
@@ -292,7 +446,60 @@ class CluSystem:
         pressure), then a **masked** learned write into ``V_theta``. Monitors run
         after every write.
         """
-        raise NotImplementedError
+        key = jax.random.PRNGKey(self.cfg.seed) if key is None else key
+        rep = WriteReport()
+        for item in items:
+            key, k_w = jax.random.split(key)
+            self._t += 1
+            if item.get("delete"):
+                self._delete(int(item["item_id"]), rep)
+                continue
+            iid = int(item["item_id"])
+            payload = np.atleast_1d(np.asarray(item["payload"], dtype=float))
+            address = np.asarray(
+                item["address"] if "address" in item else self._embed(item["x"]),
+                dtype=float,
+            ).reshape(-1)[: self.store.addr_dim]
+            reach = self._reach_margin_for(address, payload)
+            res = self.controller.admit(
+                iid, address, float(payload[0]),
+                utility=float(item.get("utility", 1.0)),
+                reach_margin=reach if self.cfg.stage_admission else None,
+                permanent=bool(item.get("permanent", False)),
+                leak=item.get("leak", self.cfg.leak if self.cfg.stage_lifetimes else 0.0),
+            )
+            row = dict(res.detail.get("row", {}))
+            row.update({"t": self._t, "item_id": iid, "verb": "admit",
+                        "applied": res.applied, "guard": res.guard,
+                        "decision": row.get("decision", res.reason),
+                        "reach_margin": reach,
+                        "gate_margin": row.get("d_min_proposed", float("nan"))})
+            if not res.applied:
+                rep.refused.append(iid)
+                self._write_log.append(row)
+                rep.log.append(row)
+                continue
+            slot = self._slot_of(iid)
+            self._payloads[iid] = payload
+            self._born[iid] = self._t
+            # --- the LEARNED write: masked, into V_theta ---
+            self._prev_store = self.store
+            pre = self._relaxed_sites()
+            loss = self._write_item(slot, address, payload, k_w)
+            self._losses.append(loss)
+            rep.losses.append(loss)
+            self._c3_ratio, self._oldest_drop = self._c3_check(pre)
+            rep.admitted.append(iid)
+            row["write_loss"] = loss
+            row["post_write_drift"] = self._last_drift
+            self._write_log.append(row)
+            rep.log.append(row)
+            if self.cfg.stage_lifetimes:
+                self.controller.decay(1)
+                self._sync_decay()
+            if interleave_read_every and (len(rep.admitted) % interleave_read_every == 0):
+                rep.readings.extend(self.observe(stage=f"write:t{self._t}"))
+        return rep
 
     def read(self, x, *, steps: Optional[int] = None,
              schedule: Optional[Sequence[float]] = None,
@@ -311,7 +518,83 @@ class CluSystem:
         width multiplier. Its designed guard — the schedule must return to the
         stored landscape before the value is read — is enforced by the controller.
         """
-        raise NotImplementedError
+        cfg = self.cfg
+        q0 = jnp.asarray(self._embed(x), dtype=jnp.float32)
+        if q0.ndim == 1:
+            q0 = q0[None, :]
+        q0 = q0.at[:, cfg.addr_dim: cfg.addr_dim + cfg.payload_dim].set(0.0)
+        p0 = jnp.zeros_like(q0)
+        n_addr = int(steps or cfg.address_steps)
+        sched = list(schedule) if schedule is not None else list(
+            getattr(self.controller, "schedule", (1.0,))
+        )
+        if abs(float(sched[-1]) - 1.0) > 1e-9:
+            raise ValueError(
+                "read schedule must return to the stored landscape (last multiplier 1.0)"
+            )
+
+        # --- phase 1: address acquisition (annealed if a schedule is set) ---
+        q, p = q0, p0
+        traj_parts, phase_parts = [], []
+        per_stage = max(1, n_addr // max(1, len(sched)))
+        for mult in sched:
+            m = self.model(payload_width_mult=float(mult))
+            tr = _rollout(m, q, p, per_stage, cfg.dt, cfg.gamma_address)
+            tr_s = tr[:, :: cfg.traj_stride, :]
+            if collect_trajectory:
+                traj_parts.append(tr_s)
+                phase_parts.append(np.ones((tr_s.shape[1],), dtype=int))
+            q, p = tr[:, -1, : q.shape[1]], tr[:, -1, q.shape[1]:]
+        q_addr, p_addr = q, p
+
+        # --- phase 2: the read rollout (where the value is read) ---
+        m0 = self.model()
+        tr2 = _rollout(m0, q_addr, p_addr, int(cfg.read_steps), cfg.dt, cfg.gamma_read)
+        tr2_s = tr2[:, :: cfg.traj_stride, :]
+        if collect_trajectory:
+            traj_parts.append(tr2_s)
+            phase_parts.append(2 * np.ones((tr2_s.shape[1],), dtype=int))
+        q_star, p_star = tr2[:, -1, : q0.shape[1]], tr2[:, -1, q0.shape[1]:]
+
+        traj = jnp.concatenate(traj_parts, axis=1) if collect_trajectory else tr2_s
+        phase = np.concatenate(phase_parts) if collect_trajectory else np.full(
+            (tr2_s.shape[1],), 2, dtype=int
+        )
+        state = ReadState(q0=q0, p0=p0, q_addr=q_addr, p_addr=p_addr,
+                          q_star=q_star, p_star=p_star)
+
+        g0 = np.asarray(_grad_norms(m0, q0))
+        gs = np.asarray(_grad_norms(m0, q_star))
+        rho = gs / np.maximum(np.median(g0), 1e-12)
+        conf = np.exp(-np.clip(rho, 0.0, 50.0))
+        n_steps = per_stage * len(sched) + int(cfg.read_steps)
+
+        retries = 0
+        do_retry = cfg.stage_retry if allow_retry is None else bool(allow_retry)
+        if do_retry:
+            for r in range(int(self.controller.policy.retry_max_rounds)):
+                vr = self.controller.retry(float(np.min(conf)), round_index=r)
+                if not vr.applied:
+                    break
+                retries += 1
+                tr3 = _rollout(m0, q_star, p_star, int(cfg.read_steps),
+                               cfg.dt, cfg.gamma_read)
+                tr3_s = tr3[:, :: cfg.traj_stride, :]
+                traj = jnp.concatenate([traj, tr3_s], axis=1)
+                phase = np.concatenate([phase, 2 * np.ones((tr3_s.shape[1],), dtype=int)])
+                q_star, p_star = tr3[:, -1, : q0.shape[1]], tr3[:, -1, q0.shape[1]:]
+                state = ReadState(q0=q0, p0=p0, q_addr=q_addr, p_addr=p_addr,
+                                  q_star=q_star, p_star=p_star)
+                gs = np.asarray(_grad_norms(m0, q_star))
+                rho = gs / np.maximum(np.median(g0), 1e-12)
+                conf = np.exp(-np.clip(rho, 0.0, 50.0))
+                n_steps += int(cfg.read_steps)
+
+        value = self.psi(traj, state)
+        diag = self._read_diagnostics(q0, q_addr, q_star, g0, gs, rho)
+        return ReadResult(value=value, traj=traj, phase=phase, state=state,
+                          confidence=conf, residual=gs, rho_conv=rho,
+                          n_steps=n_steps, retries=retries, diagnostics=diag)
 
     def consolidate(self, key=None) -> ConsolidationReport:
         """Offline maintenance: re-pack, enforce decay, re-check certificates,
@@ -321,7 +604,46 @@ class CluSystem:
         This is where wake-sleep is repositioned (charter §2.4): consolidation,
         not the trainer.
         """
-        raise NotImplementedError
+        probe = self.self_probe(key)
+        certs = self.certificates()
+        reads = probe.get("read").diagnostics if probe.get("read") is not None else None
+        readings = self.observe(stage="consolidate", self_probe=probe,
+                                certificates=certs, reads=reads)
+        return ConsolidationReport(certificates=certs, readings=readings,
+                                   self_probe=probe, n_moves=0)
+
+    # -- monitors ----------------------------------------------------------
+    def observe(self, stage: str, self_probe: Optional[dict] = None,
+                certificates: Optional[dict] = None,
+                blank: Optional[dict] = None, reads: Optional[dict] = None,
+                extras: Optional[dict] = None) -> List[Any]:
+        """Run the monitor registry against the system's current state."""
+        ids, centers, pays = self.codebook()
+        sep = _min_separation(centers)
+        s_max = self._s_max()
+        ex = {
+            "sep": sep,
+            "kinetic_mode": self.cfg.kinetic_mode,
+            "write_steps": self.cfg.write_steps,
+            "wall_clock_s": time.time() - self._wall0,
+            "utilisation": self._utilisation(),
+            "fairness": self._fairness(),
+            "c3_ratio": self._c3_ratio,
+            "oldest_retention_drop": self._oldest_drop,
+            "min_sep_minus_2s": (sep - 2.0 * s_max) if np.isfinite(sep) else float("nan"),
+            "knob_reads": self._knob_reads or None,
+            "knobs_declared": sorted(self._knob_reads) if self._knob_reads else None,
+        }
+        ex.update(self._reach_extras())
+        if certificates is not None:
+            ex["certificates"] = certificates
+        if extras:
+            ex.update(extras)
+        ctx = MonitorContext(stage=stage, t=self._t, system=self, reads=reads,
+                             self_probe=self_probe, blank=blank,
+                             write_log=self._write_log, controller=self.controller,
+                             extras=ex)
+        return self.registry.observe(ctx)
 
     # -- hooks -------------------------------------------------------------
     def fixed_point_residual(self, q, p, *, gamma: Optional[float] = None):
@@ -331,7 +653,13 @@ class CluSystem:
         (`trainability-spike`): a settle is a fixed point, so one differentiates
         through the equilibrium rather than the unroll.
         """
-        raise NotImplementedError
+        m = self.model()
+        g = self.cfg.gamma_address if gamma is None else float(gamma)
+        q = jnp.asarray(q)
+        p = jnp.asarray(p)
+        one = m(q, p, 1, self.cfg.dt, g)  # (1, 2*dim)
+        d = q.shape[-1]
+        return jnp.concatenate([q - one[-1, :d], p - one[-1, d:]], axis=-1)
 
     def self_probe(self, key=None) -> Dict[str, Any]:
         """Label-free diagnostic pass: the store re-reads what it wrote.
@@ -339,7 +667,70 @@ class CluSystem:
         Feeds monitors #5 (acquisition), #6 (objective divergence), #9
         (lifetimes) and #12 (starvation) without ever consulting a task label.
         """
-        raise NotImplementedError
+        ids, centers, pays = self.codebook()
+        if len(ids) == 0:
+            return {"acq": float("nan"), "n_probed": 0}
+        key = jax.random.PRNGKey(self.cfg.seed + 7919) if key is None else key
+        n_per = int(self.cfg.n_query_per_item)
+        labels = np.repeat(np.arange(len(ids)), n_per)
+        jitter = np.asarray(
+            jax.random.normal(key, (len(labels), self.store.addr_dim))
+        ) * float(self.cfg.query_sigma)
+        q0 = np.zeros((len(labels), self.store.dim), dtype=np.float32)
+        q0[:, : self.store.addr_dim] = centers[labels] + jitter
+        res = self.read(q0)
+        val = np.asarray(res.value).reshape(len(labels), -1)
+        addr = np.asarray(res.state.q_addr)[:, : self.store.addr_dim]
+        basin = _assign(addr, centers)
+        ok = basin == labels
+        err = np.linalg.norm(val - pays[labels], axis=-1)
+        strict = ok & (err < float(self.cfg.payload_tol))
+        # decode: which stored payload is the read value closest to
+        dec = np.argmin(np.linalg.norm(val[:, None, :] - pays[None, :, :], axis=-1), axis=1)
+        retention = np.array([float(np.mean(strict[labels == i])) for i in range(len(ids))])
+        return {
+            "acq": float(np.mean(ok)),
+            "strict": float(np.mean(strict)),
+            "decode": float(np.mean(dec == labels)),
+            "chance": 1.0 / max(len(ids), 1),
+            "n_probed": int(len(labels)),
+            "retention": retention,
+            "payload_abs": np.abs(pays).max(axis=1),
+            "write_loss": (self._losses[-1] if self._losses else float("nan")),
+            "delta_read_basin_conditioned": (
+                float(np.median(err[ok])) if np.any(ok) else float("nan")
+            ),
+            "values": val,
+            "labels": labels,
+            "assign_settle": basin,
+            "q0": q0,
+            "rho_conv": np.asarray(res.rho_conv),
+            "read": res,
+        }
+
+    def certificates(self) -> Dict[str, Any]:
+        """The C1-C5 / N1-N4 certificate pass (monitor #8's input)."""
+        ids, centers, pays = self.codebook()
+        out: Dict[str, Any] = {}
+        if len(ids) == 0:
+            return out
+        sep = _min_separation(centers)
+        out["injective"] = bool(sep > 1e-6)
+        out["sep"] = sep
+        out["sep_over_sigma_q"] = sep / max(float(self.cfg.query_sigma), 1e-12)
+        out["erf_accuracy"] = erf_margin_accuracy(sep / 2.0, float(self.cfg.query_sigma))
+        out["lambda_min"] = self._lambda_min(centers, pays)
+        if len(ids) > 1:
+            d = np.linalg.norm(pays[:, None, :] - pays[None, :, :], axis=-1)
+            np.fill_diagonal(d, np.inf)
+            out["payload_gap"] = float(np.min(d))
+        else:
+            out["payload_gap"] = float("inf")
+        probe = self.self_probe()
+        out["delta_read_basin_conditioned"] = probe.get(
+            "delta_read_basin_conditioned", float("nan")
+        )
+        return out
 
     def codebook(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """``(ids, addresses, payloads)`` over live items — **eval only**.
@@ -348,11 +739,319 @@ class CluSystem:
         constructed (doctrine I-1) and so monitors have ground truth about what
         the store believes it holds.
         """
-        raise NotImplementedError
+        recs = sorted(self.controller.allocator.records.values(), key=lambda r: r.item_id)
+        ids = np.array([r.item_id for r in recs], dtype=int)
+        centers = (np.stack([np.asarray(r.center, dtype=float) for r in recs])
+                   if recs else np.zeros((0, self.store.addr_dim)))
+        pays = (np.stack([self._payloads[r.item_id] for r in recs])
+                if recs else np.zeros((0, self.store.payload_dim)))
+        return ids, centers, pays
 
     def n_bytes(self) -> int:
         """Matched-bytes accounting for the full system."""
-        raise NotImplementedError
+        ids, centers, _ = self.codebook()
+        return int(self.store.n_bytes() + centers.size * 4)
+
+    # ------------------------------------------------------------------
+    # internals
+    # ------------------------------------------------------------------
+    def _embed(self, x):
+        x = jnp.asarray(x, dtype=jnp.float32)
+        if self.phi is None:
+            if x.shape[-1] == self.store.dim:
+                return x
+            pad = jnp.zeros(x.shape[:-1] + (self.store.dim - x.shape[-1],))
+            return jnp.concatenate([x, pad], axis=-1)
+        return self.phi(x)
+
+    def _slot_of(self, item_id: int) -> int:
+        for r in self.controller.allocator.records.values():
+            if r.item_id == int(item_id):
+                return int(r.slot)
+        raise KeyError(item_id)
+
+    def _write_item(self, slot: int, address, payload, key) -> float:
+        cfg = self.cfg
+        z = np.zeros((1, self.store.dim), dtype=np.float32)
+        z[0, : self.store.addr_dim] = address[: self.store.addr_dim]
+        z[0, self.store.addr_dim: self.store.addr_dim + self.store.payload_dim] = payload
+        ids, centers, pays = self.codebook()
+        crowd = np.zeros((len(ids), self.store.dim), dtype=np.float32)
+        crowd[:, : self.store.addr_dim] = centers
+        crowd[:, self.store.addr_dim: self.store.addr_dim + self.store.payload_dim] = pays
+        mask_fn = (atom_write_mask_fn(self.store.group_rows(slot))
+                   if cfg.masked_write else None)
+        V, hist = train_memory_landscape(
+            self.store.V, jnp.asarray(z), key,
+            steps=int(cfg.write_steps), lr=float(cfg.write_lr),
+            weight_decay=float(cfg.write_weight_decay),
+            loss_kwargs=dict(
+                n_perturb=int(cfg.write_n_perturb),
+                sigma_addr=float(cfg.write_sigma_addr),
+                sigma_pay=float(cfg.write_sigma_pay),
+                margin=float(cfg.write_margin),
+                barrier=float(cfg.write_barrier),
+                payload_index=int(self.store.addr_dim),
+                barrier_pairs="nn",
+                crowd_targets=jnp.asarray(crowd) if len(ids) > 1 else None,
+            ),
+            update_mask_fn=mask_fn,
+        )
+        self.store = eqx.tree_at(lambda s: s.V, self.store, V)
+        return float(hist[-1]) if hist else float("nan")
+
+    def _relaxed_sites(self) -> Optional[np.ndarray]:
+        ids, centers, _ = self.codebook()
+        if len(ids) == 0:
+            return None
+        q0 = np.zeros((len(ids), self.store.dim), dtype=np.float32)
+        q0[:, : self.store.addr_dim] = centers
+        res = self.read(q0)
+        return np.asarray(res.state.q_star)
+
+    def _c3_check(self, pre: Optional[np.ndarray]):
+        """Measured vs C3-predicted drift of previously-stored fixed points."""
+        self._last_drift = float("nan")
+        if pre is None or self._prev_store is None or pre.shape[0] < 2:
+            return float("nan"), float("nan")
+        post = self._relaxed_sites()
+        if post is None or post.shape[0] != pre.shape[0]:
+            return float("nan"), float("nan")
+        measured = np.linalg.norm(post[:-1] - pre[:-1], axis=-1)  # exclude the new item
+        self._last_drift = float(np.max(measured)) if measured.size else float("nan")
+        m_old = self.model(store=self._prev_store)
+        m_new = self.model()
+        g_old = np.asarray(_grad_vecs(m_old, jnp.asarray(pre[:-1])))
+        g_new = np.asarray(_grad_vecs(m_new, jnp.asarray(pre[:-1])))
+        dV = np.linalg.norm(g_new - g_old, axis=-1)
+        lam = max(self._lambda_min_at(pre[:-1]), 1e-9)
+        predicted = dV / lam
+        ratio = float(np.median(measured / np.maximum(predicted, 1e-12)))
+        # oldest-item retention proxy: the drift of the OLDEST stored fixed point
+        drop = float(measured[0] / max(_min_separation(self.codebook()[1]), 1e-9)) \
+            if measured.size else float("nan")
+        return ratio, drop
+
+    def _lambda_min_at(self, points) -> float:
+        m = self.model()
+        V = m.potential_net
+        hs = [np.linalg.eigvalsh(np.asarray(jax.hessian(lambda q: V(q))(jnp.asarray(z))))
+              for z in np.asarray(points)]
+        return float(np.min([h.min() for h in hs])) if hs else float("nan")
+
+    def _lambda_min(self, centers, pays) -> float:
+        if len(centers) == 0:
+            return float("nan")
+        z = np.zeros((len(centers), self.store.dim), dtype=np.float32)
+        z[:, : self.store.addr_dim] = centers
+        z[:, self.store.addr_dim: self.store.addr_dim + self.store.payload_dim] = pays
+        return self._lambda_min_at(z)
+
+    def _well_fit(self, z: np.ndarray, n_dirs: int = 8, seed: int = 0
+                  ) -> Tuple[float, float]:
+        """Fit ``(D_i, s_i)`` of the well at ``z`` **on the real learned V**.
+
+        The saddle reach criterion (monitor #11) needs the well's depth and width,
+        and reading them off the atom parameters underestimates both whenever an
+        item's atoms are displaced to reach a large payload excursion (measured:
+        an ``|a| = 1`` item's own-atom sum at its site is 0.017 while its actual
+        well is 0.46 deep). So fit the isotropic profile
+
+            V(z + r u) - alpha*(|z+ru|^2 - |z|^2) - V(z)  ~  D (1 - e^{-r^2/2s^2})
+
+        over ``n_dirs`` random directions and a radius ladder — the doctrine's
+        "64 dirs x 40 radii" cost row, at a cheaper but honest resolution.
+        """
+        V = self.store.V
+        z = np.asarray(z, dtype=np.float32)
+        rng = np.random.default_rng(int(seed))
+        u = rng.normal(size=(int(n_dirs), self.store.dim))
+        u /= np.linalg.norm(u, axis=1, keepdims=True)
+        radii = np.linspace(0.15, 1.5, 12)
+        pts = (z[None, None, :] + radii[None, :, None] * u[:, None, :]).reshape(-1, self.store.dim)
+        vals = np.asarray(jax.vmap(V)(jnp.asarray(pts, dtype=jnp.float32)))
+        v0 = float(V(jnp.asarray(z)))
+        conf = float(self.cfg.confine) * (np.sum(pts**2, axis=1) - float(np.sum(z**2)))
+        y = (vals - conf - v0).reshape(int(n_dirs), radii.size).mean(axis=0)
+        best = (float("nan"), float("nan"), np.inf)
+        for s_try in np.linspace(0.05, 1.2, 120):
+            basis = 1.0 - np.exp(-(radii**2) / (2.0 * s_try**2))
+            denom = float(np.sum(basis * basis))
+            if denom <= 0:
+                continue
+            D = float(np.sum(basis * y) / denom)
+            resid = float(np.sum((y - D * basis) ** 2))
+            if resid < best[2]:
+                best = (D, float(s_try), resid)
+        D, s_fit, _ = best
+        return max(D, 0.0), s_fit
+
+    def well_fits(self) -> Tuple[np.ndarray, np.ndarray]:
+        """``(D, s)`` per live item, fitted on the learned landscape."""
+        ids, centers, pays = self.codebook()
+        Ds, ss = [], []
+        for c, a in zip(centers, pays, strict=True):
+            z = np.zeros((self.store.dim,), dtype=np.float32)
+            z[: self.store.addr_dim] = c
+            z[self.store.addr_dim: self.store.addr_dim + self.store.payload_dim] = a
+            D, sv = self._well_fit(z, seed=self.cfg.seed)
+            Ds.append(D)
+            ss.append(sv)
+        return np.asarray(Ds), np.asarray(ss)
+
+    def _s_max(self) -> float:
+        return float(np.max(np.exp(np.asarray(self.store.atoms.log_width, dtype=float))))
+
+    def _utilisation(self) -> float:
+        cfg = self.cfg
+        d_safe = derived_d_safe(self._s_max(), cfg.query_sigma, cfg.d_safe_kappa_prime)
+        n_pack = max((2.0 * cfg.ball_radius / d_safe + 1.0) ** cfg.addr_dim, 1.0)
+        return float(self.controller.allocator.n_live / n_pack)
+
+    def _fairness(self) -> float:
+        ids, centers, _ = self.codebook()
+        if len(ids) < 2:
+            return float("nan")
+        depths, _ = self.well_fits()
+        return float(np.min(depths) / max(np.max(depths), 1e-12))
+
+    def _reach_extras(self) -> dict:
+        ids, centers, pays = self.codebook()
+        if len(ids) == 0:
+            return {}
+        margins, a_us, bad = [], [], []
+        Ds, ss = self.well_fits()
+        for iid, c, a, D, s in zip(ids, centers, pays, Ds, ss, strict=True):
+            a_u = saddle_reach_threshold(D, s, float(self.cfg.confine),
+                                         float(np.linalg.norm(c)))
+            a_us.append(a_u)
+            margin = float(a_u - np.max(np.abs(a)))
+            margins.append(margin)
+            if margin <= 0:
+                bad.append(int(iid))
+        return {"reach_margins": margins, "a_U": a_us, "unreachable_ids": bad}
+
+    def _reach_margin_for(self, address, payload) -> float:
+        """Write-time reach margin, using the store's typical (D, s)."""
+        ids, centers, _ = self.codebook()
+        if len(ids) == 0:
+            # nothing written yet: the store's own init width and a unit well are
+            # the only honest prior, and the margin is re-checked at consolidation.
+            D, s = 1.0, float(self.cfg.atom_width)
+        else:
+            Ds, ss = self.well_fits()
+            D, s = float(np.median(Ds)), float(np.median(ss))
+        a_u = saddle_reach_threshold(max(D, 1e-6), s, float(self.cfg.confine),
+                                     float(np.linalg.norm(address)))
+        return float(a_u - np.max(np.abs(payload)))
+
+    def _sync_decay(self) -> None:
+        """Apply the controller's decay factors to the LEARNED landscape."""
+        last = [r for r in self.controller.log if r.verb == "decay"]
+        if not last:
+            return
+        det = last[-1].detail
+        for iid, factor in det.get("factors", {}).items():
+            try:
+                slot = self._slot_of(int(iid))
+            except KeyError:
+                continue
+            if abs(float(factor) - 1.0) > 1e-12:
+                self.store = self.store.scale_group_amplitude(slot, float(factor))
+
+    def _delete(self, item_id: int, rep: WriteReport) -> None:
+        try:
+            slot = self._slot_of(item_id)
+        except KeyError:
+            return
+        res = self.controller.evict(
+            item_id, reason="delete", trips=self.controller.policy.evict_persistence_W
+        )
+        if res.applied:
+            self.store = self.store.scale_group_amplitude(slot, 0.0)
+            self._payloads.pop(item_id, None)
+            rep.deleted.append(item_id)
+        row = {"t": self._t, "item_id": item_id, "verb": "evict",
+               "decision": "delete" if res.applied else "delete_refused",
+               "applied": res.applied, "guard": res.guard}
+        self._write_log.append(row)
+        rep.log.append(row)
+
+    def _read_diagnostics(self, q0, q_addr, q_star, g0, gs, rho) -> dict:
+        ids, centers, pays = self.codebook()
+        q0n = np.asarray(q0)[:, : self.store.addr_dim]
+        addr = np.asarray(q_addr)[:, : self.store.addr_dim]
+        out = {
+            "grad_norm_q0": g0,
+            "grad_norm_qstar": gs,
+            "rho_conv": rho,
+            "displacement": np.linalg.norm(np.asarray(q_star) - np.asarray(q0), axis=-1),
+            "corr_q0_qstar": _corr(np.asarray(q0), np.asarray(q_star)),
+        }
+        if len(ids) > 0:
+            a_settle = _assign(addr, centers)
+            a_argmin = _assign(q0n, centers)
+            r_i = 0.5 * _min_separation(centers)
+            cov = np.min(np.linalg.norm(q0n[:, None, :] - centers[None, :, :], axis=-1),
+                         axis=1) <= r_i
+            out.update({"assign_settle": a_settle, "assign_argmin": a_argmin,
+                        "covered": cov})
+        return out
+
+    # -- the store-side sink the controller's verbs reach ------------------
+    def store_apply(self, verb: str, payload: dict) -> None:
+        if verb == "evict":
+            self.store = self.store.scale_group_amplitude(int(payload["slot"]), 0.0)
+        elif verb == "expand":
+            self.cfg.ball_radius = float(self.cfg.ball_radius) * float(payload["factor"])
+
+
+# --------------------------------------------------------------------------
+# construction helpers
+# --------------------------------------------------------------------------
+def make_controller(cfg: CluSystemConfig, registry=None,
+                    policy: Optional[ControllerPolicy] = None) -> CluControllerV0:
+    """Controller v0 over a C1 MVC-0 allocator sized for ``cfg``.
+
+    The allocator's designed ``AtomStorePotential`` is used **only** as the
+    address codebook (admission geometry + records); the energy landscape the
+    read runs on is the learned ``V_theta``.
+    """
+    from chlu.core.memory_potentials import AtomStorePotential
+
+    shadow = AtomStorePotential(
+        dim=cfg.addr_dim + 1, capacity=int(cfg.capacity), s=float(cfg.atom_width),
+        addr_dim=int(cfg.addr_dim),
+    )
+    d_safe = derived_d_safe(cfg.atom_width, cfg.query_sigma, cfg.d_safe_kappa_prime)
+    alloc = Controller(
+        shadow, d_safe=d_safe, budget=int(cfg.capacity), amp=1.0,
+        leak=float(cfg.leak), amp_floor=float(cfg.amp_floor),
+        evict_policy="depth",  # set-function, never LRU
+        allow_relocation=False,  # the address IS the content (q = phi(x))
+    )
+    pol = policy or ControllerPolicy(
+        decay_leak=float(cfg.leak),
+        retry_confidence_tau=float(cfg.retry_tau),
+        retry_max_rounds=int(cfg.retry_max_rounds),
+        anneal_payload_mult=float(cfg.anneal_payload_mult),
+        anneal_stages=int(cfg.anneal_stages),
+    )
+    budget = int(cfg.budget if cfg.budget is not None else cfg.capacity)
+    return CluControllerV0(alloc, policy=pol, registry=registry, budget=budget)
+
+
+def build_system(cfg: CluSystemConfig, key=None, phi=None, psi=None,
+                 loud: bool = True) -> CluSystem:
+    """Assemble a full CLU (store + controller + monitors) from a config."""
+    key = jax.random.PRNGKey(cfg.seed) if key is None else key
+    store = LearnedVStore(cfg, key)
+    registry = default_registry(loud=loud)
+    controller = make_controller(cfg, registry)
+    sys_ = CluSystem(store, phi=phi, psi=psi, controller=controller,
+                     registry=registry, config=cfg)
+    controller.store_apply = sys_.store_apply
+    return sys_
 
 
 # --------------------------------------------------------------------------
@@ -365,7 +1064,12 @@ def settled_point_psi(addr_dim: int, payload_dim: int = 1) -> Callable:
     used: point-vs-trajectory then becomes an ablation against a known baseline
     rather than a comparison against a new one.
     """
-    raise NotImplementedError
+
+    def psi(traj: Trajectory, state: ReadState) -> jnp.ndarray:
+        return state.q_star[..., addr_dim: addr_dim + payload_dim]
+
+    psi.representation = "settled_point"
+    return psi
 
 
 def tail_mean_psi(addr_dim: int, payload_dim: int = 1,
@@ -376,7 +1080,15 @@ def tail_mean_psi(addr_dim: int, payload_dim: int = 1,
     trajectory buffer has a consumer in v0 and monitor #4's trajectory-launder
     requirement is exercised before a learned psi lands.
     """
-    raise NotImplementedError
+
+    def psi(traj: Trajectory, state: ReadState) -> jnp.ndarray:
+        n = traj.shape[1]
+        i0 = int(max(0, n - max(1, int(tail_frac * n))))
+        seg = traj[:, i0:, addr_dim: addr_dim + payload_dim]
+        return jnp.mean(seg, axis=1)
+
+    psi.representation = "trajectory_tail"
+    return psi
 
 
 def store_relative_trajectory(traj: Trajectory, state: ReadState,
@@ -389,11 +1101,57 @@ def store_relative_trajectory(traj: Trajectory, state: ReadState,
     read must be reported alongside its store-relative and ``q0``-only laundered
     forms.
     """
-    raise NotImplementedError
+    d = state.q0.shape[-1]
+    ref = jnp.concatenate([state.q0, jnp.zeros_like(state.p0)], axis=-1)
+    out = traj - ref[:, None, :]
+    if mask_q0:
+        out = out[:, 1:, :]
+    _ = d
+    return out
+
+
+# --------------------------------------------------------------------------
+# small numeric helpers
+# --------------------------------------------------------------------------
+@eqx.filter_jit
+def _rollout(model, q, p, steps: int, dt: float, gamma: float):
+    return jax.vmap(lambda a, b: model(a, b, steps, dt, gamma))(q, p)
+
+
+@eqx.filter_jit
+def _grad_vecs(model, q):
+    V = model.potential_net
+    return jax.vmap(jax.grad(lambda z: V(z)))(q)
+
+
+def _grad_norms(model, q):
+    return jnp.linalg.norm(_grad_vecs(model, jnp.asarray(q)), axis=-1)
+
+
+def _assign(points: np.ndarray, centers: np.ndarray) -> np.ndarray:
+    d = np.linalg.norm(np.asarray(points)[:, None, :] - centers[None, :, :], axis=-1)
+    return np.argmin(d, axis=1)
+
+
+def _min_separation(centers: np.ndarray) -> float:
+    c = np.asarray(centers, dtype=float)
+    if c.shape[0] < 2:
+        return float("inf")
+    d = np.linalg.norm(c[:, None, :] - c[None, :, :], axis=-1)
+    np.fill_diagonal(d, np.inf)
+    return float(np.min(d))
+
+
+def _corr(a: np.ndarray, b: np.ndarray) -> float:
+    x, y = np.asarray(a).ravel(), np.asarray(b).ravel()
+    if x.std() < 1e-12 or y.std() < 1e-12:
+        return float("nan")
+    return float(np.corrcoef(x, y)[0, 1])
 
 
 __all__ = [
     "Trajectory", "CluSystemConfig", "ReadState", "ReadResult", "WriteReport",
-    "ConsolidationReport", "LearnedVStore", "CluSystem",
-    "settled_point_psi", "tail_mean_psi", "store_relative_trajectory",
+    "ConsolidationReport", "LearnedVStore", "CluSystem", "build_system",
+    "make_controller", "settled_point_psi", "tail_mean_psi",
+    "store_relative_trajectory",
 ]
