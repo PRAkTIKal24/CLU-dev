@@ -145,8 +145,21 @@ def test_ledger_identity_reproduces_the_banked_aggregate_cell():
 
 
 def test_ledger_identity_is_the_CORRECTED_law_at_n_spectator_1():
-    """⛔ The shipped ``byte_ratio_law`` misses the ``n_spectator = 1`` cells by
-    +8.6667 (24/28, not 28/28). The corrected law ``[A(D+2)+d]/(d+m)`` is exact."""
+    """⭐ The corrected law ``[A(D+2)+d]/(d+m)`` is exact at ``n_spectator = 1``,
+    and ``byte_ratio_law`` now agrees with it.
+
+    **History (C2W3→C2W4, kept so the tripwire's purpose survives its firing).**
+    This test was written by ``bprime-rivals`` while the shipped
+    ``byte_ratio_law`` still divided by the *store* dim ``D`` where the launder
+    row is ``(d+m)``, so it missed every ``n_spectator > 0`` cell by
+    **+8.6667** (24 of 28, not 28 of 28 — the published *"verified to 1e-9 in
+    all 28 cells"* was wrong, in the **conservative** direction). It was
+    deliberately written to assert that live disagreement so that
+    ``harness-debt``'s P0 fix would **flip a test rather than pass silently**.
+    It did exactly that at the C2W4 integration merge, and the Hub flipped the
+    assertion here. ⛔ Do not re-loosen this to an inequality: the two forms
+    must now agree at every ``n_spectator``.
+    """
     from chlu.experiments.memory_gym import byte_ratio_law
 
     atoms, k, d, m, spec = 192, 6, 4, 1, 1
@@ -156,8 +169,10 @@ def test_ledger_identity_is_the_CORRECTED_law_at_n_spectator_1():
     corrected = (atoms / k * (dim + 2) + d) / (d + m)
     assert idn["ratio_corrected"] == pytest.approx(corrected)
     shipped = byte_ratio_law(atoms / k, addr_dim=d, payload_dim=m, n_spectator=spec)
-    assert shipped != pytest.approx(corrected)          # the known live bug
-    assert corrected - shipped == pytest.approx(8.6667, abs=1e-3)
+    assert shipped == pytest.approx(corrected)          # the C2W4 fix, asserted
+    # and the pre-fix formula is what it is NOT: D in the denominator, not (d+m)
+    pre_fix = (atoms / k) * (dim + 2) / dim + d / dim
+    assert corrected - pre_fix == pytest.approx(8.6667, abs=1e-3)
 
 
 def test_ledger_identity_raises_when_the_store_drifts():
