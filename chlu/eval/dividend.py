@@ -383,10 +383,90 @@ def fit_shared_metric(keys: np.ndarray, queries: np.ndarray, labels: np.ndarray,
     return np.asarray(M)
 
 
+# ==========================================================================
+# ⭐ THE STRUCTURAL LEDGER IDENTITY (`bprime-rivals` D7 = theorist code request C3,
+# appended — the C2W1 signatures above are FROZEN and untouched)
+#
+# `bprime-theory` T1 verifies the byte law in exact integer/rational arithmetic:
+#
+#     full    == 4 * [ N_at * (D + 2) + K * d ]
+#     launder == 4 * [ K * (d + m) ]
+#     ratio   == [A(D+2) + d] / (d+m)   with A = N_at/K   (the CORRECTED law;
+#                the shipped `byte_ratio_law` misses the n_spectator>0 cells)
+#
+# Asserting this **as integers** rather than by comparing a float ratio is what
+# makes a two-sided ledger auditable: a float comparison passes on a store whose
+# leaf structure has silently changed, an integer identity does not. It is also
+# T5.1's ledger-drift guard, which `allocate` then inherits for free.
+# ==========================================================================
+class LedgerIdentityError(AssertionError):
+    """The store's byte ledger does not equal its structural form. Raised."""
+
+
+def ledger_identity(system, keys: np.ndarray, payloads: np.ndarray, *,
+                    floats_per_atom: Optional[int] = None) -> Dict[str, Any]:
+    """Compute both sides of the T1 identity **as integers** (no floats involved).
+
+    ``floats_per_atom`` defaults to ``D + 2`` (the Gaussian atom's
+    ``centers/log_width/amp``); pass ``D + 3`` for the shell atom, whose surcharge
+    is exactly ``+1/(D+2)`` on the atom term.
+    """
+    keys = np.asarray(keys)
+    pays = np.asarray(payloads)
+    atoms = np.asarray(system.store.V.learned.centers)
+    n_at, dim = int(atoms.shape[0]), int(atoms.shape[1])
+    per_atom = int(dim + 2 if floats_per_atom is None else floats_per_atom)
+    k, d = int(keys.shape[0]), int(keys.shape[1])
+    m = int(pays.shape[1]) if pays.ndim > 1 else 1
+    return {
+        "n_atoms": n_at, "D": dim, "K": k, "d": d, "m": m,
+        "floats_per_atom": per_atom,
+        "A_atoms_per_item": (float(n_at) / k if k else float("nan")),
+        "full_expected": 4 * (n_at * per_atom + k * d),
+        "launder_expected": 4 * (k * (d + m)),
+        "v_theta_expected": 4 * n_at * per_atom,
+        "codebook_expected": 4 * k * d,
+        "full_measured": int(system.store.n_bytes()) + 4 * int(keys.size),
+        "v_theta_measured": int(system.store.n_bytes()),
+        "ratio_corrected": ((float(n_at) / k * (dim + 2) + d) / (d + m)
+                            if k else float("nan")),
+    }
+
+
+def assert_ledger_identity(system, keys: np.ndarray, payloads: np.ndarray, *,
+                           account: Optional[ByteAccount] = None,
+                           floats_per_atom: Optional[int] = None) -> Dict[str, Any]:
+    """⭐ Blocking check: ``full == 4[N_at(D+2) + Kd]`` and ``launder == 4K(d+m)``.
+
+    Raises :class:`LedgerIdentityError` on any integer mismatch — the guard that
+    makes B′'s two-sided ledger auditable rather than merely printed.
+    """
+    idn = ledger_identity(system, keys, payloads, floats_per_atom=floats_per_atom)
+    ba = account if account is not None else byte_account(system, keys, payloads)
+    problems = []
+    if int(ba.full_bytes) != int(idn["full_expected"]):
+        problems.append(
+            f"full: measured {int(ba.full_bytes)} != 4*[N_at*(D+2)+K*d] = "
+            f"{idn['full_expected']} (N_at={idn['n_atoms']}, D={idn['D']}, "
+            f"K={idn['K']}, d={idn['d']}; implied floats/atom = "
+            f"{(int(ba.full_bytes) / 4 - idn['K'] * idn['d']) / max(idn['n_atoms'], 1):.4f})")
+    if int(ba.launder_bytes) != int(idn["launder_expected"]):
+        problems.append(
+            f"launder: measured {int(ba.launder_bytes)} != 4*K*(d+m) = "
+            f"{idn['launder_expected']}")
+    if problems:
+        raise LedgerIdentityError("; ".join(problems))
+    idn["ok"] = True
+    idn["ratio_measured"] = float(ba.ratio)
+    return idn
+
+
 __all__ = [
     "ByteAccount", "DividendReport", "dividend", "settle_deleted_launder",
     "shared_metric_launder", "same_keys_null", "blank_store_control",
     "trajectory_launder", "count_bytes", "byte_account",
     # gym-side callers (memory-gym-v0)
     "knn_mean_launder", "order_aware_launder", "echo_launder", "fit_shared_metric",
+    # the structural ledger identity (bprime-rivals D7 / theorist C3)
+    "LedgerIdentityError", "ledger_identity", "assert_ledger_identity",
 ]
