@@ -55,8 +55,18 @@ LEDGER_KIND: Dict[str, str] = {"ttt_linear": "ttt_linear", "ttt_mlp": "ttt_mlp",
 DEFAULT_BUDGET_FLOATS = 1364
 
 #: F3-lite (declared as a budget choice, **not** presented as `rival-recon` F3
-#: compliance, which asks for 6 lrs x 2 weight decays).
+#: compliance, which asks for 6 lrs x 2 weight decays). ⭐ Kept as the default so
+#: the C2W4 audit stays reproducible; the **full** F3 grid is opt-in below.
 LR_GRID: Tuple[float, ...] = (1e-3, 3.16e-3, 1e-2)
+#: ⭐ `rival-recon` **F3, verbatim** (= MAD App. B.4's 3x2 grid u Zoology's
+#: ``np.logspace(-4, -2, 4)``): the standing baseline-tuning rule, the operational
+#: form of N78. ⚠ Its *upper* edge is 1e-2 — the same as F3-lite's — so widening
+#: the grid adds points only on the low-lr side.
+LR_GRID_F3: Tuple[float, ...] = (1e-4, 3.16e-4, 5e-4, 1e-3, 3.16e-3, 1e-2)
+#: F3's second axis. ``wd = 0`` keeps ``optax.adam`` (⛔ no optimiser change at
+#: all, so the F3-lite control column is untouched); ``wd > 0`` uses decoupled
+#: ``optax.adamw``.
+WD_GRID_F3: Tuple[float, ...] = (0.0, 0.1)
 #: TTT's mini-batch is part of the grid because the gym's stream is ~10-19 tokens
 #: (see ``ttt.py``'s regime caveat) — the arm is audited at its own best.
 TTT_B_GRID: Tuple[int, ...] = (1, TTT_MINI_BATCH)
@@ -104,21 +114,36 @@ def _loss(model, xs, mask, xq, tgt) -> jnp.ndarray:
         xs, mask, xq, tgt))
 
 
+def _stack(examples: Sequence[FitExample]):
+    return (jnp.asarray(np.stack([e.xs for e in examples]), dtype=jnp.float32),
+            jnp.asarray(np.stack([e.mask for e in examples]), dtype=jnp.float32),
+            jnp.asarray(np.stack([e.xq for e in examples]), dtype=jnp.float32),
+            jnp.asarray(np.stack([e.target for e in examples]), dtype=jnp.float32))
+
+
 def fit_rival(model, examples: Sequence[FitExample], *, lr: float = 3.16e-3,
-              steps: int = OUTER_STEPS, verbose: bool = False):
+              wd: float = 0.0, steps: int = OUTER_STEPS,
+              val_examples: Optional[Sequence[FitExample]] = None,
+              verbose: bool = False):
     """Train the rival's **outer** parameters through its own test-time inner loop.
 
     That is what TTT's outer loop is (§2.2) and what a delta-rule layer's
     projections are trained by; doing anything else would audit an untrained rival,
     which would be a laundering in *our* favour.
+
+    ``wd`` is `rival-recon` F3's second grid axis. ⛔ ``wd == 0`` keeps
+    ``optax.adam`` **exactly** — the C2W4 configuration is not perturbed by the
+    existence of the new axis; ``wd > 0`` switches to decoupled ``optax.adamw``.
+    ``val_examples`` (if given) are scored on the fitted model and never entered
+    into a gradient: they exist so best-of-grid can be selected on a **held-out**
+    fit stream instead of on the objective it is optimising (see
+    :func:`select_best`).
     """
     import optax
 
-    xs = jnp.asarray(np.stack([e.xs for e in examples]), dtype=jnp.float32)
-    mask = jnp.asarray(np.stack([e.mask for e in examples]), dtype=jnp.float32)
-    xq = jnp.asarray(np.stack([e.xq for e in examples]), dtype=jnp.float32)
-    tgt = jnp.asarray(np.stack([e.target for e in examples]), dtype=jnp.float32)
-    opt = optax.adam(float(lr))
+    xs, mask, xq, tgt = _stack(examples)
+    opt = (optax.adamw(float(lr), weight_decay=float(wd)) if float(wd) > 0
+           else optax.adam(float(lr)))
     params, static = eqx.partition(model, eqx.is_inexact_array)
     state = opt.init(params)
 
@@ -136,44 +161,116 @@ def fit_rival(model, examples: Sequence[FitExample], *, lr: float = 3.16e-3,
         params, state, loss = step(params, state)
         hist.append(float(loss))
         if verbose and i % 100 == 0:
-            print(f"    [fit lr={lr:g}] step {i:4d} loss {float(loss):.5f}")
-    if not np.all(np.isfinite(hist)):
-        # a diverged arm is REPORTED with its budget, never silently dropped
-        return eqx.combine(params, static), {"lr": float(lr), "steps": int(steps),
-                                             "final": float("nan"),
-                                             "diverged": True, "history": hist}
-    return eqx.combine(params, static), {"lr": float(lr), "steps": int(steps),
-                                         "final": float(hist[-1]),
-                                         "diverged": False, "history": hist}
+            print(f"    [fit lr={lr:g} wd={wd:g}] step {i:4d} loss {float(loss):.5f}")
+    fitted = eqx.combine(params, static)
+    diverged = not bool(np.all(np.isfinite(hist)))
+    rec = {"lr": float(lr), "wd": float(wd), "steps": int(steps),
+           "final": float("nan") if diverged else float(hist[-1]),
+           "diverged": diverged, "history": hist}
+    if val_examples is not None and not diverged:
+        # held out: scored once, never differentiated
+        rec["val_final"] = float(_loss(fitted, *_stack(val_examples)))
+    elif val_examples is not None:
+        rec["val_final"] = float("nan")
+    # a diverged arm is REPORTED with its budget, never silently dropped
+    return fitted, rec
+
+
+def fit_grid(name: str, d_in: int, m: int, examples: Sequence[FitExample],
+             *, key, budget_floats: int = DEFAULT_BUDGET_FLOATS,
+             d_head: Optional[int] = None,
+             lrs: Sequence[float] = LR_GRID,
+             wds: Sequence[float] = (0.0,),
+             b_grid: Optional[Sequence[int]] = None,
+             steps: int = OUTER_STEPS,
+             val_examples: Optional[Sequence[FitExample]] = None,
+             verbose: bool = False) -> Tuple[List[dict], List[Any]]:
+    """Fit **every** point of the ``lr x wd x b`` grid and return the whole surface.
+
+    ⭐ **The init is drawn once per ``(arm, seed, b)`` and shared by every
+    ``(lr, wd)``** — so the surface is a tuning surface and not a tuning-*and*-init
+    surface, and so widening the grid cannot silently re-draw the incumbent points.
+    ⚠ This is a **declared change** from C2W4, which split the key sequentially and
+    therefore made every model depend on the grid's length and order; the
+    consequence is priced by re-selecting the C2W4 sub-grid from these same fits
+    (the *F3-lite control*, see :func:`select_best`).
+    """
+    bs = list(b_grid if b_grid is not None else
+              (TTT_B_GRID if name.startswith("ttt") else (TTT_MINI_BATCH,)))
+    grid: List[dict] = []
+    models: List[Any] = []
+    for b in bs:
+        k_b = jax.random.fold_in(key, int(b))
+        for wd in wds:
+            for lr in lrs:
+                model = make_rival(name, d_in, m, key=k_b,
+                                   budget_floats=budget_floats,
+                                   mini_batch=int(b), d_head=d_head)
+                model, rec = fit_rival(model, examples, lr=float(lr),
+                                       wd=float(wd), steps=steps,
+                                       val_examples=val_examples, verbose=verbose)
+                rec["mini_batch"] = int(b)
+                rec.pop("history")
+                grid.append(rec)
+                models.append(model)
+    return grid, models
+
+
+def select_best(grid: Sequence[dict], models: Sequence[Any], *,
+                lrs: Optional[Sequence[float]] = None,
+                wds: Optional[Sequence[float]] = None,
+                on: str = "fit", label: str = "") -> Tuple[Any, dict]:
+    """Pick the grid's best point, optionally restricted to a **sub-grid**.
+
+    ``on="fit"`` selects on the fit split's own (optimised) loss — C2W4's rule.
+    ``on="val"`` selects on the **held-out** auxiliary stream, which is the only
+    way F3's ``wd`` axis can ever be chosen: a regulariser does not lower the
+    objective it is not optimising. ⛔ Neither reader ever sees the eval split.
+    """
+    field = "val_final" if on == "val" else "final"
+    tol = 1e-12
+    sub = [(r, mo) for r, mo in zip(grid, models, strict=True)
+           if (lrs is None or any(abs(r["lr"] - float(x)) <= tol for x in lrs))
+           and (wds is None or any(abs(r.get("wd", 0.0) - float(x)) <= tol
+                                   for x in wds))]
+    if not sub:
+        raise ValueError(f"empty sub-grid for selection {label!r}")
+    best, best_rec = None, None
+    for rec, model in sub:
+        score = rec.get(field, float("nan"))
+        score = float(score) if np.isfinite(score) else np.inf
+        if best_rec is None or score < best_rec["_score"]:
+            best, best_rec = model, dict(rec, _score=score)
+    best_rec.pop("_score")
+    return best, {"best": best_rec, "grid": list(grid),
+                  "selection": {"label": label or ("f3" if lrs is None else "sub"),
+                                "on": ("held-out fit-validation stream (never the "
+                                       "eval split)" if on == "val" else
+                                       "the FIT split's own loss (C2W4's rule)"),
+                                "lrs": (None if lrs is None else [float(x)
+                                                                  for x in lrs]),
+                                "wds": (None if wds is None else [float(x)
+                                                                  for x in wds]),
+                                "n_points": len(sub)},
+                  "note": ("best-of-grid on the FIT split (auxiliary streams from "
+                           "different seeds), never on the eval split")}
 
 
 def fit_best_of_grid(name: str, d_in: int, m: int, examples: Sequence[FitExample],
                      *, key, budget_floats: int = DEFAULT_BUDGET_FLOATS,
                      d_head: Optional[int] = None,
                      lrs: Sequence[float] = LR_GRID,
+                     wds: Sequence[float] = (0.0,),
                      b_grid: Optional[Sequence[int]] = None,
-                     steps: int = OUTER_STEPS, verbose: bool = False):
-    """Best-of-grid on the **fit** split (F3-lite), never on the eval split."""
-    bs = list(b_grid if b_grid is not None else
-              (TTT_B_GRID if name.startswith("ttt") else (TTT_MINI_BATCH,)))
-    best, best_rec = None, None
-    grid: List[dict] = []
-    for b in bs:
-        for lr in lrs:
-            key, k = jax.random.split(key)
-            model = make_rival(name, d_in, m, key=k, budget_floats=budget_floats,
-                               mini_batch=int(b), d_head=d_head)
-            model, rec = fit_rival(model, examples, lr=float(lr), steps=steps,
-                                   verbose=verbose)
-            rec["mini_batch"] = int(b)
-            rec.pop("history")
-            grid.append(rec)
-            score = rec["final"] if np.isfinite(rec["final"]) else np.inf
-            if best_rec is None or score < best_rec["final"]:
-                best, best_rec = model, dict(rec)
-    return best, {"best": best_rec, "grid": grid,
-                  "note": ("best-of-grid on the FIT split (auxiliary streams from "
-                           "different seeds), never on the eval split")}
+                     steps: int = OUTER_STEPS,
+                     val_examples: Optional[Sequence[FitExample]] = None,
+                     select_on: str = "fit", verbose: bool = False):
+    """Best-of-grid on the **fit** split, never on the eval split."""
+    grid, models = fit_grid(name, d_in, m, examples, key=key,
+                            budget_floats=budget_floats, d_head=d_head, lrs=lrs,
+                            wds=wds, b_grid=b_grid, steps=steps,
+                            val_examples=val_examples, verbose=verbose)
+    return select_best(grid, models, on=select_on, label="best_of_grid")
 
 
 # --------------------------------------------------------------------------
@@ -246,7 +343,8 @@ def table_budget(model, *, budget_floats: Optional[int] = None) -> Dict[str, Any
 
 
 __all__ = [
-    "RIVALS", "LEDGER_KIND", "DEFAULT_BUDGET_FLOATS", "LR_GRID", "TTT_B_GRID",
-    "OUTER_STEPS", "FitExample", "make_rival", "fit_rival", "fit_best_of_grid",
-    "rival_arms", "table_budget", "DELTA_VARIANTS",
+    "RIVALS", "LEDGER_KIND", "DEFAULT_BUDGET_FLOATS", "LR_GRID", "LR_GRID_F3",
+    "WD_GRID_F3", "TTT_B_GRID", "OUTER_STEPS", "FitExample", "make_rival",
+    "fit_rival", "fit_grid", "select_best", "fit_best_of_grid", "rival_arms",
+    "table_budget", "DELTA_VARIANTS",
 ]
