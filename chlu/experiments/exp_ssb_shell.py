@@ -40,7 +40,7 @@ import json
 import os
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import equinox as eqx
 import jax
@@ -160,8 +160,11 @@ def shell_rig(arm: ShellArm, *, sink: Optional[List] = None, tilt_seed: int = 0)
     orig_build = gym_exp.build_system
     orig_mask = clu_system_mod.atom_write_mask_fn
 
-    def patched_build(cfg, key=None, phi=None, psi=None, loud=True):
-        sys_ = orig_build(cfg, key=key, phi=phi, psi=psi, loud=loud)
+    def patched_build(cfg, key=None, phi=None, psi=None, loud=True, **kw):
+        # ⭐ C2W3 D4 (the 2x2): ``**kw`` forwards the C2W2 write-objective seam
+        # (``write_objective=…``) untouched. Without it the Route-1 x Route-2
+        # cell cannot even be built — the patch would swallow the seam.
+        sys_ = orig_build(cfg, key=key, phi=phi, psi=psi, loud=loud, **kw)
         if arm.is_shell:
             _install_shell(sys_, arm, jax.random.PRNGKey(tilt_seed)
                            if arm.tilt_eps else None)
@@ -530,20 +533,27 @@ def run_shell_cell(family: str, arm_name: str, seed: int = 0, *,
                    gym_overrides: Optional[dict] = None, quick: bool = False,
                    loud: bool = False, dial: bool = False,
                    gym_arm: str = "base",
-                   family_label: Optional[str] = None) -> Dict[str, Any]:
+                   family_label: Optional[str] = None,
+                   write_objective: Optional[dict] = None) -> Dict[str, Any]:
     """One race cell: ``exp_memory_gym.run_cell`` on a shell store + the spectra.
 
     ``gym_arm`` selects the GYM's own arm (e.g. ``load1x_shipped``, the 478x
     shipped-atom-budget anchor — the only gym cell where the store actually
     works); ``family_label`` renames the family on the race card so an escalated
     budget is never silently averaged into the base family's verdict.
+
+    ⭐ ``write_objective`` (C2W3 D4) is the **Route-1 seam**, consumed unchanged:
+    ``None`` is the shipped endpoint write, bit-for-bit. Crossing it with
+    ``arm_name`` is the Route-1 x Route-2 2x2 — C2W2's declared NOT-RUN, flagged
+    by both engineers as the wave's most informative unrun cell.
     """
     arm = ARMS[arm_name]
     sink: List[Any] = []
     t0 = time.time()
     with shell_rig(arm, sink=sink, tilt_seed=seed + 4242):
         rec = gym_exp.run_cell(family, arm=gym_arm, seed=seed,
-                               gym_overrides=gym_overrides, quick=quick, loud=loud)
+                               gym_overrides=gym_overrides, quick=quick, loud=loud,
+                               write_objective=write_objective)
     rec["gym_arm"] = gym_arm
     # ⚠ NOT `rec["family"]` — that key drives the gym's own metric/scorer lookup.
     # The race card's family label is separate, so an escalated budget is never
@@ -551,6 +561,7 @@ def run_shell_cell(family: str, arm_name: str, seed: int = 0, *,
     if family_label:
         rec["race_family"] = family_label
     rec["shell_arm"] = arm.as_flags()
+    rec["write_objective_spec"] = write_objective
     rec["route"] = ROUTE
     rec["wall_cell_s"] = time.time() - t0
     system = sink[0] if sink else None
@@ -909,6 +920,187 @@ def _json_default(o):
     if isinstance(o, (jnp.ndarray,)):
         return np.asarray(o).tolist()
     return str(o)
+
+
+# ==========================================================================
+# ⭐ C2W3 D4 — THE ROUTE-1 x ROUTE-2 2x2 (C2W2's funded declared NOT-RUN)
+# ==========================================================================
+#: The write-objective axis. ``None`` = the shipped endpoint write (the control);
+#: the path coefficient is **0.3**, the largest at which C2W2 measured the write
+#: still admissible (``lambda_path >= 3`` drove ``lambda_min`` to -0.48…-1.30).
+TWO_BY_TWO_WRITES: Dict[str, Optional[dict]] = {
+    "endpoint": None,
+    "path@0.3": {"loss_kwargs": {"lambda_path": 0.3, "path_kwargs": {"n_interp": 7}}},
+}
+
+#: The store axis. ``shell`` has a **learned** radius — the arm the hypothesis is
+#: about (C2W2: learned ``r`` moved 0.500 -> 0.501 in 300 steps, *"the design was
+#: ignored, because the objective could not see it"*). ``shell_r0`` is carried for
+#: the ⛔ blocking r=0 bit-identity gate, at seed 0 only.
+TWO_BY_TWO_STORES = ("gauss", "shell")
+
+
+def run_2x2(families: Sequence[Tuple[str, str]] = (("overload", "load1x_shipped"),
+                                                   ("manifold", "base")),
+            seeds: Sequence[int] = (0, 1, 2),
+            stores: Sequence[str] = TWO_BY_TWO_STORES,
+            writes: Optional[Dict[str, Optional[dict]]] = None,
+            save_dir: str = ".claude/outputs/route3-stage1-plus-2x2",
+            r0_gate: bool = True, quick: bool = False) -> Dict[str, Any]:
+    """⭐ The 2x2: ``{gauss, shell} x {endpoint write, path write}``.
+
+    ============================  ==============================  ==============
+    .                             Gaussian atoms                  shell atoms
+    ============================  ==============================  ==============
+    **endpoint write** (control)  the shipped anchor              Route 2 alone
+    **path write**                Route 1 alone                   ⭐ the unrun cell
+    ============================  ==============================  ==============
+
+    The hypothesis, stated before the run (``PREREG.md`` §5): Route 1's
+    ``lambda_path`` term is *exactly* the signal the shell radius is currently
+    blind to — so the 2x2 asks whether an objective that **can see a path** makes
+    the designed degeneracy visible. ⛔ Two blocking bit-identity gates ride with
+    it: the r=0 reduction (here, **with the path term ON**, which is the version
+    C2W2 never ran) and — asserted in ``tests/`` — the coefficient-zero gate.
+    """
+    race = _race()
+    os.makedirs(save_dir, exist_ok=True)
+    writes = dict(writes or TWO_BY_TWO_WRITES)
+    cells: List[Dict[str, Any]] = []
+    t0 = time.time()
+    for family, gym_arm in families:
+        for store in stores:
+            for wname, wspec in writes.items():
+                for s in seeds:
+                    t = time.time()
+                    rec = run_shell_cell(family, store, int(s), gym_arm=gym_arm,
+                                         quick=quick, write_objective=wspec)
+                    row = _2x2_row(rec, family, gym_arm, store, wname, int(s))
+                    row["wall_s"] = time.time() - t
+                    cells.append(row)
+                    print(f"[2x2 {family}/{store}/{wname} s{s}] "
+                          f"full={row['full']:.4f} launder={row['launder']:.4f} "
+                          f"div={row['dividend']:+.4f} lam_min={row['lambda_min']:+.4f} "
+                          f"r={row['radii_mean']} adm={row['admissible']} "
+                          f"({row['wall_s']:.0f}s)", flush=True)
+
+    # ⛔ BLOCKING GATE (b): r = 0 reduces the shell to the Gaussian BIT-identically
+    # — re-verified here **under the path term**, which C2W2 never ran.
+    gate_r0: List[Dict[str, Any]] = []
+    if r0_gate:
+        for family, gym_arm in families:
+            for wname, wspec in writes.items():
+                a = run_shell_cell(family, "gauss", 0, gym_arm=gym_arm, quick=quick,
+                                   write_objective=wspec)
+                b = run_shell_cell(family, "shell_r0", 0, gym_arm=gym_arm,
+                                   quick=quick, write_objective=wspec)
+                sa, sb = a.get("scores", {}), b.get("scores", {})
+                keys = sorted(set(sa) & set(sb))
+                ident = {k: bool(sa[k] == sb[k]) for k in keys}
+                gate_r0.append({
+                    "family": family, "gym_arm": gym_arm, "write": wname, "seed": 0,
+                    "n_score_keys": len(keys),
+                    "n_bit_identical": int(sum(ident.values())),
+                    "bit_identical": bool(keys and all(ident.values())),
+                    "mismatched": [k for k, v in ident.items() if not v],
+                    "gauss_full": float(sa.get("clu", {}).get(
+                        PRIMARY_METRIC[family], float("nan"))),
+                    "shell_r0_full": float(sb.get("clu", {}).get(
+                        PRIMARY_METRIC[family], float("nan"))),
+                })
+                print(f"[r0-gate {family}/{wname}] bit_identical="
+                      f"{gate_r0[-1]['bit_identical']} "
+                      f"({gate_r0[-1]['n_bit_identical']}/{len(keys)} score keys)",
+                      flush=True)
+
+    out = {
+        "wall_s": time.time() - t0,
+        "n_cells": len(cells),
+        "seeds": [int(s) for s in seeds],
+        "stores": list(stores),
+        "writes": {k: v for k, v in writes.items()},
+        "sd_convention": "sample sd (ddof=1); SE = sd/sqrt(n)",
+        "cells": cells,
+        "aggregate": _2x2_aggregate(cells),
+        "r0_bit_identity_gate": gate_r0,
+        "r0_gate_passed": bool(gate_r0) and all(g["bit_identical"] for g in gate_r0),
+        "note": ("⛔ every cell is architectural on bytes (>= 17.11x anywhere; the "
+                 "shell RAISES the floor by 1/(dim+2)) and is NOT quotable as a "
+                 "byte-matched dividend. The 2x2 is a declared re-price, not a "
+                 "second gate (C2W2's gate has already fired)."),
+    }
+    recs = [c.pop("_rec", None) for c in cells]  # the raw records never hit the JSON
+    if race is not None:
+        out["race_cells"] = [
+            dict(to_race_cell(r, race).as_dict(),
+                 arm=f"{c['store']}x{c['write']}", family=c["family"])
+            for c, r in zip(cells, recs, strict=True) if r is not None]
+    path = os.path.join(save_dir, "two_by_two.json")
+    with open(path, "w") as fh:
+        json.dump(out, fh, indent=2, default=_json_default)
+    out["path"] = path
+    return out
+
+
+def _2x2_row(rec: Dict[str, Any], family: str, gym_arm: str, store: str,
+             write: str, seed: int) -> Dict[str, Any]:
+    metric = PRIMARY_METRIC[family]
+    sc = rec.get("scores", {})
+    div = rec.get("dividend", {})
+    spec = rec.get("spectra", {})
+    lam = float(spec.get("lambda_min_min", float("nan")))
+    eps = [float(x) for x in (rec.get("endpoint_write_losses") or [])
+           if x is not None and np.isfinite(x)]
+    epl = float(max(eps)) if eps else float("nan")
+    return {
+        "family": family, "gym_arm": gym_arm, "store": store, "write": write,
+        "seed": int(seed), "metric": metric,
+        "full": float(sc.get("clu", {}).get(metric, float("nan"))),
+        "launder": float(sc.get("settle_deleted", {}).get(metric, float("nan"))),
+        "dividend": float(div.get("dividend", float("nan"))),
+        "plus_zero_byte": float(rec.get("trivial_substitute_audit", {})
+                                .get("best_zero_byte", float("nan"))),
+        "substitute_margin": float(
+            sc.get("clu", {}).get(metric, float("nan"))
+            - rec.get("trivial_substitute_audit", {}).get("best_zero_byte",
+                                                          float("nan"))),
+        "blank": float(rec.get("blank", {}).get("family_primary_score", float("nan"))),
+        "lambda_min": lam,
+        "endpoint_write_loss_max": epl,
+        "admissible": bool(np.isfinite(epl) and epl <= 0.05
+                           and np.isfinite(lam) and lam >= 0.0),
+        "radii_mean": rec.get("radii", {}).get("mean", None),
+        "byte_ratio": float(rec.get("byte_ledger", {}).get("ratio", float("nan"))),
+        "trajectory_launder_fired": bool(
+            (rec.get("trajectory_launder") or {}).get("q0_only", -np.inf)
+            > (rec.get("trajectory_launder") or {}).get("bar", np.inf)),
+        "trips": rec.get("trips", []),
+        "n_live": rec.get("n_live", 0),
+        "_rec": rec,
+    }
+
+
+def _2x2_aggregate(cells: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """Mean ± sample sd (ddof=1) per ``family/store/write``, and the interaction."""
+    out: Dict[str, Any] = {}
+    groups: Dict[Tuple[str, str, str], List[Dict[str, Any]]] = {}
+    for c in cells:
+        groups.setdefault((c["family"], c["store"], c["write"]), []).append(c)
+    for (fam, store, write), rows in groups.items():
+        d = np.asarray([r["dividend"] for r in rows], dtype=float)
+        f = np.asarray([r["full"] for r in rows], dtype=float)
+        r = [x for x in (row["radii_mean"] for row in rows) if x is not None]
+        sd = float(np.std(d, ddof=1)) if d.size > 1 else 0.0
+        out[f"{fam}/{store}/{write}"] = {
+            "family": fam, "store": store, "write": write, "n": int(d.size),
+            "dividend_mean": float(np.mean(d)), "dividend_sd": sd,
+            "dividend_se": float(sd / np.sqrt(d.size)) if d.size > 1 else 0.0,
+            "full_mean": float(np.mean(f)),
+            "radii_mean": (float(np.mean(r)) if r else None),
+            "n_admissible": int(sum(row["admissible"] for row in rows)),
+            "seeds": [row["seed"] for row in rows],
+        }
+    return out
 
 
 def main():
