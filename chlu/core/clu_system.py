@@ -37,6 +37,12 @@ other two engineer branches build on this file without editing it:
   :func:`resolve_store_potential_factory`) + ``store_potential_kwargs``, so a
   brand-new store family (``ssb-shell-atoms``'s shell atoms) is registered from
   config alone.
+* **(c) the store-WRITE-MASK factory hook** (C2W3 rider A) —
+  ``CluSystemConfig.store_write_mask_factory`` (+ ``store_write_mask_kwargs``),
+  resolved by :func:`resolve_store_write_mask_factory`. Seam (b) without it was
+  half a seam: a new family could supply its potential but **not** its update
+  mask, so any leaf outside ``learned.{centers,log_width,amp}`` was written
+  unmasked and **C3 locality broke silently**.
 
 **Hook for ``trainability-spike``:** :class:`CluSystem` takes
 ``psi: Callable[[Trajectory, ReadState], Array]`` and the settle exposes its
@@ -184,6 +190,29 @@ class CluSystemConfig:
     # **bit-identical** (asserted in ``tests/test_clu_system.py``).
     store_potential_factory: Optional[str] = None
     store_potential_kwargs: Dict[str, Any] = field(default_factory=dict)
+
+    # -- C2W3 RIDER A: the matching WRITE-MASK hook ------------------------
+    # ⭐ ``store_potential_factory`` lets a new store family supply its own
+    # potential; without a matching hook it could **not** supply its own update
+    # mask, so the write fell back to :func:`atom_write_mask_fn`, which masks
+    # exactly ``learned.{centers,log_width,amp}``. Any leaf a new family carries
+    # outside those three is left **unmasked** — it is updated by every write, so
+    # writing item ``j`` moves a parameter item ``i``'s read depends on and
+    # **C3 locality breaks** (``tests/test_clu_system.py`` asserts both halves:
+    # the unmasked leaf breaks it, the family's own mask restores it).
+    #
+    # Resolved by the same ``pkg.module:attr`` mechanism as
+    # :func:`resolve_store_potential_factory`, and invoked as::
+    #
+    #     factory(cfg=cfg, store=store, slot=slot, default_mask_fn=default,
+    #             **store_write_mask_kwargs)  ->  (updates -> updates) | None
+    #
+    # ``default_mask_fn`` is the shipped row mask (or ``None`` when
+    # ``masked_write`` is off), so a family can *compose* with it rather than
+    # replace it. ⛔ ``None`` (the default) => the shipped write path,
+    # **bit-identical** (asserted in ``tests/test_clu_system.py``).
+    store_write_mask_factory: Optional[str] = None
+    store_write_mask_kwargs: Dict[str, Any] = field(default_factory=dict)
 
     # -- harness -----------------------------------------------------------
     seed: int = 0
@@ -906,6 +935,13 @@ class CluSystem:
         crowd[:, self.store.addr_dim: self.store.addr_dim + self.store.payload_dim] = pays
         mask_fn = (atom_write_mask_fn(self.store.group_rows(slot))
                    if cfg.masked_write else None)
+        # -- C2W3 RIDER A: the store family's OWN write mask ------------------
+        # Additive: absent factory => `mask_fn` is the shipped row mask, untouched.
+        if cfg.store_write_mask_factory:
+            mask_fn = resolve_store_write_mask_factory(cfg.store_write_mask_factory)(
+                cfg=cfg, store=self.store, slot=int(slot), default_mask_fn=mask_fn,
+                **dict(cfg.store_write_mask_kwargs or {}),
+            )
         loss_kwargs = dict(
             n_perturb=int(cfg.write_n_perturb),
             sigma_addr=float(cfg.write_sigma_addr),
@@ -1224,6 +1260,41 @@ def resolve_store_potential_factory(path: str) -> Callable:
     return obj
 
 
+def resolve_store_write_mask_factory(path: str) -> Callable:
+    """⭐ **C2W3 RIDER A.** Resolve ``"pkg.module:attr"`` / ``"pkg.module.attr"``.
+
+    The write-mask twin of :func:`resolve_store_potential_factory`: a store family
+    registered through that seam can now also register **its own update mask**,
+    from config alone, without editing a line of this file. The resolved object is
+    called as ``factory(cfg=cfg, store=store, slot=slot,
+    default_mask_fn=default, **cfg.store_write_mask_kwargs)`` and must return an
+    ``updates -> updates`` callable (or ``None`` for "no masking at all").
+
+    ⛔ Without it a family whose learned leaves are not exactly
+    ``learned.{centers,log_width,amp}`` writes those leaves **unmasked**, and C3
+    locality — *"writing item j leaves every other item bit-identical"* — is lost
+    silently. That is why this is a blocker for any future store family
+    (``route3-stage2``'s slotted store included).
+    """
+    import importlib
+
+    p = str(path)
+    if ":" in p:
+        mod_name, attr = p.split(":", 1)
+    elif "." in p:
+        mod_name, attr = p.rsplit(".", 1)
+    else:
+        raise ValueError(
+            f"store_write_mask_factory {path!r} must be 'pkg.module:attr' "
+            "or 'pkg.module.attr'"
+        )
+    obj = getattr(importlib.import_module(mod_name), attr)
+    if not callable(obj):
+        raise TypeError(
+            f"store_write_mask_factory {path!r} resolved to a non-callable")
+    return obj
+
+
 # --------------------------------------------------------------------------
 # construction helpers
 # --------------------------------------------------------------------------
@@ -1383,4 +1454,5 @@ __all__ = [
     # C2W2 seams
     "WRITE_OBJECTIVE_KEYS", "normalize_write_objective",
     "resolve_store_potential_factory",
+    "resolve_store_write_mask_factory",
 ]
