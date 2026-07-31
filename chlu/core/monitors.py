@@ -38,11 +38,16 @@ carried here so the code and the doctrine cannot drift apart:
      fire and certify nothing). Adds the validity leg and packing utilisation.
  4   confirmed; chance comes from the empirical marginal, not ``1/K``.
  5   confirmed (self-probe, label-free).
- 6   **SHARPENED**: retrieval leg = the self-probe acquisition rate. **+ C2W2
-     REPAIR (gym R2): a DEAD-BAND** — ``slope_loss < -eps and slope_acq <= 0``,
-     ``eps = 1e-9 * max|loss|``. 29 of the monitor's 58 first-ever trips fired
-     at ``slope_write_loss = -5.2e-17``: a monitor that trips on the
-     floating-point floor is a monitor that gets disabled.
+ 6   **SHARPENED**: retrieval leg = the self-probe acquisition rate. **+ the
+     TWO-SIDED DEAD-BAND** — ``slope_loss < -eps and slope_acq <= +eps_acq``,
+     ``eps = 1e-9 * max|loss|``, ``eps_acq = 1e-9 * max|acq|``. The loss half
+     landed in C2W2 (gym R2): 31 of the monitor's 58 first-ever trips fired at
+     ``slope_write_loss = -5.2e-17`` — a monitor that trips on the
+     floating-point floor is a monitor that gets disabled. **The acq half
+     landed in C2W4**: it is the same band on the other leg, and without it a
+     ``slope_acq = +1e-17`` counted as "acquisition is rising" and *suppressed*
+     a genuine trip (a false NEGATIVE). One leg with a dead-band and one
+     without is a half-repair that moves the trip count in one direction only.
  7   **SHARPENED (scope)**: a ``pytest`` gauge over the *trajectory*, and the
      gauge is **Newtonian-only** (relativistic breaks as O(1/c^2)). C2W2:
      :data:`GAUGE_SCOPE` names the scope per ``kinetic_mode`` and ``pytest``
@@ -713,22 +718,48 @@ class ObjectiveDivergenceMonitor:
     ``min_i (sep_i - 2 s_i)`` trending down while the loss falls.
     Verb: ``stop`` the write objective -> ``consolidate`` -> resume.
 
-    ⭐ **DEAD-BAND (C2W2 repair, `memory-gym-v0` R2).** The shipped predicate was
-    ``slope_loss < 0 and slope_acq <= 0``, with **no dead-band**, so a converged
-    write whose loss is flat to round-off trips: **29 of the monitor's 58
-    first-ever trips fired at ``slope_write_loss = -5.2e-17``,
-    ``slope_acq = -5.9e-17``** — half its trips were an epsilon artefact. The
-    predicate is now
+    ⭐ **THE TWO-SIDED DEAD-BAND (C2W2 loss half + C2W4 acq half).** The
+    originally shipped predicate was ``slope_loss < 0 and slope_acq <= 0``, with
+    **no dead-band on either leg**, so a converged write whose loss is flat to
+    round-off trips: **31 of the monitor's 58 first-ever trips fired at
+    ``slope_write_loss = -5.2e-17``, ``slope_acq = -5.9e-17``** — over half its
+    trips were an epsilon artefact. The predicate is now
 
-        ``slope_loss < -eps and slope_acq <= 0``,  ``eps = eps_rel * scale``
+        ``slope_loss < -eps and slope_acq <= +eps_acq``
 
-    with ``scale = max(|loss|)`` over the window (so the band is relative to the
-    objective's own magnitude, not to an absolute number that would be wrong the
-    moment the loss is rescaled) and ``eps_rel = 1e-9``. ``eps_rel = 0.0``
-    restores the pre-repair predicate exactly, which is how the before/after
-    re-score is done without re-running the store.
+    with ``eps = eps_rel * scale``, ``scale = max(|loss|)`` over the window, and
+    symmetrically ``eps_acq = eps_acq_rel * scale_acq``,
+    ``scale_acq = max(|acq|)`` over the window (both bands are relative to their
+    own leg's magnitude, not to an absolute number that would be wrong the
+    moment the quantity is rescaled), ``eps_rel = eps_acq_rel = 1e-9``.
+
+    ⛔ **``eps_rel = 0.0`` restores the pre-C2W2 predicate exactly and
+    ``eps_acq_rel = 0.0`` restores the C2W2-C2W3 (loss-half-only) predicate
+    exactly** — that is how the before/after re-scores are done without
+    re-running the store, and it is why the repair is auditable: a repair that
+    cannot be turned off is not auditable.
+
+    **Why the acq half is load-bearing (C2W4, `bprime-fb4-gate` R4).** The loss
+    half only ever *removes* trips (false positives). The missing acq half is
+    the other error: ``slope_acq <= 0.0`` means a ``+1e-17`` round-off slope
+    counts as "acquisition is rising" and **suppresses** a genuine trip — a
+    false NEGATIVE. Landing one leg and not the other moves the trip count in
+    one direction only, which is not a repair.
+
+    ⚠ **This band is a ROUND-OFF floor, not a RESOLUTION floor.** Both legs are
+    ``1e-9 * (the leg's own window scale)``, i.e. ~7 orders above the float64
+    ulp and ~6 orders below any real slope in the C2W1 record. `doctrine-repairs`
+    §2.3 additionally proposed a *resolution* floor on the acq leg
+    (``1/(n_probed * window)`` ~ 4e-2, "a slope whose extrapolated change over
+    the window is below the quantity's own quantum is not a measurement") and
+    predicted 2 recovered false negatives from it. That is a **larger and
+    different** claim — it would trip on genuine sub-quantum acquisition slopes
+    — and it is deliberately NOT shipped here: `eps_acq_rel` is the knob a
+    future task would raise to test it, and the C2W4 re-score reports the flip
+    count as a function of the band (see `.claude/outputs/harness-debt.md`).
 
     A "loss fell by 1e-17" is not divergence; it is the floating-point floor.
+    And an "acquisition rose by 1e-17" is not acquisition.
     """
 
     name = "objective_divergence"
@@ -738,15 +769,19 @@ class ObjectiveDivergenceMonitor:
                   "numerically zero — the dead-band closes the second one")
 
     def __init__(self, window: int = 3, eps_rel: float = 1e-9,
-                 eps_floor: float = 1e-30):
+                 eps_floor: float = 1e-30, eps_acq_rel: float = 1e-9,
+                 eps_acq_floor: float = 1e-30):
         self.window = int(window)
         self.eps_rel = float(eps_rel)
         self.eps_floor = float(eps_floor)
+        self.eps_acq_rel = float(eps_acq_rel)
+        self.eps_acq_floor = float(eps_acq_floor)
         self._hist: List[tuple] = []
 
     def observe(self, ctx: MonitorContext) -> MonitorReading:
         band = (f"sign agreement over {self.window} windows (w25/w26 violation), "
-                f"dead-band eps = {self.eps_rel:g} * max|loss| (gym R2)")
+                f"dead-band eps = {self.eps_rel:g} * max|loss| (gym R2), "
+                f"eps_acq = {self.eps_acq_rel:g} * max|acq| (fb4 R4)")
         loss = ctx.get("self_probe", "write_loss")
         acq = ctx.get("self_probe", "acq")
         if loss is None or acq is None:
@@ -762,18 +797,28 @@ class ObjectiveDivergenceMonitor:
         slope_loss = float(np.polyfit(x, h[:, 0], 1)[0])
         slope_acq = float(np.polyfit(x, h[:, 1], 1)[0])
         scale = float(np.max(np.abs(h[:, 0])))
+        scale_acq = float(np.max(np.abs(h[:, 1])))
         eps = max(self.eps_rel * scale, self.eps_floor if self.eps_rel > 0 else 0.0)
-        tripped = objective_divergence_predicate(slope_loss, slope_acq, eps)
+        eps_acq = max(self.eps_acq_rel * scale_acq,
+                      self.eps_acq_floor if self.eps_acq_rel > 0 else 0.0)
+        tripped = objective_divergence_predicate(slope_loss, slope_acq, eps, eps_acq)
         return MonitorReading(
             name=self.name, mode=self.mode, value=slope_acq, band=band, tripped=tripped,
             lever="write objective", verb="stop|consolidate",
             detail={"slope_write_loss": slope_loss, "slope_acq": slope_acq,
                     "eps_dead_band": eps, "loss_scale": scale,
                     "eps_rel": self.eps_rel,
+                    "eps_acq_dead_band": eps_acq, "acq_scale": scale_acq,
+                    "eps_acq_rel": self.eps_acq_rel,
                     # the pre-repair predicate, carried so a trip-state diff can
                     # be re-scored offline from the artifact (gym R2)
                     "tripped_pre_repair": objective_divergence_predicate(
-                        slope_loss, slope_acq, 0.0),
+                        slope_loss, slope_acq, 0.0, 0.0),
+                    # ...and the loss-half-only predicate (the C2W2-C2W3 shipped
+                    # state, which produced the published "27"), so the C2W4
+                    # acq-half diff is re-scorable offline too (fb4 R4)
+                    "tripped_loss_half_only": objective_divergence_predicate(
+                        slope_loss, slope_acq, eps, 0.0),
                     "leading_indicator_min_sep_minus_2s":
                         ctx.extras.get("min_sep_minus_2s", float("nan")),
                     "false_trip_mode": self.false_trip},
@@ -1133,14 +1178,26 @@ class GuardLivenessMonitor:
 # Free functions used by monitors and by ``pytest``
 # --------------------------------------------------------------------------
 def objective_divergence_predicate(slope_loss: float, slope_acq: float,
-                                   eps: float = 0.0) -> bool:
+                                   eps: float = 0.0,
+                                   eps_acq: float = 0.0) -> bool:
     """Monitor #6's trip predicate, as a free function so a recorded reading can
-    be **re-scored offline** at any ``eps`` (the C2W2 before/after diff).
+    be **re-scored offline** at any ``(eps, eps_acq)`` (the C2W2 and C2W4
+    before/after diffs — the store is never re-run).
 
-    ``eps = 0.0`` is the pre-repair predicate (``slope_loss < 0 and
-    slope_acq <= 0``); ``eps > 0`` is the dead-band (gym R2).
+    Three settings span the monitor's whole history:
+
+    * ``eps = eps_acq = 0`` — the **pre-repair** predicate (``slope_loss < 0 and
+      slope_acq <= 0``), 58 trips on the C2W1 gym;
+    * ``eps > 0, eps_acq = 0`` — the **C2W2 loss half only** (the C2W2-C2W3
+      shipped state), 27 trips;
+    * ``eps > 0, eps_acq > 0`` — the **two-sided** band shipped in C2W4.
+
+    ⚠ The predicate is **monotone non-decreasing in ``eps_acq``**: raising the
+    acq band can only *add* trips. A ``TRIP -> no-trip`` flip attributed to
+    ``eps_acq`` is therefore a contradiction and means something else moved.
     """
-    return bool(float(slope_loss) < -float(eps) and float(slope_acq) <= 0.0)
+    return bool(float(slope_loss) < -float(eps)
+                and float(slope_acq) <= +float(eps_acq))
 
 
 class ConfigAccessProxy:

@@ -263,9 +263,13 @@ def test_every_monitor_declares_its_false_trip_mode():
 # C2W2 repairs (`phi-particle-head` D4): #6 dead-band, #10 tier (a), #7 scope
 # ==========================================================================
 def test_monitor6_dead_band_does_not_trip_on_a_numerically_zero_slope():
-    """⭐ gym R2: **29 of #6's 58 first-ever trips fired at
+    """⭐ gym R2: **31 of #6's 58 first-ever trips fired at
     ``slope_write_loss = -5.2e-17``.** A loss that "fell" by 1e-17 has not
     diverged from anything; it has hit the floating-point floor.
+
+    ⚠ The count is **31, not 29** — "29" was inferred from a log that prints
+    only ``slope_acq``; re-scoring all 28 cells with both slopes recorded gives
+    31 killed / 27 surviving (`phi-particle-head` R-1).
     """
     from chlu.core.monitors import ObjectiveDivergenceMonitor
 
@@ -285,8 +289,8 @@ def test_monitor6_dead_band_does_not_trip_on_a_numerically_zero_slope():
 
 
 def test_monitor6_still_trips_on_a_genuine_divergence():
-    """The other ~29 are real (e.g. ``overload/base@s2``: slope_acq -0.214,
-    slope_loss -0.055) and must survive the repair."""
+    """The surviving 27 are real (e.g. ``overload/base@s2``: slope_acq -0.214,
+    slope_loss -0.055) and must survive the repair -- both halves of it."""
     from chlu.core.monitors import ObjectiveDivergenceMonitor
 
     m = ObjectiveDivergenceMonitor(window=3)
@@ -320,6 +324,95 @@ def test_objective_divergence_predicate_is_a_pure_function():
     assert objective_divergence_predicate(-5.2e-17, -5.9e-17, 0.0)  # pre-repair
     assert not objective_divergence_predicate(-5.2e-17, -5.9e-17, 1e-9)  # repaired
     assert not objective_divergence_predicate(-0.05, +0.2, 0.0)  # acq rising
+
+
+# --------------------------------------------------------------------------
+# C2W4 repair (`harness-debt` D3): monitor #6's MISSING `+eps_acq` half
+# --------------------------------------------------------------------------
+def test_monitor6_acq_dead_band_recovers_a_false_negative():
+    """⛔ **The half that did not land in C2W2** (`bprime-fb4-gate` R4). With
+    ``slope_acq <= 0.0``, a converged run whose acquisition slope is flat *to
+    round-off on the positive side* fails the retrieval leg and does **not**
+    trip — a false NEGATIVE, the mirror image of the artefact the loss half
+    closed. One leg with a dead-band and one without is not a repair.
+    """
+    from chlu.core.monitors import ObjectiveDivergenceMonitor
+
+    # a genuine write-loss collapse (slope -0.055) with acquisition flat to
+    # round-off on the POSITIVE side
+    def _run(**kw):
+        m = ObjectiveDivergenceMonitor(window=3, **kw)
+        r = None
+        for i in range(4):
+            r = m.observe(MonitorContext(self_probe={
+                "write_loss": 1.0 - 0.055 * i, "acq": 0.5 + 1e-15 * i}))
+        return r
+
+    r_new = _run()
+    assert r_new.detail["slope_write_loss"] == pytest.approx(-0.055, rel=1e-6)
+    assert 0.0 < r_new.detail["slope_acq"] < r_new.detail["eps_acq_dead_band"]
+    assert r_new.tripped, "the acq dead-band did not recover the false negative"
+    # ...and the loss-half-only predicate (the C2W2-C2W3 shipped state) is
+    # carried on the reading, so the C2W4 diff is re-scorable offline
+    assert r_new.detail["tripped_loss_half_only"] is False
+    # ⭐ turning the acq half OFF reproduces that shipped state exactly
+    assert _run(eps_acq_rel=0.0).tripped is False
+
+
+def test_monitor6_acq_dead_band_does_not_swallow_a_real_acquisition_rise():
+    """The band is a ROUND-OFF floor, not a resolution floor: an acquisition
+    rate that genuinely climbs must still clear the retrieval leg."""
+    from chlu.core.monitors import ObjectiveDivergenceMonitor
+
+    m = ObjectiveDivergenceMonitor(window=3)
+    r = None
+    for i in range(4):
+        r = m.observe(MonitorContext(self_probe={"write_loss": 1.0 - 0.055 * i,
+                                                 "acq": 0.2 + 0.05 * i}))
+    assert r.detail["slope_acq"] == pytest.approx(0.05, rel=1e-6)
+    assert r.detail["eps_acq_dead_band"] < 1e-9
+    assert not r.tripped
+
+
+def test_monitor6_eps_acq_zero_reproduces_the_loss_half_only_predicate_exactly():
+    """⭐ **Blocking bit-identity gate (task §4.3).** ``eps_acq_rel = 0``
+    restores the C2W2-C2W3 shipped predicate exactly — which is how the C2W4
+    re-score of the published "27" is done without re-running the store. A
+    repair that cannot be turned off is not auditable.
+    """
+    from chlu.core.monitors import ObjectiveDivergenceMonitor
+
+    rng = np.random.default_rng(0)
+    for _ in range(200):
+        loss = rng.normal(0.0, 1.0, size=4) * 10.0 ** rng.integers(-18, 2)
+        acq = rng.normal(0.0, 1.0, size=4) * 10.0 ** rng.integers(-18, 2)
+        off = ObjectiveDivergenceMonitor(window=3, eps_acq_rel=0.0)
+        on = ObjectiveDivergenceMonitor(window=3)
+        r_off = r_on = None
+        for i in range(4):
+            ctx = MonitorContext(self_probe={"write_loss": float(loss[i]),
+                                             "acq": float(acq[i])})
+            r_off = off.observe(ctx)
+            r_on = on.observe(ctx)
+        # `eps_acq_rel = 0` == the shipped C2W2 state, and the on-state's
+        # recorded `tripped_loss_half_only` reproduces it reading-for-reading
+        assert r_off.tripped == r_on.detail["tripped_loss_half_only"]
+        # ...and the acq band is monotone: it can only ADD trips, never remove
+        assert not (r_off.tripped and not r_on.tripped)
+
+
+def test_monitor6_predicate_is_monotone_in_eps_acq():
+    """A dead-band on the acq leg only *widens* the trip condition, so a
+    ``TRIP -> no-trip`` flip attributed to it is a contradiction."""
+    from chlu.core.monitors import objective_divergence_predicate
+
+    for eps_acq in (0.0, 1e-18, 1e-9, 1e-3, 4.2e-2, 1.0):
+        assert objective_divergence_predicate(-0.05, -0.2, 1e-9, eps_acq)
+    assert not objective_divergence_predicate(-0.05, +7.84e-4, 1e-9, 1e-9)
+    # the theorist's `doctrine-repairs` §2.3 RESOLUTION floor (1/(n_probed*W)
+    # ~ 4.2e-2) is what its 2 predicted recoveries needed; the shipped round-off
+    # band (1e-9 * max|acq| <= 1e-9) is 7 orders narrower and does not reach it
+    assert objective_divergence_predicate(-0.05, +7.84e-4, 1e-9, 4.2e-2)
 
 
 def test_monitor10_tier_a_catches_a_declared_but_never_read_knob():

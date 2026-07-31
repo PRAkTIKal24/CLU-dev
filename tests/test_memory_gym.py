@@ -115,17 +115,32 @@ def test_atom_budget_is_pinned_to_the_reference_capacity():
 
 
 # -- the byte ledger (the hard problem, pinned) -----------------------------
-def test_byte_ratio_law_matches_the_measured_ledger():
+@pytest.mark.parametrize("n_spectator", [0, 1])
+def test_byte_ratio_law_matches_the_measured_ledger(n_spectator):
+    """⛔ **C2W4 regression (theorist C2).** This test used to pass
+    ``n_spectator = 0`` literally, and the end-to-end test was parametrised over
+    ``aggregate``/``recency`` only, so **no test exercised a spectator dim** —
+    which is exactly the geometry in which the shipped closed form was wrong for
+    three waves. The spectator case is now parametrised in.
+    """
     cfg = CluSystemConfig(addr_dim=4, payload_dim=1, capacity=4, atoms_per_item=8,
-                          min_atoms=32, min_atoms_base=32, min_atoms_c=1.0)
+                          min_atoms=32, min_atoms_base=32, min_atoms_c=1.0,
+                          n_spectator=n_spectator)
     sys_ = build_system(cfg, loud=False)
     keys = np.zeros((4, 4))
     pays = np.zeros((4, 1))
     ba = byte_account(sys_, keys, pays)
     n_atoms = int(sys_.store.V.learned.centers.shape[0])
-    predicted = byte_ratio_law(n_atoms / 4, 4, 1, 0)
+    predicted = byte_ratio_law(n_atoms / 4, 4, 1, n_spectator)
     assert ba.ratio == pytest.approx(predicted, rel=1e-9)
     assert not ba.matched()
+    # ⭐ and structurally, as INTEGERS -- the law is an accounting identity over
+    # the store's parameter leaves, not a float coincidence of the sizing
+    # convention (`full = 4[N_at(D+2) + K d]`, `launder = 4 K (d+m)`).
+    d, m, k = 4, 1, 4
+    store_dim = d + m + n_spectator
+    assert ba.full_bytes == 4 * (n_atoms * (store_dim + 2) + k * d)
+    assert ba.launder_bytes == 4 * k * (d + m)
 
 
 def test_matched_bytes_is_unreachable_by_construction():
@@ -138,6 +153,36 @@ def test_matched_bytes_is_unreachable_by_construction():
     # the ratio is independent of K and monotone in the atom budget
     assert byte_ratio_law(8, 4, 1, 0) == pytest.approx(1.4 * 8 + 0.8)
     assert byte_ratio_law(32, 4, 1, 0) > byte_ratio_law(8, 4, 1, 0)
+
+
+def test_byte_ratio_law_is_correct_on_a_spectator_dim():
+    """⛔ **The C2W4 erratum, pinned as a test.** ``byte_ratio_law`` used to
+    divide by the *store* dim ``D`` where the launder row is ``(d + m)`` floats;
+    the two coincide iff ``n_spectator == 0``, so the defect was invisible to
+    every test we had. The corrected law is ``[A(D+2) + d] / (d + m)``.
+
+    Numbers pinned here are the C2W1 ``manifold`` cells (measured **52.00x**,
+    published **43.33x**) and the corrected floor (**2.40x**, printed as
+    **2.00x**). Both corrections are in the **conservative** direction.
+    """
+    d, m, nsp = 4, 1, 1
+    store_dim = d + m + nsp  # D = 6
+    # the four C2W1 `manifold` cells: A = 32 atoms per live item
+    assert byte_ratio_law(32, d, m, nsp) == pytest.approx(52.0, rel=0, abs=1e-12)
+    assert byte_ratio_law(32, d, m, nsp) == pytest.approx(
+        (32 * (store_dim + 2) + d) / (d + m))
+    # ...against the pre-erratum value, which is 8.6667 LOWER
+    assert 32 * (store_dim + 2.0) / store_dim + d / store_dim == pytest.approx(
+        43.3333333, abs=1e-6)
+    # ⭐ the floor RISES with a spectator dim: 2.20x -> 2.40x
+    assert byte_ratio_law(1.0, d, m, nsp) == pytest.approx(2.4, rel=0, abs=1e-12)
+    assert byte_ratio_law(1.0, d, m, 0) == pytest.approx(2.2, rel=0, abs=1e-12)
+    # ⭐ bit-identity gate: at n_spectator = 0 the corrected law is the SAME
+    # float expression as the pre-erratum one, so the 24 unaffected C2W1 cells
+    # re-score bitwise unchanged.
+    for A in (3.0, 8.0, 32.0, 341.0, 198 / 17, 192 / 5):
+        pre = A * (d + m + 2.0) / (d + m) + d / (d + m)
+        assert byte_ratio_law(A, d, m, 0).hex() == pre.hex()
 
 
 # -- the streams ------------------------------------------------------------
@@ -293,9 +338,14 @@ def test_scorers_are_sane():
 
 
 # -- end to end -------------------------------------------------------------
-@pytest.mark.parametrize("family", ["aggregate", "recency"])
+@pytest.mark.parametrize("family", ["aggregate", "recency", "manifold"])
 def test_cell_reports_all_three_harness_native_controls_and_a_byte_ledger(family):
-    """A cell that cannot produce all three controls does not report."""
+    """A cell that cannot produce all three controls does not report.
+
+    ⛔ **``manifold`` added in C2W4 (theorist C2).** It is the only family with
+    ``n_spectator = 1``, and its absence here is why the byte law's denominator
+    bug survived three waves of green tests.
+    """
     rec = run_cell(family, "base", seed=0, quick=True, loud=False,
                    gym_overrides=dict(clu_overrides=dict(addr_dim=3)))
     assert not rec["degenerate"], rec

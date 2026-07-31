@@ -322,21 +322,49 @@ def byte_ratio_law(atoms_per_item: float, addr_dim: int = 4,
                    payload_dim: int = 1, n_spectator: int = 0) -> float:
     """``full/launder`` byte ratio, in closed form and **independent of K**.
 
-    With one atom group per item (which is what makes the write masked/C3-local)
-    each item costs ``atoms_per_item * (dim + 2)`` floats of ``V_theta`` against
-    the launder's ``dim`` floats per row, plus the retained address codebook::
+    Write ``A = atoms_per_item``, ``d = addr_dim``, ``m = payload_dim`` and
+    ``D = d + m + n_spectator`` (the **store** dimension — the atoms live in
+    ``R^D``). With one atom group per item (which is what makes the write
+    masked/C3-local) each item costs ``A * (D + 2)`` floats of ``V_theta``
+    (``D`` centre coordinates + ``log_width`` + ``amp``) plus its retained
+    address codebook row of ``d`` floats, against a launder row of exactly
+    ``(d + m)`` floats — the table stores the *address* and the *payload*, and
+    **not** the spectator coordinates::
 
-        ratio = atoms_per_item * (dim + 2)/dim + addr_dim/dim
+        ratio = [A * (D + 2) + d] / (d + m)
 
-    ⛔ **Hence ``ratio >= atoms_per_item``, and matched bytes requires
-    ``atoms_per_item < 1`` — atoms shared between items, which the masked write
-    forbids by construction.** Matched bytes is therefore *unreachable* at v0,
-    not merely unachieved, and a byte-matched table always holds MORE items than
-    the CLU does, so it is never budget-limited. That is why the overload family
-    reports a frontier and not a dividend.
+    ⛔ **HISTORY / ERRATUM (C2W4, theorist C1).** This function previously
+    divided by ``D`` on both terms, i.e. it used the *store* dimension where the
+    launder's row width belongs. The two forms coincide **iff**
+    ``n_spectator == 0``, which is the only geometry any test covered, so the
+    defect was invisible: the closed form was published as *"verified to 1e-9 in
+    all 28 C2W1 cells"* when it in fact held in **24 of 28**. The four
+    ``n_spectator = 1`` (``manifold``) cells were understated by **+8.667
+    (20 %)** — measured **52.00x**, printed **43.33x** — and the floor printed
+    **2.00x** where the true floor at ``n_spec = 1`` is **2.40x**. ⭐ **Every
+    correction is in the conservative direction: the store costs MORE relative
+    to the table than was published, so no published claim was inflated.** The
+    corrected law is exact in **all 28** cells in integer/rational arithmetic
+    (0 ulp); the theorem itself (an accounting identity over the store's
+    parameter leaves) was never in question.
+
+    ⛔ **Since one atom group per item forces ``A >= 1``, the floor is
+    ``[(D + 2) + d] / (d + m)`` = 2.20x at ``(d, m, n_spec) = (4, 1, 0)`` and
+    2.40x at ``(4, 1, 1)``**, so matched bytes requires atoms *shared* between
+    items, which the masked write forbids by construction. Matched bytes is
+    therefore *unreachable* at v0, not merely unachieved, and a byte-matched
+    table always holds MORE items than the CLU does, so it is never
+    budget-limited. That is why the overload family reports a frontier and not a
+    dividend.
     """
-    dim = float(addr_dim + payload_dim + n_spectator)
-    return float(atoms_per_item) * (dim + 2.0) / dim + float(addr_dim) / dim
+    store_dim = float(addr_dim + payload_dim + n_spectator)
+    launder_row = float(addr_dim + payload_dim)
+    # ⚠ written as two terms over ``launder_row`` (rather than as the single
+    # fraction) so that at ``n_spectator = 0`` this is the *same float
+    # expression* the pre-erratum code evaluated ⇒ the 24 unaffected C2W1 cells
+    # re-score BITWISE identically, which is the auditable half of the fix.
+    return (float(atoms_per_item) * (store_dim + 2.0) / launder_row
+            + float(addr_dim) / launder_row)
 
 
 # --------------------------------------------------------------------------
