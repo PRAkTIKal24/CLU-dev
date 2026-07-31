@@ -48,6 +48,11 @@ __all__ = [
     "PsiSpec",
     "DeepSetsPsi",
     "AttentionPsi",
+    # C2W3 reconciliation 1 — the AttentionPsi quarantine (charter §A11 rider)
+    "AttentionPsiLeakError",
+    "LeakProbe",
+    "ATTENTION_PSI_LEAK_BAR",
+    "ATTENTION_PSI_LEAK_EVIDENCE",
     "LearnedPhi",
     "make_psi",
     "matched_pair",
@@ -195,12 +200,113 @@ class DeepSetsPsi(eqx.Module):
         return jax.vmap(self.dec)(pooled)
 
 
+#: ⛔ The registered `AttentionPsi` leak bar (C2W2 `traj-write-objective` D6 /
+#: spike R-4). ``chance + 3 SE`` on the family the leak was measured on.
+ATTENTION_PSI_LEAK_BAR = 0.1902
+
+#: The measured evidence, kept next to the code that must not be used without it.
+ATTENTION_PSI_LEAK_EVIDENCE: Dict[str, Any] = {
+    "source": "C2W2 traj-write-objective D6 (spike R-4), K=8, 2000 fit steps, "
+              "params matched 4609, chance 0.1386, bar 0.1902",
+    "q0_only_by_stride": {1: 0.4134, 2: 0.4332, 4: 0.4480, 8: 0.4257,
+                          16: 0.3515, 32: 0.3911},
+    "blank_store_by_stride": {1: 0.4059, 2: 0.4381, 4: 0.4728, 8: 0.4653,
+                              16: 0.3762, 32: 0.3713},
+    "full_by_stride": {1: 0.6658, 2: 0.6460, 4: 0.6460, 8: 0.6510,
+                       16: 0.6386, 32: 0.6658},
+    "fired": "1/1 at EVERY stride — the leak is stride-independent",
+}
+
+
+class AttentionPsiLeakError(RuntimeError):
+    """⛔ Raised when an ``AttentionPsi`` is asked for a **store-relative**
+    (trajectory) reading without a passing leak probe.
+
+    **The evidence (C2W2 D6 / spike R-4, closed and FIRED).** An attention psi
+    *selects* the launch point out of the buffer instead of diluting it, so it
+    reads ``phi(x)`` rather than the store:
+
+    ======  ======  =========  ===========  ============
+    stride  full    q0_only    blank_store  leak (bar 0.1902)
+    ======  ======  =========  ===========  ============
+    1       0.6658  **0.4134**  **0.4059**  YES
+    2       0.6460  **0.4332**  **0.4381**  YES
+    4       0.6460  **0.4480**  **0.4728**  YES
+    8       0.6510  **0.4257**  **0.4653**  YES
+    16      0.6386  **0.3515**  **0.3762**  YES
+    32      0.6658  **0.3911**  **0.3713**  YES
+    ======  ======  =========  ===========  ============
+
+    ``q0_only`` is 3.0x chance and 2.2x the bar **at every stride**, and a
+    **blank store** read by an attention psi scores 0.37-0.47 — i.e. the number
+    survives deleting the store entirely. A pooled DeepSets psi does not do this
+    (C2W1: ``q0_only`` 0.129 vs chance 0.125, no leak): pooling dilutes ``q0`` to
+    1 of 150 points, attention selects it. ⇒ **no attention-psi trajectory number
+    is quotable store-relative**, and the C2W2 gate's race card is unaffected only
+    because it used the gym's handcrafted psi.
+
+    The quarantine raises rather than warns, per the ``PhiMismatchError``
+    precedent: an invariant enforced in prose is not enforced. To use the module
+    anyway (e.g. the bit-identity regression test, or a deliberately
+    non-store-relative use) pass ``quarantine=False`` **explicitly** — that is
+    greppable; a silently ignored warning is not.
+
+    ⚠ **This does not bar a table reader that happens to use softmax attention**
+    over a launder's own ``(key, payload)`` rows (``bprime-fb4-gate``'s
+    ``attention`` arm). That object never sees a trajectory, cannot select ``q0``
+    out of a buffer that it is not given, and is a different object entirely.
+    """
+
+
+@dataclass(frozen=True)
+class LeakProbe:
+    """The trajectory launder's verdict for one psi, as a first-class object.
+
+    ``q0_only``/``blank_store`` are the same-scorer scores of the leak controls;
+    the probe **passes** only when both sit at or below ``bar``.
+    """
+
+    q0_only: float
+    blank_store: float
+    bar: float = ATTENTION_PSI_LEAK_BAR
+    stride: Optional[int] = None
+    source: str = ""
+
+    @property
+    def leak(self) -> float:
+        return float(max(self.q0_only, self.blank_store) - self.bar)
+
+    def passed(self) -> bool:
+        vals = (float(self.q0_only), float(self.blank_store), float(self.bar))
+        return bool(all(np.isfinite(v) for v in vals) and self.leak <= 0.0)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {"q0_only": float(self.q0_only),
+                "blank_store": float(self.blank_store), "bar": float(self.bar),
+                "stride": self.stride, "source": self.source,
+                "leak": self.leak, "passed": self.passed()}
+
+
 class AttentionPsi(eqx.Module):
     """A learned query attends over the encoded trajectory points.
 
     ``a = softmax(<Wq q_learned, Wk h_i> / sqrt(h))``, ``out = rho(sum_i a_i Wv h_i)``.
     Degenerate at ``input_mode="settled_point"``: one point, so ``a = 1`` and the
     module is again an MLP on ``[q*, p*]`` — same parameters, same count.
+
+    ⛔ **QUARANTINED for trajectory input (C2W2 reconciliation 1).** In
+    ``input_mode="trajectory"`` this module reads the launch point, not the store
+    — ``q0_only`` **0.35-0.45** against a bar of **0.19**, blank store
+    **0.37-0.47**, *at every stride*. It therefore **refuses** to produce a
+    reading in that mode unless it is handed a passing
+    :class:`LeakProbe` (``__call__(..., leak_probe=probe)``) or is constructed
+    with ``quarantine=False``. See :class:`AttentionPsiLeakError` for the numbers
+    and for why the pooled DeepSets psi is *not* quarantined.
+
+    ⭐ Everything else is bit-identical to the shipped module: the quarantine is
+    a pure precondition check, the parameters, the maths and the outputs are
+    untouched (``tests/test_psi_readout.py`` asserts bit-identity with the
+    quarantine disabled).
     """
 
     enc: eqx.nn.MLP
@@ -210,10 +316,15 @@ class AttentionPsi(eqx.Module):
     dec: eqx.nn.MLP
     spec: PsiSpec = eqx.field(static=True)
     representation: str = eqx.field(static=True)
+    quarantine: bool = eqx.field(static=True)
+    leak_probe: Optional[LeakProbe] = eqx.field(static=True)
 
-    def __init__(self, spec: PsiSpec, key):
+    def __init__(self, spec: PsiSpec, key, *, quarantine: bool = True,
+                 leak_probe: Optional[LeakProbe] = None):
         k1, k2, k3, k4, k5 = jax.random.split(key, 5)
         self.spec = spec
+        self.quarantine = bool(quarantine)
+        self.leak_probe = leak_probe
         self.representation = f"attention:{spec.input_mode}:{spec.representation}"
         nh = int(spec.n_heads)
         hd = max(int(spec.hidden) // nh, 1)
@@ -226,7 +337,30 @@ class AttentionPsi(eqx.Module):
         self.dec = eqx.nn.MLP(nh * hd, spec.payload_dim, spec.hidden,
                               max(int(spec.depth) - 1, 1), activation=jax.nn.tanh, key=k5)
 
-    def __call__(self, traj: jnp.ndarray, state) -> jnp.ndarray:
+    def _guard(self, leak_probe: Optional[LeakProbe]) -> None:
+        """⛔ The quarantine. Raises; never warns (the ``PhiMismatchError``
+        precedent — an invariant enforced in prose is not enforced)."""
+        if not self.quarantine or self.spec.input_mode != "trajectory":
+            return
+        probe = leak_probe if leak_probe is not None else self.leak_probe
+        if probe is not None and probe.passed():
+            return
+        raise AttentionPsiLeakError(
+            "AttentionPsi refuses a store-relative TRAJECTORY reading: the leak "
+            "probe is "
+            + ("absent" if probe is None
+               else f"failing ({probe.as_dict()})")
+            + f". C2W2 D6 measured q0_only 0.3515-0.4480 and blank_store "
+              f"0.3713-0.4728 against a bar of {ATTENTION_PSI_LEAK_BAR} at EVERY "
+              "stride, so no attention-psi trajectory number is quotable "
+              "store-relative. Supply a passing LeakProbe "
+              "(__call__(..., leak_probe=...) or AttentionPsi(..., "
+              "leak_probe=...)), or pass quarantine=False explicitly if the "
+              "reading is deliberately not store-relative.")
+
+    def __call__(self, traj: jnp.ndarray, state, *,
+                 leak_probe: Optional[LeakProbe] = None) -> jnp.ndarray:
+        self._guard(leak_probe)
         pts = select_points(traj, state, self.spec)
         h = jax.vmap(jax.vmap(self.enc))(pts)  # (B, n, hidden)
         k = jnp.einsum("hdc,bnc->bhnd", self.W_k, h)
@@ -276,12 +410,19 @@ class LearnedPhi(eqx.Module):
 # --------------------------------------------------------------------------
 # helpers
 # --------------------------------------------------------------------------
-def make_psi(family: str, spec: PsiSpec, key) -> eqx.Module:
-    """``family in {"deepsets", "attention"}``."""
+def make_psi(family: str, spec: PsiSpec, key, *, quarantine: bool = True,
+             leak_probe: Optional[LeakProbe] = None) -> eqx.Module:
+    """``family in {"deepsets", "attention"}``.
+
+    ``quarantine``/``leak_probe`` are forwarded to :class:`AttentionPsi` only —
+    ``DeepSetsPsi`` is **not** quarantined (its own trajectory launder did not
+    fire: C2W1 measured ``q0_only`` 0.129 against a chance of 0.125).
+    """
     if family == "deepsets":
         return DeepSetsPsi(spec, key)
     if family == "attention":
-        return AttentionPsi(spec, key)
+        return AttentionPsi(spec, key, quarantine=quarantine,
+                            leak_probe=leak_probe)
     raise ValueError(f"unknown psi family {family!r} (deepsets | attention)")
 
 
@@ -291,15 +432,19 @@ def psi_param_count(psi: eqx.Module) -> int:
     return int(sum(int(np.asarray(x).size) for x in leaves))
 
 
-def matched_pair(family: str, spec: PsiSpec, key) -> Tuple[eqx.Module, eqx.Module]:
+def matched_pair(family: str, spec: PsiSpec, key, *, quarantine: bool = True,
+                 leak_probe: Optional[LeakProbe] = None
+                 ) -> Tuple[eqx.Module, eqx.Module]:
     """``(point_psi, trajectory_psi)`` from the **same key** — identical
     initial parameters, identical parameter count, only ``input_mode`` differs.
 
     This is the ablation's fairness guarantee, in one function: a trajectory read
     that wins by being bigger is not a result.
     """
-    p = make_psi(family, replace(spec, input_mode="settled_point"), key)
-    t = make_psi(family, replace(spec, input_mode="trajectory"), key)
+    p = make_psi(family, replace(spec, input_mode="settled_point"), key,
+                 quarantine=quarantine, leak_probe=leak_probe)
+    t = make_psi(family, replace(spec, input_mode="trajectory"), key,
+                 quarantine=quarantine, leak_probe=leak_probe)
     assert psi_param_count(p) == psi_param_count(t)
     return p, t
 

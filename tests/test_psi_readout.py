@@ -13,8 +13,12 @@ import pytest
 
 from chlu.core.clu_system import ReadState
 from chlu.core.psi_readout import (
+    ATTENTION_PSI_LEAK_BAR,
+    ATTENTION_PSI_LEAK_EVIDENCE,
     AttentionPsi,
+    AttentionPsiLeakError,
     DeepSetsPsi,
+    LeakProbe,
     LearnedPhi,
     PsiSpec,
     make_psi,
@@ -22,6 +26,12 @@ from chlu.core.psi_readout import (
     psi_param_count,
     select_points,
 )
+
+#: ⛔ C2W2 reconciliation 1: an ``AttentionPsi`` trajectory read leaks ``phi(x)``.
+#: Every test below that legitimately needs the module in trajectory mode says so
+#: explicitly — that is the point of the quarantine.
+CLEAR_PROBE = LeakProbe(q0_only=0.129, blank_store=0.130,
+                        source="C2W1 DeepSets-style clear probe (test fixture)")
 
 
 @pytest.fixture(autouse=True)
@@ -125,7 +135,7 @@ def test_psi_is_permutation_invariant_over_the_point_set(family):
     the storage order of the buffer rather than on its content."""
     spec = PsiSpec(dim=DIM, addr_dim=ADDR, payload_dim=PAY,
                    input_mode="trajectory", include_time=False)
-    psi = make_psi(family, spec, jax.random.PRNGKey(4))
+    psi = make_psi(family, spec, jax.random.PRNGKey(4), quarantine=False)
     st = _state(jax.random.PRNGKey(1))
     traj = _traj(jax.random.PRNGKey(0))
     perm = np.random.default_rng(0).permutation(N)
@@ -137,7 +147,7 @@ def test_psi_is_permutation_invariant_over_the_point_set(family):
 @pytest.mark.parametrize("family", ["deepsets", "attention"])
 def test_psi_output_shape_and_gradients(family):
     spec = PsiSpec(dim=DIM, addr_dim=ADDR, payload_dim=PAY)
-    psi = make_psi(family, spec, jax.random.PRNGKey(5))
+    psi = make_psi(family, spec, jax.random.PRNGKey(5), quarantine=False)
     st = _state(jax.random.PRNGKey(1))
     traj = _traj(jax.random.PRNGKey(0))
     assert psi(traj, st).shape == (B, PAY)
@@ -157,7 +167,7 @@ def test_psi_stride_actually_subsamples():
 
 def test_attention_weights_are_a_simplex_over_points():
     spec = PsiSpec(dim=DIM, addr_dim=ADDR, input_mode="trajectory")
-    psi = AttentionPsi(spec, jax.random.PRNGKey(6))
+    psi = AttentionPsi(spec, jax.random.PRNGKey(6), quarantine=False)
     st = _state(jax.random.PRNGKey(1))
     pts = select_points(_traj(jax.random.PRNGKey(0)), st, spec)
     h = jax.vmap(jax.vmap(psi.enc))(pts)
@@ -165,6 +175,88 @@ def test_attention_weights_are_a_simplex_over_points():
     logits = jnp.einsum("hd,bhnd->bhn", psi.q_tok, k) / np.sqrt(k.shape[-1])
     a = np.asarray(jax.nn.softmax(logits, axis=-1))
     assert np.allclose(a.sum(-1), 1.0, atol=1e-5)
+
+
+# --------------------------------------------------------------------------
+# ⛔ C2W3 reconciliation 1 — the AttentionPsi QUARANTINE (charter §A11 rider)
+# --------------------------------------------------------------------------
+def test_attention_psi_refuses_a_trajectory_reading_without_a_leak_probe():
+    """⛔ C2W2 D6 measured ``q0_only`` 0.3515-0.4480 and ``blank_store``
+    0.3713-0.4728 against a bar of 0.1902 — at EVERY stride. The module must
+    **raise**, not warn (the ``PhiMismatchError`` precedent)."""
+    spec = PsiSpec(dim=DIM, addr_dim=ADDR, payload_dim=PAY,
+                   input_mode="trajectory")
+    psi = AttentionPsi(spec, jax.random.PRNGKey(6))
+    with pytest.raises(AttentionPsiLeakError):
+        psi(_traj(jax.random.PRNGKey(0)), _state(jax.random.PRNGKey(1)))
+
+
+def test_attention_psi_refuses_a_FAILING_leak_probe_and_accepts_a_passing_one():
+    spec = PsiSpec(dim=DIM, addr_dim=ADDR, payload_dim=PAY,
+                   input_mode="trajectory")
+    psi = AttentionPsi(spec, jax.random.PRNGKey(6))
+    traj, st = _traj(jax.random.PRNGKey(0)), _state(jax.random.PRNGKey(1))
+    # the C2W2 measurement itself — stride 4, the worst cell
+    failing = LeakProbe(q0_only=0.4480, blank_store=0.4728, stride=4,
+                        source="C2W2 traj-write-objective D6")
+    assert not failing.passed() and failing.leak > 0
+    with pytest.raises(AttentionPsiLeakError):
+        psi(traj, st, leak_probe=failing)
+    assert CLEAR_PROBE.passed()
+    assert psi(traj, st, leak_probe=CLEAR_PROBE).shape == (B, PAY)
+
+
+def test_the_quarantine_is_bit_identical_shipped_behaviour_when_disabled():
+    """⛔ BLOCKING: the quarantine is a precondition check and nothing else.
+
+    Same key => same parameters => **bitwise** identical outputs, whether the
+    module is unquarantined or cleared by a probe.
+    """
+    spec = PsiSpec(dim=DIM, addr_dim=ADDR, payload_dim=PAY,
+                   input_mode="trajectory")
+    traj, st = _traj(jax.random.PRNGKey(0)), _state(jax.random.PRNGKey(1))
+    free = AttentionPsi(spec, jax.random.PRNGKey(6), quarantine=False)
+    guarded = AttentionPsi(spec, jax.random.PRNGKey(6), leak_probe=CLEAR_PROBE)
+    a, b = np.asarray(free(traj, st)), np.asarray(guarded(traj, st))
+    assert np.array_equal(a, b)                      # bitwise, not allclose
+    assert psi_param_count(free) == psi_param_count(guarded)
+    for x, y in zip(jax.tree_util.tree_leaves(eqx.filter(free, eqx.is_inexact_array)),
+                    jax.tree_util.tree_leaves(eqx.filter(guarded, eqx.is_inexact_array)),
+                    strict=True):
+        assert np.array_equal(np.asarray(x), np.asarray(y))
+
+
+@pytest.mark.parametrize("mode", ["settled_point", "endpoints"])
+def test_the_quarantine_does_not_touch_the_point_reads(mode):
+    """The leak is a *trajectory* leak: attention selects ``q0`` out of a buffer.
+    A one- or two-point read cannot do that, so it is not quarantined."""
+    spec = PsiSpec(dim=DIM, addr_dim=ADDR, payload_dim=PAY, input_mode=mode)
+    psi = AttentionPsi(spec, jax.random.PRNGKey(6))
+    assert psi(_traj(jax.random.PRNGKey(0)),
+               _state(jax.random.PRNGKey(1))).shape == (B, PAY)
+
+
+def test_deepsets_is_NOT_quarantined_because_its_own_launder_did_not_fire():
+    """C2W1: pooled ``q0_only`` 0.129 vs chance 0.125 — no leak. Pooling dilutes
+    ``q0`` to 1 of 150 points; attention *selects* it. Quarantining both would
+    have been a policy, not a measurement."""
+    spec = PsiSpec(dim=DIM, addr_dim=ADDR, payload_dim=PAY,
+                   input_mode="trajectory")
+    psi = DeepSetsPsi(spec, jax.random.PRNGKey(6))
+    assert psi(_traj(jax.random.PRNGKey(0)),
+               _state(jax.random.PRNGKey(1))).shape == (B, PAY)
+
+
+def test_the_leak_evidence_travels_with_the_code():
+    """The numbers live in the module, not only in a report: the next person to
+    reach for an attention psi reads *why* before they reach."""
+    ev = ATTENTION_PSI_LEAK_EVIDENCE
+    assert set(ev["q0_only_by_stride"]) == {1, 2, 4, 8, 16, 32}
+    assert min(ev["q0_only_by_stride"].values()) > ATTENTION_PSI_LEAK_BAR
+    assert min(ev["blank_store_by_stride"].values()) > ATTENTION_PSI_LEAK_BAR
+    assert "AttentionPsi" in AttentionPsiLeakError.__doc__
+    # the distinction bprime-fb4-gate's attention TABLE reader depends on
+    assert "table reader" in AttentionPsiLeakError.__doc__
 
 
 # --------------------------------------------------------------------------
