@@ -37,6 +37,12 @@ other two engineer branches build on this file without editing it:
   :func:`resolve_store_potential_factory`) + ``store_potential_kwargs``, so a
   brand-new store family (``ssb-shell-atoms``'s shell atoms) is registered from
   config alone.
+* **(c) the store-WRITE-MASK factory hook** (C2W3 rider A) —
+  ``CluSystemConfig.store_write_mask_factory`` (+ ``store_write_mask_kwargs``),
+  resolved by :func:`resolve_store_write_mask_factory`. Seam (b) without it was
+  half a seam: a new family could supply its potential but **not** its update
+  mask, so any leaf outside ``learned.{centers,log_width,amp}`` was written
+  unmasked and **C3 locality broke silently**.
 
 **Hook for ``trainability-spike``:** :class:`CluSystem` takes
 ``psi: Callable[[Trajectory, ReadState], Array]`` and the settle exposes its
@@ -72,6 +78,7 @@ from chlu.core.controller import Controller
 from chlu.core.memory_potentials import (
     DesignFreedomPotential,
     atom_write_mask_fn,
+    designed_sites,
 )
 from chlu.core.monitors import (
     MonitorContext,
@@ -185,6 +192,46 @@ class CluSystemConfig:
     store_potential_factory: Optional[str] = None
     store_potential_kwargs: Dict[str, Any] = field(default_factory=dict)
 
+    # -- C2W3 RIDER A: the matching WRITE-MASK hook ------------------------
+    # ⭐ ``store_potential_factory`` lets a new store family supply its own
+    # potential; without a matching hook it could **not** supply its own update
+    # mask, so the write fell back to :func:`atom_write_mask_fn`, which masks
+    # exactly ``learned.{centers,log_width,amp}``. Any leaf a new family carries
+    # outside those three is left **unmasked** — it is updated by every write, so
+    # writing item ``j`` moves a parameter item ``i``'s read depends on and
+    # **C3 locality breaks** (``tests/test_clu_system.py`` asserts both halves:
+    # the unmasked leaf breaks it, the family's own mask restores it).
+    #
+    # Resolved by the same ``pkg.module:attr`` mechanism as
+    # :func:`resolve_store_potential_factory`, and invoked as::
+    #
+    #     factory(cfg=cfg, store=store, slot=slot, default_mask_fn=default,
+    #             **store_write_mask_kwargs)  ->  (updates -> updates) | None
+    #
+    # ``default_mask_fn`` is the shipped row mask (or ``None`` when
+    # ``masked_write`` is off), so a family can *compose* with it rather than
+    # replace it. ⛔ ``None`` (the default) => the shipped write path,
+    # **bit-identical** (asserted in ``tests/test_clu_system.py``).
+    store_write_mask_factory: Optional[str] = None
+    store_write_mask_kwargs: Dict[str, Any] = field(default_factory=dict)
+
+    # -- C2W3 RIDER B: the merge certificate as a MONITORED SOFT CONSTRAINT --
+    # ⭐ SC-1…SC-7 (`doctrine-repairs.md` §4.4, Head ruling §A9.8). The shipped
+    # harness sets `d_safe := 2 s_max + kappa' sigma_q`, so **the admission
+    # radius IS the certificate radius** and the two "mutually exclusive" bands
+    # are one object. With this ON, `d_safe = zeta * sep_expected` (SC-1) is an
+    # independent declared radius, `R_cert` is still computed and reported but is
+    # no longer the gate, and a violation of the budget `B` **TRIPS monitor #3
+    # rather than refusing a write** (SC-3) — a soft constraint that refuses is a
+    # hard constraint with extra steps.
+    # ⛔ `False` (the default) => the shipped harness, **bit-identical**
+    # (blocking regression test in `tests/test_soft_certificate.py`).
+    # ⚠ The price is carried, unsoftened: `rho_ex` up to 6.3x at a `lambda_min`
+    # cost of 2.2-6.0x, and the dividend in that region stays ~0. It is a
+    # PRECONDITION, not a result.
+    soft_certificate: bool = False
+    soft_certificate_kwargs: Dict[str, Any] = field(default_factory=dict)
+
     # -- harness -----------------------------------------------------------
     seed: int = 0
     n_query_per_item: int = 8  # shipped harness uses 32; 8 declared for cost
@@ -216,6 +263,17 @@ class CluSystemConfig:
     @property
     def dim(self) -> int:
         return int(self.addr_dim + self.payload_dim + self.n_spectator)
+
+    def soft_cert_config(self):
+        """The :class:`~chlu.core.soft_certificate.SoftCertificateConfig` in force.
+
+        Lives in ``soft_certificate.py`` (the C2-owned module that uses it) and
+        is assembled here so ``chlu/config.py`` is untouched.
+        """
+        from chlu.core.soft_certificate import SoftCertificateConfig
+
+        return SoftCertificateConfig(enabled=bool(self.soft_certificate),
+                                     **dict(self.soft_certificate_kwargs or {}))
 
     @property
     def n_atoms(self) -> int:
@@ -490,6 +548,11 @@ class CluSystem:
         self._prev_store: Optional[LearnedVStore] = None
         self._c3_ratio = float("nan")
         self._oldest_drop = float("nan")
+        #: per-pair (B, delta, lambda_min) of the last write — monitor #3's
+        #: replacement leg (C2W3 D3) and SC-4(ii) read this.
+        self._c3_pairs: List[dict] = []
+        #: SC-2: one `deficit_rel` per admitted write, accumulated over the run.
+        self._cert_deficits: List[float] = []
         self._knob_reads: Dict[str, int] = {}
         self._evict_key = jax.random.PRNGKey(self.cfg.seed + 5150)
         self._wall0 = time.time()
@@ -578,6 +641,10 @@ class CluSystem:
             rep.admitted.append(iid)
             row["write_loss"] = loss
             row["post_write_drift"] = self._last_drift
+            # ⭐ SC-2: every admitted write logs its certificate margin and its
+            # relative deficit. Reporting only — the write is never refused for
+            # it (SC-3: exceeding the budget TRIPS #3).
+            row.update(self._cert_margin_now())
             self._write_log.append(row)
             rep.log.append(row)
             if self.cfg.stage_lifetimes:
@@ -745,6 +812,10 @@ class CluSystem:
             "utilisation": self._utilisation(),
             "fairness": self._fairness(),
             "c3_ratio": self._c3_ratio,
+            # ⭐ C2W3 D3: the per-pair record monitor #3's replacement leg reads.
+            # Present ALWAYS (the leg replacement is a repair, not a flag); the
+            # soft-certificate block below is what is default-off.
+            "c3_pairs": list(self._c3_pairs),
             "oldest_retention_drop": self._oldest_drop,
             "min_sep_minus_2s": (sep - 2.0 * s_max) if np.isfinite(sep) else float("nan"),
             # ⚠ Monitor #10 tier (a) — the O(1) access-counting config proxy — is
@@ -756,6 +827,10 @@ class CluSystem:
             "knob_tier_a_implemented": False,
         }
         ex.update(self._reach_extras())
+        # ⭐ C2W3 rider B: SC-1…SC-6, default-OFF. When off, nothing is added and
+        # the monitors see exactly the shipped context.
+        if self.cfg.soft_certificate:
+            ex["soft_certificate"] = self.soft_certificate_state()
         if certificates is not None:
             ex["certificates"] = certificates
         if extras:
@@ -906,6 +981,13 @@ class CluSystem:
         crowd[:, self.store.addr_dim: self.store.addr_dim + self.store.payload_dim] = pays
         mask_fn = (atom_write_mask_fn(self.store.group_rows(slot))
                    if cfg.masked_write else None)
+        # -- C2W3 RIDER A: the store family's OWN write mask ------------------
+        # Additive: absent factory => `mask_fn` is the shipped row mask, untouched.
+        if cfg.store_write_mask_factory:
+            mask_fn = resolve_store_write_mask_factory(cfg.store_write_mask_factory)(
+                cfg=cfg, store=self.store, slot=int(slot), default_mask_fn=mask_fn,
+                **dict(cfg.store_write_mask_kwargs or {}),
+            )
         loss_kwargs = dict(
             n_perturb=int(cfg.write_n_perturb),
             sigma_addr=float(cfg.write_sigma_addr),
@@ -974,20 +1056,114 @@ class CluSystem:
         g_old = np.asarray(_grad_vecs(m_old, jnp.asarray(pre[:-1])))
         g_new = np.asarray(_grad_vecs(m_new, jnp.asarray(pre[:-1])))
         dV = np.linalg.norm(g_new - g_old, axis=-1)
-        lam = max(self._lambda_min_at(pre[:-1]), 1e-9)
+        lam_i = self._lambda_min_per_point(pre[:-1])
+        lam = max(float(np.min(lam_i)) if lam_i.size else float("nan"), 1e-9)
         predicted = dV / lam
         ratio = float(np.median(measured / np.maximum(predicted, 1e-12)))
+        # ⭐ C2W3 rider B / D3: the PER-PAIR record monitor #3's replacement leg
+        # needs (`soft_certificate.c3_calibration`). Zero extra cost — every term
+        # is already computed above — and ⛔ **no `max(lambda, 1e-9)` clamp**
+        # (fix S3): the clamp sends `B -> inf` and `rho_C3 -> 0` at any
+        # non-minimum, i.e. it reports a perfect certificate precisely where
+        # there is none. A non-minimum pair is DISQUALIFIED, not rescued.
+        self._c3_pairs = [
+            {"B": float(dv / li) if li > 0 else float("nan"),
+             "delta": float(md), "lambda_min": float(li), "grad_dV": float(dv)}
+            for dv, md, li in zip(dV, measured, lam_i, strict=True)
+        ]
         # oldest-item retention proxy: the drift of the OLDEST stored fixed point
         drop = float(measured[0] / max(_min_separation(self.codebook()[1]), 1e-9)) \
             if measured.size else float("nan")
         return ratio, drop
 
-    def _lambda_min_at(self, points) -> float:
+    def _cert_margin_now(self) -> Dict[str, float]:
+        """⭐ **SC-2** at the current state: ``cert_margin`` / ``deficit_rel``.
+
+        ``R_cert`` is computed **always** (it is a reported quantity under SC-1,
+        not a gate), so the two radii can be compared even in shipped runs; the
+        deficit is accumulated for SC-3's budget.
+        """
+        from chlu.core.soft_certificate import cert_margin, cert_radius
+
+        _, centers, _ = self.codebook()
+        sep = _min_separation(centers)
+        if not np.isfinite(sep):
+            return {}
+        r = cert_radius(self._s_max(), float(self.cfg.query_sigma),
+                        float(self.cfg.d_safe_kappa_prime))
+        m = cert_margin(sep, r)
+        self._cert_deficits.append(float(m["deficit_rel"]))
+        return {"cert_margin": m["cert_margin"], "deficit_rel": m["deficit_rel"],
+                "R_cert": m["R_cert"]}
+
+    def soft_certificate_state(self, measure_capture: Optional[bool] = None
+                               ) -> Dict[str, Any]:
+        """⭐ **SC-1…SC-6** evaluated on the current store (the artifact's record).
+
+        ``measure_capture`` defaults to "yes if the soft certificate is on and
+        ``capture_dirs > 0``": SC-6's basin measurement is the one part of the
+        spec that costs anything (32-direction bisection at **one** site), and a
+        run that does not measure it reports SC-6 as **INAPPLICABLE, never
+        passed**.
+        """
+        from chlu.core.soft_certificate import (
+            expected_separation,
+            soft_certificate_report,
+        )
+
+        sc = self.cfg.soft_cert_config()
+        ids, centers, pays = self.codebook()
+        sep = _min_separation(centers)
+        sep_exp = (float(sc.sep_expected) if sc.sep_expected is not None
+                   else expected_separation(designed_sites(
+                       int(self.cfg.addr_dim), int(self.cfg.capacity),
+                       R=float(self.cfg.ball_radius), seed=int(self.cfg.seed))))
+        z = np.zeros((len(ids), self.store.dim), dtype=np.float32)
+        if len(ids):
+            z[:, : self.store.addr_dim] = centers
+            z[:, self.store.addr_dim: self.store.addr_dim + self.store.payload_dim] = pays
+        lam_i = self._lambda_min_per_point(z) if len(ids) else np.zeros((0,))
+        capture = None
+        want = (bool(sc.enabled and sc.capture_dirs > 0) if measure_capture is None
+                else bool(measure_capture))
+        if want and len(ids):
+            from chlu.core.soft_certificate import capture_radius
+
+            worst = int(np.argmin(lam_i))
+            capture = capture_radius(
+                self._relax_points, z[worst], n_dirs=int(sc.capture_dirs),
+                r_hi=float(sep if np.isfinite(sep) else 1.0),
+                steps=int(sc.capture_bisect_steps),
+                tol=float(self.cfg.query_sigma), seed=int(self.cfg.seed))
+        return soft_certificate_report(
+            sc, sep_expected=sep_exp, sep_after=sep, s_max=self._s_max(),
+            sigma_q=float(self.cfg.query_sigma),
+            kappa_prime=float(self.cfg.d_safe_kappa_prime),
+            deficits=(self._cert_deficits or None), c3_pairs=self._c3_pairs,
+            lambda_mins=lam_i, capture=capture)
+
+    def _relax_points(self, pts) -> np.ndarray:
+        """Relax ``(n, dim)`` states under the CURRENT landscape (SC-6's basin test)."""
+        q = jnp.asarray(np.atleast_2d(np.asarray(pts, dtype=np.float32)))
+        p = jnp.zeros_like(q)
+        tr = _rollout(self.model(), q, p, int(self.cfg.read_steps), self.cfg.dt,
+                      self.cfg.gamma_read)
+        return np.asarray(tr[:, -1, : q.shape[1]])
+
+    def _lambda_min_per_point(self, points) -> np.ndarray:
+        """``lambda_min`` **per site** — the quantity SC-4(i)/SC-6 and the C3
+        calibration leg need. The shipped scalar is its minimum, so this is a
+        refactor at zero cost, not a new computation."""
         m = self.model()
         V = m.potential_net
-        hs = [np.linalg.eigvalsh(np.asarray(jax.hessian(lambda q: V(q))(jnp.asarray(z))))
-              for z in np.asarray(points)]
-        return float(np.min([h.min() for h in hs])) if hs else float("nan")
+        return np.asarray(
+            [float(np.linalg.eigvalsh(
+                np.asarray(jax.hessian(lambda q: V(q))(jnp.asarray(z)))).min())
+             for z in np.asarray(points)], dtype=float)
+
+    def _lambda_min_at(self, points) -> float:
+        lam = self._lambda_min_per_point(points)
+        return float(np.min(lam)) if lam.size else float("nan")
 
     def _lambda_min(self, centers, pays) -> float:
         if len(centers) == 0:
@@ -1224,6 +1400,41 @@ def resolve_store_potential_factory(path: str) -> Callable:
     return obj
 
 
+def resolve_store_write_mask_factory(path: str) -> Callable:
+    """⭐ **C2W3 RIDER A.** Resolve ``"pkg.module:attr"`` / ``"pkg.module.attr"``.
+
+    The write-mask twin of :func:`resolve_store_potential_factory`: a store family
+    registered through that seam can now also register **its own update mask**,
+    from config alone, without editing a line of this file. The resolved object is
+    called as ``factory(cfg=cfg, store=store, slot=slot,
+    default_mask_fn=default, **cfg.store_write_mask_kwargs)`` and must return an
+    ``updates -> updates`` callable (or ``None`` for "no masking at all").
+
+    ⛔ Without it a family whose learned leaves are not exactly
+    ``learned.{centers,log_width,amp}`` writes those leaves **unmasked**, and C3
+    locality — *"writing item j leaves every other item bit-identical"* — is lost
+    silently. That is why this is a blocker for any future store family
+    (``route3-stage2``'s slotted store included).
+    """
+    import importlib
+
+    p = str(path)
+    if ":" in p:
+        mod_name, attr = p.split(":", 1)
+    elif "." in p:
+        mod_name, attr = p.rsplit(".", 1)
+    else:
+        raise ValueError(
+            f"store_write_mask_factory {path!r} must be 'pkg.module:attr' "
+            "or 'pkg.module.attr'"
+        )
+    obj = getattr(importlib.import_module(mod_name), attr)
+    if not callable(obj):
+        raise TypeError(
+            f"store_write_mask_factory {path!r} resolved to a non-callable")
+    return obj
+
+
 # --------------------------------------------------------------------------
 # construction helpers
 # --------------------------------------------------------------------------
@@ -1244,6 +1455,23 @@ def make_controller(cfg: CluSystemConfig, registry=None,
     d_safe = (float(cfg.d_safe_override) if cfg.d_safe_override is not None
               else derived_d_safe(cfg.atom_width, cfg.query_sigma,
                                   cfg.d_safe_kappa_prime))
+    # -- C2W3 RIDER B / ⭐ SC-1: break the identification ---------------------
+    # `d_safe := 2 s_max + kappa' sigma_q` makes the admission radius and the
+    # certificate radius ONE OBJECT. With the soft certificate on, the admission
+    # radius is declared independently as `zeta * sep_expected` (the harness's own
+    # S4 convention) and `R_cert` becomes a reported quantity, not the gate.
+    # ⛔ This is also what retires `d_safe_override` — the override WAS the soft
+    # certificate, undeclared — so an explicit override still wins and is
+    # reported as the legacy path.
+    if cfg.soft_certificate and cfg.d_safe_override is None:
+        from chlu.core.soft_certificate import expected_separation, soft_d_safe
+
+        sc = cfg.soft_cert_config()
+        sep_exp = (float(sc.sep_expected) if sc.sep_expected is not None
+                   else expected_separation(designed_sites(
+                       int(cfg.addr_dim), int(cfg.capacity), R=float(cfg.ball_radius),
+                       seed=int(cfg.seed))))
+        d_safe = soft_d_safe(sep_exp, sc.zeta)
     alloc = Controller(
         shadow, d_safe=d_safe, budget=int(cfg.capacity), amp=1.0,
         leak=float(cfg.leak), amp_floor=float(cfg.amp_floor),
@@ -1383,4 +1611,5 @@ __all__ = [
     # C2W2 seams
     "WRITE_OBJECTIVE_KEYS", "normalize_write_objective",
     "resolve_store_potential_factory",
+    "resolve_store_write_mask_factory",
 ]

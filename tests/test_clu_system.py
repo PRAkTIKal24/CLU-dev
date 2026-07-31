@@ -17,6 +17,7 @@ CLU rather than of a lookup table:
 * the settle exposes a **fixed-point residual** for an implicit/DEQ gradient.
 """
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -28,6 +29,7 @@ from chlu.core.clu_system import (
     build_system,
     normalize_write_objective,
     resolve_store_potential_factory,
+    resolve_store_write_mask_factory,
     settled_point_psi,
     store_relative_trajectory,
     tail_mean_psi,
@@ -416,3 +418,182 @@ def test_seam_b_rejects_a_bad_import_path():
         resolve_store_potential_factory("notapath")
     with pytest.raises(TypeError, match="non-callable"):
         resolve_store_potential_factory("chlu.core.clu_system:WRITE_OBJECTIVE_KEYS")
+
+
+# ==========================================================================
+# ⭐ C2W3 RIDER A — ``store_write_mask_factory`` (the write-mask twin of seam (b))
+#
+# Seam (b) let a new store family supply its own POTENTIAL. Without a matching
+# write-mask hook it could not supply its own UPDATE MASK, so any learned leaf
+# outside ``learned.{centers,log_width,amp}`` was written **unmasked** — writing
+# item ``j`` then moves a parameter every other item's read depends on and C3
+# locality breaks **silently**. The two tests below are the pair the rider asks
+# for: the unmasked leaf breaks locality, and the family's own mask restores it.
+# ==========================================================================
+class _SharedLeafLearned(eqx.Module):
+    """The toy family's learned subtree: the shipped atoms **plus one shared leaf**.
+
+    ``shared_tilt`` is a learnable ``(dim,)`` vector that enters ``V`` for *every*
+    query — the shape of thing a factored / slotted store (``route3-stage2``)
+    carries. It lives **inside** ``.learned``, which is the only part
+    :func:`~chlu.training.train_memory.trainable_filter` trains, so it IS written
+    — and :func:`~chlu.core.memory_potentials.atom_write_mask_fn` masks exactly
+    ``centers`` / ``log_width`` / ``amp`` and therefore **cannot see it**.
+    """
+
+    atoms: eqx.Module
+    shared_tilt: jnp.ndarray
+
+    def __init__(self, atoms, dim: int):
+        self.atoms = atoms
+        self.shared_tilt = jnp.zeros((int(dim),))
+
+    def __call__(self, q):
+        return self.atoms(q) + jnp.sum(self.shared_tilt * q)
+
+    # the surface `LearnedVStore` / the monitors / the mask read off `.learned`
+    @property
+    def centers(self):
+        return self.atoms.centers
+
+    @property
+    def log_width(self):
+        return self.atoms.log_width
+
+    @property
+    def amp(self):
+        return self.atoms.amp
+
+    @property
+    def n_groups(self):
+        return self.atoms.n_groups
+
+    def group_rows(self, slot: int):
+        return self.atoms.group_rows(int(slot))
+
+
+class _SharedLeafPotential(eqx.Module):
+    """A stand-in NEW store family registered through seam (b)."""
+
+    learned: _SharedLeafLearned
+    designed: None = None
+    learned_family: str = eqx.field(static=True, default="atoms")
+
+    def __call__(self, q):
+        return self.learned(q)
+
+
+def _shared_leaf_store_factory(*, cfg, key):
+    """The store-potential half of the toy family (seam (b))."""
+    from chlu.core.memory_potentials import AtomDictionaryPotential
+
+    atoms = AtomDictionaryPotential(
+        dim=cfg.dim, n_atoms=int(cfg.n_atoms), key=key,
+        init_scale=float(cfg.atom_init_scale), init_width=float(cfg.atom_width),
+        confine=float(cfg.confine), depth_init=float(cfg.atom_depth_init),
+        n_groups=int(cfg.capacity),
+    )
+    return _SharedLeafPotential(_SharedLeafLearned(atoms, cfg.dim))
+
+
+def _shared_leaf_mask_factory(*, cfg, store, slot, default_mask_fn, freeze=True):
+    """The write-mask half (C2W3 rider A) — freezes the family's own shared leaf.
+
+    Composes with ``default_mask_fn`` rather than replacing it, which is the
+    contract the hook advertises. ``freeze=False`` reproduces the broken
+    behaviour through the same code path, so the pair is a controlled comparison.
+    """
+    def apply(updates):
+        if default_mask_fn is not None:
+            updates = default_mask_fn(updates)
+        if not freeze:
+            return updates
+        return eqx.tree_at(lambda u: u.learned.shared_tilt, updates,
+                           replace=jnp.zeros_like(updates.learned.shared_tilt))
+
+    return apply
+
+
+def _toy_family_cfg(**kw):
+    return _tiny_cfg(
+        store_potential_factory="tests.test_clu_system:_shared_leaf_store_factory",
+        **kw)
+
+
+def _write_two_items(cfg):
+    sys_ = build_system(cfg, loud=False)
+    sites = np.asarray(designed_sites(cfg.addr_dim, 3, R=1.0, seed=0))
+    sys_.write_stream([{"item_id": 0, "address": sites[0], "payload": 0.5}])
+    m0 = np.asarray(sys_.store.group_rows(0), dtype=bool)
+    before = {
+        "tilt": np.asarray(sys_.store.V.learned.shared_tilt).copy(),
+        "centers": np.asarray(sys_.store.V.learned.centers)[~m0].copy(),
+    }
+    sys_.write_stream([{"item_id": 1, "address": sites[1], "payload": -0.5}])
+    m1 = np.asarray(sys_.store.group_rows(1), dtype=bool)
+    keep = ((~m0) & (~m1))[~m0]
+    after = {
+        "tilt": np.asarray(sys_.store.V.learned.shared_tilt),
+        "centers": np.asarray(sys_.store.V.learned.centers)[~m0],
+    }
+    return before, after, keep
+
+
+def test_rider_a_an_unmasked_shared_leaf_BREAKS_C3_locality():
+    """⛔ The failure the hook exists to fix, asserted rather than asserted-about."""
+    before, after, keep = _write_two_items(_toy_family_cfg())
+    # the atoms are still local (the shipped row mask covers them) ...
+    assert np.array_equal(before["centers"][keep], after["centers"][keep])
+    # ... but the family's own shared leaf was written by item 1's write, and
+    # every other item's read goes through it => C3 is broken.
+    assert not np.array_equal(before["tilt"], after["tilt"])
+
+
+def test_rider_a_the_familys_own_mask_RESTORES_C3_locality():
+    """✅ The passing partner: same family, same write, its own mask supplied."""
+    cfg = _toy_family_cfg(
+        store_write_mask_factory="tests.test_clu_system:_shared_leaf_mask_factory")
+    before, after, keep = _write_two_items(cfg)
+    assert np.array_equal(before["centers"][keep], after["centers"][keep])
+    assert np.array_equal(before["tilt"], after["tilt"])   # bit-identical
+
+
+def test_rider_a_freeze_false_reproduces_the_break_through_the_SAME_code_path():
+    """The comparison is controlled: the hook itself is not what fixes it."""
+    cfg = _toy_family_cfg(
+        store_write_mask_factory="tests.test_clu_system:_shared_leaf_mask_factory",
+        store_write_mask_kwargs={"freeze": False})
+    before, after, _ = _write_two_items(cfg)
+    assert not np.array_equal(before["tilt"], after["tilt"])
+
+
+def test_rider_a_defaults_to_None_and_is_inert():
+    """⛔ BLOCKING: flag off => the shipped write path, bit-identical.
+
+    ``None`` must not appear in the flag-provenance table, must not change the
+    config's identity, and a pass-through factory (one that returns
+    ``default_mask_fn`` unchanged) must produce a **bit-identical** store.
+    """
+    assert CluSystemConfig().store_write_mask_factory is None
+    assert CluSystemConfig().store_write_mask_kwargs == {}
+    assert CluSystemConfig().as_flag_table() == {}
+
+    shipped = _written_system(_tiny_cfg(), n=2)[0]
+    passthrough = _written_system(
+        _tiny_cfg(store_write_mask_factory="tests.test_clu_system:_passthrough_mask"),
+        n=2)[0]
+    for a, b in zip(_store_leaves(shipped.store), _store_leaves(passthrough.store),
+                    strict=True):
+        assert np.array_equal(a, b)
+
+
+def _passthrough_mask(*, cfg, store, slot, default_mask_fn):
+    """The identity element of the hook: hand back the shipped mask untouched."""
+    return default_mask_fn
+
+
+def test_rider_a_rejects_a_bad_import_path():
+    with pytest.raises(ValueError, match="pkg.module"):
+        resolve_store_write_mask_factory("notapath")
+    with pytest.raises(TypeError, match="non-callable"):
+        resolve_store_write_mask_factory("chlu.core.clu_system:WRITE_OBJECTIVE_KEYS")

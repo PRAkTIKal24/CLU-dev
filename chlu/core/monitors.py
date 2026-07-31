@@ -503,27 +503,60 @@ class VacuousGateMonitor:
     """#3 vacuous gate (N74: spacing 1.4142 vs ``d_safe`` 1.10 => the gate could
     not fire arithmetically; N91: the *address space* was binding, not the gate).
 
-    Three legs: (i) fire-rate ``f`` over the stream — **trip if f in {0, 1}**;
-    (ii) **validity** ``corr(gate margin, measured post-write drift)`` — trip
-    below 0.3 (a certificate that does not predict drift is not a certificate);
-    (iii) packing utilisation ``n_live / N_pack`` — trip above 0.95.
+    Legs: (i) fire-rate ``f`` over the stream — **trip if f in {0, 1}**;
+    ⭐ **(ii′) the C3 first-order calibration leg** (C2W3 D3, see below);
+    (iii) packing utilisation ``n_live / N_pack`` — trip above 0.95;
+    ⭐ **(iv) the SC-3 violation budget** when the soft certificate is on.
+
+    ⛔ **C2W3 D3 — leg (ii) is RETIRED as a correlation and REPLACED.** The
+    shipped leg was ``validity = -corr(gate_margin, post_write_drift)``, tripping
+    below 0.30. It is **sign-unstable on a learned V_theta** for four named
+    causes (`doctrine-repairs.md` §1.1): (1) 18 of 28 gym cells have
+    ``lambda_min <= 0``, where "drift of the fixed point" has no first-order
+    theory at all; (2) the ``(A_j, s_j)`` heterogeneity a learned write produces
+    moves ``||grad dV||`` by **1823x** at fixed distance, and none of it enters a
+    pure distance margin; (3) ``d exp(-d^2/2s^2)`` peaks at ``d = s`` — closer is
+    not monotonically worse; (4) a pairing bug — the margin is logged *before*
+    relocation while the drift is caused by the site written *after*.
+    Its validity domain is ``d/s >~ 4``; the gym runs at ``d/s ~ 1.9-2``.
+
+    The replacement bounds the same harm **measured**: with
+    ``B_ij = ||grad dV_j(q_i*)|| / lambda_min,i`` (predicted, first order) and
+    ``Delta_ij`` measured at the relaxed fixed point, trip iff
+    ``rho_C3 = median(Delta/B)`` leaves ``[1/3, 3]`` or ``P[Delta > 3B] > 0.10``;
+    **INAPPLICABLE** below 3 qualifying pairs. Head-to-head, 12 seeds, gym-like:
+    shipped **+0.412** mean with **1/12 sign flips**, replacement spearman
+    **+0.914** with **0/12** — **at zero extra cost**, since
+    ``CluSystem._c3_check`` already computes every term.
+    **The old leg survives as a REPORTED diagnostic only and may not trip.**
 
     Verb: ``admit`` (recalibrate) / ``expand`` / ``stop``.
     False-trip mode: a stream of genuinely well-separated proposals gives
-    ``f = 0`` legitimately — which is why leg (ii) must agree before acting.
+    ``f = 0`` legitimately — which is why leg (ii′) must agree before acting.
     """
 
     name = "vacuous_gate"
     mode = 3
     false_trip = "genuinely well-separated proposals give f=0 legitimately (leg ii must agree)"
 
-    def __init__(self, validity_min: float = 0.30, utilisation_max: float = 0.95):
+    def __init__(self, validity_min: float = 0.30, utilisation_max: float = 0.95,
+                 c3_leg: bool = True):
         self.validity_min = float(validity_min)
         self.utilisation_max = float(utilisation_max)
+        #: ⛔ C2W3 D3. ``False`` restores the retired correlation leg as the
+        #: tripping leg — kept only so the repair's own effect is measurable as a
+        #: controlled diff, never as a recommended configuration.
+        self.c3_leg = bool(c3_leg)
 
     def observe(self, ctx: MonitorContext) -> MonitorReading:
-        band = ("fire-rate f in (0,1) strictly; validity corr >= "
-                f"{self.validity_min:g}; n_live/N_pack <= {self.utilisation_max:g} (N74/N91)")
+        band = (
+            "fire-rate f in (0,1) strictly; "
+            + ("C3 calibration rho_C3 in [1/3,3] and P[Delta>3B] <= 0.10 "
+               "(C2W3 D3; the corr leg is RETIRED to a diagnostic)"
+               if self.c3_leg else
+               f"validity corr >= {self.validity_min:g} (RETIRED leg, forced on)")
+            + f"; n_live/N_pack <= {self.utilisation_max:g} (N74/N91)"
+            + "; SC-3 deficit_rel <= B when the soft certificate is on")
         log = list(ctx.write_log or [])
         offers = [r for r in log if r.get("decision") in
                   ("admit", "relocate", "refuse_spacing", "refuse_full", "refuse_reach")]
@@ -546,14 +579,43 @@ class VacuousGateMonitor:
             if np.std(m) > 1e-12 and np.std(d) > 1e-12:
                 # a valid certificate predicts LESS drift at LARGER margin
                 validity = float(-np.corrcoef(m, d)[0, 1])
+        # -- ⭐ leg (ii′): the C3 first-order calibration test (C2W3 D3) --------
+        from chlu.core.soft_certificate import c3_calibration
+
+        soft = ctx.extras.get("soft_certificate") or {}
+        sc_kwargs = {}
+        if soft:
+            sc1 = soft.get("SC4", {}).get("c3_calibration", {})
+            sc_kwargs = {k: sc1[k] for k in ("kappa", "eta", "lambda_floor",
+                                             "delta_num") if k in sc1}
+            if "rho_band" in sc1:
+                sc_kwargs["rho_band"] = tuple(sc1["rho_band"])
+        c3 = c3_calibration(ctx.extras.get("c3_pairs") or [], **sc_kwargs)
+        # -- ⭐ leg (iv): SC-3's violation budget (soft certificate only) -------
+        budget = soft.get("SC3") if soft else None
+
         tripped = bool(f <= 0.0 or f >= 1.0)
-        tripped = tripped or bool(np.isfinite(validity) and validity < self.validity_min)
+        if self.c3_leg:
+            tripped = tripped or bool(c3.get("applicable") and c3.get("tripped"))
+        else:  # the retired path, kept only as a controlled diff
+            tripped = tripped or bool(np.isfinite(validity)
+                                      and validity < self.validity_min)
         tripped = tripped or bool(np.isfinite(util) and util > self.utilisation_max)
+        # ⛔ SC-3: exceeding the budget is a TRIP, never a refusal — a soft
+        # constraint that refuses is a hard constraint with extra steps.
+        if budget and budget.get("applicable") and not budget.get("within_budget"):
+            tripped = True
         return MonitorReading(
             name=self.name, mode=self.mode, value=f, band=band, tripped=tripped,
             lever="d_safe / address-space volume", verb="admit|expand|stop",
             detail={"fire_rate": f, "n_offers": len(offers), "n_refused": len(refused),
-                    "validity_corr": validity, "utilisation": util,
+                    # the RETIRED leg, reported and never tripping (C2W3 D3)
+                    "validity_corr_RETIRED_DIAGNOSTIC": validity,
+                    "validity_corr_domain": ("valid only for d/s >~ 4; the gym runs "
+                                             "at d/s ~ 1.9-2"),
+                    "c3_calibration_leg": c3,
+                    "soft_certificate_budget": budget,
+                    "utilisation": util,
                     "false_trip_mode": self.false_trip},
         )
 
