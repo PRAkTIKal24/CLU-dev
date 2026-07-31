@@ -611,6 +611,34 @@ def setup_experiment_parsers(subparsers):
                                     '0.03 0.3 3.0 30.0)')
     exp_tw_parser.set_defaults(func=cmd_exp_traj_write)
 
+    # exp-route3-attribution  (C2W3 Route 3 stage 1 + C2W4 the C6 third-party probe)
+    exp_r3_parser = subparsers.add_parser(
+        'exp-route3-attribution',
+        help='Route 3 stage 1: the per-slot store-attribution curve (the §A9.4 '
+             'unlock bar + the §A9.5 per-slot table launder), and --part '
+             'thirdparty for the C6 third-party attribution probe (delete a '
+             'NON-selected item; a per-slot table gives exactly 0 by construction)'
+    )
+    exp_r3_parser.add_argument('--project', help='Project name to use')
+    exp_r3_parser.add_argument('--seed', type=int, help='Base seed offset')
+    exp_r3_parser.add_argument('--quick', action='store_true',
+                               help='Quick smoke mode (plumbing only, not a result)')
+    exp_r3_parser.add_argument('--part', choices=['curve', 'thirdparty'],
+                               default='curve',
+                               help='curve = the stage-1 attribution curve; '
+                                    'thirdparty = the C6 probe across d/s')
+    exp_r3_parser.add_argument('--families', nargs='+',
+                               help='Run only these families '
+                                    '(overload|aggregate|manifold); curve part only')
+    exp_r3_parser.add_argument('--seeds', nargs='+', type=int, default=[0, 1, 2],
+                               help='Seeds per cell (the bar needs {0,1,2})')
+    exp_r3_parser.add_argument('--radii', nargs='+', type=float,
+                               help='ball_radius sweep for --part thirdparty '
+                                    '(default: the PRE-REGISTERED d/s grid)')
+    exp_r3_parser.add_argument('--no-escalate', action='store_true',
+                               help='Skip the one bounded write-budget escalation')
+    exp_r3_parser.set_defaults(func=cmd_exp_route3_attribution)
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -1736,6 +1764,90 @@ def cmd_exp_traj_write(args):
         console.print(f"  <=0 votes:    {g['le_zero_votes'] or 'none'}")
         console.print(f"  abstained:    {g['abstained'] or 'none'}")
         console.print(f"  under-powered grids: {g['under_powered_grids'] or 'none'}")
+        return 0
+    except Exception as e:  # pragma: no cover - CLI plumbing
+        console.print(f"[red]Error: {e}[/red]")
+        import traceback
+
+        traceback.print_exc()
+        return 1
+
+
+def cmd_exp_route3_attribution(args):
+    """Route 3 stage 1's attribution curve, or the C6 third-party probe.
+
+    ⛔ Measurement only: no dividend is claimed here and §A9.5's kill (the
+    per-slot table reproduces the slotted read) **stands**. ``--part thirdparty``
+    measures the one coupling a per-slot table gives exactly 0 for by
+    construction — audit-paper protocol evidence (§A14.1), not a revival.
+    """
+    part = getattr(args, 'part', 'curve')
+    console.print(
+        "[bold cyan]Running Experiment ROUTE3-ATTRIBUTION"
+        + (": the C6 THIRD-PARTY probe (delete a NON-selected item; the "
+           "per-slot table's Delta is exactly 0 by construction)"
+           if part == 'thirdparty' else
+           ": the per-slot store-attribution curve + the §A9.4 bar + the "
+           "§A9.5 per-slot table launder")
+        + "[/bold cyan]"
+    )
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+    config.project.save_dir = str(paths['plots'])
+    try:
+        from ..experiments.exp_route3_attribution import (
+            BALL_RADIUS_GRID,
+            run_experiment_route3_attribution,
+            run_experiment_thirdparty,
+        )
+
+        if part == 'thirdparty':
+            res = run_experiment_thirdparty(
+                config=config,
+                save_dir=str(paths['plots']),
+                models_dir=str(paths['models']),
+                seed=getattr(args, 'seed', None),
+                seeds=tuple(getattr(args, 'seeds', None) or (0, 1, 2)),
+                radii=tuple(getattr(args, 'radii', None) or BALL_RADIUS_GRID),
+                quick=getattr(args, 'quick', False),
+            )
+            console.print("✓ C6 third-party probe completed "
+                          f"({len(res['cells'])} cells)")
+            for row in res['per_radius']:
+                console.print(
+                    f"  R={row['ball_radius']:<5} coverage "
+                    f"{row['n_admissible']}/{row['n_cells']}  "
+                    f"d/s(atom_width)={row['d_over_s_proxy']:.2f} "
+                    f"d/s(fitted)={row['d_over_s_fitted']:.2f}  "
+                    f"grad_ratio={row['grad_ratio']:.3e}  "
+                    f"coupling_q(slot0)={row['coupling_slot0_q']:.3e}"
+                )
+            console.print("  ⛔ the per-slot table's third-party Delta: "
+                          "0 by construction (Prop T5.4)")
+            return 0
+
+        res = run_experiment_route3_attribution(
+            config=config,
+            save_dir=str(paths['plots']),
+            models_dir=str(paths['models']),
+            seed=getattr(args, 'seed', None),
+            families=getattr(args, 'families', None),
+            seeds=tuple(getattr(args, 'seeds', None) or (0, 1, 2)),
+            quick=getattr(args, 'quick', False),
+            escalate=not getattr(args, 'no_escalate', False),
+        )
+        console.print("✓ Experiment ROUTE3-ATTRIBUTION completed")
+        for fam, row in res['coverage_per_family'].items():
+            console.print(
+                f"  admissible-cell coverage [{fam}]: "
+                f"{row['n_admissible']}/{row['n_cells']} ({row['coverage']:.0%})"
+                f"  {row['verdict']}"
+            )
+        console.print(f"  unlock = {res['unlock']}")
+        console.print(f"  §A9.5 fires on clearing slots = "
+                      f"{res['a95_fires_on_clearing_slots']}")
+        console.print(f"  {res['stage2_verdict']}")
         return 0
     except Exception as e:  # pragma: no cover - CLI plumbing
         console.print(f"[red]Error: {e}[/red]")

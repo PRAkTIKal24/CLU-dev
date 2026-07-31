@@ -156,3 +156,21 @@ def test_a_quick_thirdparty_cell_measures_both_channels_and_the_tables_exact_zer
     assert c["d_over_s_proxy"] > 0 and c["d_over_s_fitted"] > 0
     # a quick write does not converge, and the cell says so instead of voting
     assert c["admissible"] is False and "endpoint write loss" in c["reason"]
+
+
+def test_cli_exposes_exp_route3_attribution():
+    """⛔ Reconciliation 6 (C2W3): the module had no CLI hook and ran only via
+    ``python -m``."""
+    import argparse
+
+    from chlu.cli.experiment_cmd import setup_experiment_parsers
+
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command")
+    setup_experiment_parsers(sub)
+    args = parser.parse_args(["exp-route3-attribution", "--quick"])
+    assert args.part == "curve" and args.quick is True and hasattr(args, "func")
+    args = parser.parse_args(["exp-route3-attribution", "--part", "thirdparty",
+                              "--seeds", "0", "1", "2", "--radii", "0.42", "1.0"])
+    assert args.part == "thirdparty" and args.seeds == [0, 1, 2]
+    assert args.radii == [0.42, 1.0]
