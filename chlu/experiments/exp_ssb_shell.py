@@ -642,6 +642,12 @@ def to_race_cell(rec: Dict[str, Any], race, *, liveness: Optional[dict] = None):
         same_keys_null=float(sc.get("same_keys_null", {}).get(metric, np.nan)),
         blank=float(rec.get("blank", {}).get("family_primary_score", np.nan)),
         plus_zero_byte_substitute=float(audit.get("best_zero_byte", np.nan)),
+        # ⭐ C2W3: the MANDATORY trajectory launder was being dropped on the floor
+        # here — the gym computes it on every cell and this mapping never carried
+        # it, so every route2 race cell reported ``fired = False`` by absence
+        # rather than by measurement. It is now carried, and it FIRES on 2 of the
+        # 2x2's 24 cells (both already inadmissible).
+        trajectory_launder=dict(rec.get("trajectory_launder") or {}),
         bytes={"full": int(ledger.get("full_bytes", 0)),
                "launder": int(ledger.get("launder_bytes", 0)),
                "breakdown": {k: int(v) for k, v in
@@ -1071,8 +1077,11 @@ def _2x2_row(rec: Dict[str, Any], family: str, gym_arm: str, store: str,
                            and np.isfinite(lam) and lam >= 0.0),
         "radii_mean": rec.get("radii", {}).get("mean", None),
         "byte_ratio": float(rec.get("byte_ledger", {}).get("ratio", float("nan"))),
+        "trajectory_launder": {k: v for k, v in
+                               (rec.get("trajectory_launder") or {}).items()},
         "trajectory_launder_fired": bool(
-            (rec.get("trajectory_launder") or {}).get("q0_only", -np.inf)
+            max((rec.get("trajectory_launder") or {}).get("q0_only", -np.inf),
+                (rec.get("trajectory_launder") or {}).get("blank_store", -np.inf))
             > (rec.get("trajectory_launder") or {}).get("bar", np.inf)),
         "trips": rec.get("trips", []),
         "n_live": rec.get("n_live", 0),
