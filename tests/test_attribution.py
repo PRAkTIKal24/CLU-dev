@@ -19,10 +19,16 @@ from chlu.eval.attribution import (
     discriminability,
     identity_decode,
     jacobian_curves,
+    _table_predictions,
+    coupling_law_fit,
     per_slot_table_launder,
     slot_channel,
+    slot_deltas,
     slot_index_table,
     spearman,
+    table_row_assignment,
+    table_third_party_delta,
+    third_party_curve,
 )
 
 
@@ -220,3 +226,100 @@ def test_identity_decode_is_leave_one_out_and_chance_on_noise():
     assert identity_decode(clean, labels) == pytest.approx(1.0)
     noise = rng.normal(size=(24, 6))
     assert identity_decode(noise, labels) < 0.6
+
+
+# --------------------------------------------------------------------------
+# ⭐⭐ C6 — third-party store attribution (T5.4), C2W4 `bprime-c6`
+#
+# The property under test is a **structural zero**: a per-slot table's output is
+# unchanged, EXACTLY, by deleting a row the query did not select. It is the
+# definition of the contrast, not a win — so the test also pins the non-vacuous
+# half (deleting the SELECTED row does move it).
+# --------------------------------------------------------------------------
+def _table_fixture(rng, n=40, K=4, dim=2):
+    centers = np.stack([np.array([np.cos(2 * np.pi * k / K),
+                                  np.sin(2 * np.pi * k / K)]) for k in range(K)])
+    lab = rng.integers(0, K, n)
+    keys = centers[lab] + 0.05 * rng.normal(size=(n, dim))
+    values = lab.astype(float) + 0.01 * rng.normal(size=n)
+    return values, keys, centers, lab
+
+
+def test_the_tables_third_party_delta_is_EXACTLY_zero_by_construction():
+    """⭐ Prop T5.4: ``d y / d(non-selected row) = 0`` exactly, because a
+    row-selecting table never reads a row it did not select. ⛔ Asserted as float
+    equality (``== 0.0``), never as ``< tol`` — the whole point is that it is a
+    structural zero and not a small number."""
+    rng = np.random.default_rng(3)
+    values, keys, centers, _ = _table_fixture(rng)
+    for drop in range(centers.shape[0]):
+        out = table_third_party_delta(values, keys, centers, drop=drop)
+        assert out["n_non_selecting_queries"] > 0
+        assert out["max_abs_delta"] == 0.0
+        assert out["exactly_zero"] is True
+
+
+def test_deleting_the_SELECTED_row_DOES_move_the_table_so_the_zero_is_not_vacuous():
+    """The contrast's other half: the same object, the same code path, a row the
+    query *did* select — and the table moves."""
+    rng = np.random.default_rng(4)
+    values, keys, centers, _ = _table_fixture(rng)
+    pred_full, assign = _table_predictions(values, keys, centers)
+    pred_drop, _ = _table_predictions(values, keys, centers, drop=0)
+    moved = assign == 0
+    assert moved.any()
+    d = np.abs(pred_full[moved] - pred_drop[moved])
+    assert np.nanmax(d) > 0.5     # a whole payload level, not a rounding wobble
+
+
+def test_the_row_content_is_the_tables_bytes_and_is_not_refitted_on_deletion():
+    """⚠ If the surviving rows were re-fitted on the orphaned queries, the table
+    would show a nonzero third-party ``Delta`` — an artefact of the estimator, not
+    a dependence on the deleted row. The fixed-content convention is what makes
+    T5.4 testable at all."""
+    rng = np.random.default_rng(5)
+    values, keys, centers, _ = _table_fixture(rng)
+    base = table_row_assignment(keys, centers)
+    after = table_row_assignment(keys, centers, drop=1)
+    assert set(np.unique(after)) <= {0, 2, 3}          # row 1 is gone
+    assert np.array_equal(base[base != 1], after[base != 1])  # nobody else moves
+
+
+def test_slot_deltas_are_zero_against_an_identical_read_and_have_the_right_shape():
+    rng = np.random.default_rng(6)
+    a = _res(rng, B=8, n=60, dim=6)
+    out = slot_deltas(a, a, slots=(0, 1, 2, 4), dim=6)
+    assert out["q"].shape == (4, 8) and out["p"].shape == (4, 8)
+    assert np.all(out["q"] == 0.0) and np.all(out["p"] == 0.0)
+    assert list(out["slots"]) == [0, 1, 2, 4]
+
+
+def test_third_party_curve_reads_the_deltas_of_the_item_each_query_did_not_select():
+    """Per-query indexing is the whole instrument: query ``i``'s third-party
+    ``Delta`` must come from deleting ``third[i]``, not from any pooled average."""
+    slots = np.array([0, 1])
+    per_item = {k: {"q": np.full((2, 3), float(k + 1)),
+                    "p": np.full((2, 3), float(k + 1)),
+                    "slots": slots} for k in range(3)}
+    sel = np.array([0, 1, 2])
+    third = np.array([2, 0, 1])
+    rows = third_party_curve(per_item, sel, third, sigma_q=1.0)
+    q0 = [r for r in rows if r.channel == "q" and r.slot == 0][0]
+    # third-party deltas are 3, 1, 2 ; own are 1, 2, 3 => ratios 3, 0.5, 0.667
+    assert q0.delta_third == pytest.approx(2.0)
+    assert q0.delta_own == pytest.approx(2.0)
+    assert q0.coupling == pytest.approx(0.6667, abs=1e-3)   # MEDIAN, not mean
+    assert q0.coupling_mean == pytest.approx(1.3889, abs=1e-3)
+
+
+def test_coupling_law_fit_recovers_the_width_that_generated_the_curve():
+    """⭐ T5.5's exchange rate is ``(d/sigma_q) exp(-(d^2 - sigma_q^2)/2s^2)``, so
+    the fit returns an INDEPENDENT estimate of the well width — the quantity
+    `doctrine-repairs` OQ-C says is unsolved for a learned multi-atom store."""
+    sigma_q, s = 0.15, 0.35
+    d = np.array([0.5, 0.7, 0.9, 1.1, 1.3])
+    k = (d / sigma_q) * np.exp(-(d ** 2 - sigma_q ** 2) / (2 * s ** 2))
+    fit = coupling_law_fit(d / s, k, sigma_q=sigma_q, d=d)
+    assert fit["s_implied"] == pytest.approx(s, rel=1e-6)
+    assert fit["r2"] == pytest.approx(1.0, abs=1e-9)
+    assert fit["decades"] == pytest.approx(float(np.log10(k.max() / k.min())), rel=1e-9)
