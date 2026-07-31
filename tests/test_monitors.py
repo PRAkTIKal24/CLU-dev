@@ -263,9 +263,13 @@ def test_every_monitor_declares_its_false_trip_mode():
 # C2W2 repairs (`phi-particle-head` D4): #6 dead-band, #10 tier (a), #7 scope
 # ==========================================================================
 def test_monitor6_dead_band_does_not_trip_on_a_numerically_zero_slope():
-    """⭐ gym R2: **29 of #6's 58 first-ever trips fired at
+    """⭐ gym R2: **31 of #6's 58 first-ever trips fired at
     ``slope_write_loss = -5.2e-17``.** A loss that "fell" by 1e-17 has not
     diverged from anything; it has hit the floating-point floor.
+
+    ⚠ The count is **31, not 29** — "29" was inferred from a log that prints
+    only ``slope_acq``; re-scoring all 28 cells with both slopes recorded gives
+    31 killed / 27 surviving (`phi-particle-head` R-1).
     """
     from chlu.core.monitors import ObjectiveDivergenceMonitor
 
@@ -285,8 +289,8 @@ def test_monitor6_dead_band_does_not_trip_on_a_numerically_zero_slope():
 
 
 def test_monitor6_still_trips_on_a_genuine_divergence():
-    """The other ~29 are real (e.g. ``overload/base@s2``: slope_acq -0.214,
-    slope_loss -0.055) and must survive the repair."""
+    """The surviving 27 are real (e.g. ``overload/base@s2``: slope_acq -0.214,
+    slope_loss -0.055) and must survive the repair -- both halves of it."""
     from chlu.core.monitors import ObjectiveDivergenceMonitor
 
     m = ObjectiveDivergenceMonitor(window=3)
