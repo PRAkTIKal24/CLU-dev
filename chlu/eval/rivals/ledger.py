@@ -150,6 +150,10 @@ def head_width_for_budget(kind: str, budget_floats: int, *,
     * ``"ttt_linear"``  ``d^2 + b*d``      (``d_head^2`` + the in-flight buffer)
     * ``"ttt_mlp"``     ``8 d^2 + b*d``    (two layers, 4x hidden)
     * ``"delta"``       ``d^2``            (``n_head * d_k * d_v`` at ``n_head=1``)
+    * ``"mamba2"``      ``d^2``            (``n_head * head_dim * d_state`` at
+      ``n_head = 1``, ``d_state = head_dim = d``) — deliberately the **same**
+      arithmetic as ``"delta"``, so the SSD arm and the delta arms land on
+      byte-identical state and the row isolates the update rule.
 
     ⛔ Never re-tuned after seeing a score: the budget is the CLU's own banked
     ``aggregate@base`` figure and the rule is arithmetic.
@@ -163,7 +167,7 @@ def head_width_for_budget(kind: str, budget_floats: int, *,
             cost = nxt * nxt + b * nxt
         elif kind == "ttt_mlp":
             cost = 8 * nxt * nxt + b * nxt
-        elif kind == "delta":
+        elif kind in ("delta", "mamba2"):
             cost = nxt * nxt
         else:
             raise ValueError(f"unknown ledger kind {kind!r}")

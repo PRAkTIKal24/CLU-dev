@@ -39,15 +39,23 @@ import numpy as np
 from chlu.eval.dividend import knn_mean_launder, same_keys_null, settle_deleted_launder
 from chlu.eval.rivals.deltanet import DELTA_VARIANTS, DeltaMemory
 from chlu.eval.rivals.ledger import TTT_MINI_BATCH, head_width_for_budget, matched_table_rows
+from chlu.eval.rivals.mamba2 import Mamba2Memory
 from chlu.eval.rivals.ttt import TTTMemory
 
-#: The five rival state types this task audits. ``gdn`` is the §A14.2 ablation;
-#: ``gdn2`` is the **reference** delta-rule arm.
-RIVALS: Tuple[str, ...] = ("ttt_linear", "ttt_mlp", "deltanet", "gdn", "gdn2")
+#: The rival state types this task audits. ``gdn`` is the §A14.2 ablation;
+#: ``gdn2`` is the **reference** delta-rule arm. ⭐ ``mamba2`` (C2W5, Head-funded
+#: ruling 5) closes the referee's missing-experiment 5 — the B′ survey sentence
+#: names SSMs and none was measured. ⛔ **APPEND ONLY:** the per-rival fit key is
+#: ``RIVALS.index(name)``, so inserting a name anywhere but the end would silently
+#: re-draw every later arm's initialisation and break reproduction of the banked
+#: C2W4/C2W5 numbers (verified: the five incumbents reproduce bit-identically).
+RIVALS: Tuple[str, ...] = ("ttt_linear", "ttt_mlp", "deltanet", "gdn", "gdn2",
+                           "mamba2")
 
 #: Which sizing law each rival's head width obeys (see ``head_width_for_budget``).
 LEDGER_KIND: Dict[str, str] = {"ttt_linear": "ttt_linear", "ttt_mlp": "ttt_mlp",
-                               "deltanet": "delta", "gdn": "delta", "gdn2": "delta"}
+                               "deltanet": "delta", "gdn": "delta", "gdn2": "delta",
+                               "mamba2": "mamba2"}
 
 #: ⭐ The declared budget: the CLU's **banked** ``aggregate@base`` full-byte figure,
 #: 5456 B = 1364 float32 (`bprime-fb4-gate` §A3.4). Filed in the PREREG before any
@@ -86,8 +94,15 @@ class FitExample:
 def make_rival(name: str, d_in: int, m: int, *, key,
                budget_floats: int = DEFAULT_BUDGET_FLOATS,
                mini_batch: int = TTT_MINI_BATCH,
-               d_head: Optional[int] = None):
-    """Build a rival at the **iso-state** head width the PREREG's rule fixes."""
+               d_head: Optional[int] = None, **arm_kwargs):
+    """Build a rival at the **iso-state** head width the PREREG's rule fixes.
+
+    ``arm_kwargs`` are forwarded to the arm's constructor. ⛔ **Empty in every
+    reported audit cell** — it exists so a declared *ablation* (e.g. Mamba-2's
+    block-level ``use_D`` / ``gate_z``, dropped by default exactly as every other
+    arm's block-level parts are) can be run through the SAME outer loop and scorer
+    instead of a hand-rolled script.
+    """
     if name not in RIVALS:
         raise ValueError(f"unknown rival {name!r}; known: {RIVALS}")
     d = int(d_head) if d_head is not None else head_width_for_budget(
@@ -96,7 +111,13 @@ def make_rival(name: str, d_in: int, m: int, *, key,
         return TTTMemory(d_in, d, m, key=key,
                          kind=("linear" if name == "ttt_linear" else "mlp"),
                          mini_batch=int(mini_batch))
-    return DeltaMemory(d_in, d, m, key=key, variant=name)
+    if name == "mamba2":
+        # ⚠ ``mini_batch`` is NOT forwarded as the SSD chunk: TTT's ``b`` changes
+        # the function (and its state, via the in-flight buffer), while SSD's
+        # chunk is an exact re-association. The chunk stays at the rig-matched
+        # ``SSD_CHUNK`` and is asserted inert in the tests.
+        return Mamba2Memory(d_in, d, m, key=key, **arm_kwargs)
+    return DeltaMemory(d_in, d, m, key=key, variant=name, **arm_kwargs)
 
 
 # --------------------------------------------------------------------------
@@ -184,6 +205,7 @@ def fit_grid(name: str, d_in: int, m: int, examples: Sequence[FitExample],
              b_grid: Optional[Sequence[int]] = None,
              steps: int = OUTER_STEPS,
              val_examples: Optional[Sequence[FitExample]] = None,
+             arm_kwargs: Optional[dict] = None,
              verbose: bool = False) -> Tuple[List[dict], List[Any]]:
     """Fit **every** point of the ``lr x wd x b`` grid and return the whole surface.
 
@@ -205,7 +227,8 @@ def fit_grid(name: str, d_in: int, m: int, examples: Sequence[FitExample],
             for lr in lrs:
                 model = make_rival(name, d_in, m, key=k_b,
                                    budget_floats=budget_floats,
-                                   mini_batch=int(b), d_head=d_head)
+                                   mini_batch=int(b), d_head=d_head,
+                                   **(arm_kwargs or {}))
                 model, rec = fit_rival(model, examples, lr=float(lr),
                                        wd=float(wd), steps=steps,
                                        val_examples=val_examples, verbose=verbose)
@@ -264,12 +287,14 @@ def fit_best_of_grid(name: str, d_in: int, m: int, examples: Sequence[FitExample
                      b_grid: Optional[Sequence[int]] = None,
                      steps: int = OUTER_STEPS,
                      val_examples: Optional[Sequence[FitExample]] = None,
+                     arm_kwargs: Optional[dict] = None,
                      select_on: str = "fit", verbose: bool = False):
     """Best-of-grid on the **fit** split, never on the eval split."""
     grid, models = fit_grid(name, d_in, m, examples, key=key,
                             budget_floats=budget_floats, d_head=d_head, lrs=lrs,
                             wds=wds, b_grid=b_grid, steps=steps,
-                            val_examples=val_examples, verbose=verbose)
+                            val_examples=val_examples, arm_kwargs=arm_kwargs,
+                            verbose=verbose)
     return select_best(grid, models, on=select_on, label="best_of_grid")
 
 
