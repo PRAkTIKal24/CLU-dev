@@ -33,9 +33,13 @@ LR schedule, the **data order**, the seeds, and the **chunk granularity**. Only
 
 from __future__ import annotations
 
+import atexit
 import json
 import math
+import multiprocessing as mp
+import os
 import time
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -121,6 +125,17 @@ class PilotConfig:
     #: Monitors are run every ``monitor_every`` optimisation steps (and always at
     #: evaluation). Running all 13 per chunk would dominate the clock.
     monitor_every: int = 100
+    #: ⭐ Lanes of the batch are **independent** in the plan pass (each builds its
+    #: own controller), so they may run in worker PROCESSES. ``0`` = serial (the
+    #: shipped behaviour, bit-identical); ``-1`` = ``min(batch, cpu_count)``.
+    #: Layers stay sequential — layer ``l+1``'s latents need layer ``l``'s
+    #: decisions — so this is a batch-axis cut only.
+    plan_workers: int = 0
+    #: Start method for those workers. ⛔ ``"spawn"`` by default and not ``"fork"``:
+    #: JAX is **not fork-safe** (the parent has live backend threads), and the
+    #: controller's shadow store is an Equinox module. Spawn pays one import per
+    #: worker at pool creation and nothing thereafter (the pool is persistent).
+    plan_mp_start: str = "spawn"
 
     @classmethod
     def from_mapping(cls, overrides: Optional[dict] = None) -> "PilotConfig":
@@ -382,6 +397,185 @@ def _chunk_latents(model: StreamModel, tokens: jnp.ndarray):
         h = _block_forward(blk, h, plan)
 
 
+# --------------------------------------------------------------------------
+# ⭐ the two picklable summaries that make a lane a WORKER-PROCESS unit
+# --------------------------------------------------------------------------
+@dataclass
+class LaneControllerSummary:
+    """Picklable stand-in for the live :class:`CluControllerV0` of one lane.
+
+    The lane call used to hand its **live controller** back through
+    ``_stats["controller"]`` (it reaches :class:`MonitorContext`). A live
+    controller owns an Equinox shadow store and the monitor registry, so a lane
+    cannot cross a process boundary while it returns one — and shipping the
+    store's arrays back per lane per layer per step would cost more than the
+    parallelism buys. Everything a consumer actually reads off it is a *summary*:
+    guard counts, the verb log, the live records, the stop state.
+
+    ⭐ The SERIAL path returns this too, so serial and pooled runs are the same
+    object graph and the equivalence test compares like with like.
+    """
+
+    guard_counts: Dict[str, int] = field(default_factory=dict)
+    n_live: int = 0
+    t: int = 0
+    budget: int = 0
+    stopped: Optional[str] = None
+    policy: Dict[str, Any] = field(default_factory=dict)
+    records: List[Dict[str, Any]] = field(default_factory=list)
+    log: List[Dict[str, Any]] = field(default_factory=list)
+
+    def guard_fire_counts(self) -> Dict[str, int]:
+        """Duck-types the controller method of the same name."""
+        return dict(self.guard_counts)
+
+    @classmethod
+    def of(cls, ctrl) -> "LaneControllerSummary":
+        return cls(
+            guard_counts=dict(ctrl.guard_fire_counts()),
+            n_live=int(ctrl.allocator.n_live),
+            t=int(ctrl.t),
+            budget=int(ctrl.budget),
+            stopped=(None if ctrl.stopped is None else str(ctrl.stopped)),
+            policy=asdict(ctrl.policy),
+            records=[{"slot": int(r.slot), "item_id": int(r.item_id),
+                      "center": np.asarray(r.center, dtype=float).tolist(),
+                      "payload": float(getattr(r, "payload", 0.0)),
+                      "permanent": bool(getattr(r, "permanent", False))}
+                     for r in ctrl.allocator.records.values()],
+            log=[{"verb": str(v.verb), "applied": bool(v.applied),
+                  "reason": str(v.reason), "guard": str(v.guard), "t": int(v.t)}
+                 for v in ctrl.log],
+        )
+
+
+class _ClassITrips:
+    """Picklable read-only stand-in for the monitor registry.
+
+    The controller consults the registry for **one** thing — ``class_i_tripped()``
+    before a memory-mutating verb (doctrine §5, consequence 1) — and never writes
+    to it. Within a single :func:`plan_pass` nothing calls ``registry.observe``,
+    so that list is **constant for the whole pass**; snapshotting it once and
+    handing every lane the snapshot is exactly equivalent to sharing the live
+    registry, and it is picklable. (Asserted in the test suite against a registry
+    carrying a real class-I trip.)
+    """
+
+    __slots__ = ("_names",)
+
+    def __init__(self, names: Sequence[str] = ()):
+        self._names = tuple(str(n) for n in names)
+
+    def class_i_tripped(self, window: int = 1) -> List[str]:
+        _ = window
+        return list(self._names)
+
+
+# --------------------------------------------------------------------------
+# ⭐ the lane-parallel controller (C2W5, probe §8.1)
+# --------------------------------------------------------------------------
+#: Env forced on every worker **before** it imports JAX. ⛔ Without
+#: ``JAX_PLATFORMS=cpu`` each of ``plan_workers`` processes would open its own
+#: handle on the job's single GPU and pre-allocate against it. The workers do
+#: pure controller bookkeeping (numpy admission geometry + a small Equinox
+#: shadow store); they never touch the model.
+_WORKER_ENV = {
+    "JAX_PLATFORMS": "cpu",
+    "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+}
+_POOLS: Dict[Tuple[int, str], ProcessPoolExecutor] = {}
+_POOL_FAILED: List[str] = []
+
+
+def _worker_ping(i: int) -> int:
+    """Forces a worker to actually start (and pay its import) at pool creation."""
+    return int(os.getpid()) + 0 * int(i)
+
+
+def _lane_worker(args) -> Dict[str, np.ndarray]:
+    """Module-level (hence picklable) entry point for one lane."""
+    z_lane, scfg, class_i = args
+    return _controller_plan_for_lane(z_lane, scfg, _ClassITrips(class_i))
+
+
+def _resolve_workers(pcfg: "PilotConfig", n_lanes: int) -> int:
+    w = int(getattr(pcfg, "plan_workers", 0) or 0)
+    if w < 0:
+        w = min(int(n_lanes), os.cpu_count() or 1)
+    return max(0, min(w, int(n_lanes)))
+
+
+def _lane_pool(workers: int, start: str) -> ProcessPoolExecutor:
+    """One persistent pool per (workers, start-method), created lazily.
+
+    ⚠ Creating it per step would pay the spawn/import cost 4000 times; the whole
+    point is that it is paid once. ``_worker_ping`` is submitted eagerly so the
+    cost lands here and not inside the first step's plan-pass timing.
+    """
+    key = (int(workers), str(start))
+    ex = _POOLS.get(key)
+    if ex is not None:
+        return ex
+    saved = {k: os.environ.get(k) for k in _WORKER_ENV}
+    os.environ.update(_WORKER_ENV)
+    try:
+        ex = ProcessPoolExecutor(max_workers=int(workers),
+                                 mp_context=mp.get_context(str(start)))
+        list(ex.map(_worker_ping, range(2 * int(workers))))
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    _POOLS[key] = ex
+    return ex
+
+
+def shutdown_lane_pools() -> None:
+    """Tear every worker pool down (registered at exit; safe to call twice)."""
+    for key in list(_POOLS):
+        try:
+            _POOLS.pop(key).shutdown(wait=False, cancel_futures=True)
+        except Exception:  # a dead pool is already down
+            pass
+
+
+atexit.register(shutdown_lane_pools)
+
+
+def _plan_lanes(zc: np.ndarray, scfg: CluSystemConfig, class_i: Sequence[str],
+                pcfg: "PilotConfig") -> Tuple[List[Dict[str, np.ndarray]], str]:
+    """Run every lane's controller — serially, or one process per lane.
+
+    ⭐ **Lanes are independent**: each :func:`_controller_plan_for_lane` builds
+    its own controller over its own latents and shares nothing but the (now
+    snapshotted) class-I trip list, so the batch axis is embarrassingly parallel.
+    **Layers are not** — layer ``l+1``'s latents are computed from layer ``l``'s
+    decisions — so this is a batch-axis cut only, and ``ex.map`` preserves lane
+    order, which is what keeps the stacked plan lane-for-lane identical.
+
+    A broken pool is a wall-clock failure, never a correctness one: it falls back
+    to the serial path and says so, once.
+    """
+    B = int(zc.shape[0])
+    workers = _resolve_workers(pcfg, B)
+    if workers > 1 and not _POOL_FAILED:
+        try:
+            ex = _lane_pool(workers, str(pcfg.plan_mp_start))
+            args = [(np.asarray(zc[b]), scfg, tuple(class_i)) for b in range(B)]
+            return list(ex.map(_lane_worker, args)), f"pool[{workers}/{pcfg.plan_mp_start}]"
+        except Exception as exc:      # BrokenProcessPool, pickling, OS limits...
+            _POOL_FAILED.append(repr(exc))
+            print(f"[plan_pass] ⚠ lane pool unavailable ({exc!r}); "
+                  f"falling back to the serial controller", flush=True)
+    stub = _ClassITrips(class_i)
+    mode = "serial" if not _POOL_FAILED else "serial (pool failed)"
+    return [_controller_plan_for_lane(zc[b], scfg, stub) for b in range(B)], mode
+
+
 def _controller_plan_for_lane(z_lane: np.ndarray, scfg: CluSystemConfig,
                               registry) -> Dict[str, np.ndarray]:
     """Run the real controller over one lane's chunk latents.
@@ -461,7 +655,9 @@ def _controller_plan_for_lane(z_lane: np.ndarray, scfg: CluSystemConfig,
     stats["guards"] = dict(ctrl.guard_fire_counts())
     stats["n_live_end"] = int(ctrl.allocator.n_live)
     stats["rows"] = rows
-    stats["controller"] = ctrl
+    # ⭐ a SUMMARY, not the live controller — a lane must be able to cross a
+    # process boundary (see :class:`LaneControllerSummary`).
+    stats["controller"] = LaneControllerSummary.of(ctrl)
     return {"slot": slot, "admitted": admitted, "group_scale": group_scale,
             "reset": reset, "sites": sites, "live": live,
             "retry": np.zeros((n_chunks,), np.int32), "_stats": stats}
@@ -473,12 +669,24 @@ def plan_pass(model: StreamModel, tokens: jnp.ndarray, pcfg: PilotConfig,
 
     ``blank=True`` produces the **blank-store control** (collapse mode #4): the
     store is read exactly as in the live arm but nothing is ever admitted.
+
+    ⭐ With ``pcfg.plan_workers > 1`` the ``batch`` lane-calls of each layer run
+    in worker **processes** (:func:`_plan_lanes`) — the only CPU-serial term left
+    after the forward was jitted, priced at ≈ 2.6-3.7 s/step at pilot scale.
+    **Decision-replay is the spec**, so the pooled path is required to produce a
+    lane-for-lane identical :class:`WritePlan`; that is a blocking test, not a
+    hope.
     """
     scfg = pcfg.store_cfg()
     B, T = tokens.shape
     n_chunks = T // int(pcfg.memory_cfg().chunk)
     K, dim = int(scfg.capacity), int(scfg.dim)
     registry = registry if registry is not None else default_registry(loud=False)
+    # ⭐ ONE snapshot of the class-I trip list for the whole pass. Nothing here
+    # calls ``registry.observe``, so it cannot change mid-pass; snapshotting is
+    # what lets a lane be a picklable unit of work (see :class:`_ClassITrips`).
+    class_i = tuple(registry.class_i_tripped()
+                    if hasattr(registry, "class_i_tripped") else ())
     gen = _chunk_latents(model, tokens)
     plans: List[WritePlan] = []
     diag: Dict[str, Any] = {"layers": []}
@@ -496,9 +704,10 @@ def plan_pass(model: StreamModel, tokens: jnp.ndarray, pcfg: PilotConfig,
             lstats = {"controller": "round_robin (probe only)"}
         else:
             zc = np.asarray(jax.lax.stop_gradient(z))
-            lanes = [_controller_plan_for_lane(zc[b], scfg, registry) for b in range(B)]
+            lanes, lane_mode = _plan_lanes(zc, scfg, class_i, pcfg)
             lstats = {k: int(sum(la["_stats"][k] for la in lanes))
                       for k in ("offers", "refused", "evicted", "n_live_end")}
+            lstats["lane_mode"] = lane_mode
             gsum: Dict[str, int] = {}
             for la in lanes:
                 for gk, gv in la["_stats"]["guards"].items():
@@ -1129,6 +1338,6 @@ __all__ = [
     "assert_shared_shell_identical", "plan_pass", "loss_fn", "train_arm",
     "evaluate", "dynamic_eval", "gradient_probe", "allocation_liveness",
     "monitor_pass", "make_optimizer", "save_json", "anytime_curve",
-    "calibrate_phi_gain",
+    "calibrate_phi_gain", "LaneControllerSummary", "shutdown_lane_pools",
 ]
 _ = Sequence
