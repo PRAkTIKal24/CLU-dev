@@ -341,6 +341,22 @@ def assert_shared_shell_identical(models: Dict[str, StreamModel]) -> Dict[str, i
 # ==========================================================================
 # ⭐ the concrete plan pass — the REAL C2W1 controller
 # ==========================================================================
+@eqx.filter_jit
+def _embed_stream(model: StreamModel, tokens: jnp.ndarray):
+    h = jax.vmap(lambda t: jax.vmap(model.embed)(t))(tokens)
+    return h + model.pos[: h.shape[1]][None]
+
+
+@eqx.filter_jit
+def _block_chunk_latents(blk, h):
+    return jax.vmap(blk.chunk_latents)(h)
+
+
+@eqx.filter_jit
+def _block_forward(blk, h, plan):
+    return jax.vmap(blk)(h, plan)
+
+
 def _chunk_latents(model: StreamModel, tokens: jnp.ndarray):
     """Per-layer chunk latents under the *current* plan, computed concretely.
 
@@ -349,13 +365,21 @@ def _chunk_latents(model: StreamModel, tokens: jnp.ndarray):
     layer ``l+1``'s latents are computed with layer ``l``'s real decisions in
     force. That ordering matters: a plan computed on a forward that ignored the
     earlier layers' memories would not be the plan the model runs.
+
+    ⭐ **The three stages are ``filter_jit``-ed (`pilot-placement-probe`).** This
+    changes no result — the same functions on the same inputs — but it is the
+    single biggest wall-clock lever in the block. `cluformer-pilot` §8.2 reported
+    that **77–84 % of the CLU arm's step is "the plan pass"** and attributed it to
+    the Python controller; **measured, only ~1.6 % of the plan pass is the
+    controller** — the other ~98 % was this forward, executed EAGERLY op-by-op
+    while the differentiable pass next to it ran under ``filter_jit``. Jitting it
+    is not a vectorisation of the controller and does not touch a single decision.
     """
-    h = jax.vmap(lambda t: jax.vmap(model.embed)(t))(tokens)
-    h = h + model.pos[: h.shape[1]][None]
+    h = _embed_stream(model, tokens)
     for blk in model.blocks:
-        z = jax.vmap(blk.chunk_latents)(h)
+        z = _block_chunk_latents(blk, h)
         plan = yield z
-        h = jax.vmap(blk)(h, plan)
+        h = _block_forward(blk, h, plan)
 
 
 def _controller_plan_for_lane(z_lane: np.ndarray, scfg: CluSystemConfig,
@@ -515,6 +539,16 @@ def loss_fn(model: StreamModel, tokens: jnp.ndarray, targets: jnp.ndarray,
 
 
 @eqx.filter_jit
+def _eval_loss(model, tokens, targets, plans, read_mode, verlet):
+    """``loss_fn`` under ``filter_jit`` — ``read_mode``/``verlet`` are Python
+    values and become static, so the D5 Verlet-budget override still re-compiles
+    per budget exactly as before. Evaluation was running the whole block forward
+    EAGERLY (`pilot-placement-probe` §plan-pass); this is the same function on
+    the same inputs."""
+    return loss_fn(model, tokens, targets, plans, read_mode, verlet)
+
+
+@eqx.filter_jit
 def _train_step(model, opt_state, tokens, targets, plans, optimizer):
     loss, grads = eqx.filter_value_and_grad(loss_fn)(model, tokens, targets, plans)
     updates, opt_state = optimizer.update(grads, opt_state, eqx.filter(model, eqx.is_inexact_array))
@@ -577,7 +611,7 @@ def evaluate(model: StreamModel, pcfg: PilotConfig, batches, *, blank: bool = Fa
         tk = jnp.asarray(x, dtype=jnp.int32)
         tg = jnp.asarray(y, dtype=jnp.int32)
         plans, _ = plan_pass(model, tk, pcfg, blank=blank)
-        tot += float(loss_fn(model, tk, tg, plans, None, verlet))
+        tot += float(_eval_loss(model, tk, tg, plans, None, verlet))
         n += 1
     nll = tot / max(n, 1)
     return {"nll": nll, "bpc": bits_per_character(nll), "n_batches": n}

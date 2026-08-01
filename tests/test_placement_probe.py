@@ -405,6 +405,49 @@ def test_equinox_filter_sees_no_new_parameters(scfg):
     assert na == nb
 
 
+def test_jitting_the_plan_pass_changes_no_controller_decision():
+    """⭐ The plan pass's forward is now ``filter_jit``-ed (it was ~98 % of the
+    'plan pass' cost and was running eagerly). That is a wall-clock change only,
+    and this test is what makes 'only' checkable: every DISCRETE field of the
+    plan — slot, admitted, reset, live, retry — must be **bit-identical** to the
+    eager reference.
+
+    ⚠ Honest scope: ``sites`` (a float record of the controller's chosen centres)
+    can differ by float32 ULP (~6e-08 measured) because XLA fuses differently. A
+    knife-edge admission could in principle flip; none did here or in the probe's
+    spot-check, and this test is the tripwire if one ever does.
+    """
+    import chlu.training.train_cluformer as T
+    from chlu.experiments.exp_cluformer_pilot import make_config
+
+    pcfg = make_config("toy", 0, {"seq_len": 128, "batch": 2,
+                                  "d_model": 32, "n_layers": 2})
+    specs, _ = T.solve_arms(pcfg, jax.random.PRNGKey(0))
+    model = T.build_arm("clu_store", pcfg, specs, key=jax.random.PRNGKey(5))
+    tk = jnp.asarray(np.random.default_rng(0).integers(
+        0, 256, (pcfg.batch, pcfg.seq_len)), jnp.int32)
+
+    def eager(model, tokens):
+        h = jax.vmap(lambda t: jax.vmap(model.embed)(t))(tokens)
+        h = h + model.pos[: h.shape[1]][None]
+        for blk in model.blocks:
+            z = jax.vmap(blk.chunk_latents)(h)
+            plan = yield z
+            h = jax.vmap(blk)(h, plan)
+
+    p_jit, _ = T.plan_pass(model, tk, pcfg)
+    orig, T._chunk_latents = T._chunk_latents, eager
+    try:
+        p_eager, _ = T.plan_pass(model, tk, pcfg)
+    finally:
+        T._chunk_latents = orig
+    for a, b in zip(p_jit, p_eager, strict=True):
+        for field in ("slot", "admitted", "reset", "live", "retry"):
+            assert np.array_equal(np.asarray(getattr(a, field)),
+                                  np.asarray(getattr(b, field))), field
+        assert np.allclose(np.asarray(a.sites), np.asarray(b.sites), atol=1e-5)
+
+
 def test_atom_dictionary_localization_helper_rejects_bad_shapes(scfg):
     store = LearnedVStore(scfg, jax.random.PRNGKey(18))
     with pytest.raises(ValueError):
