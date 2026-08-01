@@ -521,6 +521,54 @@ class StreamMemoryConfig:
     #: in every arm.
     mlp_mult: int = 4
 
+    # -- `pilot-placement-probe` H1: the N98 LOCALIZED ATOM INIT --------------
+    #: ⭐ **H1.** Radius of the ball each atom group is initialised in, around
+    #: its own ``atom_group_centers`` row, **on the leading ``L`` (address)
+    #: coordinates only** (N46: localizing the payload axis would hand the write
+    #: the value it is supposed to learn). ``0.0`` (default) = the historical
+    #: scatter and the construction is **bit-identical** — the localized draw
+    #: uses a folded key, so even the default RNG stream is untouched.
+    #: N98's designed band is ``~2 * atom_width``.
+    #: ⚠ ``CluSystemConfig.atom_local_radius`` exists but is **not read** by
+    #: :class:`~chlu.core.clu_system.LearnedVStore` (it never forwards it to
+    #: ``DesignFreedomPotential``); this knob is the streaming block's own path
+    #: to the same shipped mechanism and reproduces it bit-for-bit.
+    atom_local_radius: float = 0.0
+    #: ``(capacity, L)`` localization targets as a **tuple of tuples of floats**
+    #: (the config is a static field, so it must stay hashable). ``None`` =>
+    #: no localization regardless of ``atom_local_radius``.
+    atom_group_centers: Optional[tuple] = None
+    #: ⭐ **H1b — localized placement AT WRITE** (the streaming form of H1).
+    #: ``atom_local_radius`` is N98 as it ships: a *static* init localization
+    #: around targets fixed before the stream starts. In a streaming block the
+    #: site an item will occupy is **not known at init** — the controller decides
+    #: it when the chunk arrives — so the static lever localizes a group's atoms
+    #: around a point the item it later holds has no reason to be near. This
+    #: knob re-draws the written slot's atom ADDRESS coordinates into a ball of
+    #: this radius around the **incoming chunk's own address** at write time,
+    #: which is what "atoms seeded near the phi-image of the chunk" means once
+    #: the stream is live. Payload coordinates are untouched (N46). The offsets
+    #: are a fixed per-atom pattern (a parameter-free geometric jig), so no byte
+    #: of the STATE column changes and C3 locality is preserved: only the
+    #: slot's own rows move, and a refused offer still leaves ``V_theta``
+    #: bit-identical. ``0.0`` (default) = off, bit-identical.
+    atom_place_radius: float = 0.0
+
+    # -- `pilot-placement-probe` H2: the C2W2 TRAJECTORY WRITE TERM ----------
+    #: ⭐ **H2.** Coefficient of :func:`~chlu.training.train_memory.
+    #: trajectory_margin_penalty` inside the inner write objective. ``0.0``
+    #: (default) leaves the shipped objective **bit-identical** (the term is
+    #: added only when the coefficient is a Python float > 0, so not one extra
+    #: op is traced). C2W2's measured band is ``{0.03, 0.3, 3, 30}``.
+    write_lambda_traj: float = 0.0
+    #: Verlet steps of the trajectory term's own rollout (defaults to the read's
+    #: phase-2 budget when 0, so the path the write shapes is the path the read
+    #: traverses).
+    write_traj_steps: int = 0
+    #: Launches per item in the trajectory term (kept small: the term costs
+    #: ``n_launch * steps`` differentiated force evaluations per inner step).
+    write_traj_n_launch: int = 2
+
     @classmethod
     def from_mapping(cls, overrides: Optional[dict] = None) -> "StreamMemoryConfig":
         known = {f.name for f in fields(cls)}
@@ -797,6 +845,50 @@ class StoreState(NamedTuple):
     codebook: jnp.ndarray
 
 
+def localize_atom_init(store, centers, radius: float, *, key):
+    """⭐ **H1 — the N98 localized atom init, applied to a built ``LearnedVStore``.**
+
+    Reproduces :class:`~chlu.core.memory_potentials.AtomDictionaryPotential`'s own
+    localization **bit-for-bit** (same ``_uniform_ball``, same owner map, same
+    ``fold_in(key, 1)`` sub-stream, same "leading ``L`` coordinates only" rule),
+    but from the outside — because
+    :class:`~chlu.core.clu_system.LearnedVStore` never forwards
+    ``CluSystemConfig.atom_local_radius`` to ``DesignFreedomPotential``, so the
+    shipped lever is unreachable through the store's own config. Bit-identity
+    with the direct construction is asserted in ``tests/test_placement_probe.py``.
+
+    Args:
+        store: a built ``LearnedVStore`` (or anything with ``.V.learned``).
+        centers: ``(n_groups, L)`` localization targets, ``L <= dim``. ⭐ **Address
+            axes only** (N46): the payload axis keeps its ``N(0, init_scale)``
+            scatter, or the write is handed the value it is supposed to learn.
+        radius: ball radius; ``<= 0`` returns ``store`` unchanged.
+        key: the SAME key the store's atoms were drawn with (``LearnedVStore``'s
+            ``key``), or the reproduction is not bit-identical.
+    """
+    from chlu.core.memory_potentials import _atom_group_owner, _uniform_ball
+
+    if radius is None or float(radius) <= 0.0 or centers is None:
+        return store
+    atoms = store.V.learned
+    gc = jnp.asarray(np.asarray(centers, dtype=np.float32), dtype=atoms.centers.dtype)
+    if gc.ndim != 2:
+        raise ValueError(f"centers must be 2-D, got shape {gc.shape}")
+    n_atoms = int(atoms.centers.shape[0])
+    n_g = int(atoms.n_groups)
+    if int(gc.shape[0]) != n_g:
+        raise ValueError(f"centers has {gc.shape[0]} rows for {n_g} groups")
+    local_dims = int(gc.shape[1])
+    if local_dims > int(atoms.centers.shape[1]):
+        raise ValueError(f"centers width {local_dims} exceeds dim "
+                         f"{atoms.centers.shape[1]}")
+    owner = jnp.asarray(_atom_group_owner(n_atoms, n_g))
+    k_ball = jax.random.fold_in(key, 1)     # default path's stream untouched
+    offs = _uniform_ball(k_ball, n_atoms, local_dims) * float(radius)
+    new = atoms.centers.at[:, :local_dims].set(gc[owner] + offs)
+    return eqx.tree_at(lambda s: s.V.learned.centers, store, new)
+
+
 class CluStoreCell(eqx.Module):
     """⭐⭐ **The full C2W1 CLU store as a block's memory.**
 
@@ -844,6 +936,10 @@ class CluStoreCell(eqx.Module):
         self.mcfg = mcfg
         self.latent_dim = int(cfg.dim)
         store = LearnedVStore(cfg, k_store)
+        # ⭐ H1 (`pilot-placement-probe`): the N98 localized atom init. A no-op
+        # (bit-identical) at the default `atom_local_radius = 0.0`.
+        store = localize_atom_init(store, mcfg.atom_group_centers,
+                                   float(mcfg.atom_local_radius), key=k_store)
         self.clu = clu_with_potential(
             store.V, dim=int(cfg.dim), kinetic_mode=str(cfg.kinetic_mode),
             inertia=jnp.ones(int(cfg.dim)),
@@ -1005,7 +1101,36 @@ class CluStoreCell(eqx.Module):
         centers = jnp.where(reset_rows[:, None] > 0.5, a0.centers, state.centers)
         log_width = jnp.where(reset_rows > 0.5, a0.log_width, state.log_width)
         amp = jnp.where(reset_rows > 0.5, a0.amp, state.amp * amp_scale)
+
         st = StoreState(centers, log_width, amp, state.codebook)
+
+        # 1b. ⭐ H1b — LOCALIZED PLACEMENT AT WRITE. The slot's own atoms have
+        #     their ADDRESS coordinates re-drawn into a ball of
+        #     `atom_place_radius` around the INCOMING chunk's address (payload
+        #     coordinates untouched — N46). Off by default, bit-identical.
+        #     The offsets are a fixed, key-free geometric jig, so this adds no
+        #     parameter and no state byte; the update is restricted to
+        #     `row_mask`, so C3 locality holds.
+        #     ⚠ It is applied to `st_w` — the state the write STARTS FROM — and
+        #     NOT to `st`, because `st` is what the admission blend at step 3
+        #     falls back to: a refused offer must leave `V_theta` bit-identical,
+        #     and placing atoms for an offer that is then refused would break
+        #     exactly that contract (caught by
+        #     `test_a_refused_offer_leaves_the_landscape_bit_identical_under_placement`).
+        st_w = st
+        if float(self.mcfg.atom_place_radius) > 0.0:
+            from chlu.core.memory_potentials import _uniform_ball
+
+            d_addr = int(self.cfg.addr_dim)
+            n_atoms = int(centers.shape[0])
+            jig = _uniform_ball(jax.random.PRNGKey(0xB0CA), n_atoms, d_addr)
+            jig = jig * float(self.mcfg.atom_place_radius)
+            placed = z[:d_addr][None, :] + jig                   # (n_atoms, d)
+            sel = (row_mask > 0.5)[:, None]
+            st_w = StoreState(
+                centers.at[:, :d_addr].set(
+                    jnp.where(sel, placed, centers[:, :d_addr])),
+                log_width, amp, state.codebook)
 
         # 2. the masked local write, unrolled `write_inner_steps` times.
         target = z[None, :]                                      # (1, dim)
@@ -1013,6 +1138,22 @@ class CluStoreCell(eqx.Module):
         lr = float(self.mcfg.write_lr)
         mask_apply = atom_write_mask_fn(row_mask)
         key = jax.random.PRNGKey(0)
+
+        # ⭐ H2 (`pilot-placement-probe`): the C2W2 trajectory-information term.
+        # Added ONLY when the coefficient is a Python float > 0, so at the
+        # default 0.0 not one extra op is traced and the written V is
+        # bit-identical to the shipped objective (`write_loss`'s own
+        # coefficient-zero regression gate). The rollout is the READ's phase-2
+        # budget and friction, so the path the write is asked to shape is the
+        # path the read actually traverses.
+        lam_traj = float(self.mcfg.write_lambda_traj)
+        traj_kw = dict(
+            rollout_steps=int(self.mcfg.write_traj_steps
+                              or self.mcfg.read_steps),
+            stride=int(self.mcfg.traj_stride),
+            gamma=float(self.cfg.gamma_read), dt=float(self.cfg.dt),
+            n_launch=int(self.mcfg.write_traj_n_launch),
+        )
 
         def loss_of(V):
             return write_loss(
@@ -1025,9 +1166,11 @@ class CluStoreCell(eqx.Module):
                 payload_index=int(self.cfg.addr_dim),
                 barrier_pairs="nn", crowd_targets=crowd,
                 payload_dim=int(self.cfg.payload_dim),
+                lambda_traj=lam_traj,
+                traj_kwargs=(traj_kw if lam_traj > 0.0 else None),
             )
 
-        V = self._model(st).potential_net
+        V = self._model(st_w).potential_net
         for _ in range(int(self.mcfg.write_inner_steps)):
             g = eqx.filter_grad(loss_of)(V)
             g = mask_apply(g)

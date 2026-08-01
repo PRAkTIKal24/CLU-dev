@@ -49,6 +49,16 @@ STEPS="${STEPS:-}"                # empty => the config's own step count
 ARMS="${ARMS:-}"                  # empty => all five arms
 OUT="${OUT:-.claude/outputs/cluformer-pilot}"
 STAGE_ONLY="${STAGE_ONLY:-0}"     # 1 => fetch enwik8 and exit (run this FIRST)
+# ⭐ `pilot-placement-probe`'s recommendation block goes HERE, as flags -- never
+#    by editing the module (an edited module is a provenance hole; a flag is
+#    recorded verbatim in the artifact's `flags` block). All three default to
+#    EMPTY, so an unmodified submission is bit-identical to the pre-probe one.
+#      MEM   -> StreamMemoryConfig  (atom_place_radius, write_inner_steps, ...)
+#      STORE -> CluSystemConfig
+#      SET   -> top-level PilotConfig (monitor_every, ...)
+MEM="${MEM:-}"
+STORE="${STORE:-}"
+SET="${SET:-}"
 
 export CLU_REPO="${CLU_REPO:-$HOME/scratch/CHLU}"
 # shellcheck disable=SC1091
@@ -86,6 +96,10 @@ PY
 EXTRA=""
 [ -n "$STEPS" ] && EXTRA="$EXTRA --steps $STEPS"
 [ -n "$ARMS" ] && EXTRA="$EXTRA --arms $ARMS"
+[ -n "$MEM" ] && EXTRA="$EXTRA --mem $MEM"
+[ -n "$STORE" ] && EXTRA="$EXTRA --store $STORE"
+[ -n "$SET" ] && EXTRA="$EXTRA --set $SET"
+echo "=== config overrides === MEM='$MEM' STORE='$STORE' SET='$SET'"
 
 echo "=== tier-iii pilot: scale=$STAGE stage=$STG seeds=$SEEDS ==="
 # shellcheck disable=SC2086

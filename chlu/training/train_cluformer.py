@@ -248,6 +248,41 @@ def calibrate_phi_gain(pcfg: PilotConfig, tokens, *, key) -> float:
     return float(mcfg.phi_gain) * float(scfg.ball_radius) / max(rms, 1e-9)
 
 
+def calibrate_atom_group_centers(pcfg: PilotConfig, tokens, *, key) -> tuple:
+    """⭐ **H1's localization targets: the φ-image of the EARLIEST chunks.**
+
+    `cluformer-pilot` §5.3's placement hypothesis is that a few unrolled write
+    steps cannot gather 128 atoms scattered at ``init_scale = 1.0`` into a well
+    at the target, so the binding constraint is atom *placement at init*. The fix
+    it names is the shipped N98 lever — *"atoms seeded near the φ-image of early
+    chunks instead of scattered at scale 1.0"* — which needs one localization
+    target per atom group.
+
+    This returns exactly that: lane 0's first ``capacity`` chunk latents from the
+    same calibration batch the φ-gain is set on, **address axes only** (N46), as
+    a hashable tuple of tuples (``StreamMemoryConfig`` is a static field).
+
+    ⚠ **Declared property: this is a data-dependent INITIALISATION.** It is
+    therefore PARAMETERS under the learned-initial-state rule (PREREG-Bprime §4),
+    exactly like a GRU's ``h0``, and it changes no byte of the STATE column. It
+    also means the **blank-store control must be run with the same localized
+    init** — otherwise a self-probe hit bought by the initialisation is scored as
+    a retrieval. ⛔ Call ``calibrate_phi_gain`` FIRST and put its gain into
+    ``pcfg.memory``, or the targets are in the wrong scale.
+    """
+    scfg = pcfg.store_cfg()
+    probe = build_arm("none", pcfg, {"none": ArmSpec("none")}, key=key)
+    h = jax.vmap(lambda t: jax.vmap(probe.embed)(t))(jnp.asarray(tokens, jnp.int32))
+    h = h + probe.pos[: h.shape[1]][None]
+    z = np.asarray(jax.vmap(probe.blocks[0].chunk_latents)(h))   # (B, n_chunks, dim)
+    K, d = int(scfg.capacity), int(scfg.addr_dim)
+    flat = z[0, :, :d]
+    if flat.shape[0] < K:      # short sequence: wrap the earliest chunks
+        reps = int(np.ceil(K / max(flat.shape[0], 1)))
+        flat = np.concatenate([flat] * reps, axis=0)
+    return tuple(tuple(float(v) for v in row) for row in flat[:K])
+
+
 def build_arm(name: str, pcfg: PilotConfig, specs: Dict[str, ArmSpec], *, key
               ) -> StreamModel:
     """Build one arm. ⭐ The shell's keys do NOT depend on the arm.
@@ -306,6 +341,22 @@ def assert_shared_shell_identical(models: Dict[str, StreamModel]) -> Dict[str, i
 # ==========================================================================
 # ⭐ the concrete plan pass — the REAL C2W1 controller
 # ==========================================================================
+@eqx.filter_jit
+def _embed_stream(model: StreamModel, tokens: jnp.ndarray):
+    h = jax.vmap(lambda t: jax.vmap(model.embed)(t))(tokens)
+    return h + model.pos[: h.shape[1]][None]
+
+
+@eqx.filter_jit
+def _block_chunk_latents(blk, h):
+    return jax.vmap(blk.chunk_latents)(h)
+
+
+@eqx.filter_jit
+def _block_forward(blk, h, plan):
+    return jax.vmap(blk)(h, plan)
+
+
 def _chunk_latents(model: StreamModel, tokens: jnp.ndarray):
     """Per-layer chunk latents under the *current* plan, computed concretely.
 
@@ -314,13 +365,21 @@ def _chunk_latents(model: StreamModel, tokens: jnp.ndarray):
     layer ``l+1``'s latents are computed with layer ``l``'s real decisions in
     force. That ordering matters: a plan computed on a forward that ignored the
     earlier layers' memories would not be the plan the model runs.
+
+    ⭐ **The three stages are ``filter_jit``-ed (`pilot-placement-probe`).** This
+    changes no result — the same functions on the same inputs — but it is the
+    single biggest wall-clock lever in the block. `cluformer-pilot` §8.2 reported
+    that **77–84 % of the CLU arm's step is "the plan pass"** and attributed it to
+    the Python controller; **measured, only ~1.6 % of the plan pass is the
+    controller** — the other ~98 % was this forward, executed EAGERLY op-by-op
+    while the differentiable pass next to it ran under ``filter_jit``. Jitting it
+    is not a vectorisation of the controller and does not touch a single decision.
     """
-    h = jax.vmap(lambda t: jax.vmap(model.embed)(t))(tokens)
-    h = h + model.pos[: h.shape[1]][None]
+    h = _embed_stream(model, tokens)
     for blk in model.blocks:
-        z = jax.vmap(blk.chunk_latents)(h)
+        z = _block_chunk_latents(blk, h)
         plan = yield z
-        h = jax.vmap(blk)(h, plan)
+        h = _block_forward(blk, h, plan)
 
 
 def _controller_plan_for_lane(z_lane: np.ndarray, scfg: CluSystemConfig,
@@ -480,6 +539,16 @@ def loss_fn(model: StreamModel, tokens: jnp.ndarray, targets: jnp.ndarray,
 
 
 @eqx.filter_jit
+def _eval_loss(model, tokens, targets, plans, read_mode, verlet):
+    """``loss_fn`` under ``filter_jit`` — ``read_mode``/``verlet`` are Python
+    values and become static, so the D5 Verlet-budget override still re-compiles
+    per budget exactly as before. Evaluation was running the whole block forward
+    EAGERLY (`pilot-placement-probe` §plan-pass); this is the same function on
+    the same inputs."""
+    return loss_fn(model, tokens, targets, plans, read_mode, verlet)
+
+
+@eqx.filter_jit
 def _train_step(model, opt_state, tokens, targets, plans, optimizer):
     loss, grads = eqx.filter_value_and_grad(loss_fn)(model, tokens, targets, plans)
     updates, opt_state = optimizer.update(grads, opt_state, eqx.filter(model, eqx.is_inexact_array))
@@ -542,7 +611,7 @@ def evaluate(model: StreamModel, pcfg: PilotConfig, batches, *, blank: bool = Fa
         tk = jnp.asarray(x, dtype=jnp.int32)
         tg = jnp.asarray(y, dtype=jnp.int32)
         plans, _ = plan_pass(model, tk, pcfg, blank=blank)
-        tot += float(loss_fn(model, tk, tg, plans, None, verlet))
+        tot += float(_eval_loss(model, tk, tg, plans, None, verlet))
         n += 1
     nll = tot / max(n, 1)
     return {"nll": nll, "bpc": bits_per_character(nll), "n_batches": n}
