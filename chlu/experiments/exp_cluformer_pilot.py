@@ -342,12 +342,17 @@ def plot_pilot(records: List[Dict[str, Any]], out_dir: str) -> Optional[str]:
     # (b) the swap table: static vs dyn-eval, seed-mean +- se
     arms = list(r0["arms"])
     xs = np.arange(len(arms))
+    lo, hi = np.inf, -np.inf
     for j, col in enumerate(("static", "dyneval")):
         mu = [np.mean([r["arms"][a][col]["bpc"] for r in recs]) for a in arms]
         se = [(np.std([r["arms"][a][col]["bpc"] for r in recs], ddof=1)
                / np.sqrt(len(recs))) if len(recs) > 1 else 0.0 for a in arms]
         ax[0, 1].bar(xs + 0.36 * j - 0.18, mu, 0.34, yerr=se, capsize=3,
                      label=("static" if col == "static" else "dynamic eval"))
+        lo = min(lo, min(np.array(mu) - np.array(se)))
+        hi = max(hi, max(np.array(mu) + np.array(se)))
+    pad = 0.25 * (hi - lo) + 1e-6
+    ax[0, 1].set_ylim(lo - pad, hi + pad)     # zoomed: a 0-based axis hides 0.01 bpc
     ax[0, 1].set_xticks(xs)
     ax[0, 1].set_xticklabels(arms, rotation=20, fontsize=8)
     ax[0, 1].set(ylabel="held-out bpc",
@@ -374,12 +379,21 @@ def plot_pilot(records: List[Dict[str, Any]], out_dir: str) -> Optional[str]:
 
     # (d) monitors
     m = r0["arms"].get("clu_store", {}).get("monitors_final") or r0["monitors_init"]
+    # ⚠ THREE states, not two: `inapplicable` is NOT `clear`, and colouring it
+    # green would be exactly the silent pass the acceptance criterion forbids.
     names = [x["name"] for x in m["readings"]]
-    trip = [1.0 if x.get("tripped") else 0.0 for x in m["readings"]]
-    ax[1, 1].barh(names, trip, color=["tab:red" if t else "tab:green" for t in trip])
-    ax[1, 1].set(xlim=(0, 1.2), xticks=[0, 1], xticklabels=["clear", "TRIPPED"],
-                 title=f"(d) 13 monitors, seed {r0['seed']} "
-                       f"({m['n_tripped']} tripped)")
+    state = ["TRIPPED" if x.get("tripped") else
+             ("clear" if x.get("applicable", True) else "inapplicable")
+             for x in m["readings"]]
+    cmap = {"TRIPPED": "tab:red", "clear": "tab:green", "inapplicable": "0.75"}
+    ax[1, 1].barh(names, [1.0] * len(names), color=[cmap[s_] for s_ in state])
+    for yi, s_ in enumerate(state):
+        ax[1, 1].text(0.5, yi, s_, ha="center", va="center", fontsize=7,
+                      color="white" if s_ != "inapplicable" else "black")
+    ax[1, 1].set(xlim=(0, 1), xticks=[],
+                 title=f"(d) 13 monitors + M14, seed {r0['seed']} — "
+                       f"{m['n_tripped']} TRIPPED, "
+                       f"{len(names) - m['n_applicable']} inapplicable")
     ax[1, 1].tick_params(labelsize=7)
     fig.suptitle("Tier-iii pilot: the FULL C2W1 CLU store as a streaming block's "
                  "memory (enwik8)  —  acceptance = DOES NOT COLLAPSE, not WINS")
