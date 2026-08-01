@@ -308,6 +308,20 @@ def test_grad_accumulation_reproduces_the_full_batch_gradient():
         assert float(np.abs(x - y).max()) <= 3e-5 * scale + 1e-8
 
 
+def test_dynamic_eval_inherits_accum_steps_without_moving_its_number():
+    """⛔ dyn-eval takes the SAME backward as a training step, so it must inherit
+    the lever — the job header's cut-order forbids cutting this column, and a
+    run that needed the microbatch to fit would otherwise OOM here."""
+    from chlu.training.train_cluformer import dynamic_eval
+
+    pcfg = _pcfg(batch=4)
+    m = _model(pcfg)
+    bat = [_tokens(pcfg, seed=s) for s in (5, 6)]
+    a = dynamic_eval(m, pcfg, list(bat), lrs=[1e-4])
+    b = dynamic_eval(m, _pcfg(batch=4, accum_steps=2), list(bat), lrs=[1e-4])
+    assert a["bpc"] == pytest.approx(b["bpc"], rel=1e-5)
+
+
 def test_accum_steps_must_divide_the_batch():
     from chlu.training.train_cluformer import train_arm
 
