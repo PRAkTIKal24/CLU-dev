@@ -61,13 +61,20 @@ from chlu.eval.rivals import (
     assert_identical_phi,
     clu_two_sided_ledger,
     fit_best_of_grid,
+    fit_grid,
     matched_table_rows,
     phi_row,
     rival_arms,
+    select_best,
     table_ledger,
 )
 from chlu.eval.rivals.deltanet import metric_native_verdict as delta_verdict
-from chlu.eval.rivals.fit import DEFAULT_BUDGET_FLOATS, LR_GRID
+from chlu.eval.rivals.fit import (
+    DEFAULT_BUDGET_FLOATS,
+    LR_GRID,
+    LR_GRID_F3,
+    WD_GRID_F3,
+)
 from chlu.eval.rivals.ttt import measured_state_floats
 from chlu.eval.rivals.ttt import metric_native_verdict as ttt_verdict
 from chlu.experiments.exp_memory_gym import (
@@ -173,19 +180,23 @@ def stream_tokens(stream: GymStream, ccfg: CluSystemConfig
 
 def aux_fit_examples(family: str, arm: str, seed: int, ccfg: CluSystemConfig,
                      gcfg: GymConfig, *, n_streams: int = 2,
-                     offset: int = 101) -> Tuple[List[FitExample], Dict[str, Any]]:
+                     offset: int = 101, n_val: int = 0
+                     ) -> Tuple[List[FitExample], Optional[List[FitExample]],
+                                Dict[str, Any]]:
     """⭐ **F2a's binding guard**: fit streams built from *different* seeds.
 
     Different farthest-point sites, different designed payloads, the same query
     law. The rival's outer parameters therefore cannot memorise the eval cell's
     items — which is what makes the state-byte axis (F2) mean anything. No
     published rival baseline runs this guard; we do, and we say so.
+
+    ``n_val`` adds **held-out** auxiliary streams (seeds ``offset + n_streams``
+    onward) that are *never* differentiated and exist only so best-of-grid can be
+    selected on something other than the objective it optimises (F3's ``wd`` axis
+    is otherwise unselectable). ⛔ Their trim is computed separately, so the
+    **training** examples are byte-identical to C2W4's whether or not they exist.
     """
-    out: List[FitExample] = []
-    used = []
-    for i in range(int(n_streams)):
-        s = int(seed) + int(offset) + i
-        used.append(s)
+    def _draw(s: int) -> FitExample:
         g2 = replace(gcfg, seed=s)
         st = make_gym_stream(g2, ccfg)
         xs, mask, _ = stream_tokens(st, ccfg)
@@ -194,17 +205,43 @@ def aux_fit_examples(family: str, arm: str, seed: int, ccfg: CluSystemConfig,
         rng = np.random.default_rng(s + 7717)
         born = np.asarray(st.order, dtype=float)
         qs = _build_queries(g2, ccfg, st, None, centers, pays, born, rng)
-        out.append(FitExample(xs=xs, mask=mask,
-                              xq=np.asarray(qs.q0, dtype=np.float32),
-                              target=np.asarray(qs.target, dtype=np.float32
-                                                ).reshape(len(qs), -1)))
-    # vmap over examples needs a common shape; trim to the shortest draw
-    t = min(e.xs.shape[0] for e in out)
-    n = min(e.xq.shape[0] for e in out)
-    out = [FitExample(xs=e.xs[:t], mask=e.mask[:t], xq=e.xq[:n], target=e.target[:n])
-           for e in out]
-    return out, {"fit_stream_seeds": used, "n_tokens": int(t), "n_queries": int(n),
-                 "guard": "F2a — outer parameters never see the eval cell's items"}
+        return FitExample(xs=xs, mask=mask,
+                          xq=np.asarray(qs.q0, dtype=np.float32),
+                          target=np.asarray(qs.target, dtype=np.float32
+                                            ).reshape(len(qs), -1))
+
+    def _trim(group: List[FitExample]) -> Tuple[List[FitExample], int, int]:
+        # vmap over examples needs a common shape; trim to the shortest draw
+        t = min(e.xs.shape[0] for e in group)
+        n = min(e.xq.shape[0] for e in group)
+        return ([FitExample(xs=e.xs[:t], mask=e.mask[:t], xq=e.xq[:n],
+                            target=e.target[:n]) for e in group], int(t), int(n))
+
+    out: List[FitExample] = []
+    used = []
+    for i in range(int(n_streams)):
+        s = int(seed) + int(offset) + i
+        used.append(s)
+        out.append(_draw(s))
+    out, t, n = _trim(out)
+
+    val: Optional[List[FitExample]] = None
+    val_used: List[int] = []
+    if int(n_val) > 0:
+        grp = []
+        for i in range(int(n_val)):
+            s = int(seed) + int(offset) + int(n_streams) + i
+            val_used.append(s)
+            grp.append(_draw(s))
+        val, _, _ = _trim(grp)
+    return out, val, {
+        "fit_stream_seeds": used, "n_tokens": int(t), "n_queries": int(n),
+        "val_stream_seeds": val_used,
+        "guard": "F2a — outer parameters never see the eval cell's items",
+        "val_guard": ("held-out auxiliary streams: never differentiated, used only "
+                      "for the declared secondary best-of-grid selection; ⛔ never "
+                      "the eval split"),
+    }
 
 
 # --------------------------------------------------------------------------
@@ -294,102 +331,132 @@ def run_rivals_cell(family: str, arm: str = "base", seed: int = 0, *,
     fkw = dict(fit_kwargs or {})
     if quick:
         fkw = dict(QUICK_FIT, **fkw)
-    examples, fit_note = aux_fit_examples(family, arm, seed, ccfg, gcfg)
+    lrs = tuple(float(x) for x in fkw.get("lrs", LR_GRID))
+    wds = tuple(float(x) for x in fkw.get("wds", (0.0,)))
+    n_val = int(fkw.get("n_val", 0))
+    examples, val_examples, fit_note = aux_fit_examples(
+        family, arm, seed, ccfg, gcfg, n_val=n_val)
     budget = int(budget_floats if budget_floats is not None else DEFAULT_BUDGET_FLOATS)
     d_in, m = int(ccfg.dim), int(ccfg.payload_dim)
     phi = phi_row(qs.q0, qs.keys)
 
+    # ⭐ Which best-of-grid SELECTIONS to score, all from the SAME set of fits
+    # (task §1 + PREREG §4.1). ``f3`` is the primary; ``f3_lite_control`` re-selects
+    # C2W4's sub-grid under this run's key scheme, so that
+    # ``control − C2W4 = the init-redraw effect`` and ``f3 − control = the tuning
+    # effect``; ``f3_val`` is the declared secondary (held-out selection).
+    ctrl_lrs = tuple(x for x in lrs if any(abs(x - y) <= 1e-12 for y in LR_GRID))
+    sel_plan: List[Tuple[str, dict]] = [("f3", dict(lrs=None, wds=None, on="fit"))]
+    if ctrl_lrs and (len(ctrl_lrs) < len(lrs) or len(wds) > 1):
+        sel_plan.append(("f3_lite_control",
+                         dict(lrs=ctrl_lrs, wds=(0.0,), on="fit")))
+    if val_examples is not None:
+        sel_plan.append(("f3_val", dict(lrs=None, wds=None, on="val")))
+
     rows: Dict[str, Any] = {}
+    by_selection: Dict[str, Dict[str, Any]] = {lb: {} for lb, _ in sel_plan}
     for name in rivals:
         t1 = time.time()
         # ⚠ deterministic per-rival key offset. ⛔ NEVER Python's ``hash(name)``:
         # string hashing is salted per process (``PYTHONHASHSEED``), which makes
         # the whole run irreproducible at a fixed seed. Caught in review.
         k_fit = jax.random.PRNGKey(seed * 1000 + 7 * (RIVALS.index(name) + 1))
-        model, fit_rec = fit_best_of_grid(
+        grid, models = fit_grid(
             name, d_in, m, examples, key=k_fit, budget_floats=budget,
-            lrs=fkw.get("lrs", LR_GRID), steps=int(fkw.get("steps", 400)),
-            b_grid=fkw.get("b_grid"))
-        st_floats = int(model.declared_state_floats())
-        n_rows = matched_table_rows(st_floats, model.d_k, model.d_v)
-        arms_pred = rival_arms(model, xs, mask, np.asarray(qs.q0, dtype=np.float32),
-                               rng=np.random.default_rng(seed + 31337),
-                               n_rows=n_rows)
-        sc = {k: float(score(qs, v)[metric]) for k, v in arms_pred.items()}
-        zero_byte = {k: v for k, v in sc.items() if k.endswith("+0B")}
-        best_zb = max(zero_byte, key=lambda n: zero_byte[n]) if zero_byte else ""
-        # FB4's own convention, for uniformity: the +0 B reader set INCLUDES the
-        # arg-min launder (a different reader of the same table at the same bytes).
-        incl = dict(zero_byte, settle_deleted=sc["launder"])
-        best_incl = max(incl, key=lambda n: incl[n])
-        # ⭐ THE STRONGER CONTROL A REFEREE WILL ASK FOR. The registered P5
-        # construction reads the table through the memory's OWN projections, which
-        # are trained for the recurrence and not for a table. So the same state
-        # budget is ALSO spent on the gym's raw ``(address, payload)`` rows and read
-        # by the same +0 B readers in the raw metric — i.e. literally the CLU's own
-        # launder set, on the same queries. It is strictly stronger and it cannot
-        # be accused of handicapping the control.
-        raw_rows = int(st_floats // max(int(ccfg.addr_dim + ccfg.payload_dim), 1))
-        raw_cands = {k: v for k, v in clu_lnd.items()
-                     if k.endswith("+0B") or k == "settle_deleted"}
-        best_raw = max(raw_cands, key=lambda n: raw_cands[n]) if raw_cands else ""
-        state_final = model.write(xs, mask)
-        moved = measured_state_floats(model.init_state(), state_final)
-        led = model.ledger(moved=moved)
-        tab = table_ledger(n_rows, model.d_k, model.d_v,
-                           param_floats=led.param_floats,
-                           param_breakdown=led.param_breakdown)
-        verdict = (ttt_verdict("linear" if name == "ttt_linear" else "mlp")
-                   if name.startswith("ttt") else delta_verdict(name))
-        rows[name] = {
-            "rival": name, "d_head": int(model.d_head),
-            "arms": sc,
-            "dividend_vs_own_table": float(sc["full"] - sc["launder"]),
-            "zero_byte_margin": {
-                "name": best_zb,
-                "value": (float(zero_byte[best_zb]) if best_zb else float("nan")),
-                "signed_margin_full_minus_sub": (float(sc["full"] - zero_byte[best_zb])
-                                                 if best_zb else float("nan")),
-                "incl_argmin_name": best_incl,
-                "incl_argmin_value": float(incl[best_incl]),
-                "signed_margin_incl_argmin": float(sc["full"] - incl[best_incl]),
-                "convention": ("primary = the EXCLUSIVE +0 B reader set (as "
-                               "registered in PREREG R5); the inclusive set adds "
-                               "the arg-min launder, FB4's own convention"),
-            },
-            "raw_table_control": {
-                "note": ("the SAME state budget spent on the gym's raw "
-                         "(address, payload) rows and read by the same +0 B "
-                         "readers in the raw metric — strictly stronger than the "
-                         "registered projected-table launder, and identical to "
-                         "the CLU's own launder set on these queries"),
-                "rows_affordable": raw_rows,
-                "table_is_lossless": bool(raw_rows >= int(len(ids))),
-                "best_reader": best_raw,
-                "best_reader_score": (float(raw_cands[best_raw]) if best_raw
-                                      else float("nan")),
-                "signed_margin_full_minus_raw": (
-                    float(sc["full"] - raw_cands[best_raw]) if best_raw
-                    else float("nan")),
-                "all_raw_readers": dict(raw_cands),
-            },
-            "byte_ledger": {
-                "rival": led.as_dict(), "matched_table": tab.as_dict(),
-                "state_floats_declared": st_floats,
-                "state_floats_measured_moved": int(moved),
-                "table_rows_affordable": int(n_rows),
-                "table_rows_used": int(min(n_rows, xs.shape[0])),
-                "table_is_lossless": bool(n_rows >= xs.shape[0]),
-                "state_over_own_table_bytes": (
-                    float(led.state_bytes) / max(float(tab.state_bytes), 1.0)),
-                "state_bytes_vs_clu_full_bytes": (
-                    float(led.state_bytes) / max(float(ba.full_bytes), 1.0)),
-                **phi,
-            },
-            "metric_native": verdict,
-            "fit": fit_rec,
-            "wall_s": time.time() - t1,
-        }
+            lrs=lrs, wds=wds, steps=int(fkw.get("steps", 400)),
+            b_grid=fkw.get("b_grid"), val_examples=val_examples)
+        grid_wall = time.time() - t1
+
+        def _score_selection(model, fit_rec, name=name):
+            st_floats = int(model.declared_state_floats())
+            n_rows = matched_table_rows(st_floats, model.d_k, model.d_v)
+            arms_pred = rival_arms(model, xs, mask, np.asarray(qs.q0, dtype=np.float32),
+                                   rng=np.random.default_rng(seed + 31337),
+                                   n_rows=n_rows)
+            sc = {k: float(score(qs, v)[metric]) for k, v in arms_pred.items()}
+            zero_byte = {k: v for k, v in sc.items() if k.endswith("+0B")}
+            best_zb = max(zero_byte, key=lambda n: zero_byte[n]) if zero_byte else ""
+            # FB4's own convention, for uniformity: the +0 B reader set INCLUDES the
+            # arg-min launder (a different reader of the same table at the same bytes).
+            incl = dict(zero_byte, settle_deleted=sc["launder"])
+            best_incl = max(incl, key=lambda n: incl[n])
+            # ⭐ THE STRONGER CONTROL A REFEREE WILL ASK FOR. The registered P5
+            # construction reads the table through the memory's OWN projections, which
+            # are trained for the recurrence and not for a table. So the same state
+            # budget is ALSO spent on the gym's raw ``(address, payload)`` rows and read
+            # by the same +0 B readers in the raw metric — i.e. literally the CLU's own
+            # launder set, on the same queries. It is strictly stronger and it cannot
+            # be accused of handicapping the control.
+            raw_rows = int(st_floats // max(int(ccfg.addr_dim + ccfg.payload_dim), 1))
+            raw_cands = {k: v for k, v in clu_lnd.items()
+                         if k.endswith("+0B") or k == "settle_deleted"}
+            best_raw = max(raw_cands, key=lambda n: raw_cands[n]) if raw_cands else ""
+            state_final = model.write(xs, mask)
+            moved = measured_state_floats(model.init_state(), state_final)
+            led = model.ledger(moved=moved)
+            tab = table_ledger(n_rows, model.d_k, model.d_v,
+                               param_floats=led.param_floats,
+                               param_breakdown=led.param_breakdown)
+            verdict = (ttt_verdict("linear" if name == "ttt_linear" else "mlp")
+                       if name.startswith("ttt") else delta_verdict(name))
+            return {
+                "rival": name, "d_head": int(model.d_head),
+                "arms": sc,
+                "dividend_vs_own_table": float(sc["full"] - sc["launder"]),
+                "zero_byte_margin": {
+                    "name": best_zb,
+                    "value": (float(zero_byte[best_zb]) if best_zb else float("nan")),
+                    "signed_margin_full_minus_sub": (float(sc["full"] - zero_byte[best_zb])
+                                                     if best_zb else float("nan")),
+                    "incl_argmin_name": best_incl,
+                    "incl_argmin_value": float(incl[best_incl]),
+                    "signed_margin_incl_argmin": float(sc["full"] - incl[best_incl]),
+                    "convention": ("primary = the EXCLUSIVE +0 B reader set (as "
+                                   "registered in PREREG R5); the inclusive set adds "
+                                   "the arg-min launder, FB4's own convention"),
+                },
+                "raw_table_control": {
+                    "note": ("the SAME state budget spent on the gym's raw "
+                             "(address, payload) rows and read by the same +0 B "
+                             "readers in the raw metric — strictly stronger than the "
+                             "registered projected-table launder, and identical to "
+                             "the CLU's own launder set on these queries"),
+                    "rows_affordable": raw_rows,
+                    "table_is_lossless": bool(raw_rows >= int(len(ids))),
+                    "best_reader": best_raw,
+                    "best_reader_score": (float(raw_cands[best_raw]) if best_raw
+                                          else float("nan")),
+                    "signed_margin_full_minus_raw": (
+                        float(sc["full"] - raw_cands[best_raw]) if best_raw
+                        else float("nan")),
+                    "all_raw_readers": dict(raw_cands),
+                },
+                "byte_ledger": {
+                    "rival": led.as_dict(), "matched_table": tab.as_dict(),
+                    "state_floats_declared": st_floats,
+                    "state_floats_measured_moved": int(moved),
+                    "table_rows_affordable": int(n_rows),
+                    "table_rows_used": int(min(n_rows, xs.shape[0])),
+                    "table_is_lossless": bool(n_rows >= xs.shape[0]),
+                    "state_over_own_table_bytes": (
+                        float(led.state_bytes) / max(float(tab.state_bytes), 1.0)),
+                    "state_bytes_vs_clu_full_bytes": (
+                        float(led.state_bytes) / max(float(ba.full_bytes), 1.0)),
+                    **phi,
+                },
+                "metric_native": verdict,
+                "fit": fit_rec,
+            }
+
+        for label_sel, kw in sel_plan:
+            model, fit_rec = select_best(grid, models, label=label_sel, **kw)
+            by_selection[label_sel][name] = _score_selection(model, fit_rec)
+        # ⭐ the PRIMARY row is the full-grid, fit-selected one; every other
+        # selection is carried beside it, never instead of it.
+        rows[name] = dict(by_selection[sel_plan[0][0]][name],
+                          grid_wall_s=float(grid_wall),
+                          wall_s=float(time.time() - t1),
+                          selections_scored=[lb for lb, _ in sel_plan])
 
     # identical-phi across EVERY arm — raises, never warns
     phi_rows = {f"{n}/{a}": dict(phi) for n in rows for a in
@@ -424,6 +491,28 @@ def run_rivals_cell(family: str, arm: str = "base", seed: int = 0, *,
                             "two_sided_learned_init_rule": clu_ledger.as_dict()},
         "stream": tok_note, "fit_streams": fit_note, "phi_id": phi_id,
         "rivals": rows,
+        "tuning_grid": {
+            "lrs": list(lrs), "wds": list(wds),
+            "steps": int(fkw.get("steps", 400)),
+            "b_grid": (list(fkw.get("b_grid")) if fkw.get("b_grid") else
+                       "TTT arms: (1, 16); delta arms: (16,) — b is inert for them"),
+            "n_points_per_ttt_arm": len(lrs) * len(wds) * 2,
+            "n_points_per_delta_arm": len(lrs) * len(wds),
+            "is_full_F3": bool(sorted(lrs) == sorted(LR_GRID_F3)
+                               and sorted(wds) == sorted(WD_GRID_F3)),
+            "optimizer": ("optax.adam for wd = 0 (⛔ byte-identical to C2W4's "
+                          "optimiser); optax.adamw (decoupled) for wd > 0. "
+                          "⚠ `rival-recon` F3's beta = (0.9, 0.98) and cosine "
+                          "decay are NOT adopted — declared deviation, one "
+                          "variable moves."),
+            "init_key_scheme": ("one init per (arm, seed, mini_batch b), shared "
+                                "across all (lr, wd) — ⚠ CHANGED from C2W4's "
+                                "sequential split, which made the init depend on "
+                                "the grid's length; priced by the "
+                                "`f3_lite_control` selection"),
+        },
+        "rivals_by_selection": by_selection,
+        "selection_plan": [{"label": lb, **kw} for lb, kw in sel_plan],
         "gym_config_non_default": gcfg.as_flag_table(),
         "clu_config_non_default": ccfg.as_flag_table(),
         "n_admitted": len(admitted), "wall_write_s": write_s,
@@ -466,7 +555,7 @@ def run_frontier_cell(seed: int = 0, *, heads: Sequence[int] = FRONTIER_HEADS,
     rng = np.random.default_rng(seed + 7717)
     qs = _build_queries(gcfg, ccfg, stream, system, centers, pays, born, rng)
     xs, mask, tok = stream_tokens(stream, ccfg)
-    examples, fit_note = aux_fit_examples(family, arm, seed, ccfg, gcfg)
+    examples, _val, fit_note = aux_fit_examples(family, arm, seed, ccfg, gcfg)
     fkw = dict(QUICK_FIT) if quick else {}
     fkw.update(dict(fit_kwargs or {}))
     d_in, m = int(ccfg.dim), int(ccfg.payload_dim)
@@ -477,8 +566,8 @@ def run_frontier_cell(seed: int = 0, *, heads: Sequence[int] = FRONTIER_HEADS,
             k_fit = jax.random.PRNGKey(seed * 1000 + int(d))
             model, fit_rec = fit_best_of_grid(
                 name, d_in, m, examples, key=k_fit, d_head=int(d),
-                lrs=fkw.get("lrs", LR_GRID), steps=int(fkw.get("steps", 400)),
-                b_grid=fkw.get("b_grid"))
+                lrs=fkw.get("lrs", LR_GRID), wds=fkw.get("wds", (0.0,)),
+                steps=int(fkw.get("steps", 400)), b_grid=fkw.get("b_grid"))
             st = int(model.declared_state_floats())
             n_rows = matched_table_rows(st, model.d_k, model.d_v)
             pred = rival_arms(model, xs, mask, np.asarray(qs.q0, dtype=np.float32),
@@ -541,6 +630,12 @@ def audit_table(records: Sequence[dict]) -> Dict[str, Any]:
             # margin against it is quotable.
             lift_m, lift_se = _mean_se([p["arms"]["full"] - p["arms"]["blank"]
                                         for p in per])
+            # ⭐ the §4 methodological finding, as a measured quantity with an SE:
+            # what the REGISTERED projected-table control costs the table against a
+            # raw-metric table of the same bytes (PREREG-f3 threshold T5).
+            gap_m, gap_se = _mean_se(
+                [p["raw_table_control"]["best_reader_score"] - p["arms"]["launder"]
+                 for p in per])
             rescued = bool(np.isfinite(lift_m) and np.isfinite(lift_se)
                            and lift_m > 2.0 * lift_se)
             fam_rows[name] = {
@@ -555,6 +650,7 @@ def audit_table(records: Sequence[dict]) -> Dict[str, Any]:
                 "raw_table_reader": per[0]["raw_table_control"]["best_reader"],
                 "raw_table_margin": raw_m, "raw_table_margin_se": raw_se,
                 "beats_raw_table_plus0B": bool(np.isfinite(raw_m) and raw_m > 0),
+                "p5_vs_raw_gap": gap_m, "p5_vs_raw_gap_se": gap_se,
                 "same_keys_null": null_m, "blank": blank_m,
                 "lift_over_own_blank": lift_m, "lift_se": lift_se,
                 "RESCUED_above_own_blank_2se": rescued,
@@ -582,6 +678,137 @@ def audit_table(records: Sequence[dict]) -> Dict[str, Any]:
             "admissible_coverage": [c["admissible_coverage"] for c in cells],
         }
     return out
+
+
+#: ⭐ The **C2W4 incumbent** audit numbers (`.claude/outputs/bprime-rivals.md` §1.1
+#: / §4, `aggregate@base`, 3 seeds). ⛔ Quoted, never recomputed — they are the
+#: priors this rider puts on trial, and they are what a CHANGED verdict is measured
+#: against (`.claude/outputs/bprime-rivals-f3/PREREG.md` §1/§2).
+C2W4_INCUMBENT: Dict[str, Dict[str, Any]] = {
+    "ttt_linear": {"d_head": 29, "rescued": True, "full": -0.4546, "full_se": 0.0312,
+                   "dividend_vs_own_table": -0.0302, "zero_byte_margin": -0.0523,
+                   "zero_byte_margin_se": 0.0165, "raw_table_margin": -0.2465,
+                   "raw_table_margin_se": 0.0371, "p5_vs_raw_gap": 0.2164,
+                   "lift_over_own_blank": 0.3879, "lift_se": 0.0869},
+    "ttt_mlp": {"d_head": 12, "rescued": False, "full": -0.6324, "full_se": 0.2036,
+                "dividend_vs_own_table": -0.2216, "zero_byte_margin": -0.2284,
+                "zero_byte_margin_se": 0.1999, "raw_table_margin": -0.4242,
+                "raw_table_margin_se": 0.2114, "p5_vs_raw_gap": 0.2027,
+                "lift_over_own_blank": -0.0293, "lift_se": 0.1090},
+    "deltanet": {"d_head": 36, "rescued": False, "full": -0.4652, "full_se": 0.0402,
+                 "dividend_vs_own_table": 0.2006, "zero_byte_margin": -0.0047,
+                 "zero_byte_margin_se": 0.0549, "raw_table_margin": -0.2571,
+                 "raw_table_margin_se": 0.0356, "p5_vs_raw_gap": 0.4577,
+                 "lift_over_own_blank": 0.1004, "lift_se": 0.1296},
+    "gdn": {"d_head": 36, "rescued": True, "full": -0.3961, "full_se": 0.0208,
+            "dividend_vs_own_table": 1.0197, "zero_byte_margin": 0.0448,
+            "zero_byte_margin_se": 0.0591, "raw_table_margin": -0.1880,
+            "raw_table_margin_se": 0.0203, "p5_vs_raw_gap": 1.2077,
+            "lift_over_own_blank": 0.9259, "lift_se": 0.2387},
+    "gdn2": {"d_head": 36, "rescued": True, "full": -0.3964, "full_se": 0.0220,
+             "dividend_vs_own_table": 0.8771, "zero_byte_margin": 0.0445,
+             "zero_byte_margin_se": 0.0613, "raw_table_margin": -0.1883,
+             "raw_table_margin_se": 0.0227, "p5_vs_raw_gap": 1.0654,
+             "lift_over_own_blank": 1.2654, "lift_se": 0.4968},
+}
+
+#: The C2W4 derived outcomes that are also on trial (PREREG-f3 §1).
+C2W4_R5_COUNT = 3          # of 5 arms with a signed +0 B margin <= 0
+C2W4_RESCUED = ("gdn", "gdn2", "ttt_linear")
+
+
+def before_after(tables: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """⭐ **The rider's whole deliverable**: every C2W4 number beside its full-F3
+    counterpart, with a CHANGED / UNCHANGED verdict against the thresholds
+    pre-registered in `.claude/outputs/bprime-rivals-f3/PREREG.md` §2.
+
+    ``tables`` maps a selection label (``f3``, ``f3_lite_control``, ``f3_val``) to
+    that selection's ``audit_table``. The verdict is adjudicated on the **f3**
+    column; the control column is carried so that an init-redraw effect can never
+    be misread as a tuning effect (PREREG §4.1).
+    """
+    prim = tables.get("f3", {}).get("aggregate", {}).get("rivals", {})
+    ctrl = tables.get("f3_lite_control", {}).get("aggregate", {}).get("rivals", {})
+    rows: Dict[str, Any] = {}
+    fired: List[str] = []
+    for name, inc in C2W4_INCUMBENT.items():
+        new = prim.get(name)
+        if not new:
+            rows[name] = {"status": "⛔ NOT-RUN in this pass (declared, never a null)"}
+            continue
+        c = ctrl.get(name, {})
+        t1 = bool(new["RESCUED_above_own_blank_2se"] != inc["rescued"])
+        # a crossing counts only if it exceeds 2 SE of the NEW estimate
+        t2 = bool(np.sign(new["zero_byte_margin"]) != np.sign(inc["zero_byte_margin"])
+                  and abs(new["zero_byte_margin"]) > 2.0 * new["zero_byte_margin_se"])
+        t3 = bool(new["raw_table_margin"] > 2.0 * new["raw_table_margin_se"])
+        t5 = bool(new["p5_vs_raw_gap"] < 2.0 * new["p5_vs_raw_gap_se"])
+        hits = [k for k, v in (("T1_rescue_flip", t1), ("T2_R5_sign_flip", t2),
+                               ("T3_raw_margin_positive", t3),
+                               ("T5_p5_vs_raw_gap_collapsed", t5)) if v]
+        fired += [f"{name}:{h}" for h in hits]
+        rows[name] = {
+            "verdict": "CHANGED" if hits else "UNCHANGED",
+            "thresholds_fired": hits,
+            "d_head": {"C2W4": inc["d_head"], "f3": new["d_head"]},
+            "chosen_config_f3": None,   # filled in by the caller (per-seed)
+            "rescued": {"C2W4": inc["rescued"],
+                        "f3": bool(new["RESCUED_above_own_blank_2se"]),
+                        "f3_lite_control": (bool(c["RESCUED_above_own_blank_2se"])
+                                            if c else None)},
+            "full": {"C2W4": inc["full"], "f3": new["full"], "f3_se": new["full_se"],
+                     "f3_lite_control": (c.get("full") if c else None)},
+            "dividend_vs_own_table": {"C2W4": inc["dividend_vs_own_table"],
+                                      "f3": new["dividend_vs_own_table"],
+                                      "f3_lite_control": (c.get(
+                                          "dividend_vs_own_table") if c else None)},
+            "zero_byte_margin_R5": {"C2W4": inc["zero_byte_margin"],
+                                    "f3": new["zero_byte_margin"],
+                                    "f3_se": new["zero_byte_margin_se"],
+                                    "f3_lite_control": (c.get("zero_byte_margin")
+                                                        if c else None)},
+            "raw_table_margin": {"C2W4": inc["raw_table_margin"],
+                                 "f3": new["raw_table_margin"],
+                                 "f3_se": new["raw_table_margin_se"],
+                                 "f3_lite_control": (c.get("raw_table_margin")
+                                                     if c else None)},
+            "p5_vs_raw_gap": {"C2W4": inc["p5_vs_raw_gap"],
+                              "f3": new["p5_vs_raw_gap"],
+                              "f3_se": new["p5_vs_raw_gap_se"]},
+            "lift_over_own_blank": {"C2W4": inc["lift_over_own_blank"],
+                                    "C2W4_se": inc["lift_se"],
+                                    "f3": new["lift_over_own_blank"],
+                                    "f3_se": new["lift_se"]},
+            "tuning_effect_f3_minus_control": (
+                {"full": float(new["full"] - c["full"]),
+                 "raw_table_margin": float(new["raw_table_margin"]
+                                           - c["raw_table_margin"])} if c else None),
+            "init_redraw_effect_control_minus_C2W4": (
+                {"full": float(c["full"] - inc["full"]),
+                 "raw_table_margin": float(c["raw_table_margin"]
+                                           - inc["raw_table_margin"])} if c else None),
+        }
+    n_le0 = sum(1 for n, v in prim.items()
+                if np.isfinite(v["zero_byte_margin"]) and v["zero_byte_margin"] <= 0)
+    resc = tuple(sorted(n for n, v in prim.items()
+                        if v["RESCUED_above_own_blank_2se"]))
+    t4 = bool(prim) and n_le0 != C2W4_R5_COUNT
+    if t4:
+        fired.append(f"ALL:T4_R5_count_changed ({C2W4_R5_COUNT} -> {n_le0})")
+    return {
+        "thresholds": ("PREREG-f3 §2: T1 rescue flip · T2 R5 sign flip (> 2 SE) · "
+                       "T3 raw-table margin positive by > 2 SE · T4 the R5 count "
+                       "(3 of 5 <= 0) changes · T5 the P5-vs-raw gap collapses "
+                       "below 2 SE of 0"),
+        "adjudicated_on": ("the `f3` column; `f3_lite_control` is carried so an "
+                           "init-redraw effect is never read as a tuning effect"),
+        "rows": rows,
+        "R5_count_le_zero": {"C2W4": C2W4_R5_COUNT, "f3": int(n_le0)},
+        "rescued_set": {"C2W4": list(C2W4_RESCUED), "f3": list(resc)},
+        "thresholds_fired": fired,
+        "OUTCOME": ("⭐ CHANGED — see thresholds_fired" if fired else
+                    "UNCHANGED — no pre-registered threshold fired on any arm"),
+    }
 
 
 def prereg_scorecard(table: Dict[str, Any]) -> Dict[str, Any]:
@@ -802,6 +1029,16 @@ def run_experiment_bprime_rivals(config=None, save_dir: str = "results",
         "banked_not_remeasured": sorted(BANKED_CLU.keys()),
         "plan": [{"family": f, "arm": a, "seeds": list(cell_seeds)} for f, a in plan],
         "rivals": list(riv), "quick": bool(quick),
+        "tuning_grid_requested": {
+            "lrs": [float(x) for x in (overrides or {}).get(
+                "fit", {}).get("lrs", LR_GRID)],
+            "wds": [float(x) for x in (overrides or {}).get(
+                "fit", {}).get("wds", (0.0,))],
+            "steps": int((overrides or {}).get("fit", {}).get("steps", 400)),
+            "n_val": int((overrides or {}).get("fit", {}).get("n_val", 0)),
+            "rule": ("`rival-recon` F3 / standing rule 5 (N78's operational form) "
+                     "when lrs = 6 x wds = 2; C2W4's declared F3-lite otherwise"),
+        },
         "sd_convention": "sample sd (ddof=1); SE = sd/sqrt(n); n = 3",
         "prereg": ".claude/outputs/bprime-rivals/PREREG.md — filed before any run",
         "cells": [], "frontier": [],
@@ -854,6 +1091,29 @@ def run_experiment_bprime_rivals(config=None, save_dir: str = "results",
             _dump()
 
     results["audit_table"] = audit_table(results["cells"])
+    # ⭐ one audit table per best-of-grid SELECTION, all from the same fits
+    labels: List[str] = []
+    for c in results["cells"]:
+        for lb in c.get("rivals_by_selection", {}):
+            if lb not in labels:
+                labels.append(lb)
+    by_sel = {}
+    for lb in labels:
+        cells_lb = [dict(c, rivals=c.get("rivals_by_selection", {}).get(lb, {}))
+                    for c in results["cells"]]
+        by_sel[lb] = audit_table(cells_lb)
+    results["audit_table_by_selection"] = by_sel
+    if by_sel:
+        results["before_after"] = before_after(by_sel)
+        for name, row in results["before_after"]["rows"].items():
+            if isinstance(row, dict) and "chosen_config_f3" in row:
+                row["chosen_config_f3"] = [
+                    {"seed": c["seed"],
+                     **{k: v for k, v in c["rivals_by_selection"]["f3"][name]["fit"][
+                         "best"].items() if k in ("lr", "wd", "mini_batch", "steps",
+                                                  "final", "val_final")}}
+                    for c in results["cells"]
+                    if name in c.get("rivals_by_selection", {}).get("f3", {})]
     results["prereg_scorecard"] = prereg_scorecard(results["audit_table"])
     results["falsifiers"] = falsifier_adjudication(results["audit_table"])
     try:
@@ -944,7 +1204,33 @@ def main():
     parser.add_argument("--no-frontier", action="store_true",
                         help="Skip the byte-frontier column")
     parser.add_argument("--save-dir", default="results", help="Where figures go")
+    # ⭐ the tuning grid, `rival-recon` F3 (the C2W4 rider). Defaults are C2W4's,
+    # so the incumbent run is reproduced unless a flag is given.
+    parser.add_argument("--grid", choices=("lite", "f3"), default="lite",
+                        help="lite = C2W4's 3 lrs, wd=0; f3 = rival-recon F3's "
+                             "6 lrs x 2 weight decays (the full tuning pass)")
+    parser.add_argument("--lrs", nargs="+", type=float,
+                        help="Explicit lr grid (overrides --grid)")
+    parser.add_argument("--wds", nargs="+", type=float,
+                        help="Explicit weight-decay grid (overrides --grid)")
+    parser.add_argument("--steps", type=int, help="Outer steps (default 400)")
+    parser.add_argument("--n-val", type=int,
+                        help="Held-out auxiliary fit streams for the declared "
+                             "SECONDARY best-of-grid selection (default: 1 with "
+                             "--grid f3, else 0). ⛔ never the eval split")
     args = parser.parse_args()
+
+    fit: Dict[str, Any] = {}
+    if args.grid == "f3":
+        fit.update(lrs=LR_GRID_F3, wds=WD_GRID_F3, n_val=1)
+    if args.lrs:
+        fit["lrs"] = tuple(args.lrs)
+    if args.wds:
+        fit["wds"] = tuple(args.wds)
+    if args.steps:
+        fit["steps"] = int(args.steps)
+    if args.n_val is not None:
+        fit["n_val"] = int(args.n_val)
 
     config = None
     save_dir = args.save_dir
@@ -957,8 +1243,10 @@ def main():
     res = run_experiment_bprime_rivals(
         config=config, save_dir=save_dir, seed=args.seed, families=args.families,
         rivals=args.rivals, seeds=args.seeds, quick=args.quick,
-        frontier=not args.no_frontier)
+        frontier=not args.no_frontier,
+        overrides=({"fit": fit} if fit else None))
     print(json.dumps({"audit_table": res["audit_table"],
+                      "before_after": res.get("before_after", {}),
                       "prereg_scorecard": res["prereg_scorecard"],
                       "falsifiers": res["falsifiers"]},
                      indent=2, default=_json_default))

@@ -25,12 +25,16 @@ from chlu.eval.rivals.deltanet import DELTA_VARIANTS, DeltaMemory
 from chlu.eval.rivals.fit import (
     DEFAULT_BUDGET_FLOATS,
     LR_GRID,
+    LR_GRID_F3,
     RIVALS,
+    WD_GRID_F3,
     FitExample,
     fit_best_of_grid,
+    fit_grid,
     fit_rival,
     make_rival,
     rival_arms,
+    select_best,
     table_budget,
 )
 from chlu.eval.rivals.ledger import (
@@ -51,6 +55,7 @@ __all__ = [
     "TwoSidedLedger", "LedgerError", "matched_table_rows", "table_ledger",
     "head_width_for_budget", "clu_two_sided_ledger", "phi_row",
     "assert_identical_phi", "TTT_MINI_BATCH",
-    "RIVALS", "FitExample", "make_rival", "fit_rival", "fit_best_of_grid",
-    "rival_arms", "table_budget", "DEFAULT_BUDGET_FLOATS", "LR_GRID",
+    "RIVALS", "FitExample", "make_rival", "fit_rival", "fit_grid", "select_best",
+    "fit_best_of_grid", "rival_arms", "table_budget", "DEFAULT_BUDGET_FLOATS",
+    "LR_GRID", "LR_GRID_F3", "WD_GRID_F3",
 ]

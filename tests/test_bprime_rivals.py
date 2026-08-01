@@ -302,3 +302,152 @@ def test_banked_clu_column_is_quoted_not_recomputed():
     ovl = BANKED_CLU["overload/load1x_shipped"]
     assert ovl["accuracy_vs_bytes_curve"]["decode"] == [0.972, 0.097]
     assert ovl["accuracy_vs_bytes_curve"]["ratio"] == [478.0, 2.28]
+
+
+# --------------------------------------------------------------------------
+# ⭐ the full-F3 tuning pass (C2W4 rider `bprime-rivals-f3`)
+# --------------------------------------------------------------------------
+def test_the_F3_grid_is_the_standing_rule_verbatim():
+    """`rival-recon` F3 / standing rule 5 (N78's operational form):
+    ``lr in {1e-4, 3.16e-4, 5e-4, 1e-3, 3.16e-3, 1e-2} x wd in {0, 0.1}``.
+    ⚠ Its UPPER edge equals F3-lite's, so widening only adds low-lr points —
+    the fact the rider's PREREG reasons from."""
+    from chlu.eval.rivals.fit import LR_GRID, LR_GRID_F3, WD_GRID_F3
+
+    assert LR_GRID_F3 == (1e-4, 3.16e-4, 5e-4, 1e-3, 3.16e-3, 1e-2)
+    assert WD_GRID_F3 == (0.0, 0.1)
+    assert set(LR_GRID) <= set(LR_GRID_F3)          # the C2W4 sub-grid survives
+    assert max(LR_GRID_F3) == max(LR_GRID) == 1e-2  # nothing added above
+
+
+def _fit_examples(n=2, t=6, nq=5, d_in=5, m=1, seed=0):
+    from chlu.eval.rivals import FitExample
+
+    rng = np.random.default_rng(seed)
+    out = []
+    for _ in range(n):
+        xs = rng.normal(size=(t, d_in)).astype(np.float32)
+        xq = rng.normal(size=(nq, d_in)).astype(np.float32)
+        out.append(FitExample(xs=xs, mask=np.ones((t,), np.float32), xq=xq,
+                              target=rng.normal(size=(nq, m)).astype(np.float32)))
+    return out
+
+
+def test_widening_the_grid_does_not_perturb_the_incumbent_points():
+    """⭐ The property that makes the rider's F3-LITE CONTROL column valid: the
+    ``wd = 0`` sub-column of the full F3 grid must be **identical** to the same
+    points fitted on their own. It holds because the init is drawn per
+    ``(arm, b)`` (not per grid position) and ``wd = 0`` keeps ``optax.adam``."""
+    from chlu.eval.rivals.fit import fit_grid
+
+    ex = _fit_examples()
+    kw = dict(key=jax.random.PRNGKey(0), b_grid=(16,), steps=3)
+    lite, _ = fit_grid("gdn2", 5, 1, ex, lrs=(1e-3, 1e-2), wds=(0.0,), **kw)
+    full, _ = fit_grid("gdn2", 5, 1, ex, lrs=(1e-4, 1e-3, 1e-2),
+                       wds=(0.0, 0.1), **kw)
+    sub = [r for r in full if r["wd"] == 0.0 and r["lr"] in (1e-3, 1e-2)]
+    assert [r["lr"] for r in sub] == [r["lr"] for r in lite]
+    for a, b in zip(sub, lite, strict=True):
+        assert a["final"] == b["final"]      # bit-identical, not approx
+
+
+def test_the_grid_shares_one_init_per_mini_batch():
+    """A duplicated grid point must produce a duplicated result — i.e. the init
+    does NOT depend on the grid's length or order (⚠ C2W4's sequential split did,
+    which is why the rider prices the redraw with a control column)."""
+    from chlu.eval.rivals.fit import fit_grid
+
+    ex = _fit_examples()
+    grid, _ = fit_grid("deltanet", 5, 1, ex, key=jax.random.PRNGKey(1),
+                       lrs=(1e-3, 1e-3), wds=(0.0,), b_grid=(16,), steps=3)
+    assert grid[0]["final"] == grid[1]["final"]
+
+
+def test_weight_decay_is_decoupled_adamw_and_actually_bites():
+    """F3's second axis must be a real axis: ``wd = 0.1`` has to change the fit."""
+    from chlu.eval.rivals.fit import fit_grid
+
+    ex = _fit_examples()
+    grid, _ = fit_grid("gdn2", 5, 1, ex, key=jax.random.PRNGKey(2), lrs=(1e-2,),
+                       wds=(0.0, 0.1), b_grid=(16,), steps=8)
+    assert {r["wd"] for r in grid} == {0.0, 0.1}
+    assert grid[0]["final"] != grid[1]["final"]
+
+
+def test_held_out_selection_can_pick_a_point_the_fit_loss_never_would():
+    """The declared SECONDARY selection: on a held-out auxiliary stream. ⛔ Neither
+    reader ever sees the eval split."""
+    from chlu.eval.rivals.fit import select_best
+
+    grid = [{"lr": 1e-3, "wd": 0.0, "final": 0.5, "val_final": 0.1},
+            {"lr": 1e-2, "wd": 0.1, "final": 0.2, "val_final": 0.9}]
+    models = ["A", "B"]
+    assert select_best(grid, models, on="fit")[0] == "B"
+    assert select_best(grid, models, on="val")[0] == "A"
+    # and a sub-grid restriction (the F3-lite control) selects inside it only
+    mo, rec = select_best(grid, models, lrs=(1e-3,), wds=(0.0,), label="ctrl")
+    assert mo == "A" and rec["selection"]["n_points"] == 1
+    with pytest.raises(ValueError):
+        select_best(grid, models, lrs=(7.0,))
+
+
+def test_the_val_stream_does_not_move_the_training_stream():
+    """⛔ One variable moves. Adding held-out streams must leave the outer loop's
+    TRAINING examples byte-identical to C2W4's."""
+    from chlu.experiments.exp_bprime_rivals import aux_fit_examples
+    from chlu.experiments.memory_gym import gym_config
+
+    g = gym_config("aggregate", "base", seed=0)
+    c = g.build_clu()
+    a, va, na = aux_fit_examples("aggregate", "base", 0, c, g, n_val=0)
+    b, vb, nb = aux_fit_examples("aggregate", "base", 0, c, g, n_val=1)
+    assert va is None and vb is not None
+    assert na["fit_stream_seeds"] == nb["fit_stream_seeds"] == [101, 102]
+    assert nb["val_stream_seeds"] == [103]          # a DIFFERENT stream
+    assert (na["n_tokens"], na["n_queries"]) == (nb["n_tokens"], nb["n_queries"])
+    for x, y in zip(a, b, strict=True):
+        assert np.array_equal(x.xs, y.xs) and np.array_equal(x.target, y.target)
+
+
+def test_the_before_after_thresholds_are_the_pre_registered_ones():
+    """PREREG-f3 §2: T1 rescue flip · T2 R5 sign flip · T3 raw margin positive ·
+    T4 the R5 count changes · T5 the P5-vs-raw gap collapses. Adjudication is
+    mechanical, so it is tested mechanically."""
+    from chlu.experiments.exp_bprime_rivals import C2W4_INCUMBENT, before_after
+
+    def _tab(rows):
+        return {"f3": {"aggregate": {"rivals": rows}}}
+
+    same = {n: {"d_head": v["d_head"],
+                "RESCUED_above_own_blank_2se": v["rescued"],
+                "full": v["full"], "full_se": v["full_se"],
+                "dividend_vs_own_table": v["dividend_vs_own_table"],
+                "zero_byte_margin": v["zero_byte_margin"],
+                "zero_byte_margin_se": v["zero_byte_margin_se"],
+                "raw_table_margin": v["raw_table_margin"],
+                "raw_table_margin_se": v["raw_table_margin_se"],
+                "p5_vs_raw_gap": v["p5_vs_raw_gap"], "p5_vs_raw_gap_se": 0.02,
+                "lift_over_own_blank": v["lift_over_own_blank"],
+                "lift_se": v["lift_se"]}
+           for n, v in C2W4_INCUMBENT.items()}
+    out = before_after(_tab(same))
+    assert out["OUTCOME"].startswith("UNCHANGED") and not out["thresholds_fired"]
+    assert out["R5_count_le_zero"] == {"C2W4": 3, "f3": 3}
+
+    # T3: an arm that now BEATS a raw table of the same bytes by > 2 SE
+    beats = {n: dict(v) for n, v in same.items()}
+    beats["gdn2"]["raw_table_margin"] = 0.30
+    fired = before_after(_tab(beats))
+    assert fired["rows"]["gdn2"]["verdict"] == "CHANGED"
+    assert "T3_raw_margin_positive" in fired["rows"]["gdn2"]["thresholds_fired"]
+    assert "gdn2:T3_raw_margin_positive" in fired["thresholds_fired"]
+
+    # T1 + T4: ttt_mlp rescued and its +0 B margin turning positive
+    flip = {n: dict(v) for n, v in same.items()}
+    flip["ttt_mlp"]["RESCUED_above_own_blank_2se"] = True
+    flip["ttt_mlp"]["zero_byte_margin"] = 0.40
+    out2 = before_after(_tab(flip))
+    assert "ttt_mlp:T1_rescue_flip" in out2["thresholds_fired"]
+    assert "ttt_mlp:T2_R5_sign_flip" in out2["thresholds_fired"]
+    assert out2["R5_count_le_zero"]["f3"] == 2
+    assert any("T4_R5_count_changed" in f for f in out2["thresholds_fired"])
