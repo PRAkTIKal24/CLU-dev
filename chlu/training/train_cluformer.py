@@ -923,7 +923,11 @@ def monitor_pass(model: StreamModel, pcfg: PilotConfig, tokens, *, layer: int = 
     margins, a_us = [], []
     for i in live_idx:
         D, s_i = cell_group_depth(cell, st, i, sites[i, :d])
-        if D <= 0 or not np.isfinite(s_i) or s_i <= 0:
+        # ⚠ A group whose wells never got dug has D ~ 1e-86 and a depth-weighted
+        # width that underflows; `saddle_reach_threshold` then divides by
+        # 2*alpha*s^2 == 0.0. An item with no well is not "unreachable", it is
+        # ABSENT — excluded from #11 and visible instead in #5/#9.
+        if not (D > 1e-12) or not np.isfinite(s_i) or not (s_i > 1e-6):
             continue
         a_u = saddle_reach_threshold(D, s_i, float(scfg.confine),
                                      float(np.linalg.norm(sites[i, :d])))
