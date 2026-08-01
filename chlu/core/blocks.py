@@ -569,6 +569,38 @@ class StreamMemoryConfig:
     #: ``n_launch * steps`` differentiated force evaluations per inner step).
     write_traj_n_launch: int = 2
 
+    # -- `psi-payload-residual` (charter §A20.3(a)): THE PAYLOAD RESIDUAL -----
+    #: ⭐ **The read-out fix.** ``True`` routes the read's own PAYLOAD
+    #: coordinates around ``psi``'s pooling and into the decode as a gated
+    #: additive residual. ``False`` (default) is the shipped read-out and is
+    #: **bit-identical** — the gate leaf does not exist at all, so the parameter
+    #: count and the byte ledger are unchanged.
+    #:
+    #: *Why it exists.* `pilot-placement-probe` §6 measured the two-phase
+    #: relaxation DELIVERING the payload (``q*[payload]`` moves 30-50 % of the
+    #: way to the true value when the store is live and **0.000** when it is
+    #: blank) and ``psi`` then compressing the between-item spread a further
+    #: **7-25x** (``q*`` spread 0.053-0.114 -> decoded 0.0065-0.0117), leaving
+    #: the decode near-constant and acquisition exactly at chance.
+    #:
+    #: ⛔ **Payload coordinates ONLY, and that is a leak guard, not a
+    #: preference.** The read launches on the payload-zero manifold
+    #: (``q0[addr:addr+m] = 0`` by construction), so a payload-restricted
+    #: residual carries **zero** information about ``phi(x)`` at launch — it
+    #: cannot become N68's query bypass. A residual on the ADDRESS block would
+    #: be exactly that bypass and is deliberately not offered.
+    psi_payload_residual: bool = False
+    #: Where the residual's payload comes from: ``"q_star"`` (the settled point,
+    #: the channel §6 measured), ``"traj_mean"`` (the mean over the strided
+    #: trajectory's payload slots) or ``"both"`` (one gate row each).
+    psi_residual_source: str = "q_star"
+    #: Gate initialisation. ``1.0`` = **pass-through** (measure first, then let
+    #: it train); with ``"both"`` the gain is split evenly across the two rows.
+    psi_residual_gain: float = 1.0
+    #: ``False`` freezes the gate at its init (``stop_gradient``) — the
+    #: designed-mechanism control against a gate that trains itself to zero.
+    psi_residual_trainable: bool = True
+
     @classmethod
     def from_mapping(cls, overrides: Optional[dict] = None) -> "StreamMemoryConfig":
         known = {f.name for f in fields(cls)}
@@ -845,6 +877,26 @@ class StoreState(NamedTuple):
     codebook: jnp.ndarray
 
 
+#: The registered sources of the payload residual (charter §A20.3(a)).
+PSI_RESIDUAL_SOURCES: Tuple[str, ...] = ("q_star", "traj_mean")
+
+
+def psi_residual_sources(source: str) -> Tuple[str, ...]:
+    """``"q_star" | "traj_mean" | "both"`` -> the ordered gate rows.
+
+    Raises on an unknown name: a mistyped source that silently fell back to
+    ``q_star`` would be a provenance hole in the run-2 flag block.
+    """
+    s = str(source)
+    if s == "both":
+        return PSI_RESIDUAL_SOURCES
+    if s in PSI_RESIDUAL_SOURCES:
+        return (s,)
+    raise ValueError(
+        f"psi_residual_source must be one of {PSI_RESIDUAL_SOURCES + ('both',)}, "
+        f"got {source!r}")
+
+
 def localize_atom_init(store, centers, radius: float, *, key):
     """⭐ **H1 — the N98 localized atom init, applied to a built ``LearnedVStore``.**
 
@@ -922,6 +974,11 @@ class CluStoreCell(eqx.Module):
     #: **integer** leaf on purpose: static numpy arrays are unhashable (equinox
     #: warns) and a float leaf would be counted as a parameter by the ledger.
     group_matrix: jnp.ndarray
+    #: ⭐ ``(n_src, payload_dim)`` gate of the PAYLOAD RESIDUAL, or ``None`` when
+    #: ``mcfg.psi_payload_residual`` is off. ``None`` is not a stylistic choice:
+    #: an absent leaf keeps the parameter count, the byte ledger and the matched
+    #: swap arms **bit-identical** to the shipped cell.
+    psi_res_gate: Optional[jnp.ndarray]
     cfg: Any = eqx.field(static=True)        # CluSystemConfig
     mcfg: StreamMemoryConfig = eqx.field(static=True)
     latent_dim: int = eqx.field(static=True)
@@ -954,6 +1011,15 @@ class CluStoreCell(eqx.Module):
                        input_mode="trajectory", representation="raw",
                        include_momentum=True, include_time=True, stride=1)
         self.psi = DeepSetsPsi(spec, k_psi)
+        # ⭐ the payload residual's gate (charter §A20.3(a)). Absent -> the
+        # shipped read-out, bit-identically and at the same parameter count.
+        if bool(mcfg.psi_payload_residual):
+            n_src = len(psi_residual_sources(mcfg.psi_residual_source))
+            self.psi_res_gate = jnp.full(
+                (n_src, int(cfg.payload_dim)),
+                float(mcfg.psi_residual_gain) / float(n_src), dtype=jnp.float32)
+        else:
+            self.psi_res_gate = None
         self.log_gamma_addr = jnp.log(jnp.asarray(float(cfg.gamma_address)))
         self.log_gamma_read = jnp.log(jnp.asarray(float(cfg.gamma_read)))
         n_atoms = int(store.V.learned.centers.shape[0])
@@ -1064,7 +1130,39 @@ class CluStoreCell(eqx.Module):
         rs = ReadState(q0=q0[None], p0=p0[None], q_addr=q_addr[None],
                        p_addr=p_addr[None], q_star=q_star[None], p_star=p_star[None])
         _ = d
-        return self.psi(traj, rs)[0]
+        out = self.psi(traj, rs)[0]
+        # ⭐ THE PAYLOAD RESIDUAL (§A20.3(a)). Absent by default: when the gate
+        # is ``None`` this branch is not traced and the read is the shipped one.
+        if self.psi_res_gate is not None:
+            out = out + self.payload_residual(traj, q_star)
+        return out
+
+    def payload_residual(self, traj: jnp.ndarray, q_star: jnp.ndarray) -> jnp.ndarray:
+        """⭐ The gated payload-carrying residual: ``(dim,)``, zero off-payload.
+
+        The read's own payload coordinates reach the decode **without passing
+        through psi's spread-collapsing pooling**. It is additive and linear in
+        the gate by design, so ``decode(g) = decode(0) + g . source`` exactly —
+        which is what makes the per-stage spread ledger and the gate sweep
+        arithmetic rather than 6 more forward passes.
+
+        ⛔ **Never the address block.** ``q0``'s payload block is zeroed at
+        launch, so on a blank store this residual carries ~0 (measured: blank
+        ``q*[payload]`` = 9e-4 against a live 0.18-1.14) and cannot become a
+        query bypass; an address-block residual would be exactly N68's leak.
+        """
+        a, m = int(self.cfg.addr_dim), int(self.cfg.payload_dim)
+        g = self.psi_res_gate
+        if not self.mcfg.psi_residual_trainable:
+            g = jax.lax.stop_gradient(g)
+        rows = []
+        for name in psi_residual_sources(self.mcfg.psi_residual_source):
+            if name == "q_star":
+                rows.append(q_star[a: a + m])
+            else:  # "traj_mean" — the strided trajectory's payload slots
+                rows.append(jnp.mean(traj[0, :, a: a + m], axis=0))
+        pay = jnp.sum(g * jnp.stack(rows, axis=0), axis=0)        # (m,)
+        return jnp.zeros((int(self.cfg.dim),), dtype=pay.dtype).at[a: a + m].set(pay)
 
     def read_diag(self, state: StoreState, z: jnp.ndarray) -> Dict[str, jnp.ndarray]:
         """Residual / rho_conv at this read — the monitors' runtime inputs."""
