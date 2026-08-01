@@ -248,6 +248,41 @@ def calibrate_phi_gain(pcfg: PilotConfig, tokens, *, key) -> float:
     return float(mcfg.phi_gain) * float(scfg.ball_radius) / max(rms, 1e-9)
 
 
+def calibrate_atom_group_centers(pcfg: PilotConfig, tokens, *, key) -> tuple:
+    """⭐ **H1's localization targets: the φ-image of the EARLIEST chunks.**
+
+    `cluformer-pilot` §5.3's placement hypothesis is that a few unrolled write
+    steps cannot gather 128 atoms scattered at ``init_scale = 1.0`` into a well
+    at the target, so the binding constraint is atom *placement at init*. The fix
+    it names is the shipped N98 lever — *"atoms seeded near the φ-image of early
+    chunks instead of scattered at scale 1.0"* — which needs one localization
+    target per atom group.
+
+    This returns exactly that: lane 0's first ``capacity`` chunk latents from the
+    same calibration batch the φ-gain is set on, **address axes only** (N46), as
+    a hashable tuple of tuples (``StreamMemoryConfig`` is a static field).
+
+    ⚠ **Declared property: this is a data-dependent INITIALISATION.** It is
+    therefore PARAMETERS under the learned-initial-state rule (PREREG-Bprime §4),
+    exactly like a GRU's ``h0``, and it changes no byte of the STATE column. It
+    also means the **blank-store control must be run with the same localized
+    init** — otherwise a self-probe hit bought by the initialisation is scored as
+    a retrieval. ⛔ Call ``calibrate_phi_gain`` FIRST and put its gain into
+    ``pcfg.memory``, or the targets are in the wrong scale.
+    """
+    scfg = pcfg.store_cfg()
+    probe = build_arm("none", pcfg, {"none": ArmSpec("none")}, key=key)
+    h = jax.vmap(lambda t: jax.vmap(probe.embed)(t))(jnp.asarray(tokens, jnp.int32))
+    h = h + probe.pos[: h.shape[1]][None]
+    z = np.asarray(jax.vmap(probe.blocks[0].chunk_latents)(h))   # (B, n_chunks, dim)
+    K, d = int(scfg.capacity), int(scfg.addr_dim)
+    flat = z[0, :, :d]
+    if flat.shape[0] < K:      # short sequence: wrap the earliest chunks
+        reps = int(np.ceil(K / max(flat.shape[0], 1)))
+        flat = np.concatenate([flat] * reps, axis=0)
+    return tuple(tuple(float(v) for v in row) for row in flat[:K])
+
+
 def build_arm(name: str, pcfg: PilotConfig, specs: Dict[str, ArmSpec], *, key
               ) -> StreamModel:
     """Build one arm. ⭐ The shell's keys do NOT depend on the arm.
