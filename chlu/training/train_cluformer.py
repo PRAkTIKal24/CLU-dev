@@ -141,6 +141,33 @@ class PilotConfig:
     #: on by default — store destruction must be caught in flight, not post-mortem.
     store_watch: bool = True
 
+    # -- `csf3-memory-fit`: the two levers that live OUTSIDE the model ---------
+    #: ⭐ **Gradient accumulation** — the fallback memory lever if remat alone is
+    #: short. ``1`` (default) = the shipped single-shot backward, bit-identical.
+    #: ``n > 1`` cuts the BATCH axis into ``n`` equal microbatches, backprops
+    #: them **sequentially** (``lax.scan``, so XLA cannot overlap them) and sums
+    #: the gradients, then takes ONE optimiser step. The *effective* batch is
+    #: preserved exactly: the registered ``batch = 8`` is still what one update
+    #: sees. ⚠ **Summation-order caveat:** ``mean(mean_i)`` over equal-size
+    #: microbatches equals the full-batch mean in exact arithmetic but not
+    #: bit-for-bit in float32, so this lever is NOT part of the bit-identity
+    #: control (it is validated to ~1e-6 relative instead). Requires
+    #: ``batch % accum_steps == 0``.
+    accum_steps: int = 1
+    #: ⭐ Lanes used by :func:`allocation_liveness`. ``0`` (default) = the whole
+    #: batch, as shipped. At pilot scale that probe is a full-batch backward
+    #: taken at init, and it is a **liveness anchor, not a paper number** — the
+    #: quantity is a gradient norm and a slot-entropy, both defined per lane —
+    #: so the scale submission runs it on ``1``. The lane count used is reported
+    #: in the returned dict, never implied.
+    liveness_lanes: int = 0
+    #: ⚠ Lanes used by :func:`gradient_probe`. ``0`` (default) = the whole batch.
+    #: Unlike ``liveness_lanes`` this one moves a **published** number (the S2
+    #: ``||dL/dphi||`` magnitudes scale with the batch), so it is left OFF by
+    #: default and the trajectory-vs-settled-point CONTRAST — which is what S2
+    #: claims — is unaffected because both arms use the same lanes.
+    probe_lanes: int = 0
+
     @classmethod
     def from_mapping(cls, overrides: Optional[dict] = None) -> "PilotConfig":
         known = {f.name for f in fields(cls)}
@@ -768,6 +795,50 @@ def _train_step(model, opt_state, tokens, targets, plans, optimizer):
     return eqx.apply_updates(model, updates), opt_state, loss
 
 
+def _microbatch(a, n: int):
+    """``(B, ...) -> (n, B//n, ...)`` — the microbatch axis, leading."""
+    a = jnp.asarray(a)
+    return a.reshape((int(n), a.shape[0] // int(n)) + a.shape[1:])
+
+
+@eqx.filter_jit
+def _accum_grads(model, tokens, targets, plans, n_micro: int):
+    """Mean loss + mean gradient over ``n_micro`` SEQUENTIAL microbatches.
+
+    ⭐ `csf3-memory-fit`. The backward's peak activation is set by the
+    microbatch, not the batch; the update is still one step on the full
+    effective batch. ``lax.scan`` (not a Python loop) so XLA cannot schedule the
+    microbatch backwards concurrently and hand the memory back.
+    """
+    n_micro = int(n_micro)
+    tk, tg = _microbatch(tokens, n_micro), _microbatch(targets, n_micro)
+    pl = jax.tree_util.tree_map(lambda a: _microbatch(a, n_micro), plans)
+    params = eqx.filter(model, eqx.is_inexact_array)
+    zeros = jax.tree_util.tree_map(jnp.zeros_like, params)
+
+    def body(carry, xs):
+        g_acc, l_acc = carry
+        t, y, p = xs
+        loss, g = eqx.filter_value_and_grad(loss_fn)(model, t, y, p)
+        g_acc = jax.tree_util.tree_map(lambda a, b: a + b, g_acc,
+                                       eqx.filter(g, eqx.is_inexact_array))
+        return (g_acc, l_acc + loss), None
+
+    (g_sum, l_sum), _ = jax.lax.scan(body, (zeros, jnp.asarray(0.0)), (tk, tg, pl))
+    scale = 1.0 / float(n_micro)
+    return (l_sum * scale,
+            jax.tree_util.tree_map(lambda a: a * scale, g_sum))
+
+
+@eqx.filter_jit
+def _train_step_accum(model, opt_state, tokens, targets, plans, optimizer,
+                      n_micro: int):
+    loss, grads = _accum_grads(model, tokens, targets, plans, int(n_micro))
+    updates, opt_state = optimizer.update(
+        grads, opt_state, eqx.filter(model, eqx.is_inexact_array))
+    return eqx.apply_updates(model, updates), opt_state, loss
+
+
 def make_optimizer(pcfg: PilotConfig):
     sched = optax.warmup_cosine_decay_schedule(
         init_value=0.0, peak_value=pcfg.lr, warmup_steps=max(1, pcfg.warmup),
@@ -796,6 +867,9 @@ def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
     """
     optimizer = make_optimizer(pcfg)
     opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
+    n_micro = max(1, int(getattr(pcfg, "accum_steps", 1)))
+    if n_micro > 1 and int(pcfg.batch) % n_micro != 0:
+        raise ValueError(f"accum_steps={n_micro} does not divide batch={pcfg.batch}")
     hist, t0 = [], time.time()
     plan_s = 0.0
     watch: List[Dict[str, Any]] = []
@@ -845,7 +919,12 @@ def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
         tp = time.time()
         plans, _ = plan_pass(model, tk, pcfg)
         plan_s += time.time() - tp
-        model, opt_state, loss = _train_step(model, opt_state, tk, tg, plans, optimizer)
+        if n_micro > 1:
+            model, opt_state, loss = _train_step_accum(
+                model, opt_state, tk, tg, plans, optimizer, n_micro)
+        else:
+            model, opt_state, loss = _train_step(
+                model, opt_state, tk, tg, plans, optimizer)
         hist.append(float(loss))
         if (monitor_registry is not None and monitor_tokens is not None
                 and i > 0 and i % max(1, pcfg.monitor_every) == 0):
@@ -898,9 +977,15 @@ def dynamic_eval(model: StreamModel, pcfg: PilotConfig, batches,
     is reported per arm**, because a badly-tuned substitute is a weak substitute
     and a weak substitute flatters us. Krause et al. tune it on validation; we
     give every arm the same grid and take its own best.
+
+    ⚠ `csf3-memory-fit`: dynamic evaluation takes the SAME backward as a training
+    step, so it inherits ``pcfg.accum_steps`` — otherwise a run that needed the
+    microbatch lever to fit would OOM in the one column the job header's
+    cut-order forbids cutting.
     """
     grid = list(lrs) if lrs is not None else [pcfg.dyneval_lr, 10 * pcfg.dyneval_lr,
                                               100 * pcfg.dyneval_lr]
+    n_micro = max(1, int(getattr(pcfg, "accum_steps", 1)))
     bat = list(batches)
     per_lr = {}
     for lr in grid:
@@ -912,7 +997,10 @@ def dynamic_eval(model: StreamModel, pcfg: PilotConfig, batches,
             tk = jnp.asarray(x, dtype=jnp.int32)
             tg = jnp.asarray(y, dtype=jnp.int32)
             plans, _ = plan_pass(m, tk, pcfg)
-            loss, grads = eqx.filter_value_and_grad(loss_fn)(m, tk, tg, plans)
+            if n_micro > 1:
+                loss, grads = _accum_grads(m, tk, tg, plans, n_micro)
+            else:
+                loss, grads = eqx.filter_value_and_grad(loss_fn)(m, tk, tg, plans)
             tot += float(loss)      # scored BEFORE the update — strictly causal
             n += 1
             upd, st = opt.update(grads, st, eqx.filter(m, eqx.is_inexact_array))
@@ -935,10 +1023,18 @@ def gradient_probe(model: StreamModel, pcfg: PilotConfig, tokens, targets,
     trajectory read is the only channel that does. The two arms here are
     identical models differing ONLY in ``StreamMemoryConfig.read_mode``, so the
     comparison is internal and needs no baseline.
+
+    ⚠ `csf3-memory-fit`: ``pcfg.probe_lanes > 0`` cuts the batch here too (two
+    full backwards, back to back). Default OFF — this one moves a **published**
+    magnitude. The CONTRAST S2 claims is lane-count-invariant because both modes
+    read the same lanes; ``n_lanes`` is reported so the table can say so.
     """
     tk = jnp.asarray(tokens, dtype=jnp.int32)
     tg = jnp.asarray(targets, dtype=jnp.int32)
-    out: Dict[str, Any] = {}
+    n_lanes = int(getattr(pcfg, "probe_lanes", 0) or 0)
+    if 0 < n_lanes < int(tk.shape[0]):
+        tk, tg = tk[:n_lanes], tg[:n_lanes]
+    out: Dict[str, Any] = {"n_lanes": int(tk.shape[0])}
     plans, _ = plan_pass(model, tk, pcfg)
     for mode in ("trajectory", "settled_point"):
         t0 = time.time()
@@ -1035,9 +1131,17 @@ def allocation_liveness(model: StreamModel, pcfg: PilotConfig, tokens, targets
     is ``phi``'s **address head**. This reports its gradient norm beside the
     address-utilisation entropy, which is the liveness anchor the design rule
     actually needs.
+
+    ⚠ `csf3-memory-fit`: ``pcfg.liveness_lanes > 0`` runs it on that many lanes of
+    the batch instead of all of them. It is a **full-batch backward taken at
+    init** — the crash site of CSF3 run 1 — and both quantities it reports are
+    per-lane objects, so the anchor survives the cut. The lane count is returned.
     """
     tk = jnp.asarray(tokens, dtype=jnp.int32)
     tg = jnp.asarray(targets, dtype=jnp.int32)
+    n_lanes = int(getattr(pcfg, "liveness_lanes", 0) or 0)
+    if 0 < n_lanes < int(tk.shape[0]):
+        tk, tg = tk[:n_lanes], tg[:n_lanes]
     plans, _ = plan_pass(model, tk, pcfg)
     _, grads = eqx.filter_value_and_grad(loss_fn)(model, tk, tg, plans)
     ent, occ = [], []
@@ -1053,6 +1157,7 @@ def allocation_liveness(model: StreamModel, pcfg: PilotConfig, tokens, targets
         occ.append(float((cnt > 0).mean()))
     return {
         "grad_phi_addr_head": _norm([b.phi for b in grads.blocks]),
+        "n_lanes": int(tk.shape[0]),
         "policy_logits": None,
         "policy_logits_note": "the C2W1 controller's policy is RULE-BASED, not "
                               "logit-parameterised: there are no policy logits. "
