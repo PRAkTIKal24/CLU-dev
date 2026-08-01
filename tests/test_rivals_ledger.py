@@ -52,7 +52,18 @@ def test_iso_state_head_widths_match_the_prereg_arithmetic():
 
 def test_head_width_rejects_unknown_kind():
     with pytest.raises(ValueError):
-        head_width_for_budget("mamba2", 1364)
+        head_width_for_budget("titans", 1364)
+
+
+def test_mamba2_sizing_law_is_the_delta_law_by_construction():
+    """⚠ **Behaviour change, C2W5 (Head ruling 5):** ``"mamba2"`` used to be this
+    file's example of an UNKNOWN sizing kind. It is now a measured arm, and its
+    law is deliberately *identical* to the delta arms' — at ``n_head = 1`` and the
+    declared ``d_state = head_dim = d`` the SSM state is ``d^2``, so the SSD arm
+    and the delta arms land on byte-identical state and the row isolates the
+    update rule rather than the state budget."""
+    assert (head_width_for_budget("mamba2", 1364)
+            == head_width_for_budget("delta", 1364) == 36)
 
 
 def test_matched_table_rows_is_a_floor_not_a_round():

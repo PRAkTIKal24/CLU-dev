@@ -37,6 +37,10 @@ def test_every_rival_declares_the_published_state_convention(name):
         assert mo.declared_state_floats() == d * d + b * d
     elif name == "ttt_mlp":
         assert mo.declared_state_floats() == 8 * d * d + b * d
+    elif name == "mamba2":
+        # the reference implementation's own ssm_state (nheads, headdim, d_state)
+        assert mo.declared_state_floats() == mo.n_head * d * mo.d_state
+        assert mo.d_state == d          # the declared iso-state sizing choice
     else:
         assert mo.declared_state_floats() == mo.n_head * d * d
     led = mo.ledger()
@@ -451,3 +455,172 @@ def test_the_before_after_thresholds_are_the_pre_registered_ones():
     assert "ttt_mlp:T2_R5_sign_flip" in out2["thresholds_fired"]
     assert out2["R5_count_le_zero"]["f3"] == 2
     assert any("T4_R5_count_changed" in f for f in out2["thresholds_fired"])
+
+
+# --------------------------------------------------------------------------
+# ⭐ Mamba-2 / SSD (C2W5, Head ruling 5) — the selective state-space arm
+# --------------------------------------------------------------------------
+def _mamba2(d_head=6, d_in=5, m=1, seed=0, **kw):
+    from chlu.eval.rivals.mamba2 import Mamba2Memory
+
+    return Mamba2Memory(d_in, d_head, m, key=jax.random.PRNGKey(seed), **kw)
+
+
+def _stream(t=19, d_in=5, seed=3):
+    rng = np.random.default_rng(seed)
+    return (np.asarray(rng.normal(size=(t, d_in)), dtype=np.float32),
+            np.ones((t,), dtype=np.float32))
+
+
+def test_mamba2_chunked_ssd_equals_the_sequential_recurrence():
+    """⭐ **The SSD property, asserted rather than cited.** The chunked block
+    algorithm (Dao & Gu, ICML 2024, §6) is an exact re-association of
+    ``h_t = a_t h_{t-1} + B_t (Delta_t v_t)^T`` — so it must agree with the naive
+    recurrence to fp32 rounding, not merely approximately."""
+    mo = _mamba2()
+    xs, mask = _stream()
+    a = np.asarray(mo.write(xs, mask))
+    b = np.asarray(mo.write_sequential(xs, mask))
+    assert np.allclose(a, b, atol=1e-6, rtol=1e-4)
+    assert np.abs(a).max() > 0            # not a trivial all-zero agreement
+
+
+@pytest.mark.parametrize("chunk", [1, 2, 3, 7, 16, 256])
+def test_mamba2_chunk_length_is_provably_inert(chunk):
+    """⛔ **Why the SSD chunk is NOT a tuning axis while TTT's ``b`` is.** TTT's
+    mini-batch changes the function (every gradient is taken at the chunk start)
+    *and* its state (the in-flight buffer); SSD's chunk changes neither."""
+    xs, mask = _stream()
+    ref = np.asarray(_mamba2(chunk=1).write_sequential(xs, mask))
+    got = np.asarray(_mamba2(chunk=chunk).write(xs, mask))
+    assert np.allclose(got, ref, atol=1e-6, rtol=1e-4)
+
+
+def test_mamba2_dual_quadratic_read_equals_the_recurrent_read():
+    """⭐ **State-space duality, measured.** The quadratic form
+    ``o_q = sum_j gamma_j (C_q . B_j) Delta_j v_j`` (a 1-semiseparable masked
+    attention) must equal the recurrent read of the same stream."""
+    mo = _mamba2(seed=4)
+    xs, mask = _stream(seed=4)
+    xq = np.asarray(np.random.default_rng(5).normal(size=(7, 5)), dtype=np.float32)
+    rec = np.asarray(mo.read(mo.write(xs, mask), xq))
+    dual = np.asarray(mo.read_dual(xs, xq, mask))
+    assert np.allclose(rec, dual, atol=1e-6, rtol=1e-4)
+
+
+def test_mamba2_with_no_decay_is_plain_linear_attention():
+    """``A -> 0`` (no decay, ``a_t = 1``) must collapse the SSD state to the
+    unnormalised linear-attention sum ``sum_t B_t (Delta_t v_t)^T``."""
+    import equinox as eqx
+
+    mo = _mamba2(seed=6)
+    mo = eqx.tree_at(lambda t: t.A_log, mo, jnp.asarray(-30.0))   # exp(A_log) ~ 0
+    xs, mask = _stream(seed=6)
+    B, v, dt, log_a = mo._stream(jnp.asarray(xs), jnp.asarray(mask))
+    want = np.einsum("tn,tp->np", np.asarray(B),
+                     np.asarray(dt)[:, None] * np.asarray(v))
+    assert np.allclose(np.asarray(mo.write(xs, mask)), want, atol=1e-6, rtol=1e-4)
+    assert np.allclose(np.asarray(log_a), 0.0, atol=1e-10)
+
+
+def test_mamba2_selection_is_input_dependent():
+    """Mamba-1 §3.2's selection mechanism, carried over: ``Delta_t``, ``B_t`` and
+    ``C_t`` must all depend on the token. A time-invariant SSM would be a
+    different (and much weaker) model, so this is worth a test."""
+    import equinox as eqx
+
+    mo = _mamba2(seed=7)
+    mo = eqx.tree_at(lambda t: t.w_dt, mo, jnp.ones((5,)))
+    x1 = jnp.asarray(np.zeros((5,), dtype=np.float32))
+    x2 = jnp.asarray(np.ones((5,), dtype=np.float32))
+    assert float(mo._dt(x1)) != float(mo._dt(x2))
+    b1, _ = mo._kv(x1)
+    b2, _ = mo._kv(x2)
+    assert not np.allclose(np.asarray(b1), np.asarray(b2))
+
+
+def test_mamba2_reference_init_ranges():
+    """The reference implementation's init (`rival-recon` §1.4): ``A ~ U(1, 16)``
+    and ``Delta ~ exp(U(log 1e-3, log 1e-1))`` inverse-softplused into the bias."""
+    from chlu.eval.rivals.mamba2 import A_INIT_RANGE, DT_MAX, DT_MIN
+
+    for seed in range(8):
+        mo = _mamba2(seed=seed)
+        a = float(np.exp(np.asarray(mo.A_log)))
+        dt0 = float(jax.nn.softplus(mo.dt_bias))
+        assert A_INIT_RANGE[0] <= a <= A_INIT_RANGE[1], a
+        assert DT_MIN * 0.99 <= dt0 <= DT_MAX * 1.01, dt0
+
+
+def test_mamba2_ledger_is_byte_identical_to_the_delta_arms():
+    """⭐ The point of the iso-state sizing choice ``d_state = head_dim``: at the
+    shipped 1364-float budget the SSD arm and the three delta arms land on the
+    **same** state bytes, so the row isolates the update rule and nothing else."""
+    mo = make_rival("mamba2", 5, 1, key=jax.random.PRNGKey(0))
+    gdn2 = make_rival("gdn2", 5, 1, key=jax.random.PRNGKey(0))
+    assert mo.d_head == gdn2.d_head == 36
+    assert mo.declared_state_floats() == gdn2.declared_state_floats() == 1296
+    led = mo.ledger()
+    assert led.state_bytes == 5184 and led.param_floats == 2095
+    assert table_budget(mo)["n_rows_affordable"] == 18
+    # the conv-state exclusion is DECLARED in the ledger, not left implicit
+    assert "conv_state" in led.state_convention
+    assert "FAVOUR" in led.state_convention
+
+
+def test_mamba2_metric_native_verdict_is_weaker_than_the_delta_arms():
+    """⚠ Mamba-2 does **not** L2-normalise ``B``/``C`` (GDN-2 §3.5 does), so
+    ``arg-min ||q-k||`` and ``arg-max q.k`` do not coincide in its own key space.
+    The verdict must say so — it is the mechanism the arm's PREREG predicts from."""
+    from chlu.eval.rivals.mamba2 import metric_native_verdict
+
+    out = metric_native_verdict()
+    assert out["verdict"] == "metric-native (unnormalised)"
+    assert delta_verdict("gdn2")["verdict"] == "metric-native"
+    assert "L2-normalise" in out["argument"] and "WEAKLY" in out["argument"]
+    assert "2405.21060" in out["citation"]
+
+
+def test_mamba2_keys_are_not_l2_normalised_but_the_delta_arms_are():
+    """The equation-level difference above, checked on the actual projections."""
+    xs, _ = _stream(t=6, seed=8)
+    k_m, _ = _mamba2(seed=8).kv_table(jnp.asarray(xs))
+    k_d, _ = DeltaMemory(5, 6, 1, key=jax.random.PRNGKey(8),
+                         variant="gdn2").kv_table(jnp.asarray(xs))
+    n_m = np.linalg.norm(np.asarray(k_m), axis=-1)
+    n_d = np.linalg.norm(np.asarray(k_d), axis=-1)
+    assert np.allclose(n_d, 1.0, atol=1e-3)          # GDN-2 §3.5
+    assert n_m.std() > 1e-3                          # Mamba-2: free norms
+
+
+def test_mamba2_is_appended_last_so_the_banked_fit_keys_do_not_move():
+    """⛔ The per-rival fit key is ``RIVALS.index(name)``. Appending `mamba2` at
+    the END is what keeps every banked C2W4/C2W5 number reproducible; inserting it
+    anywhere else would silently re-draw the later arms' inits."""
+    assert RIVALS[:5] == ("ttt_linear", "ttt_mlp", "deltanet", "gdn", "gdn2")
+    assert RIVALS[5] == "mamba2" and len(RIVALS) == 6
+
+
+def test_mamba2_block_parts_are_off_by_default_and_reachable_as_an_ablation():
+    """⛔ ``use_D`` / ``gate_z`` are OFF in every audited cell — the same
+    minimality every arm carries. They exist so the "you hobbled Mamba-2" attack
+    can be answered by a measurement that runs through the SAME outer loop
+    (``make_rival(..., **arm_kwargs)``), not a hand-rolled script."""
+    from chlu.eval.rivals.fit import fit_grid
+
+    base = make_rival("mamba2", 5, 1, key=jax.random.PRNGKey(0))
+    blk = make_rival("mamba2", 5, 1, key=jax.random.PRNGKey(0),
+                     use_D=True, gate_z=True)
+    assert (base.use_D, base.gate_z) == (False, False)
+    assert (blk.use_D, blk.gate_z) == (True, True)
+    # the ablation costs NO state bytes (D and W_z are parameters, already counted)
+    assert blk.declared_state_floats() == base.declared_state_floats()
+    assert blk.ledger().param_floats == base.ledger().param_floats
+    xq = np.asarray(np.random.default_rng(0).normal(size=(3, 5)), dtype=np.float32)
+    xs, mask = _stream(t=5, seed=11)
+    assert not np.allclose(np.asarray(base.read(base.write(xs, mask), xq)),
+                           np.asarray(blk.read(blk.write(xs, mask), xq)))
+    # and it is reachable through the outer loop, which is the point
+    g, mos = fit_grid("mamba2", 5, 1, _fit_examples(), key=jax.random.PRNGKey(0),
+                      lrs=(1e-3,), steps=2, arm_kwargs={"use_D": True})
+    assert mos[0].use_D is True and len(g) == 1
