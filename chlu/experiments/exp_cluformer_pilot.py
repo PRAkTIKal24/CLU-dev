@@ -404,6 +404,30 @@ def plot_pilot(records: List[Dict[str, Any]], out_dir: str) -> Optional[str]:
     return str(p)
 
 
+def _parse_kv(pair: str):
+    """``key=value`` with int/float/bool/None inference (strings pass through).
+
+    Exists so the CSF3 job script can carry a recommended config without the
+    module being edited on the cluster — an edited module is a provenance hole
+    (the artifact would not say which config produced it), whereas a flag is
+    recorded verbatim in ``rec['flags']``.
+    """
+    if "=" not in pair:
+        raise SystemExit(f"expected KEY=VALUE, got {pair!r}")
+    k, v = pair.split("=", 1)
+    low = v.strip().lower()
+    if low in ("true", "false"):
+        return k.strip(), low == "true"
+    if low in ("none", "null"):
+        return k.strip(), None
+    for cast in (int, float):
+        try:
+            return k.strip(), cast(v)
+        except ValueError:
+            pass
+    return k.strip(), v
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--scale", choices=("toy", "pilot"), default="toy")
@@ -419,8 +443,27 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="re-aggregate + re-plot from artifacts already on disk")
     ap.add_argument("--d5", action="store_true",
                     help="also run the anytime shape curve (secondary; §A3 shape only)")
+    ap.add_argument("--set", nargs="*", default=None, metavar="KEY=VALUE",
+                    help="top-level PilotConfig overrides, e.g. monitor_every=25")
+    ap.add_argument("--mem", nargs="*", default=None, metavar="KEY=VALUE",
+                    help="StreamMemoryConfig overrides, e.g. atom_place_radius=0.3 "
+                         "write_inner_steps=40 (⭐ the `pilot-placement-probe` "
+                         "recommendation block sets the submitted config here, so "
+                         "the scale run never needs the module edited)")
+    ap.add_argument("--store", nargs="*", default=None, metavar="KEY=VALUE",
+                    help="CluSystemConfig overrides")
     a = ap.parse_args(argv)
     ov: Dict[str, Any] = {}
+    for flag, key in (("set", None), ("mem", "memory"), ("store", "store")):
+        pairs = getattr(a, flag)
+        if not pairs:
+            continue
+        parsed = dict(_parse_kv(p) for p in pairs)
+        if key is None:
+            ov.update(parsed)
+        else:
+            ov[key] = dict((TOY if a.scale == "toy" else PILOT).get(key, {}),
+                           **parsed)
     if a.steps is not None:
         ov["steps"] = a.steps
         ov["warmup"] = max(1, a.steps // 10)
