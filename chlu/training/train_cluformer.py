@@ -136,6 +136,10 @@ class PilotConfig:
     #: controller's shadow store is an Equinox module. Spawn pays one import per
     #: worker at pool creation and nothing thereafter (the pool is persistent).
     plan_mp_start: str = "spawn"
+    #: ⚠ §7.27 in-flight watch: log untrained-vs-trained well depth and the ``q*``
+    #: payload spread at ``monitor_every`` cadence into the run artifact. Cheap,
+    #: on by default — store destruction must be caught in flight, not post-mortem.
+    store_watch: bool = True
 
     @classmethod
     def from_mapping(cls, overrides: Optional[dict] = None) -> "PilotConfig":
@@ -783,14 +787,61 @@ def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
     what gives monitor #6 (objective divergence) the window of
     ``(write_loss, acq)`` pairs it needs — on a single observation it is
     inapplicable, and an inapplicable monitor is not a passing monitor.
+
+    ⚠ ``pcfg.store_watch`` (default ON) additionally runs
+    :func:`store_health_probe` on **fixed** tokens at the same cadence, starting
+    with an untrained reading taken before the first update, and returns the
+    series as ``store_health``. That is §7.27's watch-item: it lands in the run
+    artifact by default, so a cluster job cannot destroy its own store silently.
     """
     optimizer = make_optimizer(pcfg)
     opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
     hist, t0 = [], time.time()
     plan_s = 0.0
+    watch: List[Dict[str, Any]] = []
+    watch_tokens = None
+    watch_on = bool(getattr(pcfg, "store_watch", False))
+    base_depth = base_spread = float("nan")
+
+    def _watch(step: int, tag: str) -> None:
+        """One §7.27 reading, printed in flight and kept for the artifact."""
+        nonlocal watch_on, base_depth, base_spread
+        rec = store_health_probe(model, pcfg, watch_tokens)
+        if not rec.get("applicable", False):
+            watch_on = False          # not a store arm: nothing to watch
+            return
+        rec["at_step"] = int(step)
+        rec["tag"] = tag
+        if tag == "untrained":
+            base_depth = float(rec.get("depth_median", float("nan")))
+            base_spread = float(rec.get("qstar_payload_spread", float("nan")))
+        rec["untrained_depth_median"] = base_depth
+        rec["depth_ratio_vs_untrained"] = (
+            float(rec.get("depth_median", float("nan")) / base_depth)
+            if np.isfinite(base_depth) and base_depth > 0 else float("nan"))
+        rec["untrained_qstar_payload_spread"] = base_spread
+        rec["spread_ratio_vs_untrained"] = (
+            float(rec.get("qstar_payload_spread", float("nan")) / base_spread)
+            if np.isfinite(base_spread) and base_spread > 0 else float("nan"))
+        watch.append(rec)
+        print(f"[watch/{name}] step {step} ({tag}): depth "
+              f"{rec.get('depth_median', float('nan')):.4g} "
+              f"(x{rec['depth_ratio_vs_untrained']:.3g} vs untrained) | "
+              f"q* payload spread {rec.get('qstar_payload_spread', float('nan')):.4g} "
+              f"(x{rec['spread_ratio_vs_untrained']:.3g}) | "
+              f"n_live {rec.get('n_live')}", flush=True)
+
     for i, (x, y) in enumerate(batches):
         tk = jnp.asarray(x, dtype=jnp.int32)
         tg = jnp.asarray(y, dtype=jnp.int32)
+        if watch_on and watch_tokens is None:
+            # ⭐ FIXED tokens for the whole series (the monitors' batch when there
+            # is one), and the baseline is taken BEFORE the first update — an
+            # "untrained vs trained" ratio measured on different tokens is not a
+            # ratio of anything.
+            watch_tokens = (jnp.asarray(monitor_tokens, dtype=jnp.int32)
+                            if monitor_tokens is not None else tk)
+            _watch(0, "untrained")
         tp = time.time()
         plans, _ = plan_pass(model, tk, pcfg)
         plan_s += time.time() - tp
@@ -803,13 +854,17 @@ def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
             mp["at_step"] = i
             if monitor_out is not None:
                 monitor_out.append(mp)
+        if watch_on and i > 0 and (i % max(1, pcfg.monitor_every) == 0
+                                   or i == pcfg.steps - 1):
+            _watch(i, "trained")
         if log is not None and (i % log_every == 0 or i == pcfg.steps - 1):
             log.append({"arm": name, "step": i, "nll": float(loss),
                         "bpc": bits_per_character(float(loss)),
                         "wall_s": time.time() - t0, "plan_s": plan_s})
     return model, {"loss_history": hist, "wall_s": time.time() - t0,
                    "plan_pass_s": plan_s,
-                   "plan_pass_frac": plan_s / max(time.time() - t0, 1e-9)}
+                   "plan_pass_frac": plan_s / max(time.time() - t0, 1e-9),
+                   "store_health": watch}
 
 
 def evaluate(model: StreamModel, pcfg: PilotConfig, batches, *, blank: bool = False,
@@ -1091,6 +1146,103 @@ def cell_group_depth(cell, state, slot: int, center) -> Tuple[float, float]:
     return D, s_eff
 
 
+@eqx.filter_jit
+def _cell_write(cell, state, z, plan_c):
+    """One chunk-write under ``filter_jit`` — used by the §7.27 watch only.
+
+    ⚠ The watch replays a whole sequence's writes at every observation, and an
+    EAGER replay of ``write_inner_steps = 40`` costs ~49 s per reading at pilot
+    store geometry on this laptop (measured) — which is not a thing you run every
+    25 steps. Same function, same inputs, one compile. ``monitor_pass``'s own
+    replay is deliberately left alone (its numbers are published).
+    """
+    return cell.write(state, z, plan_c)
+
+
+def store_health_probe(model: StreamModel, pcfg: PilotConfig, tokens, *,
+                       layer: int = 0) -> Dict[str, Any]:
+    """⚠ **§7.27's in-flight watch: is the outer loop destroying the store?**
+
+    The probe measured 200 outer steps driving the in-block store's well depth
+    from ``0.0288`` to ``4.95e-63`` at the shipped config — the unnamed cause of
+    the pilot's monitor #9 ``Delta_ret = 7.8e-86``. A 4000-step cluster run that
+    only reports this at the end has measured a store that its own optimiser
+    deleted, and nobody knew until the job was over. So it is logged **during**
+    training (Head ruling 3, 2026-08-01).
+
+    Two numbers, and both are required:
+
+    * ``depth_median`` — the median fitted depth ``D_i`` of the live items' own
+      wells (:func:`cell_group_depth`), reported as a ratio to the **untrained**
+      reading of the same tokens;
+    * ``qstar_payload_spread`` — the BETWEEN-ITEM range of the settled point's
+      payload coordinate ``q*[payload]`` (probe §6.2), each item launched at its
+      own recorded site on the payload-zero manifold.
+
+    ⛔ Depth alone is not a health signal (§7.26): raising ``write_margin``
+    deepens every well *at a shared payload location*, which collapses the
+    spread ``0.114 -> 0.054`` and makes the memory strictly worse. A run whose
+    depth holds while its spread collapses is failing, and only the pair says so.
+    """
+    from chlu.core.blocks import CluStoreCell
+
+    blk = model.blocks[layer]
+    cell = blk.cell
+    if not isinstance(cell, CluStoreCell):
+        return {"applicable": False,
+                "why": f"layer {layer} cell is {type(cell).__name__}, not the store"}
+    t0 = time.time()
+    scfg = pcfg.store_cfg()
+    d, m = int(scfg.addr_dim), int(scfg.payload_dim)
+    # ⭐ ONE lane. The probe's diagnostic replays lane 0 and the lanes are
+    # independent (each builds its own controller over its own latents), so
+    # planning the other 7 would be pure cost — at pilot geometry this is the
+    # difference between an 8-lane plan pass per reading and a 1-lane one.
+    tk = jnp.asarray(tokens, dtype=jnp.int32)[:1]
+    plans, _ = plan_pass(model, tk, pcfg)
+    h = _embed_stream(model, tk)
+    for i in range(layer):
+        h = _block_forward(model.blocks[i], h, plans[i])
+    z = _block_chunk_latents(blk, h)
+
+    pl0 = jax.tree_util.tree_map(lambda a: a[0], plans[layer])
+    st = cell.init_state()
+    for c in range(int(z.shape[1])):
+        pc = jax.tree_util.tree_map(lambda a, i=c: a[i], pl0)
+        st = _cell_write(cell, st, z[0, c], pc)
+
+    live = np.asarray(pl0.live)[-1]
+    sites = np.asarray(pl0.sites)[-1]
+    idx = [i for i in range(int(scfg.capacity)) if live[i] > 0.5]
+    depths, qs_pay, true_pay = [], [], []
+    for i in idx:
+        D, _s = cell_group_depth(cell, st, i, sites[i, :d])
+        depths.append(float(D))
+        qstar = np.asarray(cell.read_diag(st, jnp.asarray(sites[i],
+                                                          dtype=jnp.float32))["q_star"])
+        qs_pay.append(float(qstar[d]) if m else float("nan"))
+        true_pay.append(float(sites[i, d]) if m else float("nan"))
+    if not idx:
+        return {"applicable": True, "n_live": 0, "wall_s": time.time() - t0,
+                "why": "no live item to fit a well on"}
+    dep = np.asarray(depths, dtype=float)
+    qp = np.asarray(qs_pay, dtype=float)
+    return {
+        "applicable": True,
+        "n_live": len(idx),
+        "depth_median": float(np.median(dep)),
+        "depth_min": float(np.min(dep)),
+        "depth_max": float(np.max(dep)),
+        "depth_per_item": [float(x) for x in dep],
+        "qstar_payload": [float(x) for x in qp],
+        "qstar_payload_spread": (float(np.ptp(qp)) if len(idx) > 1 else float("nan")),
+        "payload_true": [float(x) for x in true_pay],
+        "payload_true_spread": (float(np.ptp(np.asarray(true_pay, dtype=float)))
+                                if len(idx) > 1 else float("nan")),
+        "wall_s": time.time() - t0,
+    }
+
+
 def monitor_pass(model: StreamModel, pcfg: PilotConfig, tokens, *, layer: int = 0,
                  registry=None, write_loss_now: Optional[float] = None
                  ) -> Dict[str, Any]:
@@ -1338,6 +1490,7 @@ __all__ = [
     "assert_shared_shell_identical", "plan_pass", "loss_fn", "train_arm",
     "evaluate", "dynamic_eval", "gradient_probe", "allocation_liveness",
     "monitor_pass", "make_optimizer", "save_json", "anytime_curve",
-    "calibrate_phi_gain", "LaneControllerSummary", "shutdown_lane_pools",
+    "calibrate_phi_gain", "store_health_probe", "LaneControllerSummary",
+    "shutdown_lane_pools",
 ]
 _ = Sequence

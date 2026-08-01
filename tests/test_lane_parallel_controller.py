@@ -1,4 +1,4 @@
-"""The lane-parallel plan pass: it is a SCHEDULING change or it is nothing.
+"""The lane-parallel plan pass, and the §7.27 in-flight store watch.
 
 ⭐ **Decision-replay is the SPEC.** ``plan_pass`` runs the real, discrete C2W1
 controller outside the differentiable forward and the forward *replays* its
@@ -31,6 +31,8 @@ from chlu.training.train_cluformer import (
     plan_pass,
     shutdown_lane_pools,
     solve_arms,
+    store_health_probe,
+    train_arm,
 )
 
 #: 2 workers, not 8: the point is the boundary crossing, and every extra worker
@@ -185,3 +187,60 @@ def test_class_i_snapshot_reproduces_the_live_registry(pcfg):
         assert np.array_equal(live[k], snap[k]), k
     assert live["_stats"]["guards"] == snap["_stats"]["guards"]
     assert reg.class_i_tripped() == ["blank"]    # the pass did not mutate it
+
+
+# ---------------------------------------------------------------------------
+# ⚠ §7.27 — the in-flight store watch (Head ruling 3, 2026-08-01)
+# ---------------------------------------------------------------------------
+def test_store_health_probe_reports_depth_and_qstar_spread(pcfg):
+    model, tk = _model(pcfg, 0), _tokens(pcfg, 0)
+    h = store_health_probe(model, pcfg, tk)
+    assert h["applicable"] and h["n_live"] >= 1
+    assert np.isfinite(h["depth_median"]) and h["depth_median"] >= 0.0
+    assert len(h["depth_per_item"]) == h["n_live"]
+    assert len(h["qstar_payload"]) == h["n_live"]
+    if h["n_live"] > 1:
+        assert np.isfinite(h["qstar_payload_spread"])
+
+
+def test_store_health_probe_is_inapplicable_off_the_store(pcfg):
+    """A GRU arm has no wells to fit; the watch says so instead of inventing a
+    depth (an inapplicable reading is never reported as a healthy one)."""
+    specs, _ = solve_arms(pcfg, jax.random.PRNGKey(0))
+    gru = build_arm("gru_matched", pcfg, specs, key=jax.random.PRNGKey(100))
+    assert store_health_probe(gru, pcfg, _tokens(pcfg, 0))["applicable"] is False
+
+
+def test_the_watch_fires_during_training_and_lands_in_the_artifact(pcfg):
+    """⭐ §7.27's watch-item, as a test: an untrained baseline plus a trained
+    reading at ``monitor_every`` cadence, both carrying the depth ratio and the
+    spread — in the dict the pilot writes into its run artifact.
+    """
+    import dataclasses
+
+    cfg = dataclasses.replace(pcfg, steps=2, monitor_every=1, store_watch=True)
+    model = _model(cfg, 0)
+    rng = np.random.default_rng(7)
+    batches = [(rng.integers(0, cfg.vocab_size, (cfg.batch, cfg.seq_len)),
+                rng.integers(0, cfg.vocab_size, (cfg.batch, cfg.seq_len)))
+               for _ in range(cfg.steps)]
+    _, hist = train_arm("clu_store", model, cfg, iter(batches))
+    w = hist["store_health"]
+    assert [r["tag"] for r in w] == ["untrained", "trained"]
+    assert [r["at_step"] for r in w] == [0, 1]
+    for r in w:
+        assert {"depth_median", "qstar_payload_spread", "depth_ratio_vs_untrained",
+                "spread_ratio_vs_untrained", "n_live"} <= set(r)
+    assert w[0]["depth_ratio_vs_untrained"] == pytest.approx(1.0)
+    assert w[1]["untrained_depth_median"] == pytest.approx(w[0]["depth_median"])
+
+
+def test_the_watch_can_be_switched_off(pcfg):
+    import dataclasses
+
+    cfg = dataclasses.replace(pcfg, steps=1, monitor_every=1, store_watch=False)
+    rng = np.random.default_rng(7)
+    batches = [(rng.integers(0, cfg.vocab_size, (cfg.batch, cfg.seq_len)),
+                rng.integers(0, cfg.vocab_size, (cfg.batch, cfg.seq_len)))]
+    _, hist = train_arm("clu_store", _model(cfg, 0), cfg, iter(batches))
+    assert hist["store_health"] == []
