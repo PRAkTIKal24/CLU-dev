@@ -260,6 +260,33 @@ def test_the_gradient_moves_only_by_float32_round_off_under_remat(mem):
     assert rel <= GRAD_RELL2_TOL, f"||dg||/||g|| = {rel:.3e} > {GRAD_RELL2_TOL:.0e}"
 
 
+@pytest.mark.parametrize("arm", ["gru_matched", "ttt_matched", "none", "echo"])
+def test_every_swap_arm_survives_chunk_remat_bitwise(arm):
+    """⭐ ``remat_chunks`` wraps the SHARED ``StreamBlock`` scan, so it applies to
+    every arm of the system-level swap, not just the store — including the two
+    controls whose cells have a zero-size / constant state. The swap is only a
+    swap if the flag is inert for all of them."""
+    pcfg = _pcfg()
+    scfg = pcfg.store_cfg()
+    out = []
+    for mem in ({}, {"remat_chunks": True}):
+        mcfg = dataclasses.replace(pcfg.memory_cfg(), **mem)
+        cells = [make_memory_cell(arm, latent_dim=int(scfg.dim), clu_cfg=scfg,
+                                  mcfg=mcfg, hidden=6, ttt_shape=(3, 4),
+                                  key=jax.random.PRNGKey(11))
+                 for _ in range(pcfg.n_layers)]
+        m = StreamModel(vocab_size=pcfg.vocab_size, d_model=pcfg.d_model,
+                        n_layers=pcfg.n_layers, max_len=pcfg.seq_len, cells=cells,
+                        mcfg=mcfg, latent_dim=int(scfg.dim),
+                        addr_dim=int(scfg.addr_dim),
+                        payload_dim=int(scfg.payload_dim),
+                        key=jax.random.PRNGKey(0))
+        tk, tg = _tokens(pcfg)
+        plans, _ = plan_pass(m, tk, pcfg)
+        out.append(float(loss_fn(m, tk, tg, plans)))
+    assert out[0] == out[1], f"{arm}: nll moved by {abs(out[0] - out[1]):.3e}"
+
+
 # ---------------------------------------------------------------------------
 # 4. the microbatch lever — exact in effective batch, float-approximate in sum
 # ---------------------------------------------------------------------------
