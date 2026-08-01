@@ -288,14 +288,17 @@ def test_the_spread_convention_reproduces_the_probes_before_column():
 
 def test_the_acceptance_bar_is_adjudicated_mechanically():
     """No hand-grading: ``aggregate`` decides §A20.3(a) from the numbers."""
-    def rec(cell, seed, ratio, blank_spread=1e-4, acq_blank=0.25, chance=0.25):
+    def rec(cell, seed, ratio, blank_qstar=1e-4, acq_blank=0.25, chance=0.25,
+            blank_spread=0.01, psi_blank=0.01):
         pooled = {k: float("nan") for k in
                   ("ratio_psi_only_over_qstar", "ratio_qstar_over_true",
-                   "frac_of_true_median", "spread_true", "spread_q_star",
-                   "spread_psi_only", "spread_q_star_blank", "linearity_maxabs",
+                   "frac_of_true_median", "spread_true", "spread_traj_mean",
+                   "spread_psi_only", "linearity_maxabs",
                    "qstar_source_maxabs_vs_read_diag")}
         pooled.update({"ratio_decoded_over_qstar": ratio, "spread_decoded": 0.05,
+                       "spread_q_star": 0.05, "spread_q_star_blank": blank_qstar,
                        "spread_decoded_blank": blank_spread,
+                       "spread_psi_only_blank": psi_blank,
                        "acq_by_gate": {f"{g:g}": 0.25 for g in GATE_GRID},
                        "acq_blank_by_gate": {f"{g:g}": 0.25 for g in GATE_GRID}})
         fwd = {g: {"acq": 0.25, "acq_blank": acq_blank, "acq_minus_blank": 0.0,
@@ -306,13 +309,21 @@ def test_the_acceptance_bar_is_adjudicated_mechanically():
 
     agg = aggregate([rec("baseline", s, 0.98) for s in (0, 1, 2)]
                     + [rec("h1b_r0.3", s, 0.2) for s in (0, 1, 2)]
-                    + [rec("h1b_m1.0", s, 0.9, blank_spread=0.9,
-                           acq_blank=0.9) for s in (0, 1, 2)])
+                    + [rec("h1b_m1.0", s, 0.9, blank_qstar=0.9,
+                           acq_blank=0.9, blank_spread=0.9) for s in (0, 1, 2)])
     assert agg["cells"]["ledger/baseline"]["ACCEPTANCE_MET"] is True
     assert agg["cells"]["ledger/h1b_r0.3"]["ACCEPTANCE_MET"] is False
     assert agg["cells"]["ledger/baseline"]["LEAK_CHECK_GREEN"] is True
-    # a blank arm that decodes as widely as the live one, off chance = a LEAK
+    # ⛔ a blank arm whose q* carries as much as the live one, and whose decode
+    # goes off chance, is a LEAK — whatever the acceptance ratio says
     assert agg["cells"]["ledger/h1b_m1.0"]["LEAK_CHECK_GREEN"] is False
+    assert agg["cells"]["ledger/h1b_m1.0"]["leak_blank_acq_at_chance"] is False
+    assert agg["cells"]["ledger/h1b_m1.0"]["leak_residual_blank_share"] > 0.05
+    # ⚠ psi's OWN blank-store spread is shipped behaviour and is NOT charged to
+    # the residual: a wide blank decode that psi_only already explains is green
+    agg2 = aggregate([rec("baseline", s, 0.98, blank_spread=0.2, psi_blank=0.2)
+                      for s in (0, 1, 2)])
+    assert agg2["cells"]["ledger/baseline"]["LEAK_CHECK_GREEN"] is True
     assert ACCEPTANCE_RATIO == 0.5
 
 

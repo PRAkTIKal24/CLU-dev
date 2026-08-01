@@ -555,9 +555,14 @@ def aggregate(records: List[Dict[str, Any]]) -> Dict[str, Any]:
         "acceptance": f"ratio decoded_spread / q*_spread >= {ACCEPTANCE_RATIO} "
                       f"(charter §A20.3(a)); probe's before-column "
                       f"{PROBE_BEFORE_RATIO}",
-        "leak_check": "blank-store decode must stay at chance and its spread at "
-                      "the blank q* scale (~1e-3); a payload residual that reads "
-                      "the query is N68's leak in a new coat",
+        "leak_check": "three clauses, all RESIDUAL-SPECIFIC: (1) the blank-store "
+                      "decode stays at chance; (2) the residual's own blank "
+                      "contribution sd(q*_blank)/sd(q*) < 0.05; (3) the residual "
+                      "adds nothing to the blank decode's spread "
+                      "(sd(decoded_blank) <= 1.05 * sd(psi_only_blank)). "
+                      "⚠ psi's OWN query-driven spread on a blank store is "
+                      "shipped behaviour, present at gate 0, and is reported "
+                      "beside these clauses rather than charged to the residual.",
         "monitor_13": "4 write steps vs floor 40 => NON-PROMOTABLE (N94), except "
                       "the *_w40 cells",
         "cells": {},
@@ -576,8 +581,9 @@ def aggregate(records: List[Dict[str, Any]]) -> Dict[str, Any]:
                         ("ratio_decoded_over_qstar", "ratio_psi_only_over_qstar",
                          "ratio_qstar_over_true", "frac_of_true_median",
                          "spread_true", "spread_q_star", "spread_psi_only",
-                         "spread_decoded", "spread_decoded_blank",
-                         "spread_q_star_blank", "linearity_maxabs",
+                         "spread_traj_mean", "spread_decoded",
+                         "spread_decoded_blank", "spread_q_star_blank",
+                         "spread_psi_only_blank", "linearity_maxabs",
                          "qstar_source_maxabs_vs_read_diag")}
                 for g in ("0", "1"):
                     for k in ("acq", "acq_blank", "acq_minus_blank", "chance",
@@ -614,12 +620,20 @@ def aggregate(records: List[Dict[str, Any]]) -> Dict[str, Any]:
                    else "residual_on_ratio_decoded_over_qstar")
             row["ACCEPTANCE_MET"] = bool(np.isfinite(row.get(key, np.nan))
                                          and row[key] >= ACCEPTANCE_RATIO)
-            bk = "g1_acq_minus_blank" if tier == "ledger" else None
-            if bk is not None and bk in row:
-                row["LEAK_CHECK_GREEN"] = bool(
+            if tier == "ledger" and "g1_acq_blank" in row:
+                # ⛔ the blocking leak check, RESIDUAL-SPECIFIC (see "leak_check")
+                row["leak_blank_acq_at_chance"] = bool(
                     np.isfinite(row["g1_acq_blank"])
-                    and row["g1_acq_blank"] <= row["g1_chance"] + 1e-9
-                    and row["spread_decoded_blank"] < 0.05 * row["spread_decoded"])
+                    and row["g1_acq_blank"] <= row["g1_chance"] + 1e-9)
+                row["leak_residual_blank_share"] = float(
+                    row["spread_q_star_blank"] / max(row["spread_q_star"], 1e-12))
+                row["leak_residual_adds_no_blank_spread"] = bool(
+                    row["spread_decoded_blank"]
+                    <= 1.05 * row["spread_psi_only_blank"] + 1e-6)
+                row["LEAK_CHECK_GREEN"] = bool(
+                    row["leak_blank_acq_at_chance"]
+                    and row["leak_residual_blank_share"] < 0.05
+                    and row["leak_residual_adds_no_blank_spread"])
             out["cells"][f"{tier}/{cell}"] = row
     return out
 
