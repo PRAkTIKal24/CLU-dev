@@ -265,8 +265,10 @@ def test_byte_law_matches_the_corrected_form_and_its_floor():
 # ---------------------------------------------------------------------------
 # the block and the model
 # ---------------------------------------------------------------------------
-def _model(name, cfgs, key=jax.random.PRNGKey(3), n_layers=2, d_model=16, T=16):
+def _model(name, cfgs, key=None, n_layers=2, d_model=16, T=16):
     scfg, mcfg = cfgs
+    if key is None:
+        key = jax.random.PRNGKey(3)
     led = CluStoreCell(scfg, mcfg, key=jax.random.PRNGKey(0)).cell_ledger()
     h = solve_matched_gru(led["params"], scfg.dim)
     kn = solve_matched_ttt(led["params"], led["state_floats"], scfg.dim)
