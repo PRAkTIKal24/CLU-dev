@@ -708,11 +708,22 @@ def n4_keys(kind: str, phi: FrozenPhi, cfg: CatTestConfig, indicators: np.ndarra
 # N5 — Titans-style surprise-gated fast weights
 # ==========================================================================
 def _mlp_init(d: int, h: int, m: int, key):
+    """⚠ Pinned to float32 **deliberately**, not incidentally.
+
+    Every other array in this module is float32 (the repo's convention), but
+    ``jax.random.normal``/``jnp.zeros`` follow the *global* x64 flag — and some
+    tests in the suite enable it process-wide. The fast-weight pass then carries
+    float64 ``M`` against float32 data, the surprise becomes float64, and
+    ``lax.scan``'s carry types stop matching (caught by the full suite, invisible
+    to this file's tests run alone). Pinning here keeps the arm bit-identical
+    whatever the ambient flag is.
+    """
     k1, k2 = jax.random.split(key)
-    return {"W1": jax.random.normal(k1, (d, h)) / np.sqrt(d),
-            "b1": jnp.zeros((h,)),
-            "W2": jax.random.normal(k2, (h, m)) / np.sqrt(h),
-            "b2": jnp.zeros((m,))}
+    f32 = jnp.float32
+    return {"W1": (jax.random.normal(k1, (d, h)) / np.sqrt(d)).astype(f32),
+            "b1": jnp.zeros((h,), f32),
+            "W2": (jax.random.normal(k2, (h, m)) / np.sqrt(h)).astype(f32),
+            "b2": jnp.zeros((m,), f32)}
 
 
 def _mlp(p, x):
@@ -749,15 +760,17 @@ def _n5_stream_core(M, K0, Y0, batches, lr, momentum, decay, *, gated: bool):
 
     S = jax.tree_util.tree_map(jnp.zeros_like, M)
 
+    dt = jax.eval_shape(surprise, M, batches[0]).dtype  # never assume float32
+
     def body(carry, ib):
         M, S, lbar = carry
         ll, g = jax.value_and_grad(surprise)(M, ib)
         th = lr * jax.nn.sigmoid(ll - lbar) if gated else lr
         S = jax.tree_util.tree_map(lambda s, gg: momentum * s - th * gg, S, g)
         M = jax.tree_util.tree_map(lambda mm, s: (1.0 - decay) * mm + s, M, S)
-        return (M, S, 0.9 * lbar + 0.1 * ll), ll
+        return (M, S, (0.9 * lbar + 0.1 * ll).astype(dt)), ll
 
-    (M, _, _), ls = jax.lax.scan(body, (M, S, jnp.asarray(1.0, jnp.float32)), batches)
+    (M, _, _), ls = jax.lax.scan(body, (M, S, jnp.asarray(1.0, dt)), batches)
     return M, ls
 
 

@@ -630,9 +630,9 @@ def stage_mechanism(cfg: CatTestConfig, grid: NullArmGrid, selected: Dict[str, A
             a = np.asarray(assign)
             distinct = np.array([len(set(r.tolist())) for r in a])
             prec = np.array([np.isin(r, np.asarray(A)).mean()
-                             for r, A in zip(a, subsets)])
+                             for r, A in zip(a, subsets, strict=True)])
             exact = np.array([set(r.tolist()) == set(np.asarray(A).tolist())
-                              for r, A in zip(a, subsets)])
+                              for r, A in zip(a, subsets, strict=True)])
             return {"distinct_mean": float(distinct.mean()),
                     "distinct_ge_F": float((distinct >= F).mean()),
                     "precision": float(prec.mean()),

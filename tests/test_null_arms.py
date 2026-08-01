@@ -247,6 +247,20 @@ def test_n5_declares_init_as_parameters_and_deviation_as_state(small):
     assert led["n_state"] == led["n_params"] > 0
 
 
+def test_n5_fast_weights_are_float32_whatever_the_ambient_x64_flag_is():
+    """⚠ Regression: found by the FULL suite, invisible to this file alone.
+
+    Some tests enable ``jax_enable_x64`` process-wide. ``jax.random.normal`` then
+    returns float64 while this module's data stays float32, the surprise becomes
+    float64, and ``lax.scan``'s carry types stop matching. ``M_0`` is pinned.
+    """
+    from chlu.core.null_arms import _mlp_init
+
+    p = _mlp_init(4, 8, 6, jax.random.PRNGKey(0))
+    for k, v in p.items():
+        assert v.dtype == jnp.float32, f"{k} is {v.dtype}"
+
+
 def test_the_shuffle_phi_launder_destroys_the_query_and_nothing_else(setup):
     """The laundering control must permute WHOLE launch blocks (capacity, fitting
     and training all preserved) — otherwise it is not a matched launder."""
