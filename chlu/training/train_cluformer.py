@@ -351,10 +351,18 @@ def _controller_plan_for_lane(z_lane: np.ndarray, scfg: CluSystemConfig,
                 return int(r.slot)
         return None
 
+    rows: List[dict] = []
     for c in range(n_chunks):
         z = np.asarray(z_lane[c], dtype=float)
         addr, pay = z[:d], z[d: d + m]
-        n_ev0 = sum(1 for v in ctrl.log if v.verb == "evict" and v.applied)
+        # ⚠ Slots BEFORE the offer. Which slots an admission evicted cannot be
+        # recovered from the evicted item's id — the allocator has already
+        # removed its record — so the eviction is detected as a set difference.
+        # (An earlier version sliced `ctrl.log` by a COUNT of past evictions and
+        # looked the victim up by id: it over-counted evictions and then failed
+        # to mark ANY reset, so evicted groups were never re-drawn.)
+        n0 = len(ctrl.log)
+        slots_before = {int(r.slot) for r in ctrl.allocator.records.values()}
         res = ctrl.admit(
             c, addr, float(pay[0]) if m else 0.0, utility=1.0,
             reach_margin=None,
@@ -367,12 +375,17 @@ def _controller_plan_for_lane(z_lane: np.ndarray, scfg: CluSystemConfig,
         else:
             s = slot_of(c)
             slot[c] = 0 if s is None else s
-        for v in ctrl.log[n_ev0:]:
-            if v.verb == "evict" and v.applied:
-                ev = slot_of(int(v.detail.get("item_id", -1)))
-                if ev is not None:
-                    reset[c, ev] = 1.0
-                stats["evicted"] += 1
+        slots_after = {int(r.slot) for r in ctrl.allocator.records.values()}
+        n_ev = sum(1 for v in ctrl.log[n0:] if v.verb == "evict" and v.applied)
+        stats["evicted"] += n_ev
+        for ev in (slots_before - slots_after) | (
+                {int(slot[c])} if (n_ev and admitted[c]) else set()):
+            reset[c, ev] = 1.0
+        row = dict(res.detail.get("row", {}))
+        row.update({"t": c, "item_id": c, "verb": "admit", "applied": bool(res.applied),
+                    "guard": res.guard,
+                    "decision": row.get("decision", res.reason)})
+        rows.append(row)
         if scfg.stage_lifetimes:
             dv = ctrl.decay(1)
             for iid, f in (dv.detail or {}).get("factors", {}).items():
@@ -388,6 +401,8 @@ def _controller_plan_for_lane(z_lane: np.ndarray, scfg: CluSystemConfig,
                 sites[c, s, d: d + m] = float(getattr(r, "payload", 0.0))
     stats["guards"] = dict(ctrl.guard_fire_counts())
     stats["n_live_end"] = int(ctrl.allocator.n_live)
+    stats["rows"] = rows
+    stats["controller"] = ctrl
     return {"slot": slot, "admitted": admitted, "group_scale": group_scale,
             "reset": reset, "sites": sites, "live": live,
             "retry": np.zeros((n_chunks,), np.int32), "_stats": stats}
@@ -430,6 +445,8 @@ def plan_pass(model: StreamModel, tokens: jnp.ndarray, pcfg: PilotConfig,
                 for gk, gv in la["_stats"]["guards"].items():
                     gsum[gk] = gsum.get(gk, 0) + int(gv)
             lstats["guards"] = gsum
+            lstats["rows"] = [r for la in lanes for r in la["_stats"]["rows"]]
+            lstats["controllers"] = [la["_stats"]["controller"] for la in lanes]
             plan = WritePlan(**{
                 k: jnp.asarray(np.stack([la[k] for la in lanes]))
                 for k in ("slot", "admitted", "group_scale", "reset", "sites",
@@ -478,8 +495,17 @@ def make_optimizer(pcfg: PilotConfig):
 
 
 def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
-              *, log_every: int = 25, log: Optional[List] = None):
-    """Train one arm. ⭐ ``batches`` must be the SAME sequence for every arm."""
+              *, log_every: int = 25, log: Optional[List] = None,
+              monitor_registry=None, monitor_tokens=None,
+              monitor_out: Optional[List] = None):
+    """Train one arm. ⭐ ``batches`` must be the SAME sequence for every arm.
+
+    ``monitor_registry`` (+ ``monitor_tokens``) runs the 13 monitors every
+    ``pcfg.monitor_every`` steps **through one persistent registry**, which is
+    what gives monitor #6 (objective divergence) the window of
+    ``(write_loss, acq)`` pairs it needs — on a single observation it is
+    inapplicable, and an inapplicable monitor is not a passing monitor.
+    """
     optimizer = make_optimizer(pcfg)
     opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
     hist, t0 = [], time.time()
@@ -492,6 +518,13 @@ def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
         plan_s += time.time() - tp
         model, opt_state, loss = _train_step(model, opt_state, tk, tg, plans, optimizer)
         hist.append(float(loss))
+        if (monitor_registry is not None and monitor_tokens is not None
+                and i > 0 and i % max(1, pcfg.monitor_every) == 0):
+            mp = monitor_pass(model, pcfg, monitor_tokens,
+                              registry=monitor_registry, write_loss_now=float(loss))
+            mp["at_step"] = i
+            if monitor_out is not None:
+                monitor_out.append(mp)
         if log is not None and (i % log_every == 0 or i == pcfg.steps - 1):
             log.append({"arm": name, "step": i, "nll": float(loss),
                         "bpc": bits_per_character(float(loss)),
@@ -595,12 +628,57 @@ def gradient_probe(model: StreamModel, pcfg: PilotConfig, tokens, targets,
             "grad_embed": _norm([grads.embed]),
             "wall_s": wall,
         }
+    # ⭐ Separate the TWO reasons the settled-point arm can read exactly zero:
+    # (i) the theorem (d q*/d q0 = 0), and (ii) sign-SGD's zero derivative, which
+    # severs d(store state)/d(phi). The plain-SGD write leaves channel (ii) open,
+    # so its settled-point number is the theorem's contribution alone.
+    if model.blocks[0].cell.mcfg.write_sign:
+        import dataclasses as _dc
+
+        alt = _dc.replace(model.blocks[0].cell.mcfg, write_sign=False)
+        m_alt = _swap_mcfg(model, alt)
+        pl_alt, _ = plan_pass(m_alt, tk, pcfg)
+        for mode in ("trajectory", "settled_point"):
+            _, ga = eqx.filter_value_and_grad(loss_fn)(m_alt, tk, tg, pl_alt, mode)
+            out.setdefault("plain_sgd_write", {})[mode] = {
+                "grad_phi": _norm([b.phi for b in ga.blocks]),
+                "grad_store": _norm([getattr(getattr(bb.cell, "clu", None),
+                                             "potential_net", None)
+                                     for bb in ga.blocks]),
+            }
+        pa = out["plain_sgd_write"]["trajectory"]["grad_phi"]
+        pb = out["plain_sgd_write"]["settled_point"]["grad_phi"]
+        out["plain_sgd_write"]["ratio_traj_over_point"] = (pa / pb) if pb > 0 else float("inf")
     a = out["trajectory"]["grad_phi"]
     b = out["settled_point"]["grad_phi"]
     out["ratio_traj_over_point"] = (a / b) if b > 0 else float("inf")
     out["wall_ratio_traj_over_point"] = (out["trajectory"]["wall_s"]
                                          / max(out["settled_point"]["wall_s"], 1e-9))
     return out
+
+
+def _swap_mcfg(model: StreamModel, mcfg) -> StreamModel:
+    """Rebuild every store cell around a new (static) ``StreamMemoryConfig``.
+
+    Parameters are carried over unchanged, so the two arms are the SAME model —
+    only the static config differs. ``eqx.tree_at`` cannot do this (a static
+    field is part of the treedef, not a leaf), hence the manual reconstruction.
+    """
+    def swap(cell):
+        if not hasattr(cell, "mcfg"):
+            return cell
+        return eqx.tree_at(lambda c: [c.clu, c.psi, c.log_gamma_addr, c.log_gamma_read],
+                           _blank_like(cell, mcfg),
+                           replace=[cell.clu, cell.psi, cell.log_gamma_addr,
+                                    cell.log_gamma_read])
+    return eqx.tree_at(lambda m: [b.cell for b in m.blocks], model,
+                       replace=[swap(b.cell) for b in model.blocks])
+
+
+def _blank_like(cell, mcfg):
+    from chlu.core.blocks import CluStoreCell
+
+    return CluStoreCell(cell.cfg, mcfg, key=jax.random.PRNGKey(0))
 
 
 def _norm(mods) -> float:
@@ -675,7 +753,68 @@ def anytime_curve(model: StreamModel, pcfg: PilotConfig, batches,
 # ==========================================================================
 # monitors — all 13, as reported artifacts
 # ==========================================================================
-def monitor_pass(model: StreamModel, pcfg: PilotConfig, tokens, *, layer: int = 0
+def store_self_probe(cell, state, sites, live, *, payload_tol: float = 0.1
+                     ) -> Dict[str, Any]:
+    """⭐ The store's **label-free self-probe**: re-read every live item's own site.
+
+    This is what turns "the monitors ran" into "the monitors were exercised": #5
+    (addressing), #6 (objective divergence), #9 (lifetimes) and #4 (blank) are
+    all *inapplicable* without it, and an inapplicable monitor is not a passing
+    monitor.
+
+    For each live item the read is launched at its recorded address on the
+    payload-zero manifold and the recovered payload block is decoded to the
+    NEAREST STORED payload (N110's honest metric — never an absolute threshold,
+    which flatters a store whose payloads happen to be far apart).
+    """
+    idx = [i for i in range(sites.shape[0]) if live[i] > 0.5]
+    d, m = int(cell.cfg.addr_dim), int(cell.cfg.payload_dim)
+    if len(idx) == 0:
+        return {"acq": float("nan"), "n_probed": 0}
+    pays = np.stack([sites[i, d: d + m] for i in idx])
+    got, ret = [], []
+    for i in idx:
+        q = jnp.asarray(sites[i], dtype=jnp.float32)
+        r = np.asarray(cell.read(state, q))
+        got.append(r[d: d + m])
+        D, _s = cell_group_depth(cell, state, i, sites[i, :d])
+        ret.append(D)
+    got = np.stack(got)
+    dist = np.linalg.norm(got[:, None, :] - pays[None, :, :], axis=-1)
+    hit = (np.argmin(dist, axis=1) == np.arange(len(idx)))
+    return {
+        "acq": float(hit.mean()),
+        "strict": float((np.linalg.norm(got - pays, axis=-1) <= payload_tol).mean()),
+        "chance": 1.0 / max(len(idx), 1),
+        "n_probed": len(idx),
+        "retention": [float(x) for x in ret],
+        "payload_abs": [float(abs(p[0])) for p in pays],
+        "decoded": got.tolist(),
+    }
+
+
+def cell_group_depth(cell, state, slot: int, center) -> Tuple[float, float]:
+    """``(D_i, s_i)`` of an item's own wells, read off the LIVE atom state.
+
+    Mirrors :meth:`LearnedVStore.group_stats` but against the per-sequence state
+    rather than the parameter init (the store is written at inference here, so
+    the parameters are not where the item lives).
+    """
+    mrows = np.asarray(cell.group_matrix[int(slot)], dtype=bool)
+    A = np.asarray(state.amp, dtype=float)[mrows] ** 2
+    sw = np.exp(np.asarray(state.log_width, dtype=float)[mrows])
+    c = np.asarray(state.centers, dtype=float)[mrows]
+    z = np.zeros((int(cell.cfg.dim),), dtype=float)
+    z[: int(cell.cfg.addr_dim)] = np.asarray(center, dtype=float)[: int(cell.cfg.addr_dim)]
+    d2 = np.sum((c - z[None, :]) ** 2, axis=-1)
+    w = A * np.exp(-d2 / (2.0 * sw ** 2 + 1e-12))
+    D = float(np.sum(w))
+    s_eff = float(np.sum(w * sw) / max(np.sum(w), 1e-12)) if D > 0 else float(np.mean(sw))
+    return D, s_eff
+
+
+def monitor_pass(model: StreamModel, pcfg: PilotConfig, tokens, *, layer: int = 0,
+                 registry=None, write_loss_now: Optional[float] = None
                  ) -> Dict[str, Any]:
     """Run the **13-monitor registry** against the running stream.
 
@@ -684,14 +823,19 @@ def monitor_pass(model: StreamModel, pcfg: PilotConfig, tokens, *, layer: int = 
     collapse", not "wins". Every monitor's trip-state is a reported artifact, so
     the claim is checkable or it is not made.
 
-    ⚠ Scoped honestly: the monitors were designed against
-    :class:`~chlu.core.clu_system.CluSystem`, whose ``observe`` supplies a rich
-    context (self-probe, certificates, codebook geometry). Here the store is a
-    *layer of a language model*, so the context is assembled from the layer's own
-    plan and read diagnostics. Monitors whose inputs are genuinely absent report
-    ``inapplicable`` — never ``pass``.
+    ⚠ **``inapplicable`` is reported as ``inapplicable``, never as a pass.** The
+    monitors were designed against :class:`~chlu.core.clu_system.CluSystem`,
+    whose ``observe`` supplies self-probe, certificate and codebook context. Here
+    the store is a *layer of a language model*, so that context is reconstructed
+    from the layer's own plan, its live atom state and a real self-probe pass;
+    what genuinely cannot be reconstructed is declared, not silently passed.
+
+    Pass ``registry`` to accumulate across calls — monitor #6 (objective
+    divergence) needs a window of ``(write_loss, acq)`` pairs and is inapplicable
+    on a single observation.
     """
     from chlu.core.blocks import CluStoreCell
+    from chlu.core.monitors import saddle_reach_threshold
 
     blk = model.blocks[layer]
     cell = blk.cell
@@ -699,74 +843,172 @@ def monitor_pass(model: StreamModel, pcfg: PilotConfig, tokens, *, layer: int = 
         return {"applicable": False,
                 "why": f"layer {layer} cell is {type(cell).__name__}, not the store"}
     scfg = pcfg.store_cfg()
+    d = int(scfg.addr_dim)
     tk = jnp.asarray(tokens, dtype=jnp.int32)
     plans, pdiag = plan_pass(model, tk, pcfg)
     plan = plans[layer]
-    # replay the stream up to this layer to get its true latents + store state
     h = jax.vmap(lambda t: jax.vmap(model.embed)(t))(tk)
     h = h + model.pos[: h.shape[1]][None]
     for i in range(layer):
         h = jax.vmap(model.blocks[i])(h, plans[i])
-    z = jax.vmap(blk.chunk_latents)(h)                # (B, n_chunks, dim)
+    z = jax.vmap(blk.chunk_latents)(h)                       # (B, n_chunks, dim)
 
-    def run_lane(zl, pl):
-        st = cell.init_state()
-        diags, states = [], []
-        n = zl.shape[0]
-        for c in range(n):
-            pc = jax.tree_util.tree_map(lambda a, i=c: a[i], pl)
-            diags.append(cell.read_diag(st, zl[c]))
-            st = cell.write(st, zl[c], pc)
-            states.append(st)
-        return diags, st
-    diags, st_end = run_lane(z[0], jax.tree_util.tree_map(lambda a: a[0], plan))
-    res = np.array([float(d["residual"]) for d in diags])
-    rho = np.array([float(d["rho_conv"]) for d in diags])
-    q_star = np.stack([np.asarray(d["q_star"]) for d in diags])
-    live = np.asarray(plan.live[0])
-    sites = np.asarray(plan.sites[0])
-    last_live = live[-1] > 0.5
-    centers = sites[-1][last_live][:, : scfg.addr_dim]
+    # --- replay lane 0 concretely, collecting read diagnostics --------------
+    pl0 = jax.tree_util.tree_map(lambda a: a[0], plan)
+    st = cell.init_state()
+    diags = []
+    for c in range(int(z.shape[1])):
+        pc = jax.tree_util.tree_map(lambda a, i=c: a[i], pl0)
+        diags.append(cell.read_diag(st, z[0, c]))
+        st = cell.write(st, z[0, c], pc)
+    res = np.array([float(x["residual"]) for x in diags])
+    g0 = np.array([float(x["grad0"]) for x in diags])
+    rho = np.array([float(x["rho_conv"]) for x in diags])
+    q_star = np.stack([np.asarray(x["q_star"]) for x in diags])
+    q0 = np.asarray(z[0])[:, : int(scfg.dim)]
+
+    live = np.asarray(plan.live[0])[-1]
+    sites = np.asarray(plan.sites[0])[-1]
+    live_idx = [i for i in range(int(scfg.capacity)) if live[i] > 0.5]
+    centers = sites[live_idx][:, :d] if live_idx else np.zeros((0, d))
     sep = _min_sep(centers)
-    amps = np.asarray(st_end.amp)
-    gm = np.asarray(cell.group_matrix)
-    per_item_depth = np.array([float((amps ** 2)[gm[s]].sum())
-                               for s in range(int(scfg.capacity))])
-    ctx_extras = {
+
+    # --- #1/#2: read diagnostics -------------------------------------------
+    reads = {
+        "grad_norm_q0": g0, "grad_norm_qstar": res,
+        "displacement": np.linalg.norm(q_star[:, :d] - q0[:, :d], axis=-1),
+        "rho_conv": rho, "residual": res,
+        "corr_q0_qstar": _corr(q0[:, :d].ravel(), q_star[:, :d].ravel()),
+    }
+    if len(live_idx) >= 2:
+        # settle basin vs the arg-min over the store's OWN keys — monitor #2's
+        # `D <= U` legs, computed on the same queries the block actually ran.
+        reads["assign_settle"] = _assign(q_star[:, :d], centers)
+        reads["assign_argmin"] = _assign(q0[:, :d], centers)
+        reads["covered"] = np.ones((q0.shape[0],), dtype=bool)
+
+    # --- #5/#6/#9: the self-probe ------------------------------------------
+    probe = store_self_probe(cell, st, sites, live, payload_tol=float(scfg.payload_tol))
+    if write_loss_now is not None:
+        probe["write_loss"] = float(write_loss_now)
+
+    # --- #4: the BLANK control, on the same probe ---------------------------
+    blank_probe = store_self_probe(cell, cell.init_state(), sites, live,
+                                   payload_tol=float(scfg.payload_tol))
+    n_p = max(int(blank_probe.get("n_probed", 0)), 1)
+    chance = float(blank_probe.get("chance", float("nan")))
+    blank_ctx = {"score": float(blank_probe.get("acq", float("nan"))),
+                 "chance": chance,
+                 "se": float(np.sqrt(max(chance, 1e-9) * (1 - chance) / n_p)),
+                 "metric": "self-probe decode (nearest stored payload)",
+                 "representation": "trajectory psi"}
+
+    # --- #8: certificates ----------------------------------------------------
+    certs = None
+    if len(live_idx) >= 2:
+        lam = _lambda_min_at(cell, st, q_star[:, :d])
+        pays = np.array([sites[i, d] for i in live_idx])
+        gap = float(np.min(np.abs(pays[:, None] - pays[None, :])
+                           + np.eye(len(pays)) * 1e9)) if len(pays) > 1 else float("nan")
+        certs = {
+            "injective": bool(sep > 1e-6),
+            "sep_over_sigma_q": float(sep / max(float(scfg.query_sigma), 1e-12)),
+            "lambda_min": lam,
+            "payload_gap": gap,
+            "delta_read_basin_conditioned": float(np.median(
+                np.linalg.norm(q_star[:, :d] - q0[:, :d], axis=-1))),
+        }
+
+    # --- #11: reach margins --------------------------------------------------
+    margins, a_us = [], []
+    for i in live_idx:
+        D, s_i = cell_group_depth(cell, st, i, sites[i, :d])
+        if D <= 0 or not np.isfinite(s_i) or s_i <= 0:
+            continue
+        a_u = saddle_reach_threshold(D, s_i, float(scfg.confine),
+                                     float(np.linalg.norm(sites[i, :d])))
+        a_us.append(float(a_u))
+        margins.append(float(a_u - abs(sites[i, d])))
+
+    # --- #12/#3/M14 ----------------------------------------------------------
+    lay = pdiag["layers"][layer]
+    per_item_depth = np.array([cell_group_depth(cell, st, i, sites[i, :d])[0]
+                               for i in live_idx]) if live_idx else np.array([np.nan])
+    extras = {
         "sep": sep,
         "kinetic_mode": scfg.kinetic_mode,
         "write_steps": int(blk.mcfg.write_inner_steps),
         "wall_clock_s": 0.0,
-        "utilisation": float(last_live.mean()),
+        "utilisation": float(len(live_idx) / max(int(scfg.capacity), 1)),
         "fairness": float(_fairness(np.asarray(plan.admitted[0]),
                                     np.asarray(plan.slot[0]), int(scfg.capacity))),
         "c3_ratio": float("nan"),
         "c3_pairs": [],
-        "oldest_retention_drop": float(per_item_depth.min() / max(per_item_depth.max(), 1e-12)),
-        "min_sep_minus_2s": sep - 2.0 * float(np.exp(np.asarray(st_end.log_width)).max())
+        "oldest_retention_drop": float(
+            1.0 - per_item_depth.min() / max(per_item_depth.max(), 1e-12))
+        if np.isfinite(per_item_depth).all() and per_item_depth.size else float("nan"),
+        "min_sep_minus_2s": (sep - 2.0 * float(np.exp(np.asarray(st.log_width)).max()))
         if np.isfinite(sep) else float("nan"),
-        "knob_reads": None, "knobs_declared": None, "knob_tier_a_implemented": False,
-        "reads": {"rho_conv": rho, "residual": res, "q_star": q_star},
+        "reach_margins": margins, "a_U": a_us,
+        "canary_guard_counts": lay.get("guards"),
+        "knob_reads": None, "knobs_declared": None,
+        "knob_tier_a_implemented": False,
     }
-    registry = default_registry(loud=False)
+    if certs is not None:
+        extras["certificates"] = certs
+
+    reg = registry if registry is not None else default_registry(loud=False)
     ctx = MonitorContext(stage="stream", t=int(z.shape[1]), system=None,
-                         reads=ctx_extras["reads"], self_probe=None, blank=None,
-                         write_log=[], controller=None, extras=ctx_extras)
-    readings = registry.observe(ctx)
+                         reads=reads, self_probe=probe, blank=blank_ctx,
+                         write_log=lay.get("rows", []),
+                         controller=(lay.get("controllers") or [None])[0],
+                         extras=extras)
+    readings = reg.observe(ctx)
     return {
         "applicable": True,
         "readings": [r.as_dict() for r in readings],
+        "n_monitors": len(readings),
+        "n_applicable": int(sum(1 for r in readings if getattr(r, "applicable", True))),
         "n_tripped": int(sum(1 for r in readings if getattr(r, "tripped", False))),
         "tripped": [r.name for r in readings if getattr(r, "tripped", False)],
-        "summary": registry.summary(),
+        "inapplicable": [r.name for r in readings
+                         if not getattr(r, "applicable", True)],
+        "self_probe": {k: v for k, v in probe.items() if k != "decoded"},
+        "blank_probe_acq": blank_ctx["score"],
+        "certificates": certs,
         "read_residual_median": float(np.median(res)),
         "read_rho_conv_median": float(np.median(rho)),
         "sep": sep,
-        "plan": pdiag,
+        "plan": {k: v for k, v in lay.items() if k not in ("controllers", "rows")},
         "maturity_write_steps": int(blk.mcfg.write_inner_steps),
         "maturity_floor": 40,
         "maturity_trips_by_arithmetic": bool(blk.mcfg.write_inner_steps < 40),
     }
+
+
+def _assign(points: np.ndarray, centers: np.ndarray) -> np.ndarray:
+    d = np.linalg.norm(points[:, None, :] - centers[None, :, :], axis=-1)
+    return np.argmin(d, axis=1)
+
+
+def _corr(a: np.ndarray, b: np.ndarray) -> float:
+    if a.size < 2 or np.std(a) == 0 or np.std(b) == 0:
+        return float("nan")
+    return float(np.corrcoef(a, b)[0, 1])
+
+
+def _lambda_min_at(cell, state, points: np.ndarray) -> float:
+    """Smallest Hessian eigenvalue of ``V_theta`` over the settled points."""
+    V = cell._model(state).potential_net
+    hess = jax.hessian(lambda q: V(q))
+    vals = []
+    d = int(cell.cfg.dim)
+    for p in np.asarray(points)[:8]:
+        q = np.zeros((d,), dtype=np.float32)
+        q[: p.shape[0]] = p
+        H = np.asarray(hess(jnp.asarray(q)))
+        vals.append(float(np.min(np.linalg.eigvalsh(0.5 * (H + H.T)))))
+    return float(np.min(vals)) if vals else float("nan")
 
 
 def _min_sep(centers: np.ndarray) -> float:

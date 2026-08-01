@@ -181,9 +181,17 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
     dv = _eval_batches(te, pcfg, pcfg.dyneval_batches)
     rec["train_log"] = []
     rec["arms"] = {}
+    from chlu.core.monitors import default_registry
     for a in arms:
         t = time.time()
-        m, hist = train_arm(a, models[a], pcfg, iter(batches), log=rec["train_log"])
+        # ⭐ ONE persistent registry per arm, so monitor #6's (loss, acq) window
+        # accumulates across the run instead of restarting at every observation.
+        reg = default_registry(loud=False) if a == "clu_store" else None
+        during: List[Dict[str, Any]] = []
+        m, hist = train_arm(a, models[a], pcfg, iter(batches), log=rec["train_log"],
+                            monitor_registry=reg,
+                            monitor_tokens=(x0 if reg is not None else None),
+                            monitor_out=during)
         row = {"train": hist}
         row["static"] = evaluate(m, pcfg, iter(ev))
         row["dyneval"] = dynamic_eval(m, pcfg, iter(dv))
@@ -196,7 +204,11 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
                     m, pcfg, ev, [(max(2, base[0] // f), max(2, base[1] // f))
                                   for f in (8, 4, 2, 1)]
                     + [(base[0] * 2, base[1] * 2)])
-            row["monitors_final"] = monitor_pass(m, pcfg, x0)
+            row["monitors_during"] = [
+                {k: v for k, v in d.items() if k != "readings"} for d in during]
+            row["monitors_final"] = monitor_pass(
+                m, pcfg, x0, registry=reg,
+                write_loss_now=float(hist["loss_history"][-1]))
             row["gradient_probe_final"] = gradient_probe(m, pcfg, x0, y0)
             row["selectors_final"] = _selectors(m)
         row["wall_s"] = time.time() - t
@@ -294,6 +306,90 @@ def aggregate(records: List[Dict[str, Any]]) -> Dict[str, Any]:
     return out
 
 
+# ==========================================================================
+# plots (artifacts live under .claude/, never in the repo)
+# ==========================================================================
+def plot_pilot(records: List[Dict[str, Any]], out_dir: str) -> Optional[str]:
+    """Four panels: training curves - the swap table - the anytime curve - monitors.
+
+    Self-contained rather than routed through ``chlu/utils/plotting.py``: that
+    module is shared across every campaign and this task owns none of it, so a
+    new helper there is a merge-conflict surface for no benefit.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    recs = [r for r in records if r.get("arms")]
+    if not recs:
+        return None
+    fig, ax = plt.subplots(2, 2, figsize=(13, 9))
+    colors = {"clu_store": "tab:red", "gru_matched": "tab:blue",
+              "ttt_matched": "tab:green", "none": "0.5", "echo": "tab:orange"}
+
+    # (a) training curves, seed 0
+    r0 = recs[0]
+    for arm in r0["arms"]:
+        h = r0["arms"][arm]["train"]["loss_history"]
+        b = [v / np.log(2.0) for v in h]
+        k = max(1, len(b) // 60)
+        sm = [float(np.mean(b[max(0, i - k):i + 1])) for i in range(len(b))]
+        ax[0, 0].plot(sm, label=arm, color=colors.get(arm))
+    ax[0, 0].set(xlabel="optimisation step", ylabel="train bpc",
+                 title=f"(a) training, seed {r0['seed']} ({r0['scale']} scale)")
+    ax[0, 0].legend(fontsize=8)
+
+    # (b) the swap table: static vs dyn-eval, seed-mean +- se
+    arms = list(r0["arms"])
+    xs = np.arange(len(arms))
+    for j, col in enumerate(("static", "dyneval")):
+        mu = [np.mean([r["arms"][a][col]["bpc"] for r in recs]) for a in arms]
+        se = [(np.std([r["arms"][a][col]["bpc"] for r in recs], ddof=1)
+               / np.sqrt(len(recs))) if len(recs) > 1 else 0.0 for a in arms]
+        ax[0, 1].bar(xs + 0.36 * j - 0.18, mu, 0.34, yerr=se, capsize=3,
+                     label=("static" if col == "static" else "dynamic eval"))
+    ax[0, 1].set_xticks(xs)
+    ax[0, 1].set_xticklabels(arms, rotation=20, fontsize=8)
+    ax[0, 1].set(ylabel="held-out bpc",
+                 title=f"(b) system-level swap, {len(recs)} seeds "
+                       "(dyn-eval IN the table)")
+    ax[0, 1].legend(fontsize=8)
+
+    # (c) the anytime curve — SHAPE only
+    any_c = [r["arms"]["clu_store"].get("anytime_curve") for r in recs
+             if "clu_store" in r["arms"]]
+    if any(any_c):
+        for r, c in zip(recs, any_c, strict=False):
+            if not c:
+                continue
+            ax[1, 0].plot([p["verlet_per_read"] for p in c],
+                          [p["bpc"] for p in c], "o-", label=f"seed {r['seed']}")
+        ax[1, 0].set(xscale="log", xlabel="Verlet steps per read",
+                     ylabel="held-out bpc",
+                     title="(c) anytime shape (SHAPE claim only, §A3)")
+        ax[1, 0].legend(fontsize=8)
+    else:
+        ax[1, 0].text(0.5, 0.5, "D5 NOT RUN", ha="center", transform=ax[1, 0].transAxes)
+        ax[1, 0].set_axis_off()
+
+    # (d) monitors
+    m = r0["arms"].get("clu_store", {}).get("monitors_final") or r0["monitors_init"]
+    names = [x["name"] for x in m["readings"]]
+    trip = [1.0 if x.get("tripped") else 0.0 for x in m["readings"]]
+    ax[1, 1].barh(names, trip, color=["tab:red" if t else "tab:green" for t in trip])
+    ax[1, 1].set(xlim=(0, 1.2), xticks=[0, 1], xticklabels=["clear", "TRIPPED"],
+                 title=f"(d) 13 monitors, seed {r0['seed']} "
+                       f"({m['n_tripped']} tripped)")
+    ax[1, 1].tick_params(labelsize=7)
+    fig.suptitle("Tier-iii pilot: the FULL C2W1 CLU store as a streaming block's "
+                 "memory (enwik8)  —  acceptance = DOES NOT COLLAPSE, not WINS")
+    fig.tight_layout()
+    p = Path(out_dir) / f"pilot_{r0['scale']}_panels.png"
+    fig.savefig(p, dpi=140)
+    plt.close(fig)
+    return str(p)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--scale", choices=("toy", "pilot"), default="toy")
@@ -305,6 +401,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--steps", type=int, default=None)
     ap.add_argument("--arms", nargs="*", default=None)
     ap.add_argument("--quick", action="store_true")
+    ap.add_argument("--plot-only", action="store_true",
+                    help="re-aggregate + re-plot from artifacts already on disk")
     ap.add_argument("--d5", action="store_true",
                     help="also run the anytime shape curve (secondary; §A3 shape only)")
     a = ap.parse_args(argv)
@@ -317,11 +415,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     if a.quick:
         ov.update(steps=6, warmup=2, eval_batches=2, dyneval_batches=2,
                   data_bytes=1_000_000)
+    if a.plot_only:
+        recs = [json.loads(p.read_text())
+                for p in sorted(Path(a.out).glob(f"pilot_{a.scale}_seed*_S*.json"))]
+        agg = aggregate(recs)
+        save_json(Path(a.out) / f"pilot_{a.scale}_aggregate.json", agg)
+        print("plot:", plot_pilot(recs, a.out), flush=True)
+        print(json.dumps(agg, indent=2, default=float), flush=True)
+        return 0
     seeds = a.seeds if a.seeds else [a.seed]
     recs = [run_pilot(a.scale, s, a.stage, a.out, ov, a.d5) for s in seeds]
     if len(recs) > 1:
         agg = aggregate(recs)
         save_json(Path(a.out) / f"pilot_{a.scale}_aggregate.json", agg)
+        print("plot:", plot_pilot(recs, a.out), flush=True)
         print(json.dumps(agg, indent=2, default=float), flush=True)
     return 0
 

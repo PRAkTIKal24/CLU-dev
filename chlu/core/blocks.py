@@ -487,6 +487,13 @@ class StreamMemoryConfig:
     write_lr: float = 0.05
     #: Monte-Carlo perturbations in the masked write objective.
     write_n_perturb: int = 8
+    #: ⭐ ``True`` = sign-SGD inner write (the default and the shipped
+    #: configuration; see ``write_lr``). ``False`` = plain SGD, which is kept
+    #: **only** as a diagnostic: ``jnp.sign`` has zero derivative, so sign-SGD
+    #: severs ``d(store state)/d(phi)`` and the trajectory read becomes the
+    #: *only* channel to ``phi`` by construction as well as by theorem. Running
+    #: the gradient probe with ``write_sign=False`` separates the two causes.
+    write_sign: bool = True
     #: psi hidden width. ⭐ Chosen so a **two-sided-matched** TTT-class swap
     #: exists (see :func:`solve_matched_ttt`); declared in PREREG §0.
     psi_hidden: int = 128
@@ -1025,7 +1032,8 @@ class CluStoreCell(eqx.Module):
             g = eqx.filter_grad(loss_of)(V)
             g = mask_apply(g)
             V = eqx.apply_updates(V, jax.tree_util.tree_map(
-                lambda x: -lr * jnp.sign(x) if eqx.is_inexact_array(x) else None, g))
+                lambda x: (-lr * (jnp.sign(x) if self.mcfg.write_sign else x))
+                if eqx.is_inexact_array(x) else None, g))
         new = V.learned
 
         # 3. admission: a refused offer leaves the landscape bit-identical.
