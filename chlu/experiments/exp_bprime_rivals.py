@@ -69,6 +69,7 @@ from chlu.eval.rivals import (
     table_ledger,
 )
 from chlu.eval.rivals.deltanet import metric_native_verdict as delta_verdict
+from chlu.eval.rivals.mamba2 import metric_native_verdict as mamba2_verdict
 from chlu.eval.rivals.fit import (
     DEFAULT_BUDGET_FLOATS,
     LR_GRID,
@@ -398,7 +399,9 @@ def run_rivals_cell(family: str, arm: str = "base", seed: int = 0, *,
                                param_floats=led.param_floats,
                                param_breakdown=led.param_breakdown)
             verdict = (ttt_verdict("linear" if name == "ttt_linear" else "mlp")
-                       if name.startswith("ttt") else delta_verdict(name))
+                       if name.startswith("ttt") else
+                       mamba2_verdict() if name == "mamba2" else
+                       delta_verdict(name))
             return {
                 "rival": name, "d_head": int(model.d_head),
                 "arms": sc,
@@ -729,8 +732,58 @@ def before_after(tables: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     """
     prim = tables.get("f3", {}).get("aggregate", {}).get("rivals", {})
     ctrl = tables.get("f3_lite_control", {}).get("aggregate", {}).get("rivals", {})
+    val = tables.get("f3_val", {}).get("aggregate", {}).get("rivals", {})
     rows: Dict[str, Any] = {}
     fired: List[str] = []
+    # ⭐ Arms with NO C2W4 incumbent (C2W5's `mamba2`) cannot have a before/after
+    # verdict — there is no "before". They get the same three columns so the
+    # tuning effect and the init-redraw effect are still separable, and they are
+    # explicitly labelled NEW so a reader never mistakes a missing verdict for
+    # UNCHANGED. ⛔ They are excluded from the T4 R5-count threshold, which is
+    # defined against C2W4's own five-arm count.
+    for name in sorted(set(prim) - set(C2W4_INCUMBENT)):
+        new, c, v = prim[name], ctrl.get(name, {}), val.get(name, {})
+        rows[name] = {
+            "verdict": "NEW ARM — no C2W4 incumbent, so no before/after verdict",
+            "thresholds_fired": [],
+            "d_head": {"C2W4": None, "f3": new["d_head"]},
+            "rescued": {"C2W4": None,
+                        "f3": bool(new["RESCUED_above_own_blank_2se"]),
+                        "f3_lite_control": (bool(c["RESCUED_above_own_blank_2se"])
+                                            if c else None),
+                        "f3_val": (bool(v["RESCUED_above_own_blank_2se"])
+                                   if v else None)},
+            "full": {"f3": new["full"], "f3_se": new["full_se"],
+                     "f3_lite_control": (c.get("full") if c else None),
+                     "f3_val": (v.get("full") if v else None)},
+            "zero_byte_margin_R5": {"f3": new["zero_byte_margin"],
+                                    "f3_se": new["zero_byte_margin_se"],
+                                    "f3_lite_control": (c.get("zero_byte_margin")
+                                                        if c else None),
+                                    "f3_val": (v.get("zero_byte_margin")
+                                               if v else None)},
+            "raw_table_margin": {"f3": new["raw_table_margin"],
+                                 "f3_se": new["raw_table_margin_se"],
+                                 "f3_lite_control": (c.get("raw_table_margin")
+                                                     if c else None),
+                                 "f3_val": (v.get("raw_table_margin")
+                                            if v else None)},
+            "p5_vs_raw_gap": {"f3": new["p5_vs_raw_gap"],
+                              "f3_se": new["p5_vs_raw_gap_se"]},
+            "lift_over_own_blank": {"f3": new["lift_over_own_blank"],
+                                    "f3_se": new["lift_se"]},
+            "tuning_effect_f3_minus_control": (
+                {"full": float(new["full"] - c["full"]),
+                 "raw_table_margin": float(new["raw_table_margin"]
+                                           - c["raw_table_margin"])} if c else None),
+            "held_out_selection_effect_val_minus_f3": (
+                {"full": float(v["full"] - new["full"]),
+                 "raw_table_margin": float(v["raw_table_margin"]
+                                           - new["raw_table_margin"]),
+                 "rescue_verdict_agrees": bool(
+                     v["RESCUED_above_own_blank_2se"]
+                     == new["RESCUED_above_own_blank_2se"])} if v else None),
+        }
     for name, inc in C2W4_INCUMBENT.items():
         new = prim.get(name)
         if not new:
@@ -789,10 +842,11 @@ def before_after(tables: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
                                            - inc["raw_table_margin"])} if c else None),
         }
     n_le0 = sum(1 for n, v in prim.items()
-                if np.isfinite(v["zero_byte_margin"]) and v["zero_byte_margin"] <= 0)
+                if n in C2W4_INCUMBENT
+                and np.isfinite(v["zero_byte_margin"]) and v["zero_byte_margin"] <= 0)
     resc = tuple(sorted(n for n, v in prim.items()
                         if v["RESCUED_above_own_blank_2se"]))
-    t4 = bool(prim) and n_le0 != C2W4_R5_COUNT
+    t4 = bool(set(prim) & set(C2W4_INCUMBENT)) and n_le0 != C2W4_R5_COUNT
     if t4:
         fired.append(f"ALL:T4_R5_count_changed ({C2W4_R5_COUNT} -> {n_le0})")
     return {
@@ -847,10 +901,16 @@ def prereg_scorecard(table: Dict[str, Any]) -> Dict[str, Any]:
                    "⛔ NOT-RUN is NOT refuted.")},
         {"id": "P5", "registered": ("the launder transfers to all five rival state "
                                     "types; predicted failures 0 of 5"),
-         "measured": f"{len(agg)} of 5 state types carry a byte-matched table",
-         "verdict": ("SUPPORTED" if len(agg) == 5 else "PARTIAL"),
+         "measured": (f"{len(agg)} state types carry a byte-matched table "
+                      f"({', '.join(sorted(agg))}); 0 failures"),
+         "verdict": ("SUPPORTED" if len(agg) >= 5 else
+                     f"PARTIAL — only {len(agg)} of the 5 registered arms in "
+                     "this run (a subset run is NOT a failure of P5)"),
          "scope": ("state types run: d_head^2 (TTT-Linear), 8*d_head^2 (TTT-MLP), "
-                   "n_head*d_k*d_v x3 (DeltaNet, GDN, GDN-2)")},
+                   "n_head*d_k*d_v x3 (DeltaNet, GDN, GDN-2)"
+                   + (", n_head*head_dim*d_state (Mamba-2/SSD — the C2W5 "
+                      "addition, byte-identical to the delta arms' state)"
+                      if "mamba2" in agg else ""))},
         {"id": "R4 (mine): dividend vs own ARG-MIN table = +0.27 [+0.05,+0.45]",
          "registered": "+0.27", "measured": _fmt_map(div),
          "verdict": _band_verdict(np.mean([v for v in div.values()
@@ -884,9 +944,21 @@ def prereg_scorecard(table: Dict[str, Any]) -> Dict[str, Any]:
                 "recency / manifold families": ("⛔ substitute-saturated at +0 B "
                                                 "(S = 1.0000) ⇒ struck as "
                                                 "protocol-invalid by FB4."),
-                "Mamba-2 / GRU / sliding-window attention": (
+                **({} if "mamba2" in agg else {
+                    "Mamba-2": ("not in §A14.2's ruled family set at C2W4; "
+                                "FUNDED and RUN at C2W5 (Head ruling 5) — this "
+                                "entry appears only when the arm was not part of "
+                                "the run that produced this artifact.")}),
+                "GRU / sliding-window attention": (
                     "not in §A14.2's ruled family set."),
-            }}
+            },
+            "state_types_measured": sorted(agg),
+            "note": ("⭐ `mamba2` (Dao & Gu, ICML 2024) closes the referee's "
+                     "missing-experiment 5: the survey sentence names SSMs and "
+                     "none was measured. The '5 state types' in P5 above is the "
+                     "C2W4 registration; with the SSD arm the audit measures "
+                     f"{len(agg)}." if "mamba2" in agg else
+                     "the C2W4 registered state-type set")}
 
 
 def _fmt_map(d: Dict[str, float]) -> str:
@@ -936,15 +1008,18 @@ def falsifier_adjudication(table: Dict[str, Any]) -> Dict[str, Any]:
                              "& Boyd-Graber ACL 2019: conceded.")},
         "FB2": {"verdict": "DOES NOT FIRE",
                 "measured_families": sorted(agg.keys()),
-                "reasoned_from_equations_only": ["Mamba-2", "Sparse Delta Memory",
-                                                 "Titans"],
+                "reasoned_from_equations_only": (
+                    ["Sparse Delta Memory", "Titans"] if "mamba2" in agg else
+                    ["Mamba-2", "Sparse Delta Memory", "Titans"]),
                 "evidence": ("a byte-matched table is definable WITHOUT an "
                              "arbitrary modelling choice for every state type "
                              "measured: each has an explicit float state and an "
                              "explicit (theta_K x, theta_V x) stream, so "
                              "n_rows = floor(state_floats/(d_k+d_v)) is forced, "
-                             "not chosen. ⚠ 2 of the 5 §2 families were NOT "
-                             "adjudicated by measurement and are stated as such.")},
+                             "not chosen. ⚠ The §2 families NOT adjudicated by "
+                             "measurement are stated as such above — at C2W5 "
+                             "that set is 2 of 5 (Mamba-2 was measured, Head "
+                             "ruling 5), at C2W4 it was 3 of 5.")},
         "FB3": {"verdict": ("FIRES (strong form)" if fb3_strong else
                             "DOES NOT FIRE in the strong form"),
                 "rivals_with_positive_dividend_vs_argmin_table": sorted(pos),
@@ -979,6 +1054,7 @@ def run_experiment_bprime_rivals(config=None, save_dir: str = "results",
                                  seeds: Optional[Sequence[int]] = None,
                                  quick: bool = False,
                                  frontier: bool = True,
+                                 frontier_rivals: Optional[Sequence[str]] = None,
                                  overrides: Optional[dict] = None) -> dict:
     """Run the audit plan and write the artifact."""
     os.makedirs(save_dir, exist_ok=True)
@@ -1015,6 +1091,22 @@ def run_experiment_bprime_rivals(config=None, save_dir: str = "results",
                                    "f_MLP = 2 layers / 4x hidden / GELU"),
             "deltanet": "arXiv:2605.22791 Eq. 5 (= Yang et al. 2024)",
             "gdn": "arXiv:2605.22791 Eq. 6 (= Yang et al. 2025, the ABLATION)",
+            "mamba2": ("Dao & Gu, **ICML 2024**, arXiv:2405.21060 — the SSD "
+                       "recurrence h_t = a_t h_{t-1} + B_t (Delta_t v_t)^T with "
+                       "the paper's scalar-identity restriction A_t = a_t I, "
+                       "input-dependent Delta_t = softplus(w.x + bias), "
+                       "B_t = theta_K x_t, C_t = theta_Q x_t, "
+                       "a_t = exp(Delta_t A) with A = -exp(A_log); the CHUNKED "
+                       "SSD state pass (§6) at the rig-matched chunk 16 "
+                       "(reference default 256), asserted EXACTLY equal to the "
+                       "sequential recurrence and to the quadratic/dual read. "
+                       "Reference-implementation init A ~ U(1,16), "
+                       "Delta ~ exp(U(log 1e-3, log 1e-1)). ⚠ NO conv branch, no "
+                       "z-gate/norm, n_head = ngroups = 1 — the same minimality "
+                       "caption every other arm carries; dropping conv_state is "
+                       "IN THE RIVAL'S FAVOUR at an iso-state budget. "
+                       "⚠ Citation venue/year/id from `rival-recon` §1.4's "
+                       "pinned record, NOT re-verified this session."),
             "gdn2": ("arXiv:2605.22791 **Eq. 10** (boxed) with Eqs. 8, 9, 11, 12 "
                      "and §3.1's negative-eigenvalue erase range [0,2]^{d_k}; "
                      "§3.5 block design (L2 on q/k, SiLU on v). ⭐ STATE-SIZE "
@@ -1029,6 +1121,8 @@ def run_experiment_bprime_rivals(config=None, save_dir: str = "results",
         "banked_not_remeasured": sorted(BANKED_CLU.keys()),
         "plan": [{"family": f, "arm": a, "seeds": list(cell_seeds)} for f, a in plan],
         "rivals": list(riv), "quick": bool(quick),
+        "frontier_rivals": (list(frontier_rivals) if frontier_rivals
+                            else list(FRONTIER_RIVALS)),
         "tuning_grid_requested": {
             "lrs": [float(x) for x in (overrides or {}).get(
                 "fit", {}).get("lrs", LR_GRID)],
@@ -1039,7 +1133,8 @@ def run_experiment_bprime_rivals(config=None, save_dir: str = "results",
             "rule": ("`rival-recon` F3 / standing rule 5 (N78's operational form) "
                      "when lrs = 6 x wds = 2; C2W4's declared F3-lite otherwise"),
         },
-        "sd_convention": "sample sd (ddof=1); SE = sd/sqrt(n); n = 3",
+        "sd_convention": ("sample sd (ddof=1); SE = sd/sqrt(n); n = "
+                          f"{len(cell_seeds)} (seeds {list(cell_seeds)})"),
         "prereg": ".claude/outputs/bprime-rivals/PREREG.md — filed before any run",
         "cells": [], "frontier": [],
     }
@@ -1082,7 +1177,10 @@ def run_experiment_bprime_rivals(config=None, save_dir: str = "results",
         for s in cell_seeds:
             try:
                 results["frontier"].append(run_frontier_cell(
-                    int(s), quick=quick, fit_kwargs=(overrides or {}).get("fit")))
+                    int(s), quick=quick,
+                    rivals=(tuple(frontier_rivals) if frontier_rivals
+                            else FRONTIER_RIVALS),
+                    fit_kwargs=(overrides or {}).get("fit")))
             except Exception as exc:  # pragma: no cover
                 import traceback
 
@@ -1203,6 +1301,9 @@ def main():
     parser.add_argument("--seeds", nargs="+", type=int, help="Override the seed list")
     parser.add_argument("--no-frontier", action="store_true",
                         help="Skip the byte-frontier column")
+    parser.add_argument("--frontier-rivals", nargs="+",
+                        help="Which rivals get the labelled byte-frontier sweep "
+                             f"(default: {list(FRONTIER_RIVALS)})")
     parser.add_argument("--save-dir", default="results", help="Where figures go")
     # ⭐ the tuning grid, `rival-recon` F3 (the C2W4 rider). Defaults are C2W4's,
     # so the incumbent run is reproduced unless a flag is given.
@@ -1243,7 +1344,7 @@ def main():
     res = run_experiment_bprime_rivals(
         config=config, save_dir=save_dir, seed=args.seed, families=args.families,
         rivals=args.rivals, seeds=args.seeds, quick=args.quick,
-        frontier=not args.no_frontier,
+        frontier=not args.no_frontier, frontier_rivals=args.frontier_rivals,
         overrides=({"fit": fit} if fit else None))
     print(json.dumps({"audit_table": res["audit_table"],
                       "before_after": res.get("before_after", {}),
