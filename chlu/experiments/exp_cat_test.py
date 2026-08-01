@@ -149,7 +149,8 @@ def build_physics_arm(cfg: CatTestConfig, family: CatFamily, seed: int, *,
                       phi=None) -> Dict[str, Any]:
     """Place -> write -> organize. Returns the arm's store + its reports."""
     phi = phi if phi is not None else build_phi(cfg)
-    sep = float(sep) if sep is not None else float(cfg.target_ds * cfg.atom_width)
+    ruler = cfg.s_measured if cfg.s_measured is not None else cfg.atom_width
+    sep = float(sep) if sep is not None else float(cfg.target_ds * ruler)
     anchors = place_wells(phi, cfg, sep=sep)
     key = jax.random.PRNGKey(int(seed))
     k_init, k_write, k_org = jax.random.split(key, 3)
@@ -669,7 +670,7 @@ def stage_d_sweep(cfg: CatTestConfig, seeds: Sequence[int] = (0, 1, 2),
             t0 = time.time()
             fam = build_family(c, seed=seed)
             phi = build_phi(c, phi_seed=20260801 + int(d))
-            arm = build_physics_arm(c, fam, seed, sep=c.target_ds * 0.40, phi=phi)
+            arm = build_physics_arm(c, fam, seed, phi=phi)
             store, anchors = arm["store"], arm["anchors"]
             ind_s = fam.indicator(fam.seen, c.n_wells)
             ind_u = fam.indicator(fam.unseen, c.n_wells)

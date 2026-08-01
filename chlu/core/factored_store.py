@@ -152,6 +152,14 @@ class CatTestConfig:
 
     # -- the operating point (prereg §7; ⛔ never >= 4.0, never <= 2.01) -----
     target_ds: float = 2.7  # d/s on MEASURED s
+    # ⭐ prereg §7/OQ-1: the operating point is set on **measured** `s`, never on
+    # the `atom_init_width` ruler (which `bprime-c6` showed overstates the span by
+    # 1.74x). This is the median effective `s` measured by `stage_calibrate` at
+    # the registered cell (a = 32, 3 seeds, confinement subtracted): 0.312 /
+    # 0.321 / 0.320 -> 0.318. Well spacing is `sep = target_ds * s_measured`.
+    # None => fall back to `atom_width` and DECLARE that the ruler is the init
+    # width, not a measurement.
+    s_measured: Optional[float] = 0.318
     depth_ratio: float = 3.0  # depth heterogeneity between neighbouring wells
 
     # -- the write ----------------------------------------------------------
