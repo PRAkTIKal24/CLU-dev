@@ -32,8 +32,19 @@ from chlu.training.train_cluformer import (
 )
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="module")
 def float32_dynamics():
+    """Pin float32 for the WHOLE module (handover §7.2).
+
+    ⚠ **Module scope is load-bearing, not tidiness.** Several repo test modules
+    (`test_lattice`, `test_goldstone`, `test_twins`, ...) call
+    ``jax.config.update("jax_enable_x64", True)`` at MODULE IMPORT, so x64 is
+    globally ON in a full-suite run. A *function*-scoped fixture is set up AFTER
+    the module-scoped ones, so the store cell would be constructed in float64 and
+    then exercised in float32 — 10 tests in this file failed exactly that way in
+    the full suite while passing in isolation. An autouse module-scoped fixture
+    runs before every other fixture in the module.
+    """
     prev = jax.config.jax_enable_x64
     jax.config.update("jax_enable_x64", False)
     yield
