@@ -64,6 +64,24 @@ def test_kappa_stat_infinite_below_the_spurious_minimum_threshold():
     assert np.isfinite(kappa_stat(3.0))
 
 
+def test_saddle_reach_threshold_survives_an_underflowing_width():
+    """⚠ C2W5 rider. The ``s <= 0`` guard is not enough: for a group whose wells
+    were never dug the depth-weighted width underflows, ``s * s`` flushes to 0.0
+    while ``s > 0`` still holds, and ``beta = D / (2 alpha s^2)`` raised
+    ``ZeroDivisionError`` (it killed seed 2 of the C2W4 pilot run). The pilot
+    guarded its own caller; the guard belongs in the monitor.
+
+    An item with no well is ABSENT, not "unreachable" => ``inf``, the same answer
+    the ``D <= 0`` branch already gives.
+    """
+    assert 1e-200 > 0.0 and (1e-200 * 1e-200) == 0.0  # the underflow, asserted
+    assert np.isinf(saddle_reach_threshold(1e-86, 1e-200, 0.05, 0.9))
+    assert np.isinf(saddle_reach_threshold(1e-86, 0.0, 0.05, 0.9))
+    # ...and the non-vacuous half: a healthy well is untouched by the guard —
+    # the published anchor above (s=0.30, D=4.0) still lands on 1.155.
+    assert saddle_reach_threshold(4.0, 0.30, 0.05, 0.9) == pytest.approx(1.155, rel=0.01)
+
+
 def test_reach_is_logarithmically_unbuyable():
     """Depth buys reach only logarithmically — the ceiling's whole point."""
     a1 = saddle_reach_threshold(1.0, 0.3, 0.05, 0.9)

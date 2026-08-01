@@ -1448,7 +1448,19 @@ def saddle_reach_threshold(depth: float, width: float, alpha: float,
     D, s, al, c = float(depth), float(width), float(alpha), float(c_norm)
     if s <= 0 or D <= 0 or al <= 0:
         return float("inf")
-    beta = D / (2.0 * al * s * s)
+    # ⚠ C2W5: the three positivity guards above are NOT sufficient. A group whose
+    # wells were never dug has a depth-weighted width that underflows, and
+    # `s * s` flushes to 0.0 while `s > 0` still holds (measured: s = 1e-200
+    # raises, s = 1e-154 does not) — so the division below raised
+    # ZeroDivisionError and killed seed 2 of the C2W4 pilot's shipped 3-seed run.
+    # `cluformer-pilot` guarded its own CALLER (commit 7bc166a, in
+    # `train_cluformer.py`); the guard belongs here, where the division is.
+    # An item with no well is ABSENT, not "unreachable": `inf` is the same answer
+    # the D <= 0 branch already gives it.
+    den = 2.0 * al * s * s
+    if not (den > 0.0) or not math.isfinite(den):
+        return float("inf")
+    beta = D / den
     ks = kappa_stat(beta)
 
     def captured(a: float) -> bool:
