@@ -444,12 +444,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--d5", action="store_true",
                     help="also run the anytime shape curve (secondary; §A3 shape only)")
     ap.add_argument("--set", nargs="*", default=None, metavar="KEY=VALUE",
-                    help="top-level PilotConfig overrides, e.g. monitor_every=25")
+                    help="top-level PilotConfig overrides, e.g. monitor_every=25 "
+                         "plan_workers=8 accum_steps=2 liveness_lanes=1 "
+                         "(⭐ the last two are `csf3-memory-fit`'s out-of-model "
+                         "memory levers; both default to the shipped behaviour)")
     ap.add_argument("--mem", nargs="*", default=None, metavar="KEY=VALUE",
                     help="StreamMemoryConfig overrides, e.g. atom_place_radius=0.3 "
-                         "write_inner_steps=40 (⭐ the `pilot-placement-probe` "
-                         "recommendation block sets the submitted config here, so "
-                         "the scale run never needs the module edited)")
+                         "write_inner_steps=40 remat_chunks=true (⭐ the "
+                         "`pilot-placement-probe` recommendation block and "
+                         "`csf3-memory-fit`'s remat levers both set the submitted "
+                         "config here, so the scale run never needs the module "
+                         "edited)")
     ap.add_argument("--store", nargs="*", default=None, metavar="KEY=VALUE",
                     help="CluSystemConfig overrides")
     a = ap.parse_args(argv)

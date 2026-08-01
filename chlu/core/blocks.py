@@ -596,6 +596,14 @@ class StreamMemoryConfig:
     #: :meth:`remat_read_plan`). The strided trajectory handed to ``psi`` is
     #: re-assembled with the global stride phase, so the read output is
     #: bit-identical (asserted).
+    #: ⛔ **MEASURED: do NOT enable this alongside ``remat_chunks``.** At the
+    #: pilot store geometry the two rungs reach the SAME floor independently
+    #: (rung 1 alone 648.2 MB, rung 2 alone at ``n=4`` 658.4 MB, both against
+    #: 1935.1 MB with neither, at ``n_chunks=2, batch=1, n_layers=1``) — they are
+    #: alternative routes, not composable ones — and stacking them costs +0.65 %
+    #: (``n=4``) to +1.05 % (``n=16``) of peak for nothing. It is kept because it
+    #: is the only lever that acts *inside* one read, which is where the
+    #: remaining ~645 MB/lane floor lives if the read budget ever grows.
     remat_read_segments: int = 0
 
     @classmethod
