@@ -488,6 +488,26 @@ def setup_experiment_parsers(subparsers):
     exp_ct_parser.add_argument('--out-dir', help='Output directory for artifacts')
     exp_ct_parser.set_defaults(func=cmd_exp_cat_test)
 
+    # exp-null-arms (C2W5, the matched-capacity organizer audit: N1-N5)
+    exp_na_parser = subparsers.add_parser(
+        'exp-null-arms',
+        help='Run the N1-N5 matched-capacity organizer arms against the cat test'
+    )
+    exp_na_parser.add_argument('--project', help='Project name to use')
+    exp_na_parser.add_argument('--seed', type=int, default=0, help='Base seed')
+    exp_na_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (tiny family, 1 tune seed, 2 score '
+                                    'seeds, short grids)')
+    exp_na_parser.add_argument(
+        '--stages', nargs='+',
+        choices=['grid', 'score', 'gridmax', 'mechanism', 'ceiling', 'oracle'],
+        help='Stages to run (default: all, in the registered order)')
+    exp_na_parser.add_argument('--arms', nargs='+',
+                               choices=['N1', 'N2', 'N3', 'N4', 'N5'],
+                               help='Subset of arms (default: all five)')
+    exp_na_parser.add_argument('--out-dir', help='Output directory for artifacts')
+    exp_na_parser.set_defaults(func=cmd_exp_null_arms)
+
     # exp-paid-access
     exp_pa_parser = subparsers.add_parser(
         'exp-paid-access',
@@ -856,6 +876,32 @@ def cmd_exp_cat_test(args):
             **kw,
         )
         console.print("✓ cat test completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+    return 0
+
+
+def cmd_exp_null_arms(args):
+    """Run the C2W5 matched-capacity organizer audit (null arms N1-N5)."""
+    console.print("[bold cyan]Running the null-arm audit "
+                  "(N1-N5, matched capacity, frozen phi)[/bold cyan]")
+
+    from ..experiments.exp_null_arms import run_null_arms
+    try:
+        kw = {}
+        if getattr(args, 'stages', None):
+            kw['stages'] = tuple(args.stages)
+        if getattr(args, 'arms', None):
+            kw['arms'] = tuple(args.arms)
+        run_null_arms(
+            project=getattr(args, 'project', None),
+            seed=int(getattr(args, 'seed', 0) or 0),
+            quick=bool(getattr(args, 'quick', False)),
+            out_dir=getattr(args, 'out_dir', None),
+            **kw,
+        )
+        console.print("✓ null-arm audit completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
