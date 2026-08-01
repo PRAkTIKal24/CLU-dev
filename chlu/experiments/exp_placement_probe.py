@@ -130,6 +130,19 @@ CELLS: Dict[str, Dict[str, Any]] = {
     "h1b_r0.3_w40": dict(mem={"atom_place_radius": 0.3, "write_inner_steps": 40},
                          needs_centers=False,
                          note="H1b x N94's 40-step floor - the CSF3 candidate"),
+    # ⭐ PREREG ADDENDUM 3 — the HINGE MARGIN as the depth ceiling. `write_loss`'s
+    # minimum term is `relu(V(z) - V(z+d) + margin)`: it asks for a well `margin`
+    # deep and stops. The measured saturation (0.05-0.14 across a 10x budget
+    # range AND a 3-order placement range) IS the shipped `write_margin = 0.15`.
+    # These cells move the objective's own ceiling, which no amount of budget or
+    # placement can.
+    "h1b_m0.6": dict(mem={"atom_place_radius": 0.3}, store={"write_margin": 0.6},
+                     needs_centers=False, note="H1b x margin 0.6 (4x)"),
+    "h1b_m1.0": dict(mem={"atom_place_radius": 0.3}, store={"write_margin": 1.0},
+                     needs_centers=False, note="H1b x margin 1.0 (6.7x)"),
+    "baseline_m1.0": dict(mem={}, store={"write_margin": 1.0},
+                          needs_centers=False,
+                          note="control: margin 1.0 at the SCATTERED init"),
 }
 
 DEFAULT_SEEDS: Tuple[int, ...] = (0, 1, 2)
@@ -167,6 +180,10 @@ def _prepare(cell: str, seed: int, *, steps: Optional[int] = None,
         prov["atom_group_centers"] = [list(c) for c in centers]
     pcfg.memory.update(dict(spec["mem"]))
     prov["mem_overrides"] = dict(spec["mem"])
+    if spec.get("store"):
+        pcfg.store = dict(pcfg.store or {})
+        pcfg.store.update(dict(spec["store"]))
+        prov["store_overrides"] = dict(spec["store"])
     return pcfg, (tr, va, te), k_solve, k_model, prov
 
 
