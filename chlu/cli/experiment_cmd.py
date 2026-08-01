@@ -472,6 +472,22 @@ def setup_experiment_parsers(subparsers):
                                help='Quick mode (2 seeds, 60 epochs, short probes)')
     exp_mp_parser.set_defaults(func=cmd_exp_minus_physics)
 
+    # exp-cat-test (C2W5, tier ii: the organization dividend)
+    exp_ct_parser = subparsers.add_parser(
+        'exp-cat-test',
+        help='Run the cat test: the factored store scored on unseen combinations'
+    )
+    exp_ct_parser.add_argument('--project', help='Project name to use')
+    exp_ct_parser.add_argument('--seed', type=int, default=0, help='Base seed')
+    exp_ct_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (small family, 3 seeds, short write)')
+    exp_ct_parser.add_argument(
+        '--stages', nargs='+',
+        choices=['family', 'calibrate', 'controls', 'arm', 'd_sweep', 'deletion'],
+        help='Stages to run (default: all, in the pre-registered order)')
+    exp_ct_parser.add_argument('--out-dir', help='Output directory for artifacts')
+    exp_ct_parser.set_defaults(func=cmd_exp_cat_test)
+
     # exp-paid-access
     exp_pa_parser = subparsers.add_parser(
         'exp-paid-access',
@@ -815,6 +831,31 @@ def cmd_exp_minus_physics(args):
             quick=bool(getattr(args, 'quick', False)),
         )
         console.print("✓ minus-the-physics completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+    return 0
+
+
+def cmd_exp_cat_test(args):
+    """Run the C2W5 cat test (tier ii's vehicle: the factored store)."""
+    console.print("[bold cyan]Running the cat test "
+                  "(factored store, unseen combinations)[/bold cyan]")
+
+    from ..experiments.exp_cat_test import run_cat_test
+    stages = getattr(args, 'stages', None)
+    try:
+        kw = {}
+        if stages:
+            kw['stages'] = tuple(stages)
+        run_cat_test(
+            project=getattr(args, 'project', None),
+            seed=int(getattr(args, 'seed', 0) or 0),
+            quick=bool(getattr(args, 'quick', False)),
+            out_dir=getattr(args, 'out_dir', None),
+            **kw,
+        )
+        console.print("✓ cat test completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
