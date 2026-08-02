@@ -334,3 +334,29 @@ def test_every_cell_inherits_a_declared_probe_cell():
 
     for name, spec in CELLS.items():
         assert spec["base"] in PROBE, name
+
+
+def test_cli_exposes_exp_psi_residual():
+    """§8's declared NOT-RUN, discharged (C2W5 close-fix 5): the module had no
+    CLI hook and ran only via ``python -m``. The hook forwards the module's own
+    argv contract, so a bad cell is rejected by `main`'s validator, not by the
+    parser."""
+    import argparse
+
+    from chlu.cli.experiment_cmd import setup_experiment_parsers
+
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command")
+    setup_experiment_parsers(sub)
+    args = parser.parse_args(["exp-psi-residual"])
+    assert args.tier == "ledger" and hasattr(args, "func")
+    args = parser.parse_args(["exp-psi-residual", "--tier", "trained",
+                              "--cells", "run1", "--seeds", "0", "1",
+                              "--steps", "5", "--out-dir", "/tmp/psires",
+                              "--tag", "smoke"])
+    assert args.tier == "trained" and args.cells == ["run1"]
+    assert args.seeds == [0, 1] and args.steps == 5
+    # the forwarded argv reaches `exp_psi_residual.main`'s own validation
+    bad = parser.parse_args(["exp-psi-residual", "--cells", "not_a_cell"])
+    with pytest.raises(SystemExit, match="unknown cells"):
+        bad.func(bad)
