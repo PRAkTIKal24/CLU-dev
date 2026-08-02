@@ -508,6 +508,26 @@ def setup_experiment_parsers(subparsers):
     exp_na_parser.add_argument('--out-dir', help='Output directory for artifacts')
     exp_na_parser.set_defaults(func=cmd_exp_null_arms)
 
+    # exp-tierii-read (C2W5/6, the read-protocol iteration: charter §A20.3)
+    exp_tr_parser = subparsers.add_parser(
+        'exp-tierii-read',
+        help='Run the tier-ii multi-well read protocol + the organizer swap'
+    )
+    exp_tr_parser.add_argument('--seeds', type=int, nargs='+',
+                               default=[0, 1, 2, 3, 4], help='Score seeds')
+    exp_tr_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (tiny family, 1 seed, short settles)')
+    exp_tr_parser.add_argument(
+        '--stages', nargs='+',
+        choices=['k0', 'arms', 'guards', 'consolidate', 'levers'],
+        help='Stages to run (default: all; k0 is the blocking pre-condition)')
+    exp_tr_parser.add_argument('--organize-steps', type=int, default=60,
+                               help='Physics-organizer steps (through the settle)')
+    exp_tr_parser.add_argument('--k-particles', type=int, default=12,
+                               help='k (CAPACITY: ledgered, matched on every arm)')
+    exp_tr_parser.add_argument('--out-dir', help='Output directory for artifacts')
+    exp_tr_parser.set_defaults(func=cmd_exp_tierii_read)
+
     # exp-paid-access
     exp_pa_parser = subparsers.add_parser(
         'exp-paid-access',
@@ -902,6 +922,31 @@ def cmd_exp_null_arms(args):
             **kw,
         )
         console.print("✓ null-arm audit completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+    return 0
+
+
+def cmd_exp_tierii_read(args):
+    """Run the tier-ii read-fix iteration (multi-well read + organizer swap)."""
+    console.print("[bold cyan]Running the tier-ii multi-well read protocol "
+                  "(k-particle launch head, organizer swap)[/bold cyan]")
+
+    from ..experiments.exp_tierii_read import run_tierii_read
+    try:
+        kw = {}
+        if getattr(args, 'stages', None):
+            kw['stages'] = tuple(args.stages)
+        run_tierii_read(
+            seeds=tuple(getattr(args, 'seeds', (0, 1, 2, 3, 4))),
+            quick=bool(getattr(args, 'quick', False)),
+            organize_steps=int(getattr(args, 'organize_steps', 60) or 60),
+            k_particles=int(getattr(args, 'k_particles', 12) or 12),
+            out_dir=getattr(args, 'out_dir', None),
+            **kw,
+        )
+        console.print("✓ tier-ii read-fix completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
