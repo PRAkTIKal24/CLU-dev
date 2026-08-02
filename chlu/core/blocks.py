@@ -601,6 +601,43 @@ class StreamMemoryConfig:
     #: designed-mechanism control against a gate that trains itself to zero.
     psi_residual_trainable: bool = True
 
+    # -- `csf3-memory-fit`: BACKWARD-MEMORY levers (compute traded for memory) --
+    #: ⭐ **Rung 1 — checkpoint the chunk scan.** The backward through
+    #: ``lax.scan(step, ...)`` in :meth:`StreamBlock.__call__` otherwise stacks
+    #: every within-chunk intermediate — the ``address_steps + read_steps``
+    #: (+ retry) Verlet unroll over ``n_atoms`` atoms AND the
+    #: ``write_inner_steps`` differentiated inner writes — for **all**
+    #: ``n_chunks`` iterations, of all ``n_layers`` layers, of all ``batch``
+    #: lanes, simultaneously. With this on, the scan stores only the
+    #: chunk-boundary :class:`StoreState` carries and recomputes one chunk
+    #: interior at a time inside the backward: activations divided by
+    #: ``n_chunks * n_layers``, at ~2x the chunk-interior FLOPs.
+    #: ``False`` (default) = the historical full-backprop scan, bit-identical.
+    #: ⚠ Bit-identity is asserted in ``tests/test_csf3_memory_fit.py``
+    #: (``jax.checkpoint`` replays the SAME primitives, so the recomputed
+    #: residuals are bit-equal; only the schedule changes).
+    remat_chunks: bool = False
+    #: ⭐ **Rung 2 — checkpoint the read's Verlet rollout in segments.** ``0``
+    #: (default) = one call per phase, exactly as shipped. ``n > 0`` splits each
+    #: phase's ``steps`` into ``n`` equal segments, chains ``(q, p)`` between
+    #: them **unchanged**, and wraps each segment in ``eqx.filter_checkpoint`` —
+    #: so within one chunk interior the peak is one segment's force-evaluation
+    #: residuals instead of the whole 2-phase (+ retry) unroll. Requires each
+    #: phase's step count to be divisible by ``n`` (else the value is ignored
+    #: and the shipped single call is used — reported through
+    #: :meth:`remat_read_plan`). The strided trajectory handed to ``psi`` is
+    #: re-assembled with the global stride phase, so the read output is
+    #: bit-identical (asserted).
+    #: ⛔ **MEASURED: do NOT enable this alongside ``remat_chunks``.** At the
+    #: pilot store geometry the two rungs reach the SAME floor independently
+    #: (rung 1 alone 648.2 MB, rung 2 alone at ``n=4`` 658.4 MB, both against
+    #: 1935.1 MB with neither, at ``n_chunks=2, batch=1, n_layers=1``) — they are
+    #: alternative routes, not composable ones — and stacking them costs +0.65 %
+    #: (``n=4``) to +1.05 % (``n=16``) of peak for nothing. It is kept because it
+    #: is the only lever that acts *inside* one read, which is where the
+    #: remaining ~645 MB/lane floor lives if the read budget ever grows.
+    remat_read_segments: int = 0
+
     @classmethod
     def from_mapping(cls, overrides: Optional[dict] = None) -> "StreamMemoryConfig":
         known = {f.name for f in fields(cls)}
@@ -1061,6 +1098,48 @@ class CluStoreCell(eqx.Module):
         return ga, gr
 
     # -- the read ----------------------------------------------------------
+    def _rollout(self, m, q, p, n_steps: int, gamma, stride: int):
+        """``truncated_rollout(retain=None)``, optionally SEGMENTED + rematted.
+
+        ⭐ `csf3-memory-fit` rung 2. At ``remat_read_segments = 0/1`` (default)
+        this is one call and the historical path bit-for-bit. Otherwise the
+        phase's ``n_steps`` are cut into ``n`` equal segments whose ``(q, p)``
+        are chained **unchanged** — the Verlet step is a pure function of
+        ``(q, p)``, so the arithmetic is identical — and each segment is wrapped
+        in ``eqx.filter_checkpoint``, so the backward holds one segment's
+        force-evaluation residuals at a time instead of the whole unroll's.
+
+        The strided buffer ``psi`` consumes is re-assembled with the **global**
+        stride phase (``off = (-j*L) mod stride``), which is the same seam rule
+        :func:`~chlu.core.implicit_grad.truncated_rollout` uses across its own
+        free/retained boundary. Divisibility is required; otherwise the shipped
+        single call is used (never a silently different trajectory).
+        """
+        from chlu.core.implicit_grad import truncated_rollout
+
+        dt = float(self.cfg.dt)
+        n_steps, stride = int(n_steps), int(stride)
+        n_seg = int(self.mcfg.remat_read_segments)
+        if n_seg <= 1 or n_steps <= 0 or n_steps % n_seg != 0:
+            return truncated_rollout(m, q, p, n_steps, dt, gamma,
+                                     retain=None, stride=stride,
+                                     return_endpoint=True)
+        L = n_steps // n_seg
+
+        def _seg(mm, qq, pp, gg, off: int = 0):
+            tr, qe, pe = truncated_rollout(mm, qq, pp, L, dt, gg, retain=None,
+                                           stride=1, return_endpoint=True)
+            return tr[off::stride], qe, pe
+
+        parts = []
+        for j in range(n_seg):
+            off = (-j * L) % stride
+            fn = eqx.filter_checkpoint(
+                lambda mm, qq, pp, gg, o=off: _seg(mm, qq, pp, gg, o))
+            tr, q, p = fn(m, q, p, gamma)
+            parts.append(tr)
+        return jnp.concatenate(parts, axis=0), q, p
+
     def read(self, state: StoreState, z: jnp.ndarray, plan_c=None,
              read_mode: Optional[str] = None,
              verlet: Optional[Tuple[int, int]] = None) -> jnp.ndarray:
@@ -1076,7 +1155,7 @@ class CluStoreCell(eqx.Module):
         budget, not hidden.
         """
         from chlu.core.clu_system import ReadState
-        from chlu.core.implicit_grad import SettleSpec, implicit_settle, truncated_rollout
+        from chlu.core.implicit_grad import SettleSpec, implicit_settle
 
         m = self._model(state)
         d = int(self.cfg.dim)
@@ -1094,12 +1173,8 @@ class CluStoreCell(eqx.Module):
         # is occupied (DEQs, EBTs, Titans-Revisited); no uniqueness is claimed.
         n_addr = int(self.mcfg.address_steps if verlet is None else verlet[0])
         n_read = int(self.mcfg.read_steps if verlet is None else verlet[1])
-        tr1, q_addr, p_addr = truncated_rollout(
-            m, q0, p0, n_addr, float(self.cfg.dt), ga,
-            retain=None, stride=st, return_endpoint=True)
-        tr2, q_star, p_star = truncated_rollout(
-            m, q_addr, p_addr, n_read, float(self.cfg.dt), gr,
-            retain=None, stride=st, return_endpoint=True)
+        tr1, q_addr, p_addr = self._rollout(m, q0, p0, n_addr, ga, st)
+        tr2, q_star, p_star = self._rollout(m, q_addr, p_addr, n_read, gr, st)
         if mode == "settled_point":
             # ⭐ the pre-registered ZERO-GRADIENT control: an implicit settle, so
             # d q*/d q0 = 0 EXACTLY rather than as a 1e-9 numerical accident.
@@ -1116,9 +1191,7 @@ class CluStoreCell(eqx.Module):
             p_star = jax.lax.stop_gradient(p_star)
         if plan_c is not None and self.mcfg.retry_rounds > 0:
             w = jnp.asarray(plan_c.retry, dtype=jnp.float32)
-            tr3, q3, p3 = truncated_rollout(
-                m, q_star, p_star, n_read, float(self.cfg.dt), gr,
-                retain=None, stride=st, return_endpoint=True)
+            tr3, q3, p3 = self._rollout(m, q_star, p_star, n_read, gr, st)
             tr2 = jnp.concatenate([tr2, w * tr3 + (1.0 - w) * tr2[-1:][
                 jnp.zeros((tr3.shape[0],), dtype=jnp.int32)]], axis=0)
             q_star = w * q3 + (1.0 - w) * q_star
@@ -1460,7 +1533,13 @@ class StreamBlock(eqx.Module):
             state = self.cell.write(state, z_c, plan_c)
             return state, r
 
-        _, r = jax.lax.scan(step, self.cell.init_state(), (z, plan))  # (n_chunks, dim)
+        # ⭐ `csf3-memory-fit` rung 1: with ``remat_chunks`` the scan stores only
+        # the chunk-boundary carries and recomputes each chunk interior (the
+        # Verlet unroll + the inner writes) inside the backward. Same primitives,
+        # same order, same numbers — only the residual schedule changes.
+        body = (eqx.filter_checkpoint(step) if bool(self.mcfg.remat_chunks)
+                else step)
+        _, r = jax.lax.scan(body, self.cell.init_state(), (z, plan))  # (n_chunks, dim)
         # 5. shift by one chunk: chunk c is told what the store knew BEFORE it.
         r = jnp.concatenate([jnp.zeros((1, r.shape[-1]), dtype=r.dtype), r[:-1]], axis=0)
         m = jax.vmap(self.assim)(r)                                  # (n_chunks, D)
