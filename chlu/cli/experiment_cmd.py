@@ -528,6 +528,25 @@ def setup_experiment_parsers(subparsers):
     exp_tr_parser.add_argument('--out-dir', help='Output directory for artifacts')
     exp_tr_parser.set_defaults(func=cmd_exp_tierii_read)
 
+    # exp-psi-residual (C2W5, the payload residual read-out lever: charter §A20.3(a))
+    exp_pr_parser = subparsers.add_parser(
+        'exp-psi-residual',
+        help='Run the psi payload-residual ledger / trained tier (run-2 config evidence)'
+    )
+    exp_pr_parser.add_argument('--tier', choices=['ledger', 'trained'], default='ledger',
+                               help='ledger (untrained per-stage spread) | trained')
+    exp_pr_parser.add_argument('--cells', nargs='+',
+                               help='Subset of the registered cells (default: all four)')
+    exp_pr_parser.add_argument('--seeds', type=int, nargs='+',
+                               help='Paired seeds (default: the module default)')
+    exp_pr_parser.add_argument('--steps', type=int,
+                               help='Outer training steps (trained tier only)')
+    exp_pr_parser.add_argument('--eval-batches', type=int, default=4,
+                               help='Eval batches per record')
+    exp_pr_parser.add_argument('--out-dir', help='Output directory for artifacts')
+    exp_pr_parser.add_argument('--tag', help='Artifact filename tag (default: the tier)')
+    exp_pr_parser.set_defaults(func=cmd_exp_psi_residual)
+
     # exp-paid-access
     exp_pa_parser = subparsers.add_parser(
         'exp-paid-access',
@@ -947,6 +966,33 @@ def cmd_exp_tierii_read(args):
             **kw,
         )
         console.print("✓ tier-ii read-fix completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+    return 0
+
+
+def cmd_exp_psi_residual(args):
+    """Run the psi payload-residual tier (`exp_psi_residual`'s own argv contract)."""
+    console.print("[bold cyan]Running the psi payload-residual ledger "
+                  "(payload-only read-out residual)[/bold cyan]")
+
+    from ..experiments.exp_psi_residual import main as psi_residual_main
+    argv = ['--tier', str(getattr(args, 'tier', 'ledger') or 'ledger'),
+            '--eval-batches', str(int(getattr(args, 'eval_batches', 4) or 4))]
+    if getattr(args, 'cells', None):
+        argv += ['--cells', *[str(c) for c in args.cells]]
+    if getattr(args, 'seeds', None):
+        argv += ['--seeds', *[str(int(s)) for s in args.seeds]]
+    if getattr(args, 'steps', None):
+        argv += ['--steps', str(int(args.steps))]
+    if getattr(args, 'out_dir', None):
+        argv += ['--out', str(args.out_dir)]
+    if getattr(args, 'tag', None):
+        argv += ['--tag', str(args.tag)]
+    try:
+        psi_residual_main(argv)
+        console.print("✓ psi payload-residual completed", style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1

@@ -624,3 +624,134 @@ def test_mamba2_block_parts_are_off_by_default_and_reachable_as_an_ablation():
     g, mos = fit_grid("mamba2", 5, 1, _fit_examples(), key=jax.random.PRNGKey(0),
                       lrs=(1e-3,), steps=2, arm_kwargs={"use_D": True})
     assert mos[0].use_D is True and len(g) == 1
+
+
+# --------------------------------------------------------------------------
+# ⭐ the CLU's own audit columns, first-class in the harness (C2W5 close-fix 3)
+# --------------------------------------------------------------------------
+#: The **published** per-seed CLU cells of the `n = 9` column (draft-r4 §4.1.1 /
+#: App I.1c(b), aggregated from `.claude/outputs/bprime-rivals-f3/{run400,
+#: seeds3to8}` by `.claude/scratch/bprime-referee-closures/n9_clu_column.py`).
+#: ⛔ Nothing here is re-measured: these are the banked inputs, verbatim, so the
+#: harness's own aggregation is checked against the numbers the paper prints.
+_CLU_N9_CELLS = [
+    (0, -0.6826079419590398, -0.4962609164502307, -0.4389060366704468,
+     -0.8175015073205997, -0.21495899497080173, -0.23013506962922448,
+     -0.44860545763514836),
+    (1, -0.3846925288903795, -0.41310311933048044, -0.40420145154125486,
+     -0.7142438101521984, -0.20116179179316412, -0.1925666698420529,
+     -0.34393702982386115),
+    (2, -0.5110319980812578, -0.4322550148126372, -0.4230789980543735,
+     -0.6261158673872326, -0.250056919965218, -0.21690252112040673,
+     -0.361003831918495),
+    (3, -0.4215517852106097, -0.250467165074531, -0.3951167329978248,
+     -0.4449522066702216, -0.03963758336626879, -0.04693652849822356,
+     -0.29979591427361346),
+    (4, -0.4583619478966953, -0.514969120249935, -0.3982538069357133,
+     -0.5794431140942008, -0.18425168821330332, -0.1783325953454485,
+     -0.30512025565243406),
+    (5, -0.370921718399806, -0.3797876680493396, -0.3441830029550897,
+     -0.6378105047221216, -0.16017945033906936, -0.1690580182440876,
+     -0.3582028406090239),
+    (6, -0.281720810428571, -0.3321685884996336, -0.4060722253052891,
+     -0.7445974305277125, -0.12047228834303533, -0.11695357475373416,
+     -0.3544113442043966),
+    (7, -0.5261551878754182, -0.40409332807820664, -0.32024955461860694,
+     -0.7391920772649633, -0.1819864689365618, -0.16754254351945594,
+     -0.31366532075598746),
+    (8, -0.29637950543577246, -0.2056928735965694, -0.3852237009912964,
+     -0.5567294484975207, -0.044104050947466576, -0.038786031053585246,
+     -0.3126934622315224),
+]
+
+
+def _clu_n9_records():
+    recs = []
+    for (seed, full, lnd, blank, null, knn2_mean, knn2_idw, tbl_mean) in _CLU_N9_CELLS:
+        recs.append({
+            "cell": f"aggregate/base@s{seed}", "family": "aggregate", "arm": "base",
+            "seed": seed, "degenerate": False, "metric": "neg_mae",
+            "label": "reader-discrimination family (S = 0.5068)",
+            "rivals": {}, "admissible_coverage": {},
+            "clu_reproduction": {
+                "full": full, "launder": lnd, "blank": blank,
+                "all_launder_scores": {
+                    "settle_deleted": lnd, "same_keys_null": null,
+                    "knn2_mean_+0B": knn2_mean, "knn2_idw_+0B": knn2_idw,
+                    "raw_table_mean_+0B": tbl_mean},
+            },
+        })
+    return recs
+
+
+def test_audit_table_emits_the_published_n9_clu_columns():
+    """⭐ **C2W5 editorial 4.** ``audit_table`` used to emit only
+    ``clu_reproduced.{full,launder,dividend}`` while the paper's verdict on our
+    own arm (blank / same-keys null / ``+0 B`` margin / rescue lift) came out of
+    a scratch script. The harness now emits them, and on the SAME banked inputs
+    it must reproduce the published `n = 9` column digit-for-digit
+    (draft-r4 §4.1.1, App I.1c(b), App L.1a)."""
+    from chlu.experiments.exp_bprime_rivals import audit_table
+
+    col = audit_table(_clu_n9_records())["aggregate"]["clu_reproduced"]
+    assert col["n_seeds"] == 9 and col["seeds"] == list(range(9))
+    published = {
+        "full": (-0.4370, 0.0417), "launder": (-0.3810, 0.0345),
+        "blank": (-0.3906, 0.0124), "same_keys_null": (-0.6512, 0.0383),
+        "dividend_paired": (-0.0561, 0.0315),
+        "full_minus_same_keys_null": (+0.2141, 0.0443),
+        "zero_byte_margin": (-0.2897, 0.0328),
+        "raw_table_margin": (-0.2897, 0.0328),
+        "lift_over_own_blank": (-0.0465, 0.0406),
+    }
+    for key, (mean, se) in published.items():
+        se_key = "lift_se" if key == "lift_over_own_blank" else key + "_se"
+        se_key = "dividend_se" if key == "dividend_paired" else se_key
+        assert round(col[key], 4) == mean, (key, col[key])
+        assert round(col[se_key], 4) == se, (key, col[se_key])
+    # ⛔ the gate applied to its authors: NOT RESCUED at nine seeds
+    assert col["RESCUED_above_own_blank_2se"] is False
+    assert col["lift_over_own_blank"] < 2.0 * col["lift_se"]
+    # the legacy key is preserved bit-for-bit (difference of the two means)
+    assert col["dividend"] == pytest.approx(col["dividend_paired"], abs=1e-12)
+
+
+def test_clu_zero_byte_and_raw_margins_are_paired_and_argmax_per_seed():
+    """The `+0 B` reader is chosen **per seed** by arg-max over the exclusive
+    set, and the raw-table candidate set adds the arg-min launder. For the CLU
+    the two coincide on 9 of 9 seeds — its launder is already a raw
+    ``(key, payload)`` table and never beats the 2-NN readers (draft-r4
+    App I.1c(b)'s "float-identical" clause, asserted rather than asserted-in-prose)."""
+    from chlu.experiments.exp_bprime_rivals import audit_table
+
+    col = audit_table(_clu_n9_records())["aggregate"]["clu_reproduced"]
+    assert col["zero_byte_margin"] == col["raw_table_margin"]
+    assert col["zero_byte_substitute_per_seed"] == col["raw_table_reader_per_seed"]
+    assert set(col["zero_byte_substitute_per_seed"]) <= {"knn2_mean_+0B",
+                                                         "knn2_idw_+0B"}
+    assert col["zero_byte_readers"] == ["knn2_idw_+0B", "knn2_mean_+0B",
+                                        "raw_table_mean_+0B"]
+    # paired, not a difference of column means: recompute the rule by hand
+    by_hand = []
+    for (_seed, full, _lnd, _blank, _null, km, ki, tm) in _CLU_N9_CELLS:
+        by_hand.append(full - max(km, ki, tm))
+    assert col["zero_byte_margin"] == pytest.approx(float(np.mean(by_hand)),
+                                                    abs=0.0, rel=0.0)
+
+
+def test_clu_columns_survive_a_record_without_the_launder_set():
+    """Banked records that predate ``all_launder_scores`` must contribute
+    ``nan`` to the reader-derived columns, not crash and not be silently
+    dropped from ``full``/``launder``/``blank``."""
+    from chlu.experiments.exp_bprime_rivals import audit_table
+
+    recs = _clu_n9_records()
+    recs[0]["clu_reproduction"].pop("all_launder_scores")
+    col = audit_table(recs)["aggregate"]["clu_reproduced"]
+    assert col["n_seeds"] == 9
+    assert np.isfinite(col["full"]) and np.isfinite(col["blank"])
+    # the reader columns drop that seed rather than the whole cell
+    assert col["zero_byte_margin"] == pytest.approx(
+        float(np.mean([full - max(km, ki, tm)
+                       for (_s, full, _l, _b, _n, km, ki, tm)
+                       in _CLU_N9_CELLS[1:]])))
