@@ -604,6 +604,90 @@ def _mean_se(v: Sequence[float]) -> Tuple[float, float]:
     return float(np.mean(a)), float(sd / np.sqrt(a.size))
 
 
+#: The CLU's **exclusive** ``+0 B`` reader set is every key of
+#: ``clu_reproduction.all_launder_scores`` ending in this suffix; the *raw*-table
+#: candidate set adds the arg-min projected launder (for the CLU that launder is
+#: already a raw ``(key, payload)`` table, which is why the two margins coincide).
+_CLU_ZB_SUFFIX = "+0B"
+_CLU_RAW_EXTRA = "settle_deleted"
+
+
+def _clu_columns(cells: Sequence[dict]) -> Dict[str, Any]:
+    """⭐ The CLU arm's own audit columns, on the same rules as the rival rows.
+
+    ``audit_table`` used to emit only ``{full, launder, dividend}`` for our arm
+    while the paper's verdict on it (blank / same-keys null / ``+0 B`` margin /
+    rescue lift) was aggregated by a scratch script
+    (``.claude/scratch/bprime-referee-closures/n9_clu_column.py``, disclosed in
+    App A.1e). They are first-class here, byte-identically: sample sd (ddof=1),
+    ``SE = sd/sqrt(n)``, and **every margin/lift paired per seed** — the
+    ``+0 B`` reader chosen per seed by arg-max over the exclusive set, the
+    raw-table reader by arg-max over that set plus the arg-min launder.
+
+    Cells whose banked record predates the ``all_launder_scores`` block
+    contribute ``nan`` to the reader-derived columns rather than being dropped
+    (the ``full``/``launder``/``blank`` columns are unaffected).
+    """
+    cr = [c["clu_reproduction"] for c in cells]
+    full = [float(x["full"]) for x in cr]
+    launder = [float(x["launder"]) for x in cr]
+    blank = [float(x.get("blank", float("nan"))) for x in cr]
+    sets = [x.get("all_launder_scores", {}) or {} for x in cr]
+    null = [float(s.get("same_keys_null", float("nan"))) for s in sets]
+
+    def _best(s: dict, extra: bool) -> Tuple[str, float]:
+        cand = {k: float(v) for k, v in s.items()
+                if k.endswith(_CLU_ZB_SUFFIX)
+                or (extra and k == _CLU_RAW_EXTRA)}
+        cand = {k: v for k, v in cand.items() if np.isfinite(v)}
+        if not cand:
+            return "", float("nan")
+        nm = max(cand, key=lambda k: cand[k])
+        return nm, cand[nm]
+
+    zb_names, zb_margin, raw_names, raw_margin = [], [], [], []
+    for f, s in zip(full, sets, strict=True):
+        nm, val = _best(s, extra=False)
+        zb_names.append(nm)
+        zb_margin.append(f - val)
+        nm_r, val_r = _best(s, extra=True)
+        raw_names.append(nm_r)
+        raw_margin.append(f - val_r)
+
+    lift = [f - b for f, b in zip(full, blank, strict=True)]
+    lift_m, lift_se = _mean_se(lift)
+    div_m, div_se = _mean_se([f - lg for f, lg in zip(full, launder, strict=True)])
+    zb_m, zb_se = _mean_se(zb_margin)
+    raw_m, raw_se = _mean_se(raw_margin)
+    null_m, null_se = _mean_se(null)
+    fn_m, fn_se = _mean_se([f - x for f, x in zip(full, null, strict=True)])
+    cf, cfse = _mean_se(full)
+    cl, clse = _mean_se(launder)
+    bl_m, bl_se = _mean_se(blank)
+    readers = sorted({k for s in sets for k in s if k.endswith(_CLU_ZB_SUFFIX)})
+    return {
+        "n_seeds": len(cells), "seeds": [int(c["seed"]) for c in cells],
+        "full": cf, "full_se": cfse,
+        "launder": cl, "launder_se": clse,
+        # ⚠ kept as the plain difference of means it has always been (identical
+        # to the paired mean); the SE beside it is the PAIRED one.
+        "dividend": float(cf - cl) if np.isfinite(cf) else float("nan"),
+        "dividend_paired": div_m, "dividend_se": div_se,
+        "blank": bl_m, "blank_se": bl_se,
+        "same_keys_null": null_m, "same_keys_null_se": null_se,
+        "full_minus_same_keys_null": fn_m, "full_minus_same_keys_null_se": fn_se,
+        "zero_byte_readers": readers,
+        "zero_byte_substitute_per_seed": zb_names,
+        "zero_byte_margin": zb_m, "zero_byte_margin_se": zb_se,
+        "raw_table_reader_per_seed": raw_names,
+        "raw_table_margin": raw_m, "raw_table_margin_se": raw_se,
+        "lift_over_own_blank": lift_m, "lift_se": lift_se,
+        "RESCUED_above_own_blank_2se": bool(
+            np.isfinite(lift_m) and np.isfinite(lift_se)
+            and lift_m > 2.0 * lift_se),
+    }
+
+
 def audit_table(records: Sequence[dict]) -> Dict[str, Any]:
     """⭐ The audit table — one row per (family, rival), 3-seed mean ± SE."""
     out: Dict[str, Any] = {}
@@ -665,19 +749,14 @@ def audit_table(records: Sequence[dict]) -> Dict[str, Any]:
                 "table_is_lossless": per[0]["byte_ledger"]["table_is_lossless"],
                 "metric_native": per[0]["metric_native"]["verdict"],
             }
-        clu_full = [c["clu_reproduction"]["full"] for c in cells]
-        clu_lnd = [c["clu_reproduction"]["launder"] for c in cells]
-        cf, cfse = _mean_se(clu_full)
-        cl, clse = _mean_se(clu_lnd)
         out[fam] = {
             "is_dividend_family": bool(fam == "aggregate"),
             "label": cells[0]["label"],
             "rivals": fam_rows,
             "clu_banked": BANKED_CLU.get(f"{fam}/{cells[0]['arm']}", {}),
-            "clu_reproduced": {"full": cf, "full_se": cfse, "launder": cl,
-                               "launder_se": clse,
-                               "dividend": float(cf - cl) if np.isfinite(cf) else
-                               float("nan")},
+            # ⭐ our own arm's FULL column set, on the rivals' own rules
+            # (App A.1e's scratch aggregation, promoted into the harness).
+            "clu_reproduced": _clu_columns(cells),
             "admissible_coverage": [c["admissible_coverage"] for c in cells],
         }
     return out
