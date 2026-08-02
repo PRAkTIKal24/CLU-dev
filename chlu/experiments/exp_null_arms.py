@@ -10,9 +10,10 @@ re-scoped question:
 Two decision-grade outcomes were registered before this file ran
 (``.claude/outputs/orgdiv-null-arms/PREREG.md``):
 
-* **none clears** ⇒ the family is refuted for every organizer class measured —
-  cheaper and stronger than a tier-ii null, and the family (not the physics) is the
-  first fix;
+* **none clears** ⇒ the **P-particle occupancy read protocol at P = 4 is refuted**
+  for every organizer class measured (charter §A20.2: the refuted object is the
+  read protocol, NEVER the compositional family) — and the read protocol (not the
+  physics) is the first fix;
 * **any clears — especially N1** (identical store parameterisation, non-physics
   training) ⇒ the family is solvable *within the same landscape class* and the
   cat-test's K5 kill becomes attributable to the physics write/read specifically.
