@@ -19,12 +19,15 @@
 #   # 2. pull the artifacts
 #   rsync -av csf3:~/scratch/CHLU/.claude/outputs/cluformer-pilot/ ./.claude/outputs/cluformer-pilot/
 #
-# BUDGET DECLARED BEFORE SUBMISSION (task section 0.2): <= 108 A100-hours total
-#   = 3 arms x 3 seeds x <= 12 h. ⛔ If one arm x seed will not finish inside
-#   `-t 12:00:00`, STOP and report — do not resubmit at a larger wallclock.
-#   Cut order if exceeded: (1) the anytime curve D5, (2) the TTT arm at pilot
-#   scale, (3) n_layers 12 -> 8 with d_model 512 -> 640. NEVER the seed count,
-#   the swap control, the dyn-eval column, or a monitor.
+# WALLCLOCK (Head ruling 2026-08-02, supersedes the original "<= 108 A100-hours"
+#   declaration): gpuA is free at point of use and allows -t up to 4-0, so the
+#   12 h ceiling was self-imposed, NOT a cost. Submit ONE SEED PER JOB at
+#   `-t 4-00:00:00` (throughput: 6 single-GPU jobs vs the <=4-concurrent cap;
+#   failure isolation; early complete run1/run2 PAIRS when interleaved by seed).
+#   ⛔ The former instruction "do not resubmit at a larger wallclock" + its cut
+#   order ((1) D5, (2) the TTT arm, (3) depth/width) is WITHDRAWN — it protected
+#   a budget that does not exist. NOTHING is cut: never the seed count, the swap
+#   control, the dyn-eval column, a monitor, D5, or any arm.
 #
 # Partition facts (official CSF3 docs, gpu-jobs page): gpuA = A100 80GB, free at
 # point of use, <=4 GPUs concurrently per user, <=12 host cores/GPU, max -t 4-0.
