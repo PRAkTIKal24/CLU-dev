@@ -34,10 +34,13 @@ LR schedule, the **data order**, the seeds, and the **chunk granularity**. Only
 from __future__ import annotations
 
 import atexit
+import gc
 import json
 import math
 import multiprocessing as mp
 import os
+import resource
+import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import asdict, dataclass, field, fields
@@ -167,6 +170,30 @@ class PilotConfig:
     #: default and the trajectory-vs-settled-point CONTRAST — which is what S2
     #: claims — is unaffected because both arms use the same lanes.
     probe_lanes: int = 0
+
+    # -- `pilot-checkpoint-resume`: the HOST-memory levers ---------------------
+    #: ⭐ **The CSF3 attempt-1 crash site.** ``True`` (default) releases the JAX
+    #: compilation caches (:func:`release_host_memory`) at every eval-phase
+    #: boundary, so the next phase's XLA compile spike does not stack on the
+    #: retained executables of the phase before it. The eval block compiles a
+    #: pile of ONE-SHOT programs — the dyn-eval backward, the blank-store read,
+    #: five anytime budgets, the gradient probe's four backwards — none of which
+    #: is ever re-used, so the only price is a re-trace if a shape recurs.
+    #: ⛔ Decision-inert by construction (it drops executables, not values); the
+    #: toy bit-identity gate is what licenses saying so.
+    eval_cache_hygiene: bool = True
+    #: ⭐ Log host RSS (:func:`host_rss`) at every phase boundary, to stdout and
+    #: into the PARTIAL artifact. Cheap (two ``/proc`` reads) and on by default:
+    #: an ``oom_kill`` leaves no JSON behind, so the log line is the ONLY thing
+    #: that can attribute the next crash to a named phase.
+    rss_log: bool = True
+    #: ⚠ **TEST/OPS HOOK, default 0 = off.** Hard-exit (``os._exit``, i.e. no
+    #: finalisers — an ``oom_kill`` has none either) once this many arms have
+    #: been banked to the journal. It exists so the resume path can be gated by
+    #: an actual interrupted run rather than by inspection, and so the Head can
+    #: deliberately split a run across jobs. ⛔ Never part of a reported config;
+    #: exempt from the resume flag-equality check for that reason.
+    stop_after_arms: int = 0
 
     @classmethod
     def from_mapping(cls, overrides: Optional[dict] = None) -> "PilotConfig":
@@ -577,6 +604,102 @@ def shutdown_lane_pools() -> None:
 atexit.register(shutdown_lane_pools)
 
 
+# --------------------------------------------------------------------------
+# ⭐ host-memory instrumentation + hygiene (`pilot-checkpoint-resume`)
+# --------------------------------------------------------------------------
+_GB = 1.0 / (1024.0 ** 3)
+
+
+def _proc_status_kb(pid: Any = "self") -> Dict[str, float]:
+    """``VmRSS``/``VmHWM`` in kB from ``/proc/<pid>/status``; ``{}`` off Linux."""
+    out: Dict[str, float] = {}
+    try:
+        with open(f"/proc/{pid}/status") as fh:
+            for line in fh:
+                if line.startswith(("VmRSS:", "VmHWM:")):
+                    k, v = line.split(":", 1)
+                    out[k[:-1]] = float(v.strip().split()[0])
+    except OSError:
+        pass
+    return out
+
+
+def _ps_rss_kb(pid: Any) -> float:
+    """Current RSS in kB via ``ps`` — the no-``/proc`` fallback (macOS dev box).
+
+    ⚠ ``resource.getrusage`` only exposes the *peak* (``ru_maxrss``), so without
+    this the "did the hygiene pass actually give the memory back?" question is
+    unanswerable off Linux — which is where it has to be answered, because the
+    cluster is unreachable from an agent machine. One ``ps`` per phase boundary
+    (~20 per run) is free; it is never called in a hot loop.
+    """
+    import subprocess
+
+    try:
+        out = subprocess.run(["ps", "-o", "rss=", "-p", str(pid)],
+                             capture_output=True, text=True, timeout=10)
+        return float(out.stdout.strip().split()[0])
+    except Exception:
+        return float("nan")
+
+
+def host_rss(*, with_children: bool = True) -> Dict[str, float]:
+    """Host RSS in **GB**: ``rss_gb`` (now) and ``hwm_gb`` (peak so far).
+
+    ⭐ **This is the number CSF3 attempt 1 was killed on.** Job 18136619 was
+    ``oom_kill``ed with ``MaxRSS = 125.6 GB`` against a ``ReqMem`` of 125.7 GB —
+    a *host* kill, not a device OOM — after 22 h of training, in the eval block.
+    The kernel's own high-water mark is ``VmHWM``, so on Linux (the cluster)
+    that is exactly what is read; elsewhere (macOS, the dev laptop) only the
+    peak is available, via ``resource.getrusage``, whose ``ru_maxrss`` is
+    **bytes on Darwin and kilobytes on Linux**.
+
+    ⚠ ``VmHWM`` never decreases, which is the point: a jump in ``hwm_gb``
+    between two phase boundaries attributes the spike to the phase between them,
+    while ``rss_gb`` shows whether the hygiene pass actually gave it back.
+
+    ⚠ Only THIS process is measured by those two. The ``plan_workers`` pool's
+    children have their own RSS and the cgroup a job is killed against is the
+    **sum**, so ``children_rss_gb`` is reported beside them.
+    """
+    st = _proc_status_kb("self")
+    rec: Dict[str, float] = {}
+    if st:
+        rec["rss_gb"] = st.get("VmRSS", float("nan")) * 1024.0 * _GB
+        rec["hwm_gb"] = st.get("VmHWM", float("nan")) * 1024.0 * _GB
+    else:
+        ru = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+        rec["rss_gb"] = _ps_rss_kb(os.getpid()) * 1024.0 * _GB
+        rec["hwm_gb"] = ru * (1.0 if sys.platform == "darwin" else 1024.0) * _GB
+    if with_children:
+        kids, n = 0.0, 0
+        for ex in list(_POOLS.values()):
+            for pid in list(getattr(ex, "_processes", {}) or {}):
+                s = _proc_status_kb(pid)
+                kids += ((s["VmRSS"] if s else _ps_rss_kb(pid)) * 1024.0 * _GB)
+                n += 1
+        rec["children_rss_gb"] = kids
+        rec["n_children"] = float(n)
+    return rec
+
+
+def release_host_memory(*, clear_jax: bool = True) -> None:
+    """Drop everything droppable between two eval phases.
+
+    ``jax.clear_caches()`` releases the retained compiled executables of the
+    phase just finished (and the tracing/lowering caches behind them) so that
+    the NEXT phase's compile does not spike on top of them; ``gc.collect()``
+    then reaps the Python-side cycles holding the buffers.
+
+    ⛔ **Value-inert.** It drops *executables*, never data: a program that is
+    needed again is re-traced and re-compiled, and XLA compilation of the same
+    HLO is deterministic. Nothing here touches a weight, a plan or a metric.
+    """
+    if clear_jax:
+        jax.clear_caches()
+    gc.collect()
+
+
 def _plan_lanes(zc: np.ndarray, scfg: CluSystemConfig, class_i: Sequence[str],
                 pcfg: "PilotConfig") -> Tuple[List[Dict[str, np.ndarray]], str]:
     """Run every lane's controller — serially, or one process per lane.
@@ -936,10 +1059,20 @@ def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
         if watch_on and i > 0 and (i % max(1, pcfg.monitor_every) == 0
                                    or i == pcfg.steps - 1):
             _watch(i, "trained")
-        if log is not None and (i % log_every == 0 or i == pcfg.steps - 1):
-            log.append({"arm": name, "step": i, "nll": float(loss),
-                        "bpc": bits_per_character(float(loss)),
-                        "wall_s": time.time() - t0, "plan_s": plan_s})
+        if i % log_every == 0 or i == pcfg.steps - 1:
+            row = {"arm": name, "step": i, "nll": float(loss),
+                   "bpc": bits_per_character(float(loss)),
+                   "wall_s": time.time() - t0, "plan_s": plan_s}
+            if log is not None:
+                log.append(row)
+            # ⭐ `csf3-memory-fit` §7 claimed this print existed; it did not (Head
+            # checked attempt 1's `.out`/`.err`: no such line anywhere), so the
+            # first A100 step time for this model had to be reconstructed from
+            # wallclock. It exists now.
+            print(f"[train/{name}] step {i}/{pcfg.steps} | nll {row['nll']:.4f} "
+                  f"bpc {row['bpc']:.4f} | wall_s {row['wall_s']:.1f} "
+                  f"({row['wall_s'] / (i + 1):.2f} s/step) | plan_s {plan_s:.1f} "
+                  f"({100.0 * plan_s / max(row['wall_s'], 1e-9):.0f}%)", flush=True)
     return model, {"loss_history": hist, "wall_s": time.time() - t0,
                    "plan_pass_s": plan_s,
                    "plan_pass_frac": plan_s / max(time.time() - t0, 1e-9),
@@ -1168,7 +1301,8 @@ def allocation_liveness(model: StreamModel, pcfg: PilotConfig, tokens, targets
 
 
 def anytime_curve(model: StreamModel, pcfg: PilotConfig, batches,
-                  budgets: Sequence[Tuple[int, int]]) -> List[Dict[str, Any]]:
+                  budgets: Sequence[Tuple[int, int]],
+                  *, hygiene: Optional[bool] = None) -> List[Dict[str, Any]]:
     """⭐ D5 — accuracy vs Verlet-steps-per-read, on a model trained at ONE budget.
 
     ⚠ **SHAPE claim only** (charter §A3). The anytime figure is occupied — DEQs,
@@ -1176,7 +1310,14 @@ def anytime_curve(model: StreamModel, pcfg: PilotConfig, batches,
     claimed and none may be quoted from this curve. ⚠ The trajectory read costs
     **17.1x** the point read (`trainability-spike` §3) and that price travels
     with every point on it.
+
+    ⭐ `pilot-checkpoint-resume`: ``verlet`` is a *static* argument of
+    :func:`_eval_loss`, so every budget compiles its OWN program and **none of
+    them is ever re-used** — five one-shot executables stacking inside a single
+    phase. With ``hygiene`` (default: ``pcfg.eval_cache_hygiene``) each is
+    released before the next is compiled.
     """
+    hyg = bool(pcfg.eval_cache_hygiene if hygiene is None else hygiene)
     bat = list(batches)
     out = []
     for b in budgets:
@@ -1185,6 +1326,8 @@ def anytime_curve(model: StreamModel, pcfg: PilotConfig, batches,
         out.append({"address_steps": int(b[0]), "read_steps": int(b[1]),
                     "verlet_per_read": int(b[0]) + int(b[1]),
                     "bpc": r["bpc"], "wall_s": time.time() - t0})
+        if hyg:
+            release_host_memory()
     return out
 
 
@@ -1569,10 +1712,24 @@ def _fairness(admitted, slot, K) -> float:
 # ==========================================================================
 # artifacts
 # ==========================================================================
-def save_json(path: str | Path, obj: Any) -> Path:
+def save_json(path: str | Path, obj: Any, *, atomic: bool = False) -> Path:
+    """Dump ``obj`` as JSON. ``atomic=True`` writes a sibling tmp + ``os.replace``.
+
+    ⚠ The atomic path exists for the crash-resume **journal**: it is rewritten
+    after every phase of a 30 h job, so a kill landing mid-``write_text`` would
+    otherwise leave a truncated file that is worse than no file at all.
+    ``os.replace`` is atomic within a filesystem, which the tmp sibling
+    guarantees.
+    """
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(obj, indent=2, default=_jsonable))
+    blob = json.dumps(obj, indent=2, default=_jsonable)
+    if not atomic:
+        p.write_text(blob)
+        return p
+    tmp = p.with_name(p.name + ".tmp")
+    tmp.write_text(blob)
+    os.replace(tmp, p)
     return p
 
 
@@ -1596,6 +1753,6 @@ __all__ = [
     "evaluate", "dynamic_eval", "gradient_probe", "allocation_liveness",
     "monitor_pass", "make_optimizer", "save_json", "anytime_curve",
     "calibrate_phi_gain", "store_health_probe", "LaneControllerSummary",
-    "shutdown_lane_pools",
+    "shutdown_lane_pools", "host_rss", "release_host_memory",
 ]
 _ = Sequence
