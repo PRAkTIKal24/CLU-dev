@@ -298,6 +298,49 @@ def test_host_rss_reports_a_finite_peak_and_a_child_column():
     assert np.isfinite(host_rss()["hwm_gb"])
 
 
+def test_proc_status_parser_keeps_the_full_vm_key_names(tmp_path, monkeypatch):
+    """Regression: the Linux /proc parse path, which macOS never executes.
+
+    A ``k[:-1]`` in the parser once truncated the keys to ``VmRS``/``VmHW`` —
+    the parent then printed ``nan`` and the children loop raised ``KeyError``,
+    killing every CSF3 resubmission job at the first phase boundary (42 s in).
+    This feeds the parser real /proc-format text so the bug class cannot land
+    on the cluster untested again.
+    """
+    import builtins
+
+    import chlu.training.train_cluformer as T
+
+    fake = tmp_path / "status"
+    fake.write_text("Name:\tpython\nVmHWM:\t  234567 kB\nVmRSS:\t  123456 kB\n")
+    real_open = builtins.open
+    monkeypatch.setattr(
+        builtins, "open",
+        lambda path, *a, **k: real_open(fake, *a, **k)
+        if str(path).startswith("/proc/") else real_open(path, *a, **k),
+    )
+    st = T._proc_status_kb(12345)
+    assert st == {"VmRSS": 123456.0, "VmHWM": 234567.0}
+
+
+def test_host_rss_children_survive_a_keyless_status_and_a_nan_ps(monkeypatch):
+    """A zombie/vanished worker (status readable but no ``VmRSS``, ``ps`` NaN)
+    must be skipped — never a ``KeyError``, never a NaN-poisoned sum."""
+    import chlu.training.train_cluformer as T
+
+    class _FakePool:
+        _processes = {999999991: None}
+
+    monkeypatch.setitem(T._POOLS, "_test_fake", _FakePool())
+    # self → {} (parent takes the getrusage fallback); child → keyless-but-truthy
+    monkeypatch.setattr(T, "_proc_status_kb",
+                        lambda pid="self": {} if pid == "self" else {"VmHWM": 1.0})
+    monkeypatch.setattr(T, "_ps_rss_kb", lambda pid: float("nan"))
+    r = T.host_rss()
+    assert r["children_rss_gb"] == 0.0 and r["n_children"] == 0.0
+    assert np.isfinite(r["hwm_gb"])
+
+
 def test_cache_hygiene_is_value_inert_on_the_anytime_curve(fake_enwik8):
     """⛔ ``release_host_memory`` drops executables, never values."""
     pcfg = EXP.make_config("toy", 0, _overrides(fake_enwik8))

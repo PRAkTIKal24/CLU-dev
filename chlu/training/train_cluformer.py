@@ -617,8 +617,12 @@ def _proc_status_kb(pid: Any = "self") -> Dict[str, float]:
         with open(f"/proc/{pid}/status") as fh:
             for line in fh:
                 if line.startswith(("VmRSS:", "VmHWM:")):
+                    # split(":", 1) already drops the colon — k is the full key.
+                    # (A k[:-1] here once truncated the keys to "VmRS"/"VmHW" and
+                    # crashed every CSF3 job at the first phase boundary; macOS
+                    # has no /proc, so only the cluster ever ran this branch.)
                     k, v = line.split(":", 1)
-                    out[k[:-1]] = float(v.strip().split()[0])
+                    out[k] = float(v.strip().split()[0])
     except OSError:
         pass
     return out
@@ -676,8 +680,12 @@ def host_rss(*, with_children: bool = True) -> Dict[str, float]:
         for ex in list(_POOLS.values()):
             for pid in list(getattr(ex, "_processes", {}) or {}):
                 s = _proc_status_kb(pid)
-                kids += ((s["VmRSS"] if s else _ps_rss_kb(pid)) * 1024.0 * _GB)
-                n += 1
+                v = s.get("VmRSS")  # absent for a zombie/vanished worker even on Linux
+                if v is None:
+                    v = _ps_rss_kb(pid)
+                if not math.isnan(v):  # a NaN read must not poison the whole sum
+                    kids += v * 1024.0 * _GB
+                    n += 1
         rec["children_rss_gb"] = kids
         rec["n_children"] = float(n)
     return rec
