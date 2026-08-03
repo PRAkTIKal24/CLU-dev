@@ -157,22 +157,28 @@ def load_arm_checkpoint(out: Path, arm: str, seed: int, like):
     return eqx.tree_deserialise_leaves(ckpt_path(out, arm, seed), like)
 
 
-def _flag_fingerprint(flags: Dict[str, Any]) -> str:
-    """The resume identity check: same config, minus the operational hooks.
+def _flag_dict(flags: Dict[str, Any]) -> Dict[str, Any]:
+    """The config identity a resume must match, flattened to ``group.key``.
 
     ⚠ ``memory.phi_gain`` is EXCLUDED — it is a calibrated *output* written back
     into the flag block after the fact, and on resume it is lifted verbatim from
     the journal rather than recomputed, so comparing it here would compare the
-    journal to itself.
+    journal to itself. ``stop_after_arms`` is excluded because the interrupted
+    run carries it and its resumption does not.
     """
-    pilot = {k: v for k, v in dict(flags.get("pilot") or {}).items()
-             if k not in _RESUME_FLAG_EXEMPT}
-    mem = {k: v for k, v in dict(flags.get("memory") or {}).items()
-           if k != "phi_gain"}
-    return json.dumps({"pilot": pilot, "memory": mem, "store": flags.get("store"),
-                       "store_dim": flags.get("store_dim"),
-                       "store_n_atoms": flags.get("store_n_atoms")},
-                      sort_keys=True, default=str)
+    out: Dict[str, Any] = {}
+    for grp, drop in (("pilot", _RESUME_FLAG_EXEMPT), ("memory", ("phi_gain",)),
+                      ("store", ())):
+        for k, v in dict(flags.get(grp) or {}).items():
+            if k not in drop:
+                out[f"{grp}.{k}"] = json.dumps(v, sort_keys=True, default=str)
+    for k in ("store_dim", "store_n_atoms"):
+        out[k] = json.dumps(flags.get(k), default=str)
+    return out
+
+
+def _flag_fingerprint(flags: Dict[str, Any]) -> str:
+    return json.dumps(_flag_dict(flags), sort_keys=True)
 
 
 def load_journal(out: Path, scale: str, seed: int, flags: Dict[str, Any],
@@ -183,12 +189,17 @@ def load_journal(out: Path, scale: str, seed: int, flags: Dict[str, Any],
         print(f"[resume] no journal at {p} — starting from scratch", flush=True)
         return {}
     prior = json.loads(p.read_text())
-    got, want = _flag_fingerprint(prior.get("flags", {})), _flag_fingerprint(flags)
-    if got != want:
+    old, new = _flag_dict(prior.get("flags", {})), _flag_dict(flags)
+    if old != new:
+        bad = sorted(k for k in set(old) | set(new)
+                     if old.get(k) != new.get(k))
         raise SystemExit(
             f"⛔ refusing to resume: {p} was written under a DIFFERENT config.\n"
-            f"  journal: {got}\n  now    : {want}\n"
-            "  (delete the journal to start over, or fix the flags)")
+            + "".join(f"    {k}: journal={old.get(k, '<absent>')} "
+                      f"now={new.get(k, '<absent>')}\n" for k in bad)
+            + "  (§A20.4: a resumed leg must be the SAME leg. If two ablation "
+              "legs are sharing one --out, give each its own; otherwise delete "
+              "the journal to start over.)")
     done = list((prior.get("arms") or {}).keys())
     trained = list((prior.get("_journal") or {}).get("trained", {}).keys())
     print(f"[resume] journal {p.name}: arms complete {done or '[]'} | "
