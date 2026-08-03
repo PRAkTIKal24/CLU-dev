@@ -32,6 +32,21 @@
 # Partition facts (official CSF3 docs, gpu-jobs page): gpuA = A100 80GB, free at
 # point of use, <=4 GPUs concurrently per user, <=12 host cores/GPU, max -t 4-0.
 #
+# HOST RAM (attempt-1 post-mortem, `pilot-checkpoint-resume`): gpuA gives 10 GB
+#   of host RAM per core and at most 12 cores per GPU, so a 1-GPU job's HARD
+#   CEILING is `-c 12` = ~120 GB and there is NO `--mem` that buys more. Job
+#   18136619 was `oom_kill`ed at MaxRSS 125.6 GB against ReqMem 125.7 GB — the
+#   HOST, not the A100 (device peak is ~8.3 GiB under `remat_chunks`), 22 h into
+#   training and ~45 min into the POST-TRAINING EVAL BLOCK. Two consequences,
+#   both handled below: (a) submit with `-c 12`, and (b) footprint reduction is
+#   the primary fix, not a fallback — `eval_cache_hygiene` (default ON) releases
+#   each eval phase's one-shot XLA executables before the next one compiles, and
+#   every phase boundary prints an `[rss]` line so the NEXT crash, if any, is
+#   attributable to a named phase rather than to "the eval block".
+#   If the `[rss]` peaks still run hot, the declared uniform-SET fallback is
+#   `SET="... plan_workers=4"` (lane-parallel is measured decision-identical);
+#   `-G 2 -c 24` (240 GB, one idle GPU) is a Head decision, not a script default.
+#
 #SBATCH -p gpuA
 #SBATCH -G 1
 #SBATCH -n 1
@@ -62,6 +77,15 @@ STAGE_ONLY="${STAGE_ONLY:-0}"     # 1 => fetch enwik8 and exit (run this FIRST)
 MEM="${MEM:-}"
 STORE="${STORE:-}"
 SET="${SET:-}"
+# ⭐ `pilot-checkpoint-resume`: RESUME=1 picks the run back up from the journal
+#    in $OUT (`pilot_<scale>_seed<N>_PARTIAL.json` + `ckpt_<arm>_seed<N>.eqx`).
+#    Banked phases are lifted verbatim; a trained-but-not-evaluated arm keeps its
+#    weights and only re-runs its evals — which is exactly attempt 1's loss
+#    (22 h of clu_store training, killed 45 min into the post-training eval
+#    block). ⛔ It REFUSES to resume a journal written under a different config,
+#    so a resubmission must carry byte-identical MEM/STORE/SET.
+#    ⚠ Safe to leave at 1 on a first submission: no journal => a normal run.
+RESUME="${RESUME:-0}"
 
 export CLU_REPO="${CLU_REPO:-$HOME/scratch/CHLU}"
 # shellcheck disable=SC1091
@@ -102,7 +126,8 @@ EXTRA=""
 [ -n "$MEM" ] && EXTRA="$EXTRA --mem $MEM"
 [ -n "$STORE" ] && EXTRA="$EXTRA --store $STORE"
 [ -n "$SET" ] && EXTRA="$EXTRA --set $SET"
-echo "=== config overrides === MEM='$MEM' STORE='$STORE' SET='$SET'"
+[ "$RESUME" = "1" ] && EXTRA="$EXTRA --resume"
+echo "=== config overrides === MEM='$MEM' STORE='$STORE' SET='$SET' RESUME='$RESUME'"
 
 echo "=== tier-iii pilot: scale=$STAGE stage=$STG seeds=$SEEDS ==="
 # shellcheck disable=SC2086
