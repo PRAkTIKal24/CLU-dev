@@ -42,11 +42,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
+import equinox as eqx
 import jax
 import numpy as np
 
@@ -62,7 +64,9 @@ from chlu.training.train_cluformer import (
     dynamic_eval,
     evaluate,
     gradient_probe,
+    host_rss,
     monitor_pass,
+    release_host_memory,
     save_json,
     solve_arms,
     train_arm,
@@ -112,11 +116,197 @@ def _eval_batches(split, pcfg: PilotConfig, n: int) -> List:
                                    n_batches=n))
 
 
+# ==========================================================================
+# ⭐ the crash-resume JOURNAL (`pilot-checkpoint-resume`)
+# ==========================================================================
+#: Keys the journal carries that the FINAL artifact must NOT gain. The final
+#: JSON's content-shape is consumed downstream (``--plot-only``/``aggregate``
+#: and the analyst), so the instrumentation is additive **to the PARTIAL only**.
+_JOURNAL_ONLY_KEYS = ("host_rss", "_journal")
+#: Config fields exempt from the resume flag-equality check — operational
+#: hooks, not physics. ``stop_after_arms`` is exactly the flag an interrupted
+#: run carries and its resumption does not.
+_RESUME_FLAG_EXEMPT = ("stop_after_arms",)
+
+
+def partial_path(out: Path, scale: str, seed: int) -> Path:
+    return Path(out) / f"pilot_{scale}_seed{seed}_PARTIAL.json"
+
+
+def ckpt_path(out: Path, arm: str, seed: int) -> Path:
+    return Path(out) / f"ckpt_{arm}_seed{seed}.eqx"
+
+
+def save_arm_checkpoint(out: Path, arm: str, seed: int, model) -> Path:
+    """Serialise one trained arm's leaves; ``tmp`` + ``os.replace`` (atomic)."""
+    p = ckpt_path(out, arm, seed)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_name(p.name + ".tmp")
+    eqx.tree_serialise_leaves(tmp, model)
+    os.replace(tmp, p)
+    return p
+
+
+def load_arm_checkpoint(out: Path, arm: str, seed: int, like):
+    """Deserialise onto ``like`` — the freshly-built arm of the SAME geometry.
+
+    ``like`` is rebuilt from ``seed`` alone (``build_arm`` splits a key derived
+    from ``PRNGKey(1000 + seed)``), so the template is reproducible without any
+    reference to the interrupted process.
+    """
+    return eqx.tree_deserialise_leaves(ckpt_path(out, arm, seed), like)
+
+
+def _flag_dict(flags: Dict[str, Any]) -> Dict[str, Any]:
+    """The config identity a resume must match, flattened to ``group.key``.
+
+    ⚠ ``memory.phi_gain`` is EXCLUDED — it is a calibrated *output* written back
+    into the flag block after the fact, and on resume it is lifted verbatim from
+    the journal rather than recomputed, so comparing it here would compare the
+    journal to itself. ``stop_after_arms`` is excluded because the interrupted
+    run carries it and its resumption does not.
+    """
+    out: Dict[str, Any] = {}
+    for grp, drop in (("pilot", _RESUME_FLAG_EXEMPT), ("memory", ("phi_gain",)),
+                      ("store", ())):
+        for k, v in dict(flags.get(grp) or {}).items():
+            if k not in drop:
+                out[f"{grp}.{k}"] = json.dumps(v, sort_keys=True, default=str)
+    for k in ("store_dim", "store_n_atoms"):
+        out[k] = json.dumps(flags.get(k), default=str)
+    return out
+
+
+def _flag_fingerprint(flags: Dict[str, Any]) -> str:
+    return json.dumps(_flag_dict(flags), sort_keys=True)
+
+
+def load_journal(out: Path, scale: str, seed: int, flags: Dict[str, Any],
+                 ) -> Dict[str, Any]:
+    """Read the PARTIAL record, or ``{}``; refuse a config-mismatched resume."""
+    p = partial_path(out, scale, seed)
+    if not p.exists():
+        print(f"[resume] no journal at {p} — starting from scratch", flush=True)
+        return {}
+    prior = json.loads(p.read_text())
+    old, new = _flag_dict(prior.get("flags", {})), _flag_dict(flags)
+    if old != new:
+        bad = sorted(k for k in set(old) | set(new)
+                     if old.get(k) != new.get(k))
+        raise SystemExit(
+            f"⛔ refusing to resume: {p} was written under a DIFFERENT config.\n"
+            + "".join(f"    {k}: journal={old.get(k, '<absent>')} "
+                      f"now={new.get(k, '<absent>')}\n" for k in bad)
+            + "  (§A20.4: a resumed leg must be the SAME leg. If two ablation "
+              "legs are sharing one --out, give each its own; otherwise delete "
+              "the journal to start over.)")
+    done = list((prior.get("arms") or {}).keys())
+    trained = list((prior.get("_journal") or {}).get("trained", {}).keys())
+    print(f"[resume] journal {p.name}: arms complete {done or '[]'} | "
+          f"trained-not-evaluated {[a for a in trained if a not in done] or '[]'}",
+          flush=True)
+    return prior
+
+
+class _Phases:
+    """Phase bookkeeping: RSS marks, cache hygiene, and journal banking.
+
+    One object per run. ``step(key, fn)`` is the whole contract: it returns the
+    banked value if the journal already has it (that is the resume), otherwise
+    it computes it, marks the host RSS on both sides of the call, hands the
+    memory back, and rewrites the journal atomically.
+    """
+
+    def __init__(self, rec: Dict[str, Any], prior: Dict[str, Any], pcfg,
+                 out: Path, scale: str, seed: int, t0: float):
+        self.rec, self.prior, self.pcfg = rec, prior, pcfg
+        self.path = partial_path(out, scale, seed)
+        self.t0 = t0
+        rec.setdefault("host_rss", list(prior.get("host_rss") or []))
+        rec.setdefault("_journal", {"trained": dict(
+            (prior.get("_journal") or {}).get("trained", {}))})
+
+    # -- instrumentation ----------------------------------------------------
+    def mark(self, phase: str) -> Dict[str, float]:
+        """One host-RSS reading, to stdout **and** the journal.
+
+        ⛔ stdout is the load-bearing channel, not the JSON: a job killed by the
+        kernel writes no artifact at all, so the ``[rss]`` line of the phase
+        that was running is the only evidence that will exist.
+        """
+        if not bool(getattr(self.pcfg, "rss_log", True)):
+            return {}
+        r = host_rss()
+        r["phase"] = phase
+        r["t_s"] = round(time.time() - self.t0, 1)
+        self.rec["host_rss"].append(r)
+        print(f"[rss] {phase:<34s} rss {r.get('rss_gb', float('nan')):7.2f} GB | "
+              f"peak {r.get('hwm_gb', float('nan')):7.2f} GB | "
+              f"children {r.get('children_rss_gb', 0.0):6.2f} GB "
+              f"(n={int(r.get('n_children', 0.0))}) | "
+              f"t {r['t_s']:.0f}s", flush=True)
+        return r
+
+    def hygiene(self, phase: str) -> None:
+        if bool(getattr(self.pcfg, "eval_cache_hygiene", True)):
+            release_host_memory()
+            self.mark(f"{phase}/released")
+
+    def bank(self) -> None:
+        save_json(self.path, self.rec, atomic=True)
+
+    # -- the resume primitive ------------------------------------------------
+    def step(self, key: str, fn: Callable[[], Any], *,
+             into: Optional[Dict[str, Any]] = None,
+             prior_into: Optional[Dict[str, Any]] = None,
+             label: Optional[str] = None) -> Any:
+        """``rec[key] = fn()`` — or lift it verbatim from the journal."""
+        dst = self.rec if into is None else into
+        src = self.prior if prior_into is None else prior_into
+        name = label or key
+        if key in (src or {}):
+            dst[key] = src[key]
+            print(f"[resume] phase '{name}': lifted from the journal", flush=True)
+            return dst[key]
+        self.mark(f"{name}/enter")
+        dst[key] = fn()
+        self.mark(f"{name}/exit")
+        self.hygiene(name)
+        self.bank()
+        return dst[key]
+
+
 def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
               out_dir: str = ".claude/outputs/cluformer-pilot",
               overrides: Optional[dict] = None,
-              with_d5: bool = False) -> Dict[str, Any]:
-    """Run the pilot to ``stage``; write one JSON artifact; return the record."""
+              with_d5: bool = False, resume: bool = False) -> Dict[str, Any]:
+    """Run the pilot to ``stage``; write one JSON artifact; return the record.
+
+    ⭐ **Crash-resumable** (``resume=True``). Every phase is banked to
+    ``pilot_{scale}_seed{N}_PARTIAL.json`` as it completes and every arm's
+    trained weights to ``ckpt_{arm}_seed{N}.eqx``, both atomically; a resumed
+    run lifts the banked phases verbatim and recomputes only what is missing.
+    CSF3 attempt 1 lost 22 h of training to a host-RAM ``oom_kill`` **45 min
+    into the post-training eval block** — so the weight checkpoint is written
+    the instant training returns, before any evaluation, which is what makes
+    that particular crash cost minutes instead of a day.
+
+    ⭐ **The resume is EXACT for every arm, and here is why.** ``_train_batches``
+    materialises the whole training stream ONCE from ``(seed, steps)`` and each
+    arm consumes ``iter(batches)`` — a fresh iterator over the same list — so
+    arm *k*'s data stream depends on nothing whatsoever carried out of arms
+    ``0..k-1``. The eval iterators are ``contiguous_batches`` (deterministic, no
+    seed). No fast-forwarding is therefore required and none is performed: a
+    resumed arm is handed the identical batches in the identical order. The one
+    piece of state that genuinely crosses a phase boundary — the persistent
+    monitor registry, whose ``(write_loss, acq)`` window monitor #6 needs — is
+    handled by computing ``monitors_final`` inside the training segment, while
+    that registry is still alive.
+
+    ⛔ The FINAL artifact is unchanged in content-shape; the journal keys
+    (``host_rss``, ``_journal``) are stripped by :func:`_finish` and live only
+    in the PARTIAL.
+    """
     t_all = time.time()
     pcfg = make_config(scale, seed, overrides)
     out = Path(out_dir)
@@ -134,6 +324,9 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
         "stages_reached": [],
         "not_run": [],
     }
+    prior = load_journal(out, scale, seed, rec["flags"]) if resume else {}
+    ph = _Phases(rec, prior, pcfg, out, scale, seed, t_all)
+    ph.mark("run_pilot/enter")
     tr, va, te = _data(pcfg)
     rec["data"] = {"train_B": len(tr), "valid_B": len(va), "test_B": len(te),
                    "n_bytes_staged": pcfg.data_bytes or 100_000_000}
@@ -142,10 +335,13 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
     k_cal, k_solve, k_model = jax.random.split(key, 3)
     calib_x = next(iter(random_batches(tr, batch=pcfg.batch, seq_len=pcfg.seq_len,
                                        n_batches=1, seed=seed)))[0]
-    gain = calibrate_phi_gain(pcfg, calib_x, key=k_cal)
+    # ⭐ the gain is a pure function of (seed, config); lifting it from the
+    # journal on resume is exact AND skips a full-model probe forward.
+    gain = ph.step("phi_gain_calibrated",
+                   lambda: calibrate_phi_gain(pcfg, calib_x, key=k_cal),
+                   label="phi_gain")
     pcfg.memory = dict(pcfg.memory)
     pcfg.memory["phi_gain"] = gain
-    rec["phi_gain_calibrated"] = gain
     rec["flags"]["memory"]["phi_gain"] = gain
 
     specs, ledger = solve_arms(pcfg, k_solve)
@@ -159,72 +355,168 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
     # ---------------- S1: the block runs the stream, monitors reported --------
     x0, y0 = _eval_batches(va, pcfg, 1)[0]
     t = time.time()
-    rec["monitors_init"] = monitor_pass(models["clu_store"], pcfg, x0)
-    rec["monitors_init"]["wall_s"] = time.time() - t
-    rec["allocation_liveness_init"] = allocation_liveness(models["clu_store"], pcfg,
-                                                          x0, y0)
+
+    def _monitors_init():
+        r = monitor_pass(models["clu_store"], pcfg, x0)
+        r["wall_s"] = time.time() - t
+        return r
+
+    ph.step("monitors_init", _monitors_init)
+    ph.step("allocation_liveness_init",
+            lambda: allocation_liveness(models["clu_store"], pcfg, x0, y0))
     rec["stages_reached"].append("S1")
     if stage == "s1":
-        return _finish(rec, out, t_all, pcfg)
+        return _finish(rec, out, t_all, pcfg, ph)
 
     # ---------------- S2: the training path is real ---------------------------
-    t = time.time()
-    rec["gradient_probe_init"] = gradient_probe(models["clu_store"], pcfg, x0, y0)
-    rec["gradient_probe_init"]["wall_s_total"] = time.time() - t
+    def _probe_init():
+        t2 = time.time()
+        r = gradient_probe(models["clu_store"], pcfg, x0, y0)
+        r["wall_s_total"] = time.time() - t2
+        return r
+
+    ph.step("gradient_probe_init", _probe_init)
     rec["stages_reached"].append("S2")
     if stage == "s2":
-        return _finish(rec, out, t_all, pcfg)
+        return _finish(rec, out, t_all, pcfg, ph)
 
     # ---------------- S3: the swap control, trained on identical data ---------
+    # ⭐ ONE materialised stream, consumed by every arm through a FRESH iterator.
+    # That is the whole resume guarantee: arm k's batches are a function of
+    # (seed, steps) alone and carry nothing out of arms 0..k-1.
     batches = _train_batches(tr, pcfg)
     ev = _eval_batches(te, pcfg, pcfg.eval_batches)
     dv = _eval_batches(te, pcfg, pcfg.dyneval_batches)
     rec["train_log"] = []
     rec["arms"] = {}
+    prior_arms = dict(prior.get("arms") or {})
+    prior_log = list(prior.get("train_log") or [])
+    trained_bank: Dict[str, Any] = rec["_journal"]["trained"]
     from chlu.core.monitors import default_registry
-    for a in arms:
+    for ai, a in enumerate(arms):
         t = time.time()
-        # ⭐ ONE persistent registry per arm, so monitor #6's (loss, acq) window
-        # accumulates across the run instead of restarting at every observation.
-        reg = default_registry(loud=False) if a == "clu_store" else None
-        during: List[Dict[str, Any]] = []
-        m, hist = train_arm(a, models[a], pcfg, iter(batches), log=rec["train_log"],
-                            monitor_registry=reg,
-                            monitor_tokens=(x0 if reg is not None else None),
-                            monitor_out=during)
-        row = {"train": hist}
-        row["static"] = evaluate(m, pcfg, iter(ev))
-        row["dyneval"] = dynamic_eval(m, pcfg, iter(dv))
+        banked = trained_bank.get(a)
+        ck = ckpt_path(out, a, seed)
+        # ⛔ Banked EVAL phases are only valid against banked WEIGHTS. If the
+        # checkpoint is gone the arm is retrained, and its stale eval rows go
+        # with it — a resumed static bpc must never describe a different model.
+        parts: Dict[str, Any] = (dict(prior_arms.get(a, {}))
+                                 if (banked is not None and ck.exists()) else {})
+        rec["arms"][a] = parts
+        wall_prior = float(parts.get("wall_s", 0.0))
+
+        def _bank_arm(_p=parts, _t=t, _w=wall_prior):
+            _p["wall_s"] = _w + (time.time() - _t)
+            ph.bank()
+
+        # -- (i) TRAIN, or lift the banked weights ---------------------------
+        if banked is not None and ck.exists():
+            m = load_arm_checkpoint(out, a, seed, models[a])
+            parts.setdefault("train", banked["train"])
+            if a == "clu_store":
+                parts.setdefault("monitors_during", banked["monitors_during"])
+                parts.setdefault("monitors_final", banked["monitors_final"])
+            rec["train_log"].extend([e for e in prior_log if e.get("arm") == a])
+            print(f"[resume] arm '{a}': {ck.name} loaded, training SKIPPED "
+                  f"({len(parts['train']['loss_history'])} banked steps)", flush=True)
+        else:
+            ph.mark(f"{a}/train/enter")
+            # ⭐ ONE persistent registry per arm, so monitor #6's (loss, acq)
+            # window accumulates across the run instead of restarting at every
+            # observation. ⚠ It cannot cross a process boundary, which is why
+            # `monitors_final` is taken HERE, inside the training segment, while
+            # the registry is still alive — a pure function of (m, reg), so
+            # taking it before the eval phases instead of after is bitwise inert.
+            reg = default_registry(loud=False) if a == "clu_store" else None
+            during: List[Dict[str, Any]] = []
+            m, hist = train_arm(a, models[a], pcfg, iter(batches),
+                                log=rec["train_log"], monitor_registry=reg,
+                                monitor_tokens=(x0 if reg is not None else None),
+                                monitor_out=during)
+            parts["train"] = hist
+            bank_entry: Dict[str, Any] = {"train": hist}
+            if a == "clu_store":
+                parts["monitors_during"] = [
+                    {k: v for k, v in d.items() if k != "readings"} for d in during]
+                parts["monitors_final"] = monitor_pass(
+                    m, pcfg, x0, registry=reg,
+                    write_loss_now=float(hist["loss_history"][-1]))
+                bank_entry["monitors_during"] = parts["monitors_during"]
+                bank_entry["monitors_final"] = parts["monitors_final"]
+            ph.mark(f"{a}/train/exit")
+            # ⛔ the weights hit the disk BEFORE any evaluation — the eval block
+            # is where attempt 1 died and 22 h of training died with it.
+            save_arm_checkpoint(out, a, seed, m)
+            trained_bank[a] = bank_entry
+            _bank_arm()
+            ph.hygiene(f"{a}/train")
+
+        # -- (ii) EVALUATE, phase by phase, each one banked ------------------
+        ph.step("static", lambda m=m: evaluate(m, pcfg, iter(ev)),
+                into=parts, prior_into=parts, label=f"{a}/static")
+        _bank_arm()
+        ph.step("dyneval", lambda m=m: dynamic_eval(m, pcfg, iter(dv)),
+                into=parts, prior_into=parts, label=f"{a}/dyneval")
+        _bank_arm()
         if a == "clu_store":
-            row["blank_store"] = evaluate(m, pcfg, iter(ev), blank=True)
+            ph.step("blank_store",
+                    lambda m=m: evaluate(m, pcfg, iter(ev), blank=True),
+                    into=parts, prior_into=parts, label=f"{a}/blank_store")
+            _bank_arm()
             if with_d5:
                 mc = pcfg.memory_cfg()
                 base = (mc.address_steps, mc.read_steps)
-                row["anytime_curve"] = anytime_curve(
-                    m, pcfg, ev, [(max(2, base[0] // f), max(2, base[1] // f))
-                                  for f in (8, 4, 2, 1)]
-                    + [(base[0] * 2, base[1] * 2)])
-            row["monitors_during"] = [
-                {k: v for k, v in d.items() if k != "readings"} for d in during]
-            row["monitors_final"] = monitor_pass(
-                m, pcfg, x0, registry=reg,
-                write_loss_now=float(hist["loss_history"][-1]))
-            row["gradient_probe_final"] = gradient_probe(m, pcfg, x0, y0)
-            row["selectors_final"] = _selectors(m)
-        row["wall_s"] = time.time() - t
-        rec["arms"][a] = row
+                ph.step("anytime_curve", lambda m=m, b=base: anytime_curve(
+                    m, pcfg, ev, [(max(2, b[0] // f), max(2, b[1] // f))
+                                  for f in (8, 4, 2, 1)] + [(b[0] * 2, b[1] * 2)]),
+                    into=parts, prior_into=parts, label=f"{a}/anytime_curve")
+                _bank_arm()
+            ph.step("gradient_probe_final",
+                    lambda m=m: gradient_probe(m, pcfg, x0, y0),
+                    into=parts, prior_into=parts, label=f"{a}/gradient_probe_final")
+            ph.step("selectors_final", lambda m=m: _selectors(m),
+                    into=parts, prior_into=parts, label=f"{a}/selectors_final")
+        parts["wall_s"] = wall_prior + (time.time() - t)
+        rec["arms"][a] = _arm_row(parts, a, with_d5)
         models[a] = m
-        print(f"[{a}] static bpc {row['static']['bpc']:.4f} | "
-              f"dyneval bpc {row['dyneval']['bpc']:.4f} | {row['wall_s']:.0f}s", flush=True)
+        ph.bank()
+        print(f"[{a}] static bpc {rec['arms'][a]['static']['bpc']:.4f} | "
+              f"dyneval bpc {rec['arms'][a]['dyneval']['bpc']:.4f} | "
+              f"{rec['arms'][a]['wall_s']:.0f}s", flush=True)
+        ph.hygiene(f"{a}/done")
+        if 0 < int(getattr(pcfg, "stop_after_arms", 0)) <= ai + 1:
+            print(f"⛔ stop_after_arms={pcfg.stop_after_arms}: hard-exiting after "
+                  f"'{a}' with the journal on disk (no finalisers, as an "
+                  f"oom_kill has none)", flush=True)
+            os._exit(137)
     rec["swap_table"] = _swap_table(rec)
     rec["stages_reached"].append("S3")
     if stage in ("s3",):
         rec["not_run"].append(
             "S4 (26-47 M on CSF3): NOT RUN at this scale. See report.")
-        return _finish(rec, out, t_all, pcfg)
+        return _finish(rec, out, t_all, pcfg, ph)
 
     rec["stages_reached"].append("S4")
-    return _finish(rec, out, t_all, pcfg)
+    return _finish(rec, out, t_all, pcfg, ph)
+
+
+def _arm_row(parts: Dict[str, Any], arm: str, with_d5: bool) -> Dict[str, Any]:
+    """Re-key one arm's banked pieces into the artifact's CANONICAL order.
+
+    ⛔ The journal accumulates phases in whatever order a (possibly resumed) run
+    produced them; the final artifact's key order is part of its content-shape
+    and is fixed here, so an interrupted+resumed run and an uninterrupted one
+    emit the same object.
+    """
+    order = ["train", "static", "dyneval"]
+    if arm == "clu_store":
+        order += ["blank_store"]
+        if with_d5:
+            order += ["anytime_curve"]
+        order += ["monitors_during", "monitors_final", "gradient_probe_final",
+                  "selectors_final"]
+    order += ["wall_s"]
+    return {k: parts[k] for k in order if k in parts}
 
 
 def _selectors(model) -> Dict[str, Any]:
@@ -253,10 +545,23 @@ def _swap_table(rec: Dict[str, Any]) -> Dict[str, Any]:
     return rows
 
 
-def _finish(rec, out: Path, t0: float, pcfg: PilotConfig) -> Dict[str, Any]:
+def _finish(rec, out: Path, t0: float, pcfg: PilotConfig,
+            ph: Optional["_Phases"] = None) -> Dict[str, Any]:
+    """Write the FINAL artifact.
+
+    ⛔ ``_JOURNAL_ONLY_KEYS`` are stripped here: the crash journal's RSS series
+    and per-arm weight bookkeeping are additive artifacts of the PARTIAL file,
+    and the final artifact's content-shape is exactly what it was before
+    `pilot-checkpoint-resume` (``--plot-only``/:func:`aggregate` and the analyst
+    consume it).
+    """
     rec["wall_s_total"] = time.time() - t0
+    if ph is not None:
+        ph.mark("run_pilot/finish")
+        ph.bank()
+    body = {k: v for k, v in rec.items() if k not in _JOURNAL_ONLY_KEYS}
     p = save_json(out / f"pilot_{rec['scale']}_seed{rec['seed']}_"
-                        f"{rec['stages_reached'][-1]}.json", rec)
+                        f"{rec['stages_reached'][-1]}.json", body)
     rec["artifact"] = str(p)
     print(f"wrote {p} ({rec['wall_s_total']:.0f}s, stages "
           f"{'+'.join(rec['stages_reached'])})", flush=True)
@@ -443,11 +748,23 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="re-aggregate + re-plot from artifacts already on disk")
     ap.add_argument("--d5", action="store_true",
                     help="also run the anytime shape curve (secondary; §A3 shape only)")
+    ap.add_argument("--resume", action="store_true",
+                    help="⭐ resume from `pilot_<scale>_seed<N>_PARTIAL.json` + the "
+                         "per-arm `ckpt_<arm>_seed<N>.eqx` in --out: banked phases "
+                         "are lifted verbatim and completed arms are skipped "
+                         "entirely. Refuses to resume a journal written under a "
+                         "different config. Safe on a fresh --out (no journal => "
+                         "a normal run).")
     ap.add_argument("--set", nargs="*", default=None, metavar="KEY=VALUE",
                     help="top-level PilotConfig overrides, e.g. monitor_every=25 "
                          "plan_workers=8 accum_steps=2 liveness_lanes=1 "
                          "(⭐ the last two are `csf3-memory-fit`'s out-of-model "
-                         "memory levers; both default to the shipped behaviour)")
+                         "memory levers; both default to the shipped behaviour). "
+                         "⭐ `pilot-checkpoint-resume` adds the HOST-memory ones: "
+                         "eval_cache_hygiene=false (keep the eval block's "
+                         "one-shot executables — the attempt-1 behaviour), "
+                         "rss_log=false (silence the per-phase [rss] lines), "
+                         "stop_after_arms=N (hard-exit after N arms; test hook)")
     ap.add_argument("--mem", nargs="*", default=None, metavar="KEY=VALUE",
                     help="StreamMemoryConfig overrides, e.g. atom_place_radius=0.3 "
                          "write_inner_steps=40 remat_chunks=true (⭐ the "
@@ -486,7 +803,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(json.dumps(agg, indent=2, default=float), flush=True)
         return 0
     seeds = a.seeds if a.seeds else [a.seed]
-    recs = [run_pilot(a.scale, s, a.stage, a.out, ov, a.d5) for s in seeds]
+    recs = [run_pilot(a.scale, s, a.stage, a.out, ov, a.d5, a.resume) for s in seeds]
     if len(recs) > 1:
         agg = aggregate(recs)
         save_json(Path(a.out) / f"pilot_{a.scale}_aggregate.json", agg)
