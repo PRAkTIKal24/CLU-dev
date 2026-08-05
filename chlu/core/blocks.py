@@ -424,6 +424,14 @@ used through its public API and never edited.
    6.421e-3 trajectory). ⇒ the block trains end-to-end **only** through the
    trajectory read. ``read_mode="settled_point"`` is retained solely as the
    pre-registered *control* that must measure ~0.
+   ⚠ **This is a statement about the READ, and it is the whole story only when
+   ``atom_place_radius == 0``.** At the shipped run-1/2/3 value (0.3), H1b's
+   localized placement assigns ``phi``'s output into the atom centers inside the
+   write (:class:`StreamMemoryConfig.atom_place_radius`), which is a second,
+   *write-side* path to ``phi`` that neither this theorem nor the sign-SGD inner
+   write closes — measured at **27 % of layer-0's ``phi`` gradient** (charter
+   §A22), so the settled-point control's floor is non-zero there.
+   ``erosion_partition = True`` closes the write boundary and restores the rule.
 2. ``orgdiv-prereg`` **Theorem O1**: under a settled-point read the image of
    ``x -> q*`` is exactly the set of minima of ``V_theta`` (measured: 2 distinct
    settled points from 4000 queries), so a settled-point-read block is
@@ -464,8 +472,10 @@ class StreamMemoryConfig:
     read_steps: int = 64
     #: Strided trajectory buffer handed to psi.
     traj_stride: int = 8
-    #: ⭐ ``"trajectory"`` is the only mode that trains ``phi`` (design rule 1).
-    #: ``"settled_point"`` exists as the pre-registered zero-gradient control.
+    #: ⭐ ``"trajectory"`` is the only READ mode that trains ``phi`` (design
+    #: rule 1). ``"settled_point"`` is the pre-registered zero-gradient control
+    #: — ⚠ zero-gradient only at ``atom_place_radius == 0``; the placement path
+    #: gives it a non-zero floor otherwise (see ``atom_place_radius``).
     read_mode: str = "trajectory"
     #: Inner masked-write steps per chunk. ⚠ The shipped store uses 300; at chunk
     #: granularity that is unaffordable, so this is the §0.3 re-budget — the same
@@ -490,9 +500,23 @@ class StreamMemoryConfig:
     #: ⭐ ``True`` = sign-SGD inner write (the default and the shipped
     #: configuration; see ``write_lr``). ``False`` = plain SGD, which is kept
     #: **only** as a diagnostic: ``jnp.sign`` has zero derivative, so sign-SGD
-    #: severs ``d(store state)/d(phi)`` and the trajectory read becomes the
-    #: *only* channel to ``phi`` by construction as well as by theorem. Running
-    #: the gradient probe with ``write_sign=False`` separates the two causes.
+    #: severs the INNER LOOP's ``d(store state)/d(phi)``. Running the gradient
+    #: probe with ``write_sign=False`` separates that cause from the theorem's
+    #: (``d q*/d q0 = 0``).
+    #:
+    #: ⛔ **That severance is conditional on ``atom_place_radius == 0`` and is
+    #: FALSE in the shipped run-1/2/3 config** (``atom_place_radius = 0.3``), so
+    #: the sign write alone does NOT make the trajectory read the only channel
+    #: to ``phi``. H1b's localized placement assigns ``phi``'s output straight
+    #: into the slot's atom centers (``centers[:, :addr] = z[:addr] + jig``,
+    #: :meth:`CluStoreCell._write_stages` step 1b) OUTSIDE the sign-gated loop —
+    #: a plain differentiable assignment, hence a live write-side gradient path.
+    #: MEASURED (charter §A22, Advisor-verified): ``phi``'s layer-0 gradient
+    #: 0.0908 -> 0.0659 under P1, i.e. **27 % of it was flowing through the
+    #: write**. ``erosion_partition = True`` is what closes it (P1 leg 1
+    #: ``stop_gradient``s the state the write returns); only with the partition
+    #: on is the read the sole channel. Pinned by
+    #: ``test_the_placement_path_is_a_live_gradient_channel_to_phi``.
     write_sign: bool = True
     #: psi hidden width. ⭐ Chosen so a **two-sided-matched** TTT-class swap
     #: exists (see :func:`solve_matched_ttt`); declared in PREREG §0.
@@ -552,6 +576,10 @@ class StreamMemoryConfig:
     #: of the STATE column changes and C3 locality is preserved: only the
     #: slot's own rows move, and a refused offer still leaves ``V_theta``
     #: bit-identical. ``0.0`` (default) = off, bit-identical.
+    #: ⚠ **It is also a gradient channel**: the assignment is differentiable in
+    #: ``z``, so at ``> 0`` the outer objective reaches ``phi`` (and the atom
+    #: leaves) THROUGH THE WRITE, which the sign write does not close — see
+    #: ``write_sign`` for the 27 % measurement and ``erosion_partition``.
     atom_place_radius: float = 0.0
 
     # -- `pilot-placement-probe` H2: the C2W2 TRAJECTORY WRITE TERM ----------
@@ -1270,6 +1298,9 @@ class CluStoreCell(eqx.Module):
         if mode == "settled_point":
             # ⭐ the pre-registered ZERO-GRADIENT control: an implicit settle, so
             # d q*/d q0 = 0 EXACTLY rather than as a 1e-9 numerical accident.
+            # ⚠ Zero on the READ's path only: at atom_place_radius > 0 the write
+            # still reaches phi (design rule 1's caveat), so this arm is a
+            # zero-gradient control end-to-end only under erosion_partition.
             # ⚠ SettleSpec needs a CONCRETE gamma. Using the configured constant
             # rather than the (traced, trainable) selector is exact, not a
             # shortcut: the fixed point of the damped map is gamma-INDEPENDENT
@@ -1421,6 +1452,10 @@ class CluStoreCell(eqx.Module):
         #     The offsets are a fixed, key-free geometric jig, so this adds no
         #     parameter and no state byte; the update is restricted to
         #     `row_mask`, so C3 locality holds.
+        #     ⚠ This assignment is DIFFERENTIABLE in `z` and sits outside the
+        #     sign-gated inner loop below, so it is a live gradient path from the
+        #     outer loss back into `phi` through the write (27 % of layer-0's
+        #     phi gradient, §A22). Only `erosion_partition` closes it.
         #     ⚠ It is applied to `st_w` — the state the write STARTS FROM — and
         #     NOT to `st`, because `st` is what the admission blend at step 3
         #     falls back to: a refused offer must leave `V_theta` bit-identical,

@@ -1187,9 +1187,18 @@ def gradient_probe(model: StreamModel, pcfg: PilotConfig, tokens, targets,
 
     ⭐ This is T3 tested **in-system** rather than in a probe. ``d q*/d q0 = 0``
     exactly, so a settled-point read sends **no** gradient to its read-in; the
-    trajectory read is the only channel that does. The two arms here are
-    identical models differing ONLY in ``StreamMemoryConfig.read_mode``, so the
-    comparison is internal and needs no baseline.
+    trajectory read is the only channel **through the read** that does. The two
+    arms here are identical models differing ONLY in
+    ``StreamMemoryConfig.read_mode``, so the comparison is internal and needs no
+    baseline.
+
+    ⚠ It is NOT the only channel to ``phi`` in the block. With
+    ``atom_place_radius > 0`` (the shipped run-1/2/3 config) H1b's localized
+    placement is a differentiable write-side path to ``phi`` that neither the
+    theorem nor the sign write closes (see ``StreamMemoryConfig.write_sign``),
+    so the settled-point arm's ``grad_phi`` is a non-zero floor and the ratio
+    below UNDERSTATES the read's share. ``erosion_partition = True`` closes it
+    (§A22: 27 % of layer-0's ``phi`` gradient).
 
     ⚠ `csf3-memory-fit`: ``pcfg.probe_lanes > 0`` cuts the batch here too (two
     full backwards, back to back). Default OFF — this one moves a **published**
@@ -1226,8 +1235,11 @@ def gradient_probe(model: StreamModel, pcfg: PilotConfig, tokens, targets,
         }
     # ⭐ Separate the TWO reasons the settled-point arm can read exactly zero:
     # (i) the theorem (d q*/d q0 = 0), and (ii) sign-SGD's zero derivative, which
-    # severs d(store state)/d(phi). The plain-SGD write leaves channel (ii) open,
-    # so its settled-point number is the theorem's contribution alone.
+    # severs the inner loop's d(store state)/d(phi). The plain-SGD write leaves
+    # channel (ii) open, so its settled-point number is the theorem's alone.
+    # ⚠ "exactly zero" presumes atom_place_radius == 0: H1b's placement is a
+    # THIRD channel that neither (i) nor (ii) closes, so at the shipped 0.3 both
+    # settled-point numbers are non-zero unless erosion_partition is on.
     if model.blocks[0].cell.mcfg.write_sign:
         import dataclasses as _dc
 
