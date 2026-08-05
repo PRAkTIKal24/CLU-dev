@@ -601,6 +601,67 @@ class StreamMemoryConfig:
     #: designed-mechanism control against a gate that trains itself to zero.
     psi_residual_trainable: bool = True
 
+    # -- `c2w6-anti-erosion` P1: THE STOP-GRADIENT PARTITION (§A20.6) ---------
+    #: ⭐ **P1.** ``True`` puts a ``stop_gradient`` at the **write boundary**: the
+    #: outer LM objective loses its gradient path into (i) the written content
+    #: (the :class:`StoreState` a write returns) and (ii) the store's
+    #: depth-determining **initial-atom leaves** (``centers``/``log_width``/
+    #: ``amp``, reached through the chunk-0 read and through the state chain).
+    #: Written content and the write machinery are then owned by the
+    #: **write/decay/evict** channels only, and forgetting happens through
+    #: designed channels — never as an optimiser side effect.
+    #:
+    #: *The mechanism it kills* (N223, measured): the write is differentiably
+    #: unrolled inside the outer step, so ``dL_outer/d(amp)`` is non-zero
+    #: (9.3e-03 at the run-2 toy config) and under a **net-cost** store the
+    #: optimiser uses it to teach the writer to stop writing — fresh-write depth
+    #: ``0.0288 -> 4.95e-63`` after 200 outer steps (`pilot-placement-probe` §7).
+    #:
+    #: ⛔ **The READ channel is deliberately untouched.** ``psi``, the friction
+    #: and mass selectors, and ``phi``'s QUERY gradient (the read launches at
+    #: ``q0 = z``) all keep their gradients; only the write channel is severed.
+    #: A gradient probe separating the two is the acceptance evidence (K1).
+    #: ``False`` (default) is the shipped block and is **bit-identical** — not
+    #: one extra op is traced, and the parameter count and byte ledger are
+    #: unchanged (no leaf is added: this is a gradient-plumbing flag).
+    erosion_partition: bool = False
+
+    # -- `c2w6-anti-erosion` I1: REFRESH-ON-REWRITE MONOTONICITY --------------
+    #: ⭐ **I1 (the Head's invariant).** ``True`` guarantees that an admitted
+    #: **rewrite** — a write into a slot that already holds an item — never
+    #: leaves the slot's well SHALLOWER at the incoming item's own site than the
+    #: state the inner write started from. The slot's ``amp`` rows are rescaled
+    #: by ``f = sqrt(D_before / D_after) in [1, refresh_max_gain]`` when, and
+    #: only when, the write reduced the fitted depth.
+    #:
+    #: This guards the **interference** channel (collapse modes #9/#12) — a
+    #: channel adjacent to, and measured separately from, P1's optimiser
+    #: erosion. ``False`` (default) is the shipped write, bit-identically.
+    #:
+    #: ⛔ **Designed channels are excluded from the accounting by construction:**
+    #: the reference depth is taken AFTER lifetimes/decay, eviction re-draw and
+    #: localized placement have been applied (the state the inner write starts
+    #: from), so designed decay is never scored as erosion and the guard never
+    #: fights a designed verb. Eviction rewrites (``reset``) are excluded from
+    #: the event set for the same reason.
+    #:
+    #: ⛔ **K5 (not a hidden capacity increase):** the guard only ever RESTORES
+    #: the pre-write depth — it can never deepen a well beyond what the write
+    #: objective's own hinge (``write_margin``) already reached — the factor is
+    #: capped at ``refresh_max_gain``, an optional absolute ``amp`` ceiling caps
+    #: it further, and **no leaf and no state byte is added** (the byte ledger is
+    #: identical on every arm). A violation-free write multiplies ``amp`` by
+    #: exactly ``1.0`` and is therefore **bit-identical** to the unguarded write.
+    refresh_monotonic: bool = False
+    #: Ceiling on the per-event ``amp`` refresh factor (depth factor is its
+    #: square). ``4.0`` = at most 16x of a single event's depth restoration.
+    refresh_max_gain: float = 4.0
+    #: Optional absolute ceiling on ``|amp|`` after a refresh (``0.0`` = off).
+    #: The factor is clipped so the refreshed rows never exceed it; it can only
+    #: ever REDUCE the factor, never shrink an amplitude, so I1-b's bit-identity
+    #: on violation-free writes holds at any value.
+    refresh_amp_ceiling: float = 0.0
+
     # -- `csf3-memory-fit`: BACKWARD-MEMORY levers (compute traded for memory) --
     #: ⭐ **Rung 1 — checkpoint the chunk scan.** The backward through
     #: ``lax.scan(step, ...)`` in :meth:`StreamBlock.__call__` otherwise stacks
@@ -934,6 +995,28 @@ def psi_residual_sources(source: str) -> Tuple[str, ...]:
         f"got {source!r}")
 
 
+def fitted_well_depth(centers, log_width, amp, row_mask, z, addr_dim: int):
+    """⭐ **The erosion curve's y-axis, in traceable form** (`c2w6-anti-erosion`).
+
+    The fitted depth ``D_i`` of one atom group's well **at the item's own site on
+    the launch manifold** — i.e. the address coordinates of ``z`` with the
+    payload block zeroed, which is exactly where the read is launched.
+
+    Arithmetically identical to
+    :func:`~chlu.training.train_cluformer.cell_group_depth` (the harness's numpy
+    form, and the pilot's published convention): ``A_j = amp_j**2``,
+    ``w_j = A_j exp(-|c_j - z|^2 / (2 s_j^2 + 1e-12))``, ``D = sum_j w_j`` over
+    the group's own rows. Kept here as a jnp function because I1's guard has to
+    evaluate it INSIDE the traced write, where the numpy form cannot go.
+    """
+    zq = jnp.zeros_like(z).at[: int(addr_dim)].set(z[: int(addr_dim)])
+    A = amp ** 2
+    sw = jnp.exp(log_width)
+    d2 = jnp.sum((centers - zq[None, :]) ** 2, axis=-1)
+    w = A * jnp.exp(-d2 / (2.0 * sw ** 2 + 1e-12))
+    return jnp.sum(w * jnp.asarray(row_mask, dtype=w.dtype))
+
+
 def localize_atom_init(store, centers, radius: float, *, key):
     """⭐ **H1 — the N98 localized atom init, applied to a built ``LearnedVStore``.**
 
@@ -1073,7 +1156,16 @@ class CluStoreCell(eqx.Module):
 
     def init_state(self) -> StoreState:
         a = self._atoms
-        return StoreState(centers=a.centers, log_width=a.log_width, amp=a.amp,
+        c, lw, am = a.centers, a.log_width, a.amp
+        if bool(self.mcfg.erosion_partition):
+            # ⭐ P1, leg 2 of 3. The chunk-0 read sees the INIT leaves directly,
+            # so without this the outer loss reaches ``amp``/``log_width``/
+            # ``centers`` through the read of an as-yet-unwritten store — the
+            # same parameters, the same erosion, one chunk earlier.
+            c = jax.lax.stop_gradient(c)
+            lw = jax.lax.stop_gradient(lw)
+            am = jax.lax.stop_gradient(am)
+        return StoreState(centers=c, log_width=lw, amp=am,
                           codebook=jnp.zeros((int(self.cfg.capacity),
                                               int(self.cfg.dim))))
 
@@ -1255,6 +1347,47 @@ class CluStoreCell(eqx.Module):
     # -- the write ---------------------------------------------------------
     def write(self, state: StoreState, z: jnp.ndarray, plan_c) -> StoreState:
         """Masked, local, differentiably-unrolled write into ``V_theta``."""
+        return self._write_stages(state, z, plan_c)[0]
+
+    def write_diag(self, state: StoreState, z: jnp.ndarray, plan_c
+                   ) -> Dict[str, jnp.ndarray]:
+        """⭐ **I1's instrument**: the per-stage well depth of ONE write event.
+
+        Runs the *same* code path as :meth:`write` (one implementation, so the
+        audit can never drift from the mechanism it audits) and returns the
+        slot's fitted depth at the incoming item's own site after each stage:
+
+        =====================  =================================================
+        ``depth_in``           the state as it arrived (pre-decay)
+        ``depth_decayed``      after lifetimes/decay + eviction re-draw
+        ``depth_before``       after localized placement — **the I1 reference**,
+                               i.e. the state the inner write starts from
+        ``depth_after``        after the ``write_inner_steps`` inner steps
+        ``depth_guarded``      after I1's refresh (== ``depth_after`` when the
+                               guard is OFF or no violation occurred)
+        =====================  =================================================
+
+        plus ``rewrite`` (admitted write into an occupied, non-evicted slot),
+        ``violation`` (a rewrite that reduced the depth), ``refresh_factor``,
+        and the same before/after pair evaluated at the **outgoing occupant's**
+        recorded site (``depth_old_site_*``) — the interference reading, which
+        placement is *designed* to move and which is therefore reported
+        separately rather than guarded.
+        """
+        return self.write_and_diag(state, z, plan_c)[1]
+
+    def write_and_diag(self, state: StoreState, z: jnp.ndarray, plan_c):
+        """``(new_state, diag)`` from ONE pass of the write.
+
+        ⚠ The telemetry replays a whole sequence's writes at every monitor
+        window; calling :meth:`write` and :meth:`write_diag` separately would
+        pay the inner unroll twice, which at ``write_inner_steps = 40`` is the
+        entire instrument budget.
+        """
+        return self._write_stages(state, z, plan_c, diag=True)
+
+    def _write_stages(self, state: StoreState, z: jnp.ndarray, plan_c,
+                      *, diag: bool = False):
         from chlu.core.memory_potentials import atom_write_mask_fn
         from chlu.training.train_memory import write_loss
 
@@ -1269,9 +1402,15 @@ class CluStoreCell(eqx.Module):
         amp_scale = plan_c.group_scale @ gm                      # (n_atoms,)
         reset_rows = plan_c.reset @ gm                           # (n_atoms,) in {0,1}
         a0 = self._atoms
-        centers = jnp.where(reset_rows[:, None] > 0.5, a0.centers, state.centers)
-        log_width = jnp.where(reset_rows > 0.5, a0.log_width, state.log_width)
-        amp = jnp.where(reset_rows > 0.5, a0.amp, state.amp * amp_scale)
+        a0_centers, a0_log_width, a0_amp = a0.centers, a0.log_width, a0.amp
+        if bool(self.mcfg.erosion_partition):
+            # ⭐ P1, leg 3 of 3: the eviction re-draw reads the INIT leaves.
+            a0_centers = jax.lax.stop_gradient(a0_centers)
+            a0_log_width = jax.lax.stop_gradient(a0_log_width)
+            a0_amp = jax.lax.stop_gradient(a0_amp)
+        centers = jnp.where(reset_rows[:, None] > 0.5, a0_centers, state.centers)
+        log_width = jnp.where(reset_rows > 0.5, a0_log_width, state.log_width)
+        amp = jnp.where(reset_rows > 0.5, a0_amp, state.amp * amp_scale)
 
         st = StoreState(centers, log_width, amp, state.codebook)
 
@@ -1350,17 +1489,88 @@ class CluStoreCell(eqx.Module):
                 if eqx.is_inexact_array(x) else None, g))
         new = V.learned
 
+        # 2b. ⭐ I1 — REFRESH-ON-REWRITE MONOTONICITY (`c2w6-anti-erosion`).
+        #     The reference is `st_w` (post-decay, post-eviction, post-placement):
+        #     the designed channels are excluded from the erosion accounting by
+        #     construction, so the guard measures the INNER WRITE and nothing
+        #     else. Off by default, and a violation-free write multiplies `amp`
+        #     by exactly 1.0 => bit-identical (I1-b).
+        addr = int(self.cfg.addr_dim)
+        guard_on = bool(self.mcfg.refresh_monotonic)
+        amp_new = new.amp
+        dg: Dict[str, jnp.ndarray] = {}
+        if guard_on or diag:
+            d_before = fitted_well_depth(st_w.centers, st_w.log_width, st_w.amp,
+                                         row_mask, z, addr)
+            d_after = fitted_well_depth(new.centers, new.log_width, new.amp,
+                                        row_mask, z, addr)
+            # A REWRITE is an admitted write into a slot that already holds an
+            # item and is not being evicted. Occupancy is read off the retained
+            # codebook (zero until the slot's first admitted write), so it needs
+            # no extra state and stays traceable.
+            cb_row = slot_oh @ state.codebook                    # (dim,)
+            occupied = (jnp.max(jnp.abs(cb_row)) > 0).astype(jnp.float32)
+            evicting = jnp.clip(slot_oh @ plan_c.reset, 0.0, 1.0)
+            event = (occupied * (1.0 - evicting)
+                     * jnp.asarray(plan_c.admitted, dtype=jnp.float32))
+            viol = event * (d_after < d_before).astype(jnp.float32)
+            f = jnp.asarray(1.0, dtype=amp_new.dtype)
+            if guard_on:
+                f = jnp.sqrt(d_before / jnp.maximum(d_after, 1e-30))
+                f = jnp.minimum(f, float(self.mcfg.refresh_max_gain))
+                ceil = float(self.mcfg.refresh_amp_ceiling)
+                if ceil > 0.0:                      # K5's absolute amp ceiling
+                    amax = jnp.max(jnp.abs(new.amp) * row_mask)
+                    f = jnp.minimum(f, ceil / jnp.maximum(amax, 1e-30))
+                # ⛔ never shrink, and never touch a non-event: `x * 1.0` is
+                # bit-identical, which is exactly what I1-b asserts.
+                f = jnp.where(viol > 0.5, jnp.maximum(f, 1.0), 1.0)
+                amp_new = new.amp * jnp.where(row_mask > 0.5, f, 1.0)
+            if diag:
+                old_site = slot_oh @ plan_c.sites                # (dim,)
+                dg = {
+                    "depth_in": fitted_well_depth(
+                        state.centers, state.log_width, state.amp, row_mask, z,
+                        addr),
+                    "depth_decayed": fitted_well_depth(
+                        st.centers, st.log_width, st.amp, row_mask, z, addr),
+                    "depth_before": d_before,
+                    "depth_after": d_after,
+                    "depth_guarded": fitted_well_depth(
+                        new.centers, new.log_width, amp_new, row_mask, z, addr),
+                    "depth_old_site_before": fitted_well_depth(
+                        state.centers, state.log_width, state.amp, row_mask,
+                        old_site, addr),
+                    "depth_old_site_after": fitted_well_depth(
+                        new.centers, new.log_width, amp_new, row_mask, old_site,
+                        addr),
+                    "rewrite": event,
+                    "occupied": occupied,
+                    "evicting": evicting,
+                    "violation": viol,
+                    "refresh_factor": f,
+                    "admitted": jnp.asarray(plan_c.admitted, dtype=jnp.float32),
+                    "slot": jnp.asarray(plan_c.slot),
+                }
+
         # 3. admission: a refused offer leaves the landscape bit-identical.
         adm = plan_c.admitted
         blend = lambda a, b: adm * a + (1.0 - adm) * b  # noqa: E731
         cb = st.codebook * (1.0 - slot_oh[:, None]) + \
             adm * slot_oh[:, None] * z[None, :]
-        return StoreState(
+        out = StoreState(
             centers=blend(new.centers, st.centers),
             log_width=blend(new.log_width, st.log_width),
-            amp=blend(new.amp, st.amp),
+            amp=blend(amp_new, st.amp),
             codebook=cb,
         )
+        if bool(self.mcfg.erosion_partition):
+            # ⭐ P1, leg 1 of 3 — THE WRITE BOUNDARY. Everything the write
+            # produced leaves the write as data: the outer objective can read it
+            # but can no longer reach back through it into phi, into the atom
+            # leaves, or into the write's own unrolled inner loop.
+            out = jax.tree_util.tree_map(jax.lax.stop_gradient, out)
+        return out, dg
 
     # -- ledger ------------------------------------------------------------
     def cell_ledger(self) -> Dict[str, int]:
