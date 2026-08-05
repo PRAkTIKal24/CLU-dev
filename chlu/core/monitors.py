@@ -109,6 +109,8 @@ SEVERITY = {
     "overdamping": "III", "addressing": "III", "objective_divergence": "III",
     "lifetimes": "IV", "settle_argmin": "IV",
     "guard_liveness": "I",
+    # C2W7 (charter §A21): the learned launch head's codebook-collapse row.
+    "launch_collapse": "I",
 }
 
 
@@ -1174,6 +1176,71 @@ class GuardLivenessMonitor:
         )
 
 
+class LaunchCollapseMonitor:
+    """#15 **launch collapse** — the codebook-collapse mode of a *learned* launch
+    head (charter §A21, C2W7). ⛔ The anti-collapse row iteration 1 did not need
+    because its head was DESIGNED, not learned.
+
+    **Statistic: the MARGINAL usage perplexity** ``S_marg = exp(H(p_bar))`` where
+    ``p_bar`` is the across-inputs mean of the read's per-well importance code,
+    normalised. It is the *effective number of wells the head uses over the whole
+    batch*: ``N_a`` = a perfectly uniform marginal, ``1`` = every query is sent to
+    the same well. **Trip if ``S_marg < band_lo * N_a``** (default ``0.5 N_a``).
+
+    ⛔⛔ **Per-query concentration is CONFIDENCE and is NEVER what this row
+    watches.** A query that puts all ``k`` of its particles into its ``F`` wells
+    is the design working; the failure being monitored is the *marginal* — the
+    head learning to ignore its input. The reported ``mean_per_query_perplexity``
+    is a **diagnostic only** and is never the trip predicate.
+
+    Verb: ``regularize`` (the batch-level anti-collapse penalty of
+    :func:`chlu.core.multiplicity_read.anticollapse_penalty`, which ships **OFF**
+    — doctrine §3.3's monitored-first/regularized-second order) -> ``place``.
+
+    **Designed negative (N74: a guard that cannot fire is vacuous):** an
+    input-independent allocation (every query's code identical) gives
+    ``S_marg = F`` or less; a one-well head gives ``S_marg = 1``. Both are
+    asserted in ``tests/test_multiplicity_read.py``.
+    """
+
+    name = "launch_collapse"
+    mode = 15
+    false_trip = ("a genuinely low-entropy TASK (few distinct answers in the "
+                  "batch) has a low marginal by construction — the band is "
+                  "scoped to the family's own S_eff, not to N_a, when declared")
+
+    def __init__(self, band_lo: float = 0.5):
+        self.band_lo = float(band_lo)
+
+    def observe(self, ctx: MonitorContext) -> MonitorReading:
+        band = (f"S_marg = exp(H(p_bar)) >= {self.band_lo:g} * N_a "
+                "(marginal well usage across the batch)")
+        st = ctx.extras.get("launch_usage")
+        if st is None:
+            return _inapplicable(self.name, self.mode, band,
+                                 "no launch-usage pass", verb="regularize|place")
+        n_w = float(st.get("n_wells", 0) or 0)
+        s_marg = float(st.get("marginal_perplexity", float("nan")))
+        if n_w <= 0 or math.isnan(s_marg):
+            return _inapplicable(self.name, self.mode, band,
+                                 "launch-usage pass carried no N_a/perplexity",
+                                 verb="regularize|place")
+        return MonitorReading(
+            name=self.name, mode=self.mode, value=s_marg, band=band,
+            tripped=bool(s_marg < self.band_lo * n_w),
+            lever="launch head / allocation", verb="regularize|place",
+            detail={"marginal_perplexity": s_marg, "n_wells": n_w,
+                    "floor": self.band_lo * n_w,
+                    "marginal_max": st.get("marginal_max", float("nan")),
+                    "marginal_entropy": st.get("marginal_entropy", float("nan")),
+                    "S_eff_marginal": st.get("S_eff_marginal", float("nan")),
+                    "mean_per_query_perplexity": st.get("per_query_perplexity",
+                                                        float("nan")),
+                    "per_query_is_diagnostic_only": True,
+                    "false_trip_mode": self.false_trip},
+        )
+
+
 # --------------------------------------------------------------------------
 # Free functions used by monitors and by ``pytest``
 # --------------------------------------------------------------------------
@@ -1500,7 +1567,7 @@ def erf_margin_accuracy(margin: float, sigma: float) -> float:
 
 
 def default_registry(loud: bool = True, **kwargs) -> MonitorRegistry:
-    """The 13 monitors + M14, at their doctrine-default bands."""
+    """The 13 monitors + M14 + the C2W7 launch-collapse row (#15)."""
     monitors = [
         OverdampingMonitor(**kwargs.get("overdamping", {})),
         SettleArgminMonitor(**kwargs.get("settle_argmin", {})),
@@ -1516,6 +1583,7 @@ def default_registry(loud: bool = True, **kwargs) -> MonitorRegistry:
         StarvationMonitor(**kwargs.get("starvation", {})),
         MaturityMonitor(**kwargs.get("maturity", {})),
         GuardLivenessMonitor(),
+        LaunchCollapseMonitor(**kwargs.get("launch_collapse", {})),
     ]
     return MonitorRegistry(monitors, loud=loud)
 
@@ -1528,7 +1596,7 @@ __all__ = [
     "BlankControlMonitor", "AddressingMonitor", "ObjectiveDivergenceMonitor",
     "MassGaugeMonitor", "CertificateMonitor", "LifetimeMonitor",
     "DeadAxisMonitor", "ReachMonitor", "StarvationMonitor", "MaturityMonitor",
-    "GuardLivenessMonitor",
+    "GuardLivenessMonitor", "LaunchCollapseMonitor",
     "gauge_orbit_residual", "saddle_reach_threshold", "kappa_stat",
     "erf_margin_accuracy",
     # C2W2 repairs (#6 dead-band, #10 tier (a), #7 scope)
