@@ -61,6 +61,7 @@ from chlu.core.factored_store import (
     FactoredStore,
     FrozenPhi,
     exact_set_accuracy,
+    occupancy,
 )
 
 __all__ = [
@@ -78,6 +79,17 @@ __all__ = [
     "read_flops",
     "fit_code_payloads",
     "shuffle_launches",
+    # -- the ZERO-PARAMETER identity readers (C2W7 reconciliation 1) ---------
+    "READERS_IDENTITY",
+    "READERS_PLUS_IDENTITY",
+    "well_identity_fit",
+    "well_identity_apply",
+    "sum_identity_fit",
+    "sum_identity_apply",
+    "fit_readers_plus_identity",
+    "apply_reader_plus_identity",
+    "score_readers_plus_identity",
+    "shrinkage_report",
 ]
 
 
@@ -882,3 +894,182 @@ def _with(cfg: CatTestConfig, **kw) -> CatTestConfig:
     d = asdict(cfg)
     d.update(kw)
     return CatTestConfig(**d)
+
+
+# ==========================================================================
+# ⭐ THE ZERO-PARAMETER IDENTITY READERS (C2W7 reconciliation 1, `AMENDMENT-C2W7`)
+# ==========================================================================
+#
+# ⛔ **Why these exist.** Every fitted member of the frozen reader class is fitted
+# by **least squares** while the metric, :func:`exact_set_accuracy`, is a
+# **thresholded** all-or-nothing accuracy. ``c2w7-read-cardinality`` §4 measured the
+# consequence on one latent: lstsq shrinks ``diag(W)`` to ~0.40, which pushes the
+# residual of the queries whose asserted set is *exactly right* from 0.006 to 0.537
+# against ``tol = 0.234`` ⇒ the 72-parameter reader scores **0.0000** where a
+# **zero-parameter** identity reader scores **0.0539 +/- 0.0207**.
+#
+# ⛔ **They are ADDED to the class, never substituted for it.** The default
+# ``which=`` of every shipped ``fit_readers*`` is unchanged, so every prior code
+# path stays bit-identical; a caller that wants the audit asks for it explicitly
+# and reports fitted **and** identity columns side by side.
+#
+# ⚠ **The assumption they make, stated where it can be checked.** An identity
+# reader assumes the latent is **already in the target's units and scale** — it has
+# no gain and no bias with which to correct a mis-scaled code. Where that is false
+# (a latent whose payload table is scaled by ``alpha != 1``, a code that sums to
+# ``k`` rather than to ``F``, a store whose payloads were never written at the
+# family's radius) the identity member scores 0 while the fitted member is exact.
+# ``tests/test_reader_identity.py`` asserts both directions.
+
+#: the zero-parameter identity twins, one per fitted member that has a natural one.
+READERS_IDENTITY = ("well_identity", "sum_identity")
+
+#: the frozen class **plus** its identity twins (the audit's scored class).
+READERS_PLUS_IDENTITY = ("sum_linear", "well_table", "knn", "mlp",
+                         "well_identity", "sum_identity")
+
+
+def well_identity_fit(z, y, *, anchors, well_payloads) -> Dict[str, Any]:
+    """⭐ ``yhat = sum_{j in set(occ(z))} v_j`` — **0 fitted parameters**.
+
+    The unfitted twin of :func:`~chlu.core.factored_store._well_table_fit`: the
+    same hard nearest-well assignment, the same payload table read from the store,
+    but no ``W`` and no bias. ``z`` and ``y`` are accepted and **ignored** so the
+    signature matches the fitted members (nothing is fitted; there is nothing to
+    select on and nothing to overfit).
+
+    ⭐ Note the ``set(...)``: the occupied wells are **deduplicated**, because the
+    target is a sum over ``F`` *distinct* wells. This is the only choice in the
+    reader and it is the generous one — the multiset variant is strictly worse
+    whenever two particles share a well.
+    """
+    del z, y
+    return {"kind": "well_identity", "anchors": np.asarray(anchors),
+            "well_payloads": np.asarray(well_payloads), "n_params": 0}
+
+
+def well_identity_apply(mdl, z) -> np.ndarray:
+    occ = occupancy(z, mdl["anchors"])
+    pay = np.asarray(mdl["well_payloads"])
+    n_wells = int(pay.shape[0])
+    ind = np.zeros((len(occ), n_wells), dtype=np.float64)
+    np.put_along_axis(ind, np.asarray(occ), 1.0, axis=1)  # dedup: set, not multiset
+    return ind @ pay
+
+
+def sum_identity_fit(z, y, *, addr_dim: int) -> Dict[str, Any]:
+    """⭐ ``yhat = sum_p payload_block(z_p)`` — **0 fitted parameters**.
+
+    The unfitted twin of :func:`~chlu.core.factored_store._sum_linear_fit`, and
+    **the objective every organizer in this module is trained on**
+    (:func:`~chlu.experiments.exp_null_arms._z_native`), so on the arms that carry
+    a latent it reproduces the published ``native`` column exactly. It is scored as
+    a reader here so the identity column is complete rather than implicit.
+    """
+    del z, y
+    return {"kind": "sum_identity", "addr_dim": int(addr_dim), "n_params": 0}
+
+
+def sum_identity_apply(mdl, z) -> np.ndarray:
+    return np.asarray(z)[:, :, int(mdl["addr_dim"]):].sum(1)
+
+
+def fit_readers_plus_identity(z_seen, y_seen, *, anchors=None, well_payloads=None,
+                              addr_dim: Optional[int] = None, seed: int = 0,
+                              which: Tuple[str, ...] = READERS_PLUS_IDENTITY
+                              ) -> Dict[str, Any]:
+    """The frozen class **plus** the identity twins, fitted on the SEEN split only.
+
+    ⛔ The identity members ignore ``y_seen`` entirely — pass it anyway so a
+    reviewer can see that no branch of this function selects on ``Q_unseen``.
+    """
+    from chlu.core.factored_store import fit_readers
+
+    base = [w for w in which if w not in READERS_IDENTITY]
+    out = fit_readers(z_seen, y_seen, anchors=anchors,
+                      well_payloads=well_payloads, seed=seed, which=base)
+    if "well_identity" in which and anchors is not None \
+            and well_payloads is not None:
+        out["well_identity"] = well_identity_fit(z_seen, y_seen, anchors=anchors,
+                                                 well_payloads=well_payloads)
+    if "sum_identity" in which:
+        d = int(addr_dim if addr_dim is not None
+                else np.asarray(anchors).shape[1])
+        out["sum_identity"] = sum_identity_fit(z_seen, y_seen, addr_dim=d)
+    return out
+
+
+def apply_reader_plus_identity(mdl, z) -> np.ndarray:
+    from chlu.core.factored_store import apply_reader
+
+    if mdl["kind"] == "well_identity":
+        return well_identity_apply(mdl, z)
+    if mdl["kind"] == "sum_identity":
+        return sum_identity_apply(mdl, z)
+    return apply_reader(mdl, z)
+
+
+def score_readers_plus_identity(readers, z, y, tol) -> Dict[str, float]:
+    return {k: exact_set_accuracy(apply_reader_plus_identity(v, z), y, float(tol))
+            for k, v in readers.items()}
+
+
+def shrinkage_report(w, pred_fitted, pred_identity, y, tol, *,
+                     asserted_sets=None, subsets=None) -> Dict[str, Any]:
+    """⭐ THE MECHANISM, MEASURED — the two named suspects of C2W7 reconciliation 1.
+
+    Suspect 1, **``diag(W)`` shrinkage**: a least-squares fit of ``yhat = W [f, 1]``
+    against an all-or-nothing metric minimises MSE over *all* queries, so it trades
+    the queries it already gets right for the many it does not. Reported as
+    ``diag_W_mean`` (an unshrunk reader has ``diag(W) == 1``).
+
+    Suspect 2, **the ``tol`` crossing**: on the sub-population whose asserted set is
+    **exactly right**, the identity residual is ~0 while the shrunk fitted residual
+    can exceed ``tol``. That population's SIZE is what decides whether the pathology
+    can move a published number at all — with zero such queries there is nothing to
+    destroy, however hard ``W`` is shrunk.
+
+    ``asserted_sets``/``subsets`` are optional; without them only the ``W``
+    statistics and the two global accuracies are returned.
+    """
+    out: Dict[str, Any] = {"tol": float(tol)}
+    if w is not None:
+        W = np.asarray(w)
+        k = min(W.shape[0], W.shape[1])
+        dg = np.diag(W[:k, :k])
+        off = W[:k, :k] - np.diag(dg)
+        out.update({"diag_W": [float(v) for v in dg],
+                    "diag_W_mean": float(np.mean(dg)),
+                    "diag_W_abs_mean": float(np.mean(np.abs(dg))),
+                    "offdiag_rms": float(np.sqrt(np.mean(off ** 2))),
+                    "bias_norm": float(np.linalg.norm(W[k:]))
+                    if W.shape[0] > k else 0.0})
+    y = np.asarray(y)
+    rf = np.linalg.norm(np.asarray(pred_fitted) - y, axis=-1)
+    ri = np.linalg.norm(np.asarray(pred_identity) - y, axis=-1)
+    out.update({"n_queries": int(len(y)),
+                "acc_fitted": float((rf <= tol).mean()),
+                "acc_identity": float((ri <= tol).mean()),
+                "resid_fitted_mean": float(rf.mean()),
+                "resid_identity_mean": float(ri.mean())})
+    if asserted_sets is not None and subsets is not None:
+        ok = np.array([set(np.asarray(s).tolist())
+                       == set(np.asarray(a).tolist())
+                       for s, a in zip(asserted_sets, subsets, strict=True)])
+        out["n_set_exactly_right"] = int(ok.sum())
+        out["frac_set_exactly_right"] = float(ok.mean())
+        if ok.any():
+            out.update({
+                "resid_identity_on_exact_mean": float(ri[ok].mean()),
+                "resid_fitted_on_exact_mean": float(rf[ok].mean()),
+                "identity_within_tol_on_exact": int((ri[ok] <= tol).sum()),
+                "fitted_within_tol_on_exact": int((rf[ok] <= tol).sum()),
+                # ⭐ the C2W7 crossing, as a boolean: identity keeps them, the
+                # fitted reader loses them.
+                "c2w7_crossing_fires": bool((ri[ok] <= tol).sum()
+                                            > (rf[ok] <= tol).sum())})
+        else:
+            out["c2w7_crossing_fires"] = False
+            out["note"] = ("no query has an exactly-right asserted set ⇒ the "
+                           "shrinkage has nothing to destroy at this cell")
+    return out
