@@ -1110,23 +1110,34 @@ def plot_curves(records: List[Dict[str, Any]], out: Path) -> Optional[Path]:
     except Exception:                                    # pragma: no cover
         return None
     cells = [c for c in CELLS if any(r["cell"] == c for r in records)]
-    if not cells:
+    seeds = sorted({int(r["seed"]) for r in records})
+    if not cells or not seeds:
         return None
-    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    # ⭐ FACETED BY SEED. The arms are paired *within* a seed (the untrained
+    # depth itself varies 5.4x across seeds at this rig), so a pooled panel
+    # compares lines that were never comparable.
+    fig, axes = plt.subplots(1, len(seeds), figsize=(4.2 * len(seeds), 4.2),
+                             sharey=True)
+    axes = np.atleast_1d(axes)
     colors = plt.cm.tab10(np.linspace(0, 1, 10))
-    for j, c in enumerate(cells):
-        for r in [r for r in records if r["cell"] == c]:
-            xs = [int(p["at_step"]) for p in r["curve"]]
-            ys = [max(float(p["depth_median"]), 1e-70) for p in r["curve"]]
-            ax.plot(xs, ys, color=colors[j % 10], alpha=0.85, lw=1.4,
-                    label=c if r["seed"] == records[0]["seed"] else None)
-    ax.axvline(200, color="0.6", ls=":", lw=1)
-    ax.set_yscale("log")
-    ax.set_xlabel("outer step")
-    ax.set_ylabel("median fitted well depth (live items, own site)")
-    ax.set_title("C2W6 erosion curve — toy (0.16 M), run-2 config, "
-                 "±P1  [w4 = monitor-#13 demoted]")
-    ax.legend(fontsize=8, loc="best")
+    for ax, s in zip(axes, seeds, strict=True):
+        for j, c in enumerate(cells):
+            for r in [r for r in records
+                      if r["cell"] == c and int(r["seed"]) == s]:
+                xs = [int(p["at_step"]) for p in r["curve"]]
+                ys = [max(float(p["depth_median"]), 1e-70) for p in r["curve"]]
+                ax.plot(xs, ys, color=colors[j % 10], alpha=0.9, lw=1.4,
+                        ls="--" if c in DIAGNOSTIC_CELLS else "-",
+                        label=c if ax is axes[0] else None)
+        ax.axvline(200, color="0.6", ls=":", lw=1)
+        ax.set_yscale("log")
+        ax.set_xlabel("outer step")
+        ax.set_title(f"seed {s}", fontsize=10)
+    axes[0].set_ylabel("median fitted well depth (live items, own site)")
+    axes[0].legend(fontsize=7, loc="lower right")
+    fig.suptitle("C2W6 erosion curve — toy (0.16 M), CSF3 run-2 config, ± P1 "
+                 "  [w4 cells are monitor-#13 demoted; dashed = DIAGNOSTIC]",
+                 fontsize=10)
     fig.tight_layout()
     p = Path(out) / "erosion_curves.png"
     p.parent.mkdir(parents=True, exist_ok=True)
