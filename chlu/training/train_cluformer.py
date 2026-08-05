@@ -981,7 +981,8 @@ def make_optimizer(pcfg: PilotConfig):
 def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
               *, log_every: int = 25, log: Optional[List] = None,
               monitor_registry=None, monitor_tokens=None,
-              monitor_out: Optional[List] = None):
+              monitor_out: Optional[List] = None,
+              probe=None, probe_out: Optional[List] = None):
     """Train one arm. ⭐ ``batches`` must be the SAME sequence for every arm.
 
     ``monitor_registry`` (+ ``monitor_tokens``) runs the 13 monitors every
@@ -995,6 +996,14 @@ def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
     with an untrained reading taken before the first update, and returns the
     series as ``store_health``. That is §7.27's watch-item: it lands in the run
     artifact by default, so a cluster job cannot destroy its own store silently.
+
+    ⭐ ``probe`` (`c2w6-anti-erosion`) is an OPTIONAL caller-supplied instrument
+    ``probe(model, step, tag) -> dict`` run on the **same schedule and the same
+    fixed tokens** as the watch (untrained reading first, then every
+    ``monitor_every`` steps and at the last step); its records are appended to
+    ``probe_out`` and returned as ``probe_series``. ``None`` (default) is the
+    shipped loop, unchanged — this exists so an experiment can carry its own
+    per-well telemetry (I2) without forking the trainer.
     """
     optimizer = make_optimizer(pcfg)
     opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
@@ -1007,6 +1016,18 @@ def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
     watch_tokens = None
     watch_on = bool(getattr(pcfg, "store_watch", False))
     base_depth = base_spread = float("nan")
+    probes: List[Dict[str, Any]] = probe_out if probe_out is not None else []
+
+    def _probe(step: int, tag: str) -> None:
+        """One caller-supplied telemetry reading (`c2w6-anti-erosion`'s I2)."""
+        if probe is None:
+            return
+        rec = probe(model, int(step), str(tag))
+        if rec is None:
+            return
+        rec = dict(rec)
+        rec["at_step"], rec["tag"] = int(step), str(tag)
+        probes.append(rec)
 
     def _watch(step: int, tag: str) -> None:
         """One §7.27 reading, printed in flight and kept for the artifact."""
@@ -1047,6 +1068,8 @@ def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
             watch_tokens = (jnp.asarray(monitor_tokens, dtype=jnp.int32)
                             if monitor_tokens is not None else tk)
             _watch(0, "untrained")
+        if i == 0:
+            _probe(0, "untrained")
         tp = time.time()
         plans, _ = plan_pass(model, tk, pcfg)
         plan_s += time.time() - tp
@@ -1067,6 +1090,9 @@ def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
         if watch_on and i > 0 and (i % max(1, pcfg.monitor_every) == 0
                                    or i == pcfg.steps - 1):
             _watch(i, "trained")
+        if i > 0 and (i % max(1, pcfg.monitor_every) == 0
+                      or i == pcfg.steps - 1):
+            _probe(i, "trained")
         if i % log_every == 0 or i == pcfg.steps - 1:
             row = {"arm": name, "step": i, "nll": float(loss),
                    "bpc": bits_per_character(float(loss)),
@@ -1084,7 +1110,7 @@ def train_arm(name: str, model: StreamModel, pcfg: PilotConfig, batches,
     return model, {"loss_history": hist, "wall_s": time.time() - t0,
                    "plan_pass_s": plan_s,
                    "plan_pass_frac": plan_s / max(time.time() - t0, 1e-9),
-                   "store_health": watch}
+                   "store_health": watch, "probe_series": probes}
 
 
 def evaluate(model: StreamModel, pcfg: PilotConfig, batches, *, blank: bool = False,
