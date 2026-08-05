@@ -528,6 +528,31 @@ def setup_experiment_parsers(subparsers):
     exp_tr_parser.add_argument('--out-dir', help='Output directory for artifacts')
     exp_tr_parser.set_defaults(func=cmd_exp_tierii_read)
 
+    # exp-tierii-card (C2W7, the CARDINALITY iteration: charter §A21's C2W7 row)
+    exp_tc_parser = subparsers.add_parser(
+        'exp-tierii-card',
+        help='Run the tier-ii multiplicity read (counting code + F-commitment)'
+    )
+    exp_tc_parser.add_argument('--seeds', type=int, nargs='+',
+                               default=[0, 1, 2, 3, 4], help='Score seeds')
+    exp_tc_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (tiny family, 1 seed, short settles)')
+    exp_tc_parser.add_argument(
+        '--stages', nargs='+',
+        choices=['k0', 'arms', 'guards', 'regularizer', 'levers', 'swap'],
+        help='Stages (default: all; k0 is the blocking pre-condition, swap is gated)')
+    exp_tc_parser.add_argument('--organize-steps', type=int, default=60,
+                               help='Physics-organizer steps (through the settle)')
+    exp_tc_parser.add_argument('--k-particles', type=int, default=12,
+                               help='k (CAPACITY: ledgered, matched on every arm)')
+    exp_tc_parser.add_argument('--lam-on', type=float, default=1.0,
+                               help='Anti-collapse coefficient of the ON arm')
+    exp_tc_parser.add_argument('--force-swap', action='store_true',
+                               help='Run the swap even if the gate fails '
+                                    '(LABELLED diagnostic, never a claim cell)')
+    exp_tc_parser.add_argument('--out-dir', help='Output directory for artifacts')
+    exp_tc_parser.set_defaults(func=cmd_exp_tierii_card)
+
     # exp-psi-residual (C2W5, the payload residual read-out lever: charter §A20.3(a))
     exp_pr_parser = subparsers.add_parser(
         'exp-psi-residual',
@@ -966,6 +991,35 @@ def cmd_exp_tierii_read(args):
             **kw,
         )
         console.print("✓ tier-ii read-fix completed", style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+    return 0
+
+
+def cmd_exp_tierii_card(args):
+    """Run the tier-ii CARDINALITY iteration (multiplicity counting code)."""
+    console.print("[bold cyan]Running the tier-ii multiplicity read "
+                  "(counting code, F-commitment, launch-collapse monitor)"
+                  "[/bold cyan]")
+
+    from ..experiments.exp_tierii_cardinality import run_tierii_cardinality
+    try:
+        kw = {}
+        if getattr(args, 'stages', None):
+            kw['stages'] = tuple(args.stages)
+        run_tierii_cardinality(
+            seeds=tuple(getattr(args, 'seeds', (0, 1, 2, 3, 4))),
+            quick=bool(getattr(args, 'quick', False)),
+            organize_steps=int(getattr(args, 'organize_steps', 60) or 60),
+            k_particles=int(getattr(args, 'k_particles', 12) or 12),
+            lam_on=float(getattr(args, 'lam_on', 1.0)),
+            force_swap=bool(getattr(args, 'force_swap', False)),
+            out_dir=getattr(args, 'out_dir', None),
+            **kw,
+        )
+        console.print("✓ tier-ii cardinality iteration completed",
+                      style="bold green")
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
