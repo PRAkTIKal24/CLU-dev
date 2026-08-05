@@ -1545,6 +1545,8 @@ class CluStoreCell(eqx.Module):
                         new.centers, new.log_width, amp_new, row_mask, old_site,
                         addr),
                     "rewrite": event,
+                    "occupied": occupied,
+                    "evicting": evicting,
                     "violation": viol,
                     "refresh_factor": f,
                     "admitted": jnp.asarray(plan_c.admitted, dtype=jnp.float32),

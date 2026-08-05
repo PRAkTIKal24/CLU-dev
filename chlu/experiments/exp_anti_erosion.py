@@ -61,7 +61,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from chlu.core.blocks import WritePlan, make_memory_cell
+from chlu.core.blocks import WritePlan, fitted_well_depth, make_memory_cell
 from chlu.data.enwik8 import bits_per_character, contiguous_batches, random_batches
 from chlu.experiments.exp_placement_probe import _prepare, multi_lane_self_probe
 from chlu.training.train_cluformer import (
@@ -158,6 +158,9 @@ GATE_LEGS: Tuple[str, ...] = ("E2_on_arm_flattens", "E1_off_arm_decays",
                               "K3_bpc_not_worse", "K4_not_relocated")
 #: K4's float32 floor: below this a bpc margin is not distinguishable from zero.
 K4_FLOAT32_FLOOR: float = 1e-6
+#: ADDENDUM 1: a well below this fitted depth is at the collapse floor; ratios
+#: taken against it are 0/0 and are scored as "already collapsed", not as noise.
+DEPTH_COLLAPSE_FLOOR: float = 1e-6
 
 
 # ==========================================================================
@@ -275,6 +278,36 @@ def _write_and_diag(cell, state, z, plan_c):
     return cell.write_and_diag(state, z, plan_c)
 
 
+@eqx.filter_jit
+def _site_depths(cell, state, sites, addr_dim: int):
+    """``(K, 2)`` — each slot's fitted depth at its OWN site, two ways.
+
+    ``[:, 0]`` = the slot's **own** atom rows (the published convention,
+    :func:`~chlu.training.train_cluformer.cell_group_depth`); ``[:, 1]`` = every
+    **foreign** row. The fit is linear in the row mask, so the total landscape
+    depth at the site is exactly their sum.
+
+    ⭐ The split is the **interference instrument**, and the split is the point.
+    The masked write is C3-local in parameter space, so writing item B leaves
+    item A's own rows untouched *except* for the designed decay law — column 0
+    is therefore predicted exactly by ``D * group_scale^2`` and any deviation is
+    a locality bug. Column 1 is the real interference channel (#9/#12): B's
+    atoms dug NEAR A's site change the landscape A sits in without touching a
+    single one of A's parameters. That is the channel I1's guard was written
+    for, and it is the one that is measurable here.
+    """
+    gm = jnp.asarray(cell.group_matrix, dtype=jnp.float32)
+
+    def one(z, rows):
+        return jnp.stack([
+            fitted_well_depth(state.centers, state.log_width, state.amp, rows,
+                              z, addr_dim),
+            fitted_well_depth(state.centers, state.log_width, state.amp,
+                              1.0 - rows, z, addr_dim)])
+
+    return jax.vmap(one)(sites, gm)
+
+
 def _plan_without_slot(plan: WritePlan, slot: int) -> WritePlan:
     """The **leave-one-well-out** plan: the same stream with every chunk that
     would be admitted into ``slot`` refused instead.
@@ -310,6 +343,74 @@ def _read_selection_counts(pl0, z_lane: np.ndarray, addr_dim: int, K: int
         d = [float(np.linalg.norm(sites[c - 1, i, :addr_dim] - q)) for i in idx]
         cnt[idx[int(np.argmin(d))]] += 1
     return cnt
+
+
+def _interference_audit(site_depth: List[np.ndarray], live: np.ndarray,
+                        slot: np.ndarray, admitted: np.ndarray,
+                        group_scale: np.ndarray, tol: float = 1e-4
+                        ) -> Dict[str, Any]:
+    """⭐ **The measurable form of I1-a**: does writing item B disturb item A?
+
+    An **event** is a pair ``(A, c)``: item ``A`` was live before chunk ``c``,
+    and chunk ``c`` was admitted into a DIFFERENT slot. Two legs, and the split
+    is what makes the reading honest:
+
+    * ``own`` — A's own atom rows. The write is masked to B's rows, so the ONLY
+      designed change is the decay law: the prediction is
+      ``D_after = D_before * group_scale^2`` **exactly**. ``n_down_own`` counts
+      violations of that prediction, i.e. depth lost beyond the designed decay.
+      A non-zero count is a C3-locality bug and this leg is a live regression
+      check, not a result.
+    * ``foreign`` — every other row's contribution at A's site. This is the real
+      interference channel (#9/#12): B's atoms dug near A change the landscape A
+      sits in **without touching one of A's parameters**. Reported signed —
+      ``n_up_foreign`` (a neighbour crowding in) and the median relative change.
+
+    ``site_depth[c]`` is the ``(K, 2)`` reading taken BEFORE chunk ``c``'s write
+    (index 0 = before any write), so ``c`` and ``c + 1`` bracket it.
+    """
+    n = min(len(site_depth) - 1, int(live.shape[0]))
+    out: Dict[str, Any] = {"n_events": 0, "n_down_own": 0, "n_up_foreign": 0,
+                           "n_down_foreign": 0}
+    d_own, d_for, res = [], [], []
+    for c in range(1, n):
+        if admitted[c] <= 0.5:
+            continue
+        s_c = int(slot[c])
+        before, after = site_depth[c], site_depth[c + 1]
+        for k in range(int(live.shape[1])):
+            if k == s_c or live[c - 1, k] <= 0.5:
+                continue
+            out["n_events"] += 1
+            gs2 = float(group_scale[c, k]) ** 2
+            b0, a0 = float(before[k, 0]), float(after[k, 0])
+            pred = b0 * gs2
+            if pred > 0:
+                res.append((pred - a0) / pred)
+                if a0 < pred * (1.0 - tol):
+                    out["n_down_own"] += 1
+                d_own.append((b0 - a0) / b0 if b0 > 0 else float("nan"))
+            b1, a1 = float(before[k, 1]), float(after[k, 1])
+            if a1 > b1:
+                out["n_up_foreign"] += 1
+            elif a1 < b1:
+                out["n_down_foreign"] += 1
+            if abs(b1) > 0:
+                d_for.append((a1 - b1) / abs(b1))
+    ne = out["n_events"]
+    out["rate_down_own_beyond_decay"] = (out["n_down_own"] / ne if ne
+                                         else float("nan"))
+    out["rate_up_foreign"] = out["n_up_foreign"] / ne if ne else float("nan")
+    out["median_own_residual_vs_decay_law"] = (float(np.median(res)) if res
+                                               else float("nan"))
+    out["max_abs_own_residual_vs_decay_law"] = (float(np.max(np.abs(res)))
+                                                if res else float("nan"))
+    out["median_rel_drop_own"] = float(np.median(d_own)) if d_own else float("nan")
+    out["median_rel_change_foreign"] = (float(np.median(d_for)) if d_for
+                                        else float("nan"))
+    out["max_rel_change_foreign"] = (float(np.max(np.abs(d_for))) if d_for
+                                     else float("nan"))
+    return out
 
 
 def well_telemetry(model, pcfg, tokens, *, layer: int = 0, loo: bool = False,
@@ -359,6 +460,11 @@ def well_telemetry(model, pcfg, tokens, *, layer: int = 0, loo: bool = False,
     events: List[Dict[str, float]] = []
     last_write = [-1] * K
     n_writes = [0] * K
+    all_sites = np.asarray(pl0.sites)
+    all_live = np.asarray(pl0.live)
+    all_slot = np.asarray(pl0.slot)
+    all_adm = np.asarray(pl0.admitted)
+    site_depth = [np.asarray(_site_depths(cell, st, jnp.asarray(all_sites[0]), d))]
     for c in range(int(z.shape[1])):
         pc = jax.tree_util.tree_map(lambda a, i=c: a[i], pl0)
         st, dg = _write_and_diag(cell, st, z[0, c], pc)
@@ -369,6 +475,12 @@ def well_telemetry(model, pcfg, tokens, *, layer: int = 0, loo: bool = False,
         if float(np.asarray(pc.admitted)) > 0.5:
             last_write[s] = int(c)
             n_writes[s] += 1
+        # ⭐ the interference reading: every live item's own well, refitted
+        # AFTER this chunk's write, group-restricted and globally.
+        site_depth.append(np.asarray(
+            _site_depths(cell, st, jnp.asarray(all_sites[c]), d)))
+    inter = _interference_audit(site_depth, all_live, all_slot, all_adm,
+                                np.asarray(pl0.group_scale))
 
     live = np.asarray(pl0.live)[-1]
     sites = np.asarray(pl0.sites)[-1]
@@ -433,6 +545,18 @@ def well_telemetry(model, pcfg, tokens, *, layer: int = 0, loo: bool = False,
         "rewrite_violation_rate": (float(np.mean([e["violation"] for e in ev_r]))
                                    if ev_r else float("nan")),
         "rewrite_events": ev_r,
+        # ⚠ the audit's decomposition: how many admitted writes landed on an
+        # occupied slot at all, and how many of those were EVICTION re-draws (a
+        # designed channel, excluded from the event set by construction).
+        "n_admitted": int(sum(1 for e in events if e["admitted"] > 0.5)),
+        "n_occupied_target": int(sum(1 for e in events
+                                     if e["admitted"] > 0.5
+                                     and e["occupied"] > 0.5)),
+        "n_evicting_target": int(sum(1 for e in events
+                                     if e["admitted"] > 0.5
+                                     and e["evicting"] > 0.5)),
+        # ⭐ the interference channel I1-a's rate was a proxy for (#9/#12)
+        "interference": inter,
         "loo_ran": bool(loo and loo_batches),
         "wall_s": time.time() - t0,
     }
@@ -451,7 +575,8 @@ def _memory_deleted_bpc(model, pcfg, ev) -> float:
     the block's other weights?" — measured on the same weights; a retrained
     ``none`` arm is additionally reported by :func:`run_cell` when it is run.
     """
-    cells = [make_memory_cell("none", latent_dim=b.cell.latent_dim)
+    cells = [make_memory_cell("none", latent_dim=b.cell.latent_dim,
+                              key=jax.random.PRNGKey(0))
              for b in model.blocks]
     m = eqx.tree_at(lambda mm: [b.cell for b in mm.blocks], model,
                     replace=cells, is_leaf=lambda x: x is None)
@@ -524,6 +649,26 @@ def run_cell(cell: str, seed: int, *, steps: Optional[int] = None,
     dfin = curve[-1]["depth_median"] if curve else float("nan")
     n_ev = int(sum(r.get("n_rewrite_events", 0) for r in series))
     n_vi = int(sum(r.get("n_rewrite_violations", 0) for r in series))
+    ia = [r.get("interference", {}) for r in series if r.get("interference")]
+    inter = {
+        "n_events_total": int(sum(int(x.get("n_events", 0)) for x in ia)),
+        "n_down_own_total": int(sum(int(x.get("n_down_own", 0)) for x in ia)),
+        "n_up_foreign_total": int(sum(int(x.get("n_up_foreign", 0))
+                                      for x in ia)),
+        "rate_down_own_beyond_decay_mean": float(np.nanmean(
+            [x.get("rate_down_own_beyond_decay", np.nan) for x in ia])) if ia
+        else float("nan"),
+        "rate_up_foreign_mean": float(np.nanmean(
+            [x.get("rate_up_foreign", np.nan) for x in ia])) if ia
+        else float("nan"),
+        "max_abs_own_residual_vs_decay_law": float(np.nanmax(
+            [x.get("max_abs_own_residual_vs_decay_law", np.nan) for x in ia]))
+        if ia else float("nan"),
+        "median_rel_change_foreign_mean": float(np.nanmean(
+            [x.get("median_rel_change_foreign", np.nan) for x in ia])) if ia
+        else float("nan"),
+        "per_reading": ia,
+    }
 
     rec = {
         "cell": cell, "seed": int(seed), "tier": "erosion",
@@ -554,6 +699,12 @@ def run_cell(cell: str, seed: int, *, steps: Optional[int] = None,
         "n_rewrite_events": n_ev,
         "n_rewrite_violations": n_vi,
         "rewrite_violation_rate": (n_vi / n_ev) if n_ev else float("nan"),
+        "n_admitted": int(sum(r.get("n_admitted", 0) for r in series)),
+        "n_occupied_target": int(sum(r.get("n_occupied_target", 0)
+                                     for r in series)),
+        "n_evicting_target": int(sum(r.get("n_evicting_target", 0)
+                                     for r in series)),
+        "interference": inter,
         # I2
         "i2": i2_correlations(series),
         "plan_pass_frac": hist["plan_pass_frac"],
@@ -665,12 +816,21 @@ def gate_verdict(records: List[Dict[str, Any]], *, on: str = "p1_on",
         "per_seed": r_on, "n_met": int(sum(x >= E2_BAND[0] for x in r_on)),
         "passed": bool(all(np.isfinite(x) and x >= E2_BAND[0] for x in r_on)),
     }
+    # ⚠ ADDENDUM 1: an OFF arm already at the collapse floor by step 200 has a
+    # ratio of 0/0. That is a STRONGER form of E1, not a failure of it, so it is
+    # scored as met and labelled.
+    d200_off = [float(roff[s]["depth_at_200"]) for s in seeds]
+    coll = [bool(np.isfinite(x) and x < DEPTH_COLLAPSE_FLOOR) for x in d200_off]
+    met_off = [bool((np.isfinite(r) and r <= E1_BAND[1]) or c)
+               for r, c in zip(r_off, coll, strict=True)]
     legs["E1_off_arm_decays"] = {
-        "rule": f"depth(final)/depth(200) <= {E1_BAND[1]} on >= 2/3 seeds",
-        "per_seed": r_off,
-        "n_met": int(sum(np.isfinite(x) and x <= E1_BAND[1] for x in r_off)),
-        "passed": bool(sum(np.isfinite(x) and x <= E1_BAND[1] for x in r_off)
-                       >= max(2, len(seeds) - 1)),
+        "rule": f"depth(final)/depth(200) <= {E1_BAND[1]} on >= 2/3 seeds, OR "
+                f"already at the collapse floor ({DEPTH_COLLAPSE_FLOOR}) by "
+                f"step 200 (a stronger form of E1)",
+        "per_seed": r_off, "depth_at_200_per_seed": d200_off,
+        "collapsed_by_200": coll,
+        "n_met": int(sum(met_off)),
+        "passed": bool(sum(met_off) >= max(2, len(seeds) - 1)),
     }
     dif, _s = _paired(records, on, off, "bpc_live")
     mu, se, _n = _mean_se(dif)
@@ -856,11 +1016,21 @@ def aggregate(records: List[Dict[str, Any]]) -> Dict[str, Any]:
                   "bpc_live", "bpc_live_minus_blank",
                   "bpc_memory_deleted_minus_live", "bpc_none_minus_live",
                   "acq", "acq_blank", "chance", "rewrite_violation_rate",
-                  "n_rewrite_events", "n_rewrite_violations", "wall_s"):
+                  "n_rewrite_events", "n_rewrite_violations", "n_admitted",
+                  "n_occupied_target", "n_evicting_target", "wall_s"):
             v = [float(r.get(k, float("nan"))) for r in rs]
             mu, se, n = _mean_se(v)
             row[k], row[k + "_se"], row[k + "_n"] = mu, se, n
             row[k + "_per_seed"] = v
+        for k in ("n_events_total", "n_down_own_total", "n_up_foreign_total",
+                  "rate_down_own_beyond_decay_mean", "rate_up_foreign_mean",
+                  "max_abs_own_residual_vs_decay_law",
+                  "median_rel_change_foreign_mean"):
+            v = [float(r.get("interference", {}).get(k, float("nan")))
+                 for r in rs]
+            mu, se, n = _mean_se(v)
+            row["interference_" + k], row["interference_" + k + "_se"] = mu, se
+            row["interference_" + k + "_per_seed"] = v
         for k in ("rho_read_selection", "rho_loo_delta_bpc", "rho_grad_atoms"):
             v = [float(r.get("i2", {}).get(k, float("nan"))) for r in rs]
             mu, se, n = _mean_se(v)
