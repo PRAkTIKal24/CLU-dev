@@ -345,6 +345,32 @@ def _read_selection_counts(pl0, z_lane: np.ndarray, addr_dim: int, K: int
     return cnt
 
 
+def post_guard_violations(events: Sequence[Dict[str, float]],
+                          tol: float = 1e-6) -> int:
+    """⭐ I1-b's actual statistic: rewrite events whose **final** (post-guard)
+    depth is below the pre-write reference.
+
+    ⚠ The write's own ``violation`` flag is the *pre-guard* verdict — it says
+    "the inner write reduced the depth", which is exactly the event the guard
+    exists to repair, so on a guard-ON arm it counts REPAIRS, not failures.
+    I1-b is about what is left afterwards, and that is this. Computed from the
+    per-event depths stored in the artifact, so it is uniform across cells that
+    ran before this function existed.
+    """
+    return int(sum(1 for e in events
+                   if float(e.get("rewrite", 0.0)) > 0.5
+                   and float(e.get("depth_guarded", float("nan")))
+                   < float(e.get("depth_before", float("nan"))) * (1.0 - tol)))
+
+
+def _record_events(rec: Dict[str, Any]) -> List[Dict[str, float]]:
+    """Every rewrite event of one run, pooled over its telemetry readings."""
+    out: List[Dict[str, float]] = []
+    for t in rec.get("telemetry", []) or []:
+        out.extend(t.get("rewrite_events", []) or [])
+    return out
+
+
 def _interference_audit(site_depth: List[np.ndarray], live: np.ndarray,
                         slot: np.ndarray, admitted: np.ndarray,
                         group_scale: np.ndarray, tol: float = 1e-4
@@ -542,6 +568,7 @@ def well_telemetry(model, pcfg, tokens, *, layer: int = 0, loo: bool = False,
         "n_rewrite_events": len(ev_r),
         "n_rewrite_violations": int(sum(1 for e in ev_r
                                         if e["violation"] > 0.5)),
+        "n_rewrite_violations_post_guard": post_guard_violations(ev_r),
         "rewrite_violation_rate": (float(np.mean([e["violation"] for e in ev_r]))
                                    if ev_r else float("nan")),
         "rewrite_events": ev_r,
@@ -655,6 +682,8 @@ def run_cell(cell: str, seed: int, *, steps: Optional[int] = None,
     dfin = curve[-1]["depth_median"] if curve else float("nan")
     n_ev = int(sum(r.get("n_rewrite_events", 0) for r in series))
     n_vi = int(sum(r.get("n_rewrite_violations", 0) for r in series))
+    n_vp = int(sum(post_guard_violations(r.get("rewrite_events", []) or [])
+                   for r in series))
     ia = [r.get("interference", {}) for r in series if r.get("interference")]
     inter = {
         "n_events_total": int(sum(int(x.get("n_events", 0)) for x in ia)),
@@ -707,6 +736,9 @@ def run_cell(cell: str, seed: int, *, steps: Optional[int] = None,
         "n_rewrite_events": n_ev,
         "n_rewrite_violations": n_vi,
         "rewrite_violation_rate": (n_vi / n_ev) if n_ev else float("nan"),
+        "n_rewrite_violations_post_guard": n_vp,
+        "rewrite_violation_rate_post_guard": ((n_vp / n_ev) if n_ev
+                                              else float("nan")),
         "n_admitted": int(sum(r.get("n_admitted", 0) for r in series)),
         "n_occupied_target": int(sum(r.get("n_occupied_target", 0)
                                      for r in series)),
@@ -904,6 +936,10 @@ def prereg_scorecard(records: List[Dict[str, Any]]) -> Dict[str, Any]:
                                             if np.isfinite(x))),
                      "n_met_band": int(sum(x >= E2_BAND[0] for x in v
                                            if np.isfinite(x))),
+                     "n_inside_band": int(sum(E2_BAND[0] <= x <= E2_BAND[1]
+                                              for x in v if np.isfinite(x))),
+                     "n_above_band": int(sum(x > E2_BAND[1] for x in v
+                                             if np.isfinite(x))),
                      "n_seeds": len(v)}
     if on and off:
         dif, seeds = _paired(records, "p1_on", "p1_off", "bpc_live")
@@ -943,13 +979,18 @@ def prereg_scorecard(records: List[Dict[str, Any]]) -> Dict[str, Any]:
                                       and I1A_BAND[0] <= mu <= I1A_BAND[1])}
     if i1:
         nv = [int(r["n_rewrite_violations"]) for r in i1]
+        npost = [post_guard_violations(_record_events(r)) for r in i1]
         out["I1b"] = {"registered": "depth-reduction events = EXACTLY 0 by "
                                     "construction; a violation-free write is "
                                     "bit-identical",
-                      "violations_per_seed": nv,
+                      "violations_pre_guard_per_seed": nv,
+                      "violations_post_guard_per_seed": npost,
                       "events_per_seed": [int(r["n_rewrite_events"])
                                           for r in i1],
-                      "met": bool(all(x == 0 for x in nv))}
+                      "note": "the pre-guard count is how often the guard "
+                              "FIRED (the repairs); I1-b is the post-guard "
+                              "count",
+                      "met": bool(all(x == 0 for x in npost))}
     if on:
         rho = [float(r.get("i2", {}).get("rho_read_selection", float("nan")))
                for r in off] if off else []
@@ -1024,7 +1065,8 @@ def aggregate(records: List[Dict[str, Any]]) -> Dict[str, Any]:
                   "bpc_live", "bpc_live_minus_blank",
                   "bpc_memory_deleted_minus_live", "bpc_none_minus_live",
                   "acq", "acq_blank", "chance", "rewrite_violation_rate",
-                  "n_rewrite_events", "n_rewrite_violations", "n_admitted",
+                  "n_rewrite_events", "n_rewrite_violations",
+                  "n_rewrite_violations_post_guard", "n_admitted",
                   "n_occupied_target", "n_evicting_target", "wall_s"):
             v = [float(r.get(k, float("nan"))) for r in rs]
             mu, se, n = _mean_se(v)
