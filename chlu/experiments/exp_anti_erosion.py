@@ -586,7 +586,8 @@ def _memory_deleted_bpc(model, pcfg, ev) -> float:
 def run_cell(cell: str, seed: int, *, steps: Optional[int] = None,
              eval_batches: int = 4, loo_batches: int = 2,
              monitor_every: int = MONITOR_EVERY, with_none: bool = True,
-             n_loo_checkpoints: int = 4) -> Dict[str, Any]:
+             n_loo_checkpoints: int = 4, store_watch: bool = True
+             ) -> Dict[str, Any]:
     """One (cell, seed): train ``steps`` outer steps and return the curve.
 
     The record is the prereg's unit of adjudication — the depth curve, the I1
@@ -597,6 +598,11 @@ def run_cell(cell: str, seed: int, *, steps: Optional[int] = None,
     pcfg, (tr, va, te), k_solve, k_model, prov = _prepare_erosion(
         cell, seed, steps=steps, eval_batches=eval_batches,
         monitor_every=monitor_every)
+    # ⚠ declared cut: the trainer's own store_watch is a SECOND depth series on
+    # different tokens; at w40 it costs a full 40-step write replay per window
+    # for a quantity this module already measures. Off => `store_health` is
+    # empty and the curve comes from the telemetry alone.
+    pcfg.store_watch = bool(store_watch)
     specs, ledger = solve_arms(pcfg, k_solve)
     batches = list(random_batches(tr, batch=pcfg.batch, seq_len=pcfg.seq_len,
                                   n_batches=pcfg.steps, seed=pcfg.seed))
@@ -674,6 +680,8 @@ def run_cell(cell: str, seed: int, *, steps: Optional[int] = None,
         "cell": cell, "seed": int(seed), "tier": "erosion",
         "provenance": prov, "steps": int(pcfg.steps),
         "monitor_every": int(monitor_every),
+        "store_watch": bool(store_watch),
+        "store_health": hist.get("store_health", []),
         "cell_ledger": ledger.get("clu_store"),
         "curve": curve,
         "telemetry": series,
@@ -1046,6 +1054,45 @@ def aggregate(records: List[Dict[str, Any]]) -> Dict[str, Any]:
     return out
 
 
+def plot_curves(records: List[Dict[str, Any]], out: Path) -> Optional[Path]:
+    """The wave's headline figure: fitted depth vs outer step, per cell/seed.
+
+    Log-y (the OFF arm's collapse spans dozens of decades), one colour per cell,
+    one line per seed, with the step-200 reference the E1/E2 ratio is taken
+    against marked. Returns ``None`` if matplotlib is unavailable.
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception:                                    # pragma: no cover
+        return None
+    cells = [c for c in CELLS if any(r["cell"] == c for r in records)]
+    if not cells:
+        return None
+    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    colors = plt.cm.tab10(np.linspace(0, 1, 10))
+    for j, c in enumerate(cells):
+        for r in [r for r in records if r["cell"] == c]:
+            xs = [int(p["at_step"]) for p in r["curve"]]
+            ys = [max(float(p["depth_median"]), 1e-70) for p in r["curve"]]
+            ax.plot(xs, ys, color=colors[j % 10], alpha=0.85, lw=1.4,
+                    label=c if r["seed"] == records[0]["seed"] else None)
+    ax.axvline(200, color="0.6", ls=":", lw=1)
+    ax.set_yscale("log")
+    ax.set_xlabel("outer step")
+    ax.set_ylabel("median fitted well depth (live items, own site)")
+    ax.set_title("C2W6 erosion curve — toy (0.16 M), run-2 config, "
+                 "±P1  [w4 = monitor-#13 demoted]")
+    ax.legend(fontsize=8, loc="best")
+    fig.tight_layout()
+    p = Path(out) / "erosion_curves.png"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(p, dpi=150)
+    plt.close(fig)
+    return p
+
+
 # ==========================================================================
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -1059,6 +1106,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--eval-batches", type=int, default=4)
     ap.add_argument("--loo-batches", type=int, default=2)
     ap.add_argument("--loo-checkpoints", type=int, default=4)
+    ap.add_argument("--no-store-watch", action="store_true",
+                    help="skip the trainer's own second depth series (a "
+                         "declared cut at w40, where it costs a 40-step write "
+                         "replay per monitor window)")
     ap.add_argument("--no-none-arm", action="store_true",
                     help="skip the retrained memory-deleted arm (it is "
                          "flag-independent, so one per seed suffices)")
@@ -1076,6 +1127,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         agg = aggregate(recs)
         save_json(out / "erosion_aggregate.json",
                   {"n_records": len(recs), "aggregate": agg})
+        print("plot:", plot_curves(recs, out))
         print(json.dumps(agg["gate"], indent=1, default=float))
         print(agg["run3_flag_block"])
         return 0
@@ -1096,6 +1148,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                                  loo_batches=args.loo_batches,
                                  monitor_every=args.monitor_every,
                                  n_loo_checkpoints=args.loo_checkpoints,
+                                 store_watch=not args.no_store_watch,
                                  with_none=not args.no_none_arm))
             save_json(out / f"erosion_{args.tag}_records.json",
                       {"records": recs, "aggregate": aggregate(recs)})
