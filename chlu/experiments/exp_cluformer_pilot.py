@@ -181,6 +181,25 @@ def _flag_fingerprint(flags: Dict[str, Any]) -> str:
     return json.dumps(_flag_dict(flags), sort_keys=True)
 
 
+def _flag_defaults() -> Dict[str, Any]:
+    """The fingerprint value each ``memory.*`` key takes at its FIELD DEFAULT.
+
+    ⭐ Why this exists (`pilot-ttt-nan-and-d5-wiring`). The ``pilot`` and
+    ``store`` groups are ``as_flag_table()`` outputs — **non-default keys only**
+    — so a config field added after a journal was written simply does not appear
+    and the fingerprint is unchanged. The ``memory`` group is not: it is a full
+    ``asdict(StreamMemoryConfig())``, so **every field added to that dataclass
+    retro-invalidates every journal on disk.** That already happened: the four
+    C2W6 fields (``erosion_partition``, ``refresh_amp_ceiling``,
+    ``refresh_max_gain``, ``refresh_monotonic``) make the banked CSF3 tier-iii
+    journals unresumable on current ``main`` — 4 x 16 h of A100 training that the
+    checkpoint machinery was built to protect.
+    """
+    from chlu.core.blocks import StreamMemoryConfig
+    return {f"memory.{k}": json.dumps(v, sort_keys=True, default=str)
+            for k, v in asdict(StreamMemoryConfig()).items() if k != "phi_gain"}
+
+
 def load_journal(out: Path, scale: str, seed: int, flags: Dict[str, Any],
                  ) -> Dict[str, Any]:
     """Read the PARTIAL record, or ``{}``; refuse a config-mismatched resume."""
@@ -190,6 +209,21 @@ def load_journal(out: Path, scale: str, seed: int, flags: Dict[str, Any],
         return {}
     prior = json.loads(p.read_text())
     old, new = _flag_dict(prior.get("flags", {})), _flag_dict(flags)
+    # ⭐ A key the journal PREDATES is not a config change when the current value
+    # is that field's own DEFAULT: the journal was necessarily written by code
+    # running that default, because this repo ships every new lever gated OFF and
+    # bit-identical (the toy bit-identity gate is what licenses saying so). Set
+    # the same field to anything else and the keys differ, so the leg is still
+    # refused — this loosens NOTHING except "the dataclass grew a field".
+    # ⛔ The converse (a key the journal HAS and the current code does not) stays
+    # a refusal: a deleted field's old value is not reconstructible.
+    if set(new) - set(old):
+        defaults = _flag_defaults()
+        for k in sorted(set(new) - set(old)):
+            if k in defaults and new[k] == defaults[k]:
+                old[k] = new[k]
+                print(f"[resume] '{k}' post-dates this journal and is at its "
+                      f"default ({new[k]}) — same leg, accepted", flush=True)
     if old != new:
         bad = sorted(k for k in set(old) | set(new)
                      if old.get(k) != new.get(k))
