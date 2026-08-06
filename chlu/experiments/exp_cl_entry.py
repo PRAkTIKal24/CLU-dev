@@ -73,7 +73,7 @@ from chlu.experiments.exp_hopfield_capacity import (
     _settle_read,
     dropout_query,
 )
-from chlu.experiments.exp_phi_read_in import build_read_in
+from chlu.experiments.exp_phi_read_in import build_read_in, read_in_param_floats
 from chlu.experiments.exp_phi_stream import load_labeled_images
 from chlu.experiments.exp_retry_compute import (
     _confidence_and_nn,
@@ -430,6 +430,10 @@ def run_clu_entry(cfg, stream, regime: str, seed: int, decay_on: bool = False,
         phi, prov = build_phi(regime, stream, cfg, seed)
     else:
         prov = {"regime": regime, "reused_read_in": True}
+    # ⭐ §A4.3: the φ parameters are ledgered on EVERY arm that reads through this φ —
+    # the store, the same-keys launder and the ring-buffer launder alike. A strong
+    # encoder off the ledger is a hidden capacity increase (see PREREG-C2W8 §3.5).
+    phi_floats = read_in_param_floats(phi) if cfg.count_phi_param_floats else 0
     T = cfg.n_tasks
     A = np.zeros((T, T))
     A_knn_same = np.zeros((T, T))
@@ -511,6 +515,8 @@ def run_clu_entry(cfg, stream, regime: str, seed: int, decay_on: bool = False,
         "per_task": per_task, "geometry": diag,
         "memory_items": int(len(centers)),
         "memory_floats": int(len(centers) * _clu_floats_per_item(cfg, stream)),
+        "phi_param_floats": int(phi_floats),
+        "phi_arm": str(cfg.phi_arm),
         "ring_items": int(len(ring.keys)),
         "budget_items": int(cfg.memory_items),
         "ring_budget_items": int(ring.budget),
@@ -912,6 +918,13 @@ def baseline_table(rows, cfg):
             "forgetting": fgt[0], "forgetting_sd": fgt[1],
             "memory_items": sel[0].get("memory_items", 0),
             "memory_floats": sel[0].get("memory_floats", 0),
+            # ⭐ §A4.3 byte ledger: φ params (CLU + both launders) / fixed state
+            # (the gradient baselines' backbone) are carried on EVERY arm
+            "phi_param_floats": sel[0].get("phi_param_floats", 0),
+            "fixed_state_floats": sel[0].get("fixed_state_floats", 0),
+            "total_floats": sel[0].get(
+                "total_floats", sel[0].get("memory_floats", 0)
+            ),
             "n_seeds": len(sel),
         })
     return sorted(table, key=lambda r: -r["ACC"])
@@ -1100,7 +1113,12 @@ def run_byte_frontier(cfg, seeds=None, verbose: bool = True, data=None):
                     "budget_floats": B, "metrics": res[key],
                     "memory_items": int(items), "memory_floats": int(items * fl),
                     "floats_per_item": int(fl),
-                    "fixed_state_floats": fixed.get(name, 0),
+                    # ⚠ §A4.3: ``fixed_state_floats``' φ term assumes the linear PCA
+                    # read-in; with a conv arm the frozen encoder is much larger, so
+                    # the MEASURED count from the fitted φ overrides the formula.
+                    "fixed_state_floats": int(
+                        res.get("phi_param_floats", 0) or fixed.get(name, 0)
+                    ),
                     "budget_independent": False,
                 })
             store_diag.append({
@@ -1492,23 +1510,30 @@ def run_experiment_cl_entry(
                                     collect_store=(regime == PHI_PRIMARY))
                 entry_runs.append({k: v for k, v in res.items() if not k.startswith("_")})
                 name = f"clu_entry_{regime}"
+                phi_fl = int(res.get("phi_param_floats", 0))
                 rows.append({
                     "method": name, "class": "rehearsal-free", "seed": sd,
                     "metrics": res["metrics_clu"],
                     "memory_items": res["memory_items"],
                     "memory_floats": res["memory_floats"],
+                    "phi_param_floats": phi_fl,
+                    "total_floats": int(res["memory_floats"]) + phi_fl,
                 })
                 rows.append({
                     "method": f"knn_phi_same_keys_{regime}", "class": "launder",
                     "seed": sd, "metrics": res["metrics_knn_same_keys"],
                     "memory_items": res["memory_items"],
                     "memory_floats": res["memory_floats"],
+                    "phi_param_floats": phi_fl,
+                    "total_floats": int(res["memory_floats"]) + phi_fl,
                 })
                 rows.append({
                     "method": f"knn_phi_ringbuffer_{regime}", "class": "launder",
                     "seed": sd, "metrics": res["metrics_knn_ringbuffer"],
                     "memory_items": int(cfg.memory_items),
                     "memory_floats": int(cfg.memory_items * cfg.phi_dim),
+                    "phi_param_floats": phi_fl,
+                    "total_floats": int(cfg.memory_items * cfg.phi_dim) + phi_fl,
                 })
                 if regime == PHI_PRIMARY and "retry" in items:
                     if res.get("_store_mid") is not None:
@@ -1521,6 +1546,11 @@ def run_experiment_cl_entry(
                                      label=f"end_of_stream_seed{sd}")
                     )
 
+            # the baselines' own non-episodic state (backbone, + Fisher/ω/frozen copy)
+            # is the ledger term that answers φ params on the CLU side
+            fixed = fixed_state_floats(
+                cfg, int(stream["dim"]), cfg.n_tasks * cfg.classes_per_task
+            )
             for method in [m for m in cfg.baselines if m and m != "none"]:
                 A, diag = run_baseline_stream(
                     method, stream, cfg, sd, hyper=tuned.get(method)
@@ -1530,6 +1560,8 @@ def run_experiment_cl_entry(
                     "seed": sd, "metrics": cl_metrics(A),
                     "memory_items": diag["memory_items"],
                     "memory_floats": diag["memory_floats"],
+                    "fixed_state_floats": int(fixed.get(method, 0)),
+                    "total_floats": int(diag["memory_floats"]) + int(fixed.get(method, 0)),
                     "A": A.tolist(),
                 })
 
@@ -1594,7 +1626,9 @@ def run_experiment_cl_entry(
                 "frontier_fixed_methods", "frontier_seeds",
                 "frontier_n_test_per_task", "frontier_max_clu_items",
                 "frontier_la_band", "count_controller_record_floats",
-                "bytes_per_float",
+                "bytes_per_float", "count_phi_param_floats", "enc_steps",
+                "enc_head", "enc_l2_normalize", "enc_channels", "enc_batch",
+                "enc_lr", "enc_temperature", "enc_proj_dim",
             )
         },
         "entry_runs": entry_runs,
@@ -1673,6 +1707,50 @@ def apply_cifar10(config: CHLUConfig) -> None:
     cfg.clu_steps = 150
 
 
+#: knobs ``--set``/the explicit CLI overrides may write, applied AFTER the presets
+OVERRIDABLE = {
+    "phi_arm": str, "phi_dim": int, "enc_steps": int, "enc_head": str,
+    "n_fit_region": int, "n_fit_pool": int, "memory_items": int,
+    "n_train_per_task": int, "n_test_per_task": int, "clu_steps": int,
+    "baseline_iters": int, "tune_baselines": (lambda v: str(v).lower() == "true"),
+    "count_phi_param_floats": (lambda v: str(v).lower() == "true"),
+}
+
+
+def apply_overrides(config: CHLUConfig, assignments) -> dict:
+    """Apply ``key=value`` overrides to ``experiment_cl_entry`` **after** the presets.
+
+    ⚠ **The trap this closes** (recorded by `cl-encoder` §10): ``--dataset cifar10``
+    runs :func:`apply_cifar10` *after* the project YAML is loaded, so the preset
+    silently overwrites ``n_fit_region``/``n_fit_pool``/``baseline_iters`` that the
+    YAML had set — halving the φ fit pool and putting the run back on a weak arm
+    without saying so. Overrides parsed here are applied last and are echoed into
+    the results JSON, so what ran is what was asked for.
+
+    ``phi_regimes``/``seeds`` accept comma-separated lists.
+    """
+    cfg = config.experiment_cl_entry
+    applied = {}
+    for a in assignments or []:
+        if "=" not in a:
+            raise ValueError(f"override {a!r} is not of the form key=value")
+        k, v = a.split("=", 1)
+        k = k.strip()
+        if k == "phi_regimes":
+            cfg.phi_regimes = [s for s in v.split(",") if s]
+        elif k == "seeds":
+            cfg.seeds = [int(s) for s in v.split(",") if s]
+        elif k in OVERRIDABLE:
+            setattr(cfg, k, OVERRIDABLE[k](v))
+        else:
+            raise ValueError(
+                f"{k!r} is not an overridable CL-entry knob "
+                f"(allowed: {sorted(OVERRIDABLE) + ['phi_regimes', 'seeds']})"
+            )
+        applied[k] = getattr(cfg, k)
+    return applied
+
+
 def main():
     import argparse
 
@@ -1692,6 +1770,11 @@ def main():
         help="Comma-separated matched-BYTE budgets in floats (frontier item)",
     )
     parser.add_argument("--baselines", help="Comma-separated baseline override")
+    parser.add_argument(
+        "--set", dest="overrides", action="append", metavar="KEY=VALUE",
+        help="CL-entry config override applied AFTER --quick/--dataset presets "
+             "(e.g. --set phi_arm=simclr --set phi_regimes=task1_only). Repeatable.",
+    )
     args = parser.parse_args()
 
     if args.project:
@@ -1718,6 +1801,9 @@ def main():
         config.experiment_cl_entry.frontier_budgets_floats = [
             int(b) for b in args.budgets.split(",")
         ]
+    if args.overrides:  # LAST — see apply_overrides' docstring (the preset trap)
+        print(f"[cl-entry] overrides: {apply_overrides(config, args.overrides)}",
+              flush=True)
 
     res = run_experiment_cl_entry(
         config=config, save_dir=save_dir, models_dir=models_dir, seed=args.seed,
