@@ -35,6 +35,9 @@ from ..experiments.exp_write_ceiling import (
     run_experiment_write_ceiling,
     apply_quick as apply_write_ceiling_quick,
 )
+from ..experiments.exp_well_lifecycle import (
+    run_experiment_well_lifecycle,
+)
 from ..experiments.exp_sharded_store import (
     run_experiment_sharded_store,
     apply_quick as apply_sharded_store_quick,
@@ -392,6 +395,17 @@ def setup_experiment_parsers(subparsers):
     exp_ssto_parser.add_argument('--items', nargs='+',
                                  help='Subset of items to run (1..6)')
     exp_ssto_parser.set_defaults(func=cmd_exp_sharded_store)
+    # exp-well-lifecycle (C2W8 stage 1: the census that gates the lifecycle build)
+    exp_wl_parser = subparsers.add_parser(
+        'exp-well-lifecycle',
+        help='C2W8 stage 1: the well census on the full CLU under an over-dug CL '
+             'stream — is there anything to prune, anything to merge? (K1)'
+    )
+    exp_wl_parser.add_argument('--project', help='Project name to use')
+    exp_wl_parser.add_argument('--seeds', help='Comma-separated seeds, e.g. 0,1,2')
+    exp_wl_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (d=4, 1 seed, tiny stream)')
+    exp_wl_parser.set_defaults(func=cmd_exp_well_lifecycle)
     # exp-primitive-harness
     exp_ph_parser = subparsers.add_parser(
         'exp-primitive-harness',
@@ -1834,6 +1848,42 @@ def cmd_exp_sharded_store(args):
         )
     except Exception as e:
         console.print(f"\u2717 Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_well_lifecycle(args):
+    """Run the C2W8 stage-1 well census (the mechanical stage-2 gate)."""
+    console.print(
+        "[bold cyan]Running Experiment WELL-LIFECYCLE (stage 1): the census — "
+        "is there anything to prune, anything to merge?[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+    seeds = ([int(s) for s in str(args.seeds).split(',')]
+             if getattr(args, 'seeds', None) else None)
+
+    try:
+        res = run_experiment_well_lifecycle(
+            config=config,
+            save_dir=str(paths['plots']),
+            seeds=seeds,
+            quick=getattr(args, 'quick', False),
+        )
+        k1 = res['k1']
+        console.print(
+            f"✓ Experiment WELL-LIFECYCLE completed: P_mean={k1['P_mean']:.4f} "
+            f"M_mean={k1['M_mean']:.4f} -> stage2_unlock={res['stage2_unlock']} "
+            f"-> {res['census_json']}",
+            style="bold green",
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
         return 1
 
     return 0

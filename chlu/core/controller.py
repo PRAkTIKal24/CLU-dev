@@ -210,6 +210,10 @@ class Controller:
         # never refused it would have produced.
         self.waiting: Dict[int, ItemRecord] = {}
         self.waiting_amps: Dict[int, float] = {}
+        #: ⭐ C2W8 B2: item-id-keyed read counter, written by :meth:`touch` and
+        #: never cleared on eviction. Decision-free here (the prune verb reads it
+        #: through :mod:`chlu.experiments.usage_telemetry`, not the allocator).
+        self.read_hits: Dict[int, int] = {}
         self.t = 0
         self.stats = {
             "offered": 0,
@@ -354,7 +358,17 @@ class Controller:
         return row
 
     def touch(self, item_id: int) -> None:
-        """Mark an item as used *now* (staleness clock for LRU eviction)."""
+        """Mark an item as used *now* (staleness clock for LRU eviction).
+
+        ⭐ **C2W8 (B2, usage telemetry).** The touch path is also the *read*
+        counter: every touch increments :attr:`read_hits` ``[item_id]``, which is
+        keyed by **item id, never by slot** (slot != well: a recycled slot is a
+        different item) and **survives eviction**, so "this item was never read
+        since it first appeared" stays computable after the well is gone. The
+        counter is pure bookkeeping — no decision in this class reads it — so the
+        staleness/LRU behaviour is bit-identical to the pre-C2W8 path.
+        """
+        self.read_hits[int(item_id)] = self.read_hits.get(int(item_id), 0) + 1
         for r in self.records.values():
             if r.item_id == item_id:
                 r.last_used = self.t
