@@ -64,7 +64,11 @@ from chlu.experiments.exp_hopfield_capacity import (
     score_retrieval,
 )
 from chlu.experiments.goldstone_harness import clu_with_potential
-from chlu.experiments.phi_encoders import ENCODER_ARMS, build_encoder_read_in
+from chlu.experiments.phi_encoders import (
+    ENCODER_ARMS,
+    build_encoder_read_in,
+    module_param_floats,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +114,10 @@ class PCAReadIn:
     def __call__(self, X):
         X = np.asarray(X, np.float32)
         return jnp.asarray((X - self.mean.astype(np.float32)) @ self.components.T)
+
+    def param_floats(self) -> int:
+        """Floats this frozen read-in keeps (mean + components) — ledger term."""
+        return int(self.mean.size + self.components.size)
 
 
 # ---------------------------------------------------------------------------
@@ -173,11 +181,17 @@ class AEReadIn:
             idx = jax.random.choice(sk, n, (bs,), replace=False)
             model, opt_state, loss = step(model, opt_state, X[idx])
             self.final_loss = float(loss)
+        # only the ENCODER is carried at read time; the decoder is discarded
+        self.encoder = model.enc
         self._encode = eqx.filter_jit(jax.vmap(model.encode))
         self.k = int(k)
 
     def __call__(self, X):
         return self._encode(jnp.asarray(X, jnp.float32))
+
+    def param_floats(self) -> int:
+        """Floats the frozen read-in keeps (the encoder MLP) — ledger term."""
+        return module_param_floats(self.encoder)
 
 
 def build_read_in(arm, dataset, store_pool, fit_pool, cfg, seed):
@@ -198,6 +212,24 @@ def build_read_in(arm, dataset, store_pool, fit_pool, cfg, seed):
         # w26 (cl-encoder): the CL-capable conv arms — additive, see phi_encoders.py
         return build_encoder_read_in(arm, dataset, store_pool, fit_pool, cfg, seed)
     raise ValueError(f"unknown φ arm {arm!r}")
+
+
+def read_in_param_floats(phi) -> int:
+    """⭐ Floats a frozen read-in carries — the **φ term of the byte ledger** (§A4.3).
+
+    Every arm (``pca``/``ae``/``randconv``/``convae``/``simclr``) implements
+    :meth:`param_floats`; this dispatcher exists so a caller can ledger any φ without
+    knowing which arm it got. A strong encoder that is off the ledger is a hidden
+    capacity increase, so an arm that cannot report its own size raises rather than
+    silently contributing 0.
+    """
+    fn = getattr(phi, "param_floats", None)
+    if fn is None:
+        raise TypeError(
+            f"read-in {type(phi).__name__} cannot report its parameter count; a φ "
+            f"that is not on the byte ledger may not be used in a matched-bytes cell"
+        )
+    return int(fn())
 
 
 # ---------------------------------------------------------------------------

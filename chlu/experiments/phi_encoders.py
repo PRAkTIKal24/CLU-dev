@@ -41,6 +41,19 @@ import optax
 #: Arms served by this module (dispatched from ``exp_phi_read_in.build_read_in``).
 ENCODER_ARMS = ("randconv", "convae", "simclr")
 
+
+def module_param_floats(tree) -> int:
+    """Number of float parameters an ``eqx`` module (or PyTree of them) keeps.
+
+    ⭐ **The §A4.3 ledger term.** A strong ``φ`` is not free: its parameters are
+    memory the arm carries, exactly like a stored exemplar, and an encoder that is
+    off the byte ledger is the matched-bytes violation in its most obvious form.
+    Counted over the *inexact* (array) leaves only, in float units — the same unit
+    ``cl_baselines.floats_per_stored_item`` uses.
+    """
+    leaves = jax.tree_util.tree_leaves(eqx.filter(tree, eqx.is_array))
+    return int(sum(int(np.asarray(x).size) for x in leaves))
+
 #: Defaults for every knob, used when a config group has not declared it. The
 #: canonical home of these knobs is ``ExperimentClEntryConfig`` /
 #: ``ExperimentPhiStreamConfig`` in ``chlu/config.py``; this table only keeps older
@@ -263,6 +276,10 @@ class _PCAHead:
         H = np.asarray(H, np.float32)
         return (H - self.mean.astype(np.float32)) @ self.components.T * self.scale
 
+    def param_floats(self) -> int:
+        """Floats this head keeps (mean + components + scale) — ledger term."""
+        return int(self.mean.size + self.components.size + self.scale.size)
+
 
 # ---------------------------------------------------------------------------
 # The read-in
@@ -298,6 +315,9 @@ class ConvEncoderReadIn:
             trunk, key = self._fit_simclr(trunk, X, cfg, key)
         elif objective == "recon":
             trunk, key = self._fit_recon(trunk, X, cfg, key)
+        # the frozen trunk is kept as a module (not only as the jitted callable) so
+        # its parameter count is auditable — see :meth:`param_floats`
+        self.trunk = trunk
         self._trunk = eqx.filter_jit(jax.vmap(trunk))
         self.h_dim = int(trunk.h_dim)
         H = self._features(np.asarray(fit_pool, np.float32))
@@ -389,12 +409,26 @@ class ConvEncoderReadIn:
             F = F / (np.linalg.norm(F, axis=1, keepdims=True) + 1e-8)
         return jnp.asarray(np.asarray(F, np.float32))
 
+    def param_floats(self) -> int:
+        """⭐ Floats the **frozen φ** keeps: conv trunk + the ``h → φ`` head.
+
+        The projection head / decoder used while fitting are discarded and are NOT
+        counted — they are not carried at read time. Everything that *is* carried
+        is counted (§A4.3: φ params ride on the byte ledger of every arm, the
+        laundering control included, because both read through the same φ).
+        """
+        n = module_param_floats(self.trunk)
+        if self.head is not None:
+            n += self.head.param_floats()
+        return int(n)
+
     def provenance(self, arm):
         return {
             "arm": arm, "k": self.k, "h_dim": self.h_dim,
             "objective": self.objective, "steps": self.steps_run,
             "loss_first": self.loss_first, "loss_final": self.loss_final,
             "n_fit": self.n_fit, "frozen": True,
+            "phi_param_floats": self.param_floats(),
         }
 
 
