@@ -244,6 +244,97 @@ def test_unlock_verdict_is_mechanical():
 
 
 # --------------------------------------------------------------------------
+# K2 — the trash region's FIRST USE, and its safety (PREREG-C2W8 §5 K2)
+# --------------------------------------------------------------------------
+def _two_well_system(gamma_phi=False, seed=0):
+    sysm = _tiny_system(capacity=4, seed=seed, gamma_phi=gamma_phi)
+    sites = np.array([[0.6, 0.0], [-0.6, 0.0]])
+    for i, s in enumerate(sites):
+        plant_item(sysm, i, s, payload=0.3 * (2 * i - 1), depth=0.9, width=0.25)
+    flatten_unused_groups(sysm)
+    q0 = np.zeros((2, sysm.store.dim), dtype=np.float32)
+    q0[:, :2] = sites + 0.02
+    return sysm, sites, q0
+
+
+def test_gamma_phi_off_is_bit_identical_and_parameter_count_identical():
+    """⛔ OFF must be the pre-build path, exactly — bits AND parameter count.
+
+    ⚠ Even an EMPTY field is not bit-identical: the integrator composes
+    `1 - (1 - gamma)(1 - gamma_phi)` and `1 - (1 - g) * 1.0 != g` in floating
+    point. OFF therefore means *no field is attached at all*, and this test is
+    what pins that.
+    """
+    import equinox as eqx
+
+    off, _, q0 = _two_well_system(gamma_phi=False)
+    on, _, _ = _two_well_system(gamma_phi=True)
+
+    assert off.trash is None and off.model().friction_field is None
+    assert on.trash is not None and on.trash.k == 0     # ON but with no holes yet
+
+    # (i) parameter-count-identical: the ON-with-no-holes model must carry no
+    # extra learnable leaves, and the OFF model must be the shipped tree.
+    def n_params(m):
+        return int(sum(np.asarray(x).size
+                       for x in jax.tree_util.tree_leaves(
+                           eqx.filter(m, eqx.is_inexact_array))))
+
+    assert n_params(off.model()) == n_params(_tiny_system(capacity=4).model())
+    assert n_params(on.model()) == n_params(off.model())   # 0 holes = 0 bytes
+    assert off.trash_bytes() == 0 and on.trash_bytes() == 0
+
+    # (ii) bit-identical reads against a system built with the flag absent
+    ref, _, _ = _two_well_system(gamma_phi=False)
+    a = np.asarray(off.read(q0).state.q_star)
+    b = np.asarray(ref.read(q0).state.q_star)
+    assert np.array_equal(a, b)
+
+
+def test_gamma_phi_hole_at_a_well_destroys_its_retrievability():
+    """K2 designed negative (a): the field must actually do something."""
+    base, sites, q0 = _two_well_system(gamma_phi=True)
+    before = np.asarray(base.read(q0).state.q_star)
+    d_before = np.linalg.norm(before[0, :2] - sites[0])
+
+    base.trash_route(np.concatenate([sites[0], [0.3 * (-1)]]),
+                     radius=0.35, strength=0.45)
+    assert base.trash.k == 1
+    after = np.asarray(base.read(q0).state.q_star)
+    d_after = np.linalg.norm(after[0, :2] - sites[0])
+
+    assert not np.array_equal(before, after)
+    # the read of the holed well is measurably displaced from its site
+    assert d_after > d_before + 1e-4, (d_before, d_after)
+    # ...and the holes are on the byte ledger
+    assert base.trash_bytes() == 1 * (base.store.dim + 2) * 4
+    assert base.n_bytes() > base.store.n_bytes()
+
+
+def test_gamma_phi_hole_far_from_every_well_leaves_reads_bit_identical():
+    """K2 designed negative (b): the field must NOT leak.
+
+    The **compact** gate is exactly zero beyond `r_k`, so a hole outside every
+    read's trajectory changes nothing bitwise. A sigmoid gate would leak a tail
+    everywhere and this assertion is what would catch it.
+    """
+    sysm, sites, q0 = _two_well_system(gamma_phi=True)
+    before = np.asarray(sysm.read(q0).state.q_star)
+    far = np.zeros((sysm.store.dim,))
+    far[0] = 25.0                        # far outside the ball and every basin
+    sysm.trash_route(far, radius=0.2, strength=0.45)
+    after = np.asarray(sysm.read(q0).state.q_star)
+    assert np.array_equal(before, after)
+
+
+def test_trash_route_refuses_when_the_flag_is_off():
+    """A verb that silently builds the field would un-ship the OFF guarantee."""
+    off, sites, _ = _two_well_system(gamma_phi=False)
+    with pytest.raises(RuntimeError, match="gamma_phi"):
+        off.trash_route(sites[0])
+
+
+# --------------------------------------------------------------------------
 # the rig end to end, on synthetic labelled data (no MNIST download in tests)
 # --------------------------------------------------------------------------
 def _toy_data(n_per_class=30, dim=24, seed=0):

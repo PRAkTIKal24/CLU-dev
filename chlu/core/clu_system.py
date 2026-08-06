@@ -232,6 +232,35 @@ class CluSystemConfig:
     soft_certificate: bool = False
     soft_certificate_kwargs: Dict[str, Any] = field(default_factory=dict)
 
+    # -- C2W8: the TRASH REGION gamma_phi(q) — its genuine FIRST USE ---------
+    # ⭐ `chlu/core/friction_field.py` was built in C1 and is referenced NOWHERE
+    # in this file: the trash region has never been wired into the CLU's settle.
+    # This is the plumbing (the field itself is unchanged — Prop-11 gives its
+    # exact volume contraction, and the CHLU unit already composes
+    # `1 - (1 - gamma)(1 - gamma_phi(q))` inside `velocity_verlet_step`).
+    #
+    # ⛔ `gamma_phi = False` (the default) => `model()` attaches NO field, so the
+    # read path is **bit-identical AND parameter-count-identical** to the
+    # pre-C2W8 path (the P1 / psires precedent; both halves asserted in
+    # `tests/test_well_lifecycle.py::test_gamma_phi_off_is_*`).
+    #
+    # ⚠ The default gate is **"compact"**, not the field's own "sigmoid"
+    # default: the compact smoothstep is identically 0 beyond `r_k`, so a hole
+    # placed far from every well leaves every read bit-identical *exactly*
+    # rather than to 1e-30. A trash region that leaks a tail everywhere is not a
+    # trash region, it is a global friction change (K2 designed negative (b)).
+    #
+    # ⚠ **gamma_phi holes are BYTES** and are on the ledger (:meth:`n_bytes`):
+    # `K x (dim centers + radius + strength)`. A trash region off the ledger is
+    # a hidden capacity increase (the §A9.6 ledger-drift collapse mode).
+    gamma_phi: bool = False
+    gamma_phi_gate: str = "compact"  # compact => EXACT zero outside r_k
+    gamma_phi_max: float = 0.5
+    gamma_phi_width: float = 0.05
+    gamma_phi_radius: float = 0.2
+    gamma_phi_strength: float = 0.25
+    gamma_phi_trainable: bool = False  # the trash region is PLACED, not fitted
+
     # -- harness -----------------------------------------------------------
     seed: int = 0
     n_query_per_item: int = 8  # shipped harness uses 32; 8 declared for cost
@@ -556,6 +585,21 @@ class CluSystem:
         self._knob_reads: Dict[str, int] = {}
         self._evict_key = jax.random.PRNGKey(self.cfg.seed + 5150)
         self._wall0 = time.time()
+        #: ⭐ C2W8: the trash region. ``None`` unless ``cfg.gamma_phi`` — and
+        #: ``None`` is what makes OFF bit-identical AND parameter-count-identical
+        #: (no leaf is added to the read model at all). Holes are placed by
+        #: :meth:`trash_route`, never fitted by a loss.
+        self.trash: Optional[eqx.Module] = None
+        if self.cfg.gamma_phi:
+            from chlu.core.friction_field import FrictionField
+
+            self.trash = FrictionField(
+                dim=self.store.dim, centers=jnp.zeros((0, self.store.dim)),
+                gamma_max=float(self.cfg.gamma_phi_max),
+                width=float(self.cfg.gamma_phi_width),
+                gate=str(self.cfg.gamma_phi_gate),
+                trainable=bool(self.cfg.gamma_phi_trainable),
+            )
 
     # -- model -------------------------------------------------------------
     def model(self, store: Optional[LearnedVStore] = None,
@@ -573,10 +617,18 @@ class CluSystem:
                 eqx.tree_at(lambda a: a.axis_width_scale, V.learned, tuple(axis),
                             is_leaf=lambda x: x is None),
             )
-        return clu_with_potential(
+        m = clu_with_potential(
             V, dim=st.dim, kinetic_mode=self.cfg.kinetic_mode,
             inertia=jnp.ones(st.dim),
         )
+        # ⭐ C2W8: the trash region's FIRST USE. Attached only when it exists —
+        # even an EMPTY field is not bit-identical to no field (the integrator
+        # composes `1 - (1 - gamma)(1 - gamma_phi)`, and `1 - (1 - g)*1.0 != g`
+        # in floating point), which is exactly why OFF means *no attachment*.
+        if getattr(self, "trash", None) is not None:
+            m = eqx.tree_at(lambda t: t.friction_field, m, self.trash,
+                            is_leaf=lambda x: x is None)
+        return m
 
     # -- the three public operations --------------------------------------
     def write_stream(self, items: Sequence[dict], key=None,
@@ -948,9 +1000,45 @@ class CluSystem:
         return ids, centers, pays
 
     def n_bytes(self) -> int:
-        """Matched-bytes accounting for the full system."""
+        """Matched-bytes accounting for the full system.
+
+        ⚠ **The trash region's holes are bytes and are counted here** (§3.5): a
+        `gamma_phi` field off the ledger is a hidden capacity increase.
+        """
         ids, centers, _ = self.codebook()
-        return int(self.store.n_bytes() + centers.size * 4)
+        return int(self.store.n_bytes() + centers.size * 4 + self.trash_bytes())
+
+    def trash_bytes(self) -> int:
+        """Bytes of the trash region: ``K x (dim centers + radius + strength)``."""
+        if getattr(self, "trash", None) is None:
+            return 0
+        return int(self.trash.k * (self.store.dim + 2) * 4)
+
+    def trash_route(self, center, *, radius: Optional[float] = None,
+                    strength: Optional[float] = None) -> int:
+        """Place one trash hole at ``center`` — the routing verb, not a fit.
+
+        ⛔ Requires ``cfg.gamma_phi``: with the flag off there is no field, and
+        silently building one would make OFF non-identical to the pre-build path.
+        Returns the new hole count ``K``.
+        """
+        from chlu.core.friction_field import add_hole
+
+        if self.trash is None:
+            raise RuntimeError(
+                "trash_route requires cfg.gamma_phi=True; with the flag off the "
+                "read path carries no field at all (that is what makes OFF "
+                "bit-identical to the pre-C2W8 path)"
+            )
+        z = np.zeros((self.store.dim,), dtype=float)
+        c = np.asarray(center, dtype=float).reshape(-1)
+        z[: min(c.size, self.store.dim)] = c[: self.store.dim]
+        self.trash = add_hole(
+            self.trash, jnp.asarray(z),
+            float(self.cfg.gamma_phi_radius if radius is None else radius),
+            float(self.cfg.gamma_phi_strength if strength is None else strength),
+        )
+        return int(self.trash.k)
 
     # ------------------------------------------------------------------
     # internals

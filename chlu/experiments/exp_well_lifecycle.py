@@ -398,12 +398,16 @@ def _byte_ledger(system, launder, addr_dim: int) -> Dict[str, int]:
     added here the moment the trash region ships — a trash region off the ledger
     is a hidden capacity increase (§A9.6)."""
     n_knn = len(getattr(launder, "keys", []))
+    trash = int(system.trash_bytes())
     return {
         "clu_store_bytes": int(system.store.n_bytes()),
-        "clu_codebook_bytes": int(system.n_bytes() - system.store.n_bytes()),
+        "clu_codebook_bytes": int(system.n_bytes() - system.store.n_bytes() - trash),
         "clu_total_bytes": int(system.n_bytes()),
         "knn_launder_bytes": int(n_knn * (addr_dim + 1) * 4),
-        "gamma_phi_hole_bytes": 0,  # the trash region is NOT built (stage 2)
+        # ⚠ the trash region's holes ARE bytes; 0 only because no hole is placed
+        # in the census (the routing verb is stage 2's).
+        "gamma_phi_hole_bytes": trash,
+        "gamma_phi_enabled": bool(system.cfg.gamma_phi),
     }
 
 
