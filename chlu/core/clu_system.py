@@ -284,10 +284,24 @@ class CluSystemConfig:
     emission_head: bool = False
     emission_head_hidden: int = 64
     emission_head_layers: int = 2
-    emission_width_min: float = 0.15  # emitted-width band (designed, declared)
+    # ⚠ Both floors are set from MEASURED quantities, not guessed (the same
+    # discipline arm A applies to its atom widths):
+    #  * the WIDTH floor is what makes the well reach the read's own launch
+    #    manifold. The read launches with the payload channels at 0 and the well
+    #    sits at |a| <= 0.5, so a well of width s exerts exp(-a^2/2s^2) of its
+    #    force there: 0.007 at s = 0.16 (no force at all) vs 0.25 at s = 0.30.
+    #  * the DEPTH floor is set from pass 1's measured FOREIGN background at a
+    #    live site (median 0.611 - 1.261, `c2w8-well-lifecycle.md` §1e). A well
+    #    shallower than that is a minority of the landscape at its own site,
+    #    which is pass 1's diagnosis restated.
+    emission_width_min: float = 0.30  # emitted-width band (designed, declared)
     emission_width_max: float = 0.80
-    emission_depth_min: float = 0.05  # emitted-depth band
+    emission_depth_min: float = 1.5  # emitted-depth band
     emission_depth_max: float = 3.0
+    # ⭐ a TRAINABLE linear skip on phi, initialised at `gain * I`. An
+    # INITIALISATION, not a constraint (N98 precedent) — see
+    # `chlu/core/emission_head.py`. 0.0 = the plain random init.
+    emission_center_skip_gain: float = 1.0
     # ⚠ strictly below `payload_tol` (0.1): the emitted payload coordinate is the
     # item's own value plus a BOUNDED learned correction, so the head encodes the
     # content it is handed and can never invent one.
@@ -664,6 +678,7 @@ class CluSystem:
                 depth_min=float(self.cfg.emission_depth_min),
                 depth_max=float(self.cfg.emission_depth_max),
                 payload_delta_max=float(self.cfg.emission_payload_delta_max),
+                center_skip_gain=float(self.cfg.emission_center_skip_gain),
             )
 
     # -- model -------------------------------------------------------------

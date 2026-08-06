@@ -2866,14 +2866,21 @@ class ExperimentCaptureArmBConfig:
     #      re-priced from a project YAML without editing the store's defaults) ----
     head_hidden: int = 64
     head_layers: int = 2
-    width_min: float = 0.15
+    #: ⚠ both floors are MEASURED, not guessed — see `CluSystemConfig`:
+    #: the width floor is the payload reach (|a| <= 0.5), the depth floor is
+    #: pass 1's measured foreign background at a live site (0.611 - 1.261).
+    width_min: float = 0.30
     width_max: float = 0.80
-    depth_min: float = 0.05
+    depth_min: float = 1.5
     depth_max: float = 3.0
     payload_delta_max: float = 0.05  # strictly below the read's payload_tol
+    #: ⭐ trainable linear skip on phi, initialised at `gain * I`. An
+    #: INITIALISATION (symmetry-breaking), never a constraint: decoupled weight
+    #: decay shrinks it toward ZERO, i.e. toward IGNORING phi. 0.0 = plain init.
+    center_skip_gain: float = 1.0
 
     # ---- the amortised write cost (paid ONCE, and ledgered) ----
-    pretrain_steps: int = 400
+    pretrain_steps: int = 600
     pretrain_batch: int = 16
     pretrain_lr: float = 3e-3
     pretrain_weight_decay: float = 1e-4
@@ -2884,6 +2891,15 @@ class ExperimentCaptureArmBConfig:
     #: `chlu/core/emission_head.py`).
     reach_weight: float = 1.0
     reach_rho: float = 2.0
+    #: ⭐ THE designed write->phi organization gradient (charter §A28.1): each
+    #: launch must be attributed to its OWN well by a margin. Competitive, so it
+    #: constrains placement RELATIVE to the other wells and never to phi itself;
+    #: vacuous for a single item, where a pin is at its most active.
+    attr_weight: float = 10.0
+    attr_margin: float = 0.15
+    #: the shipped w24 crowding lever, at the rig's own admission radius: an atom
+    #: inside `d_safe` of a site it does not own is penalized.
+    crowd_weight: float = 1.0
 
     #: the SECONDARY cell: the same arm at the atom budget the emission head
     #: actually needs (one designed well per item), which is the structural half

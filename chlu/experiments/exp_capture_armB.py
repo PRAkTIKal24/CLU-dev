@@ -83,6 +83,7 @@ def clu_overrides(cfg: CHLUConfig, *, min_store: bool = False) -> Dict[str, Any]
         "emission_depth_min": float(b.depth_min),
         "emission_depth_max": float(b.depth_max),
         "emission_payload_delta_max": float(b.payload_delta_max),
+        "emission_center_skip_gain": float(b.center_skip_gain),
     }
     if min_store:
         # ⭐ the structural half of the byte finding: the emission head writes ONE
@@ -128,12 +129,17 @@ def make_post_build(cfg: CHLUConfig, record: Dict[str, Any]):
             steps=int(b.pretrain_steps), batch=int(b.pretrain_batch),
             lr=float(b.pretrain_lr), weight_decay=float(b.pretrain_weight_decay),
             reach_weight=float(b.reach_weight), reach_rho=float(b.reach_rho),
+            attr_weight=float(b.attr_weight), attr_margin=float(b.attr_margin),
             loss_kwargs=dict(
                 n_perturb=int(system.cfg.write_n_perturb),
                 sigma_addr=float(system.cfg.write_sigma_addr),
                 sigma_pay=float(system.cfg.write_sigma_pay),
                 margin=float(system.cfg.write_margin),
                 barrier=float(system.cfg.write_barrier),
+                # the w24 crowding lever at the rig's OWN admission radius
+                crowd_weight=float(b.crowd_weight),
+                crowd_d_safe=float(getattr(system.controller.allocator,
+                                            "d_safe", 0.0)),
             ),
         )
         system.emitter = head
@@ -146,6 +152,9 @@ def make_post_build(cfg: CHLUConfig, record: Dict[str, Any]):
             "wall_s": float(time.time() - t0),
             "head_param_count": int(head.n_params()),
             "reach_weight": float(b.reach_weight), "reach_rho": float(b.reach_rho),
+            "attr_weight": float(b.attr_weight), "attr_margin": float(b.attr_margin),
+            "crowd_weight": float(b.crowd_weight),
+            "center_skip_gain": float(b.center_skip_gain),
             "declared": ("the DESIGNED write->phi organization gradient "
                          "(charter §A28.1), routed through the shipped write "
                          "objective — a designed mechanism, never an inherited leak"),

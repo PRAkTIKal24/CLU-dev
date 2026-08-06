@@ -394,3 +394,96 @@ def test_pretraining_moves_the_head_through_the_designed_write_objective():
     assert not np.array_equal(
         np.asarray(head.mlp.layers[0].weight),
         np.asarray(trained.mlp.layers[0].weight))
+
+
+# ==========================================================================
+# the DESIGNED write->phi organization gradient (§A28.1) — and why it is not a pin
+# ==========================================================================
+LOG_W_03 = float(np.log(0.3))
+
+
+def _pair(phi, centers, log_width=LOG_W_03):
+    return (jnp.asarray(phi, dtype=jnp.float32),
+            WellParams(centers=jnp.asarray(centers, dtype=jnp.float32),
+                       log_widths=jnp.full((len(centers),), float(log_width),
+                                           dtype=jnp.float32),
+                       log_depths=jnp.zeros((len(centers),), dtype=jnp.float32)))
+
+
+def test_attribution_margin_is_vacuous_for_a_single_item():
+    """⛔ Property 1: no competitor => exactly 0. A pin is at its MOST active here."""
+    from chlu.core.emission_head import attribution_margin_penalty
+
+    phi, p = _pair([[0.4, 0.0]], [[3.0, 0.0, 0.0]])   # 2.6 away from its launch
+    assert float(attribution_margin_penalty(p, phi, addr_dim=2, margin=0.15)) == 0.0
+
+
+def test_attribution_margin_is_satisfied_far_from_phi_when_attribution_is_right():
+    """⛔ Property 2: a store whose wells all sit FAR from their launches satisfies
+    it perfectly, provided each launch's nearest well is its own. That is the
+    difference between organization and pinning, stated as a number."""
+    from chlu.core.emission_head import attribution_margin_penalty
+
+    # two launches 4.0 apart; both wells displaced by the SAME +3.0 offset
+    # PERPENDICULAR to the separation, so |c - phi| = 3.0 for both (own 3.0 vs
+    # other 5.0) and yet each launch's nearest well is still its own.
+    phi, p = _pair([[0.0, 0.0], [4.0, 0.0]],
+                   [[0.0, 3.0, 0.0], [4.0, 3.0, 0.0]])
+    assert float(attribution_margin_penalty(p, phi, addr_dim=2, margin=0.15)) == 0.0
+
+    # swap the wells => the attribution is wrong and the SAME |c - phi| now costs
+    phi2, p2 = _pair([[0.0, 0.0], [4.0, 0.0]],
+                     [[4.0, 3.0, 0.0], [0.0, 3.0, 0.0]])
+    assert float(attribution_margin_penalty(p2, phi2, addr_dim=2, margin=0.15)) > 0.0
+
+
+def test_attribution_margin_has_an_exactly_zero_gradient_once_the_margin_holds():
+    from chlu.core.emission_head import attribution_margin_penalty
+
+    phi, p = _pair([[0.0, 0.0], [4.0, 0.0]],
+                   [[0.0, 3.0, 0.0], [4.0, 3.0, 0.0]])
+    g = jax.grad(lambda c: attribution_margin_penalty(
+        WellParams(centers=c, log_widths=p.log_widths, log_depths=p.log_depths),
+        phi, addr_dim=2, margin=0.15))(p.centers)
+    assert np.array_equal(np.asarray(g), np.zeros_like(np.asarray(g)))
+
+
+def test_center_skip_is_an_initialisation_not_a_constraint():
+    """The skip is a TRAINABLE leaf seeded at ``gain * I`` (symmetry-breaking, the
+    N98 precedent). ``gain = 0`` recovers the plain init; and the only pressure
+    that acts on it afterwards — decoupled weight decay — shrinks it toward ZERO,
+    i.e. toward IGNORING phi, which is the opposite direction to a pin."""
+    k = jax.random.PRNGKey(7)
+    seeded = EmissionHead(addr_dim=3, payload_dim=1, key=k, hidden=8, layers=1,
+                          center_skip_gain=1.0)
+    plain = EmissionHead(addr_dim=3, payload_dim=1, key=k, hidden=8, layers=1,
+                         center_skip_gain=0.0)
+    assert np.array_equal(np.asarray(seeded.skip), np.eye(3, dtype=np.float32))
+    assert np.array_equal(np.asarray(plain.skip), np.zeros((3, 3), dtype=np.float32))
+    # trainable: the skip is an inexact-array leaf, so the optimizer sees it
+    leaves = jax.tree_util.tree_leaves(eqx.filter(seeded, eqx.is_inexact_array))
+    assert any(np.asarray(x).shape == (3, 3) for x in leaves)
+    # and the two heads emit DIFFERENT centers from the same phi (it is live)
+    phi = jnp.asarray([[0.7, -0.2, 0.4]], dtype=jnp.float32)
+    a = jnp.asarray([[0.1]], dtype=jnp.float32)
+    assert not np.allclose(np.asarray(seeded.emit(phi, a).centers),
+                           np.asarray(plain.emit(phi, a).centers))
+
+
+def test_the_attribution_term_is_coefficient_zero_inert():
+    """``attr_weight = 0.0`` traces not one extra op: the objective is the
+    reach-only form bit-for-bit (the C2W2 coefficient-zero gate's pattern)."""
+    from chlu.core.emission_head import emission_write_loss
+
+    head = EmissionHead(addr_dim=2, payload_dim=1, key=jax.random.PRNGKey(4),
+                        hidden=8, layers=1)
+    rng = np.random.default_rng(3)
+    phi = jnp.asarray(rng.normal(size=(6, 2)), dtype=jnp.float32)
+    a = jnp.asarray(rng.uniform(-0.4, 0.4, size=(6, 1)), dtype=jnp.float32)
+    k = jax.random.PRNGKey(21)
+    kw = dict(dim=3, confine=0.05, addr_dim=2, loss_kwargs={"n_perturb": 8})
+    off = float(emission_write_loss(head, phi, a, k, attr_weight=0.0, **kw))
+    ref = float(emission_write_loss(head, phi, a, k, **kw))
+    on = float(emission_write_loss(head, phi, a, k, attr_weight=1.0, **kw))
+    assert off == ref
+    assert on != ref

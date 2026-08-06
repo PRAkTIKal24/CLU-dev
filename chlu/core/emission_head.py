@@ -172,6 +172,18 @@ class EmissionHead(eqx.Module):
     """
 
     mlp: eqx.nn.MLP
+    #: ⭐ a TRAINABLE linear map on `phi`, initialised at `center_skip_gain * I`.
+    #: ⚠ It is an **initialisation**, not a constraint, and the distinction is the
+    #: whole point (the N98 localized-atom-init precedent): with a random-init MLP
+    #: every item's emitted center starts at ~0, the head sits at an almost exact
+    #: permutation symmetry between items, and gradient descent from there
+    #: collapses to a CONSTANT placement map (measured — see the report). Seeding
+    #: the map with `phi` breaks that symmetry once; nothing holds it there.
+    #: ⛔ Note the direction of the only pressure that acts on it afterwards:
+    #: decoupled weight decay shrinks `skip` toward **ZERO** — toward IGNORING
+    #: phi — which is the opposite of a pin. `center_skip_gain = 0.0` recovers the
+    #: plain random init exactly.
+    skip: jnp.ndarray
     addr_dim: int = eqx.field(static=True)
     payload_dim: int = eqx.field(static=True)
     width_min: float = eqx.field(static=True)
@@ -184,7 +196,7 @@ class EmissionHead(eqx.Module):
                  hidden: int = 64, layers: int = 2,
                  width_min: float = 0.15, width_max: float = 0.80,
                  depth_min: float = 0.05, depth_max: float = 3.0,
-                 payload_delta_max: float = 0.05):
+                 payload_delta_max: float = 0.05, center_skip_gain: float = 1.0):
         self.addr_dim = int(addr_dim)
         self.payload_dim = int(payload_dim)
         self.width_min = float(width_min)
@@ -198,6 +210,7 @@ class EmissionHead(eqx.Module):
             width_size=int(hidden), depth=int(layers),
             activation=jax.nn.tanh, key=key,
         )
+        self.skip = float(center_skip_gain) * jnp.eye(int(addr_dim))
 
     # -- emission ---------------------------------------------------------
     def __call__(self, phi: jnp.ndarray, payload: jnp.ndarray):
@@ -206,7 +219,7 @@ class EmissionHead(eqx.Module):
         a = jnp.asarray(payload, dtype=jnp.float32).reshape(-1)[: self.payload_dim]
         out = self.mlp(jnp.concatenate([phi, a]))
         d, m = self.addr_dim, self.payload_dim
-        center = out[:d]
+        center = self.skip @ phi + out[:d]
         w = self.width_min + (self.width_max - self.width_min) * jax.nn.sigmoid(out[d])
         dep = self.depth_min + (self.depth_max - self.depth_min) * jax.nn.sigmoid(out[d + 1])
         pay = a + self.payload_delta_max * jnp.tanh(out[d + 2: d + 2 + m])
@@ -320,9 +333,52 @@ def reach_penalty(params: WellParams, phi: jnp.ndarray, *, addr_dim: int,
     return jnp.mean(jax.nn.relu(d - float(rho) * params.widths) ** 2)
 
 
+def attribution_margin_penalty(params: WellParams, phi: jnp.ndarray, *,
+                               addr_dim: int, margin: float = 0.15) -> jnp.ndarray:
+    """⭐ **The DESIGNED write→φ organization gradient** (charter §A28.1), in the
+    only form that is not a pin.
+
+    ``L = mean_i relu(margin + |q_i - z_i| - min_{j!=i} |q_i - z_j|)^2`` with
+    ``q_i = (phi_i, 0)`` — *the launch from item i's own query must be attributed
+    to item i's well rather than to anybody else's, by a margin.* It is the
+    read's own success criterion written into the write objective.
+
+    ⛔ **Why this is organization and not pinning** — the distinction is
+    structural, not rhetorical:
+
+    * it is **competitive**: the gradient depends on the *nearest other well*, so
+      it says nothing about ``|c_i - phi_i|`` on its own. A store whose wells all
+      sit 5 units from their launches satisfies it perfectly, provided each
+      launch's nearest well is its own;
+    * its **zero set is a Voronoi condition** — an open region of placements of
+      dimension ``n * dim``, not the single point ``c = phi``;
+    * it is **exactly zero with an exactly zero gradient** once the margin holds;
+    * it is **vacuous for a single item** (there is no competitor), whereas a pin
+      is at its most active there. Declared, and pytest-asserted.
+
+    ⚠ Registered honestly (this spoke's own finding): the *reach* hinge alone
+    could not do this job. At the emitted widths a Gaussian basin is comparable
+    to the whole address ball, so "the launch must be inside the basin" is
+    near-vacuous and the head collapses to a **constant** placement map. The
+    only way to make the reach hinge bite is to shrink its slack to the key
+    spacing — at which point it *is* a pin. The competitive form is what breaks
+    that trade.
+    """
+    z = params.centers
+    q = jnp.zeros_like(z).at[:, :int(addr_dim)].set(
+        jnp.asarray(phi, dtype=z.dtype)[:, :int(addr_dim)])
+    d = jnp.linalg.norm(q[:, None, :] - z[None, :, :], axis=-1)  # (n_launch, n_wells)
+    n = d.shape[0]
+    own = jnp.diagonal(d)
+    other = jnp.min(jnp.where(jnp.eye(n, dtype=bool), jnp.inf, d), axis=1)
+    pen = jax.nn.relu(float(margin) + own - other) ** 2
+    return jnp.where(n < 2, jnp.asarray(0.0, dtype=z.dtype), jnp.mean(pen))
+
+
 def emission_write_loss(head: EmissionHead, phi: jnp.ndarray, payloads: jnp.ndarray,
                         key, *, dim: int, confine: float, addr_dim: int,
                         reach_weight: float = 1.0, reach_rho: float = 2.0,
+                        attr_weight: float = 0.0, attr_margin: float = 0.15,
                         loss_kwargs: Optional[Dict[str, Any]] = None) -> jnp.ndarray:
     """The head's training objective = **the shipped write objective** + reach.
 
@@ -345,6 +401,12 @@ def emission_write_loss(head: EmissionHead, phi: jnp.ndarray, payloads: jnp.ndar
     if reach_weight > 0.0:
         total = total + float(reach_weight) * reach_penalty(
             params, phi, addr_dim=int(addr_dim), rho=float(reach_rho))
+    # ⭐ the DESIGNED write->phi organization gradient (§A28.1). Added only when
+    # its coefficient is a Python float > 0, so `attr_weight = 0.0` traces not one
+    # extra op and the objective is the reach-only form bit-for-bit.
+    if attr_weight > 0.0:
+        total = total + float(attr_weight) * attribution_margin_penalty(
+            params, phi, addr_dim=int(addr_dim), margin=float(attr_margin))
     return total
 
 
@@ -352,7 +414,8 @@ def pretrain_emission_head(head: EmissionHead, phi_pool, payload_pool, key, *,
                            dim: int, confine: float, addr_dim: int,
                            steps: int = 400, batch: int = 16, lr: float = 3e-3,
                            weight_decay: float = 1e-4, reach_weight: float = 1.0,
-                           reach_rho: float = 2.0,
+                           reach_rho: float = 2.0, attr_weight: float = 0.0,
+                           attr_margin: float = 0.15,
                            loss_kwargs: Optional[Dict[str, Any]] = None,
                            callback: Optional[Callable] = None
                            ) -> Tuple[EmissionHead, Dict[str, Any]]:
@@ -383,7 +446,8 @@ def pretrain_emission_head(head: EmissionHead, phi_pool, payload_pool, key, *,
             h = eqx.combine(p, static)
             return emission_write_loss(h, P[idx], A[idx], k, dim=dim, confine=confine,
                                        addr_dim=addr_dim, reach_weight=reach_weight,
-                                       reach_rho=reach_rho, loss_kwargs=loss_kwargs)
+                                       reach_rho=reach_rho, attr_weight=attr_weight,
+                                       attr_margin=attr_margin, loss_kwargs=loss_kwargs)
         loss, grads = eqx.filter_value_and_grad(loss_fn)(params)
         upd, state = opt.update(grads, state, params)
         return eqx.apply_updates(params, upd), state, loss
@@ -442,6 +506,7 @@ def emission_ledger(head: Optional[EmissionHead], *, n_items: int,
 __all__ = [
     "NO_TIER_II_CLAIM", "WellParams", "WellVocabulary", "compose_wells",
     "private_vocabulary", "EmissionHead", "emitted_potential",
-    "apply_emitted_well", "reach_penalty", "emission_write_loss",
+    "apply_emitted_well", "reach_penalty", "attribution_margin_penalty",
+    "emission_write_loss",
     "pretrain_emission_head", "emission_ledger",
 ]
