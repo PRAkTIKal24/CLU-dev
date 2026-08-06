@@ -63,9 +63,15 @@ def _toy_cfg(arm="randconv", phi_dim=8):
     cfg.clu_steps = 20
     cfg.rollout_chunk = 32
     cfg.baselines = ["finetune"]
-    cfg.backbone = "cnn"
-    cfg.cnn_channels = [4, 4, 4]
+    # ⚠ the MLP backbone, not the CIFAR "cnn" one, deliberately: ``cl_baselines.ConvNet``
+    # builds its weights at the JAX default dtype while ``build_cl_stream`` always
+    # hands it float32 images, so under the suite-wide ``jax_enable_x64`` the conv
+    # raises `lax.conv_general_dilated requires arguments to have the same dtypes`.
+    # That is a pre-existing property of a file this task does not own (the real
+    # CIFAR runs are x64-off and unaffected); it is reported, not worked around here.
+    cfg.backbone = "mlp"
     cfg.mlp_width = 16
+    cfg.mlp_depth = 1
     cfg.baseline_iters = 6
     cfg.tune_baselines = False
     cfg.fisher_samples = 6
