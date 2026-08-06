@@ -2839,6 +2839,63 @@ class ExperimentWellLifecycleConfig:
 
 
 @dataclass
+class ExperimentCaptureArmBConfig:
+    """⭐ C2W8 PASS 2, **ARM B** — the emission head (``exp_capture_armB``).
+
+    A standard MLP-class head on ``phi`` emits the well parameters (center,
+    width, depth, payload) and the item's atom block is *set* to that designed
+    well: **a forward pass instead of 300 gradient steps**. The census is
+    pass 1's, re-run unchanged (``chlu.core.well_lifecycle`` is read-only this
+    wave); only the write mechanism differs, so the gate legs G-CAP / G-DEC /
+    G-DRIFT compare like with like.
+
+    ⛔ **K8.** One well per item is *private wells* = explicit per-item store
+    parameters = laundered by construction, so every artifact this experiment
+    writes carries ``wells_per_item``, ``vocabulary_shared`` and the
+    ``NO_TIER_II_CLAIM`` label (``chlu.core.emission_head.emission_ledger``).
+
+    ⛔ **No performance claim.** The pass-2 gate is *retrievability* and is
+    **byte-blind** (``ERRATA-C2W8-PASS2.md`` §1 Q3); the byte ledger is reported
+    on every arm regardless, and this arm's is its sharpest column because bytes
+    move out of the atom store and into head parameters.
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # ---- the head (mirrors the CluSystemConfig band; set here so an arm can be
+    #      re-priced from a project YAML without editing the store's defaults) ----
+    head_hidden: int = 64
+    head_layers: int = 2
+    width_min: float = 0.15
+    width_max: float = 0.80
+    depth_min: float = 0.05
+    depth_max: float = 3.0
+    payload_delta_max: float = 0.05  # strictly below the read's payload_tol
+
+    # ---- the amortised write cost (paid ONCE, and ledgered) ----
+    pretrain_steps: int = 400
+    pretrain_batch: int = 16
+    pretrain_lr: float = 3e-3
+    pretrain_weight_decay: float = 1e-4
+    pretrain_pool: int = 256  # phi fit-pool rows the head is trained on
+    #: ⭐ the ONLY term that mentions `phi`: a reach HINGE with a free width.
+    #: ⛔ Never a pin — `reach_weight = 0.0` disables it entirely and the arm
+    #: still writes; a pinning term would be load-bearing (see
+    #: `chlu/core/emission_head.py`).
+    reach_weight: float = 1.0
+    reach_rho: float = 2.0
+
+    #: the SECONDARY cell: the same arm at the atom budget the emission head
+    #: actually needs (one designed well per item), which is the structural half
+    #: of the byte finding. ⛔ Never the gate cell — the gate runs at pass 1's
+    #: atom budget so the race is a race.
+    run_min_store_cell: bool = True
+    min_store_atoms_per_item: int = 1
+
+    quick: bool = False
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -2937,6 +2994,10 @@ class CHLUConfig:
     )
     experiment_well_lifecycle: ExperimentWellLifecycleConfig = field(
         default_factory=ExperimentWellLifecycleConfig
+    )
+    # ⭐ C2W8 pass 2, arm B (additive; no existing default touched)
+    experiment_capture_armb: ExperimentCaptureArmBConfig = field(
+        default_factory=ExperimentCaptureArmBConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -3126,6 +3187,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_well_lifecycle", {}),
             )
         ),
+        experiment_capture_armb=ExperimentCaptureArmBConfig(
+            **filter_valid_fields(
+                ExperimentCaptureArmBConfig,
+                data.get("experiment_capture_armb", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -3173,6 +3240,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_cl_entry": asdict(config.experiment_cl_entry),
         "experiment_sharded_store": asdict(config.experiment_sharded_store),
         "experiment_well_lifecycle": asdict(config.experiment_well_lifecycle),
+        "experiment_capture_armb": asdict(config.experiment_capture_armb),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }

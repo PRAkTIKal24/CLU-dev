@@ -38,6 +38,9 @@ from ..experiments.exp_write_ceiling import (
 from ..experiments.exp_well_lifecycle import (
     run_experiment_well_lifecycle,
 )
+from ..experiments.exp_capture_armB import (
+    run_experiment_capture_armb,
+)
 from ..experiments.exp_sharded_store import (
     run_experiment_sharded_store,
     apply_quick as apply_sharded_store_quick,
@@ -406,6 +409,18 @@ def setup_experiment_parsers(subparsers):
     exp_wl_parser.add_argument('--quick', action='store_true',
                                help='Quick mode (d=4, 1 seed, tiny stream)')
     exp_wl_parser.set_defaults(func=cmd_exp_well_lifecycle)
+    # exp-capture-armb (C2W8 pass 2, ARM B: the emission head on pass 1's census)
+    exp_armb_parser = subparsers.add_parser(
+        'exp-capture-armb',
+        help='C2W8 pass 2 ARM B: an MLP-class head on phi EMITS the well '
+             'parameters (a forward pass instead of 300 gradient steps), scored '
+             'on pass 1\'s census (G-CAP/G-DEC/G-DRIFT). NO_TIER_II_CLAIM.'
+    )
+    exp_armb_parser.add_argument('--project', help='Project name to use')
+    exp_armb_parser.add_argument('--seeds', help='Comma-separated seeds, e.g. 0,1,2')
+    exp_armb_parser.add_argument('--quick', action='store_true',
+                                 help='Quick mode (d=4, 1 seed, tiny stream)')
+    exp_armb_parser.set_defaults(func=cmd_exp_capture_armb)
     # exp-primitive-harness
     exp_ph_parser = subparsers.add_parser(
         'exp-primitive-harness',
@@ -1884,6 +1899,43 @@ def cmd_exp_well_lifecycle(args):
         )
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_exp_capture_armb(args):
+    """Run C2W8 pass 2 ARM B — the emission head, on pass 1's frozen census."""
+    console.print(
+        "[bold cyan]Running C2W8 pass 2 ARM B (emission head): a forward pass "
+        "instead of 300 gradient steps[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+    seeds = ([int(s) for s in str(args.seeds).split(',')]
+             if getattr(args, 'seeds', None) else None)
+
+    try:
+        res = run_experiment_capture_armb(
+            config=config,
+            save_dir=str(paths['plots']),
+            seeds=seeds,
+            quick=getattr(args, 'quick', False),
+        )
+        g = res['gate']
+        console.print(
+            f"\u2713 ARM B completed: G-CAP {g['G_CAP_all_seeds']} \u00b7 "
+            f"G-DEC {g['G_DEC_all_seeds']} \u00b7 G-DRIFT {g['G_DRIFT_all_seeds']} "
+            f"-> all three = {g['ALL_THREE_ALL_SEEDS']} "
+            f"[{res['tier_ii_status']}] -> {res['census_json']}",
+            style="bold green",
+        )
+    except Exception as e:
+        console.print(f"\u2717 Error: {e}", style="bold red")
         return 1
 
     return 0
