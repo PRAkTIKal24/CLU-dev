@@ -261,6 +261,38 @@ class CluSystemConfig:
     gamma_phi_strength: float = 0.25
     gamma_phi_trainable: bool = False  # the trash region is PLACED, not fitted
 
+    # ======================================================================
+    # C2W8 PASS 2, ARM B: the EMISSION HEAD (this block is arm B's only edit
+    # to this config; arm A's flags are a separate block by construction)
+    # ======================================================================
+    # ⭐ A standard MLP-class head on `phi` EMITS the well parameters (center,
+    # width, depth, payload) and the item's atom block is *set* to that well:
+    # a forward pass instead of 300 gradient steps. The well's functional form
+    # is unchanged (the same `AtomDictionaryPotential` Gaussian).
+    #
+    # ⛔ `emission_head = False` (the default) => `CluSystem.emitter is None`,
+    # no head is constructed, `write_stream`/`_write_item` take the shipped
+    # branch, and `model()` never sees the head at all, so OFF is
+    # **bit-identical AND parameter-count-identical** to `main @ 80d7d4b`
+    # (asserted in `tests/test_emission_head.py::test_emission_head_off_is_*`).
+    #
+    # ⛔ K8: one well per item => explicit per-item store parameters =>
+    # `NO_TIER_II_CLAIM` (`chlu.core.emission_head.emission_ledger`).
+    #
+    # ⛔ The emitted center is NEVER pinned to `phi(item)`: see the prohibition
+    # discussion in `chlu/core/emission_head.py`'s module docstring.
+    emission_head: bool = False
+    emission_head_hidden: int = 64
+    emission_head_layers: int = 2
+    emission_width_min: float = 0.15  # emitted-width band (designed, declared)
+    emission_width_max: float = 0.80
+    emission_depth_min: float = 0.05  # emitted-depth band
+    emission_depth_max: float = 3.0
+    # ⚠ strictly below `payload_tol` (0.1): the emitted payload coordinate is the
+    # item's own value plus a BOUNDED learned correction, so the head encodes the
+    # content it is handed and can never invent one.
+    emission_payload_delta_max: float = 0.05
+
     # -- harness -----------------------------------------------------------
     seed: int = 0
     n_query_per_item: int = 8  # shipped harness uses 32; 8 declared for cost
@@ -605,6 +637,34 @@ class CluSystem:
                 gate=str(self.cfg.gamma_phi_gate),
                 trainable=bool(self.cfg.gamma_phi_trainable),
             ))
+        # ⭐ C2W8 PASS 2, ARM B: the emission head. `None` unless
+        # `cfg.emission_head` — and `None` is what makes OFF bit-identical AND
+        # parameter-count-identical (no head is built, and the head is never a
+        # leaf of `model()` even when it exists: it is a WRITE mechanism, not a
+        # read one). It is trained separately, through the designed write
+        # objective (`emission_head.pretrain_emission_head`, charter §A28.1).
+        self.emitter = None
+        #: the last emission (center, log_width, log_depth, payload_coord), and
+        #: the raw `phi` each live item was emitted FROM. ⚠ `|c - phi|` is a
+        #: REPORTED diagnostic of arm B (it is what a pin would drive to 0), so
+        #: the launch key is retained per item for the ledger — eval-only, never
+        #: read by `read`.
+        self._pending_emission = None
+        self._emitted_from_phi: Dict[int, np.ndarray] = {}
+        if getattr(self.cfg, "emission_head", False):
+            from chlu.core.emission_head import EmissionHead
+
+            self.emitter = EmissionHead(
+                addr_dim=self.store.addr_dim, payload_dim=self.store.payload_dim,
+                key=jax.random.PRNGKey(self.cfg.seed + 9001),
+                hidden=int(self.cfg.emission_head_hidden),
+                layers=int(self.cfg.emission_head_layers),
+                width_min=float(self.cfg.emission_width_min),
+                width_max=float(self.cfg.emission_width_max),
+                depth_min=float(self.cfg.emission_depth_min),
+                depth_max=float(self.cfg.emission_depth_max),
+                payload_delta_max=float(self.cfg.emission_payload_delta_max),
+            )
 
     # -- model -------------------------------------------------------------
     def model(self, store: Optional[LearnedVStore] = None,
@@ -660,6 +720,25 @@ class CluSystem:
                 item["address"] if "address" in item else self._embed(item["x"]),
                 dtype=float,
             ).reshape(-1)[: self.store.addr_dim]
+            # ⭐ C2W8 PASS 2, ARM B (write_stream's only arm-B block). With the
+            # emission head the address that is PLACED is the head's emitted
+            # center, not the raw `phi` key: the address of an item is *derived*
+            # (doctrine I-1), and the census measures `site_drift` against the
+            # codebook, so the codebook must record the site the well is at.
+            # ⛔ This is not a pin — see `chlu/core/emission_head.py`. OFF
+            # (`self.emitter is None`) leaves `address` untouched.
+            if getattr(self, "emitter", None) is not None:
+                # emit ONCE, from phi (the raw address key), and stash it: the
+                # head's input must be phi, never the address it just emitted.
+                self._pending_emission = self.emitter(
+                    jnp.asarray(address, dtype=jnp.float32)[: self.store.addr_dim],
+                    jnp.asarray(payload, dtype=jnp.float32),
+                )
+                self._emitted_from_phi[iid] = np.asarray(address, dtype=float)[
+                    : self.store.addr_dim]
+                address = np.asarray(
+                    self._pending_emission[0], dtype=float
+                ).reshape(-1)[: self.store.addr_dim]
             reach = self._reach_margin_for(address, payload)
             res = self.controller.admit(
                 iid, address, float(payload[0]),
@@ -1011,7 +1090,10 @@ class CluSystem:
         `gamma_phi` field off the ledger is a hidden capacity increase.
         """
         ids, centers, _ = self.codebook()
-        return int(self.store.n_bytes() + centers.size * 4 + self.trash_bytes())
+        # ⭐ C2W8 PASS 2, ARM B: `emission_bytes()` is 0 unless the head exists,
+        # so this line is bit-identical with the flag off.
+        return int(self.store.n_bytes() + centers.size * 4 + self.trash_bytes()
+                   + self.emission_bytes())
 
     def trash_bytes(self) -> int:
         """Bytes of the trash region: ``K x (dim centers + radius + strength)``."""
@@ -1065,6 +1147,13 @@ class CluSystem:
 
     def _write_item(self, slot: int, address, payload, key) -> float:
         cfg = self.cfg
+        # ⭐ C2W8 PASS 2, ARM B (the write's only arm-B block): ONE FORWARD PASS
+        # instead of 300 Adam steps. The head emits (center, width, depth,
+        # payload) and the slot's atom block is SET to that designed well.
+        # ⛔ OFF (`self.emitter is None`) falls straight through to the shipped
+        # `train_memory_landscape` write below, untouched.
+        if getattr(self, "emitter", None) is not None:
+            return self._emit_item(slot, address, payload, key)
         z = np.zeros((1, self.store.dim), dtype=np.float32)
         z[0, : self.store.addr_dim] = address[: self.store.addr_dim]
         z[0, self.store.addr_dim: self.store.addr_dim + self.store.payload_dim] = payload
@@ -1124,6 +1213,61 @@ class CluSystem:
         except Exception:  # never let a diagnostic break a write
             self._endpoint_losses.append(float("nan"))
         return float(hist[-1]) if hist else float("nan")
+
+    # ⭐ C2W8 PASS 2, ARM B --------------------------------------------------
+    def _emit_item(self, slot: int, address, payload, key) -> float:
+        """The emitted write: set the slot's atom block to ONE designed well.
+
+        The emission itself was computed in :meth:`write_stream` (from ``phi``,
+        before the derived address replaced it) and is consumed here. The
+        returned "loss" is the **shipped write objective evaluated on the
+        resulting landscape**, with the same base kwargs the trained write uses,
+        so the two write mechanisms are scored by the same ruler.
+        """
+        from chlu.core.emission_head import apply_emitted_well
+
+        cfg = self.cfg
+        d, m = self.store.addr_dim, self.store.payload_dim
+        if self._pending_emission is None:  # direct call (tests) => emit now
+            self._pending_emission = self.emitter(
+                jnp.asarray(address, dtype=jnp.float32)[:d],
+                jnp.asarray(payload, dtype=jnp.float32))
+        c, lw, ld, pay = self._pending_emission
+        self._pending_emission = None
+        z = np.zeros((1, self.store.dim), dtype=np.float32)
+        z[0, :d] = np.asarray(c, dtype=float)
+        z[0, d: d + m] = np.asarray(pay, dtype=float)
+        self.store = apply_emitted_well(self.store, int(slot), z[0],
+                                        width=float(np.exp(np.asarray(lw))),
+                                        depth=float(np.exp(np.asarray(ld))))
+        ids, centers, pays = self.codebook()
+        crowd = np.zeros((len(ids), self.store.dim), dtype=np.float32)
+        crowd[:, :d] = centers
+        crowd[:, d: d + m] = pays
+        try:
+            from chlu.training.train_memory import write_loss as _wl
+
+            loss = float(_wl(
+                self.store.V, jnp.asarray(z), key,
+                n_perturb=int(cfg.write_n_perturb), sigma_addr=float(cfg.write_sigma_addr),
+                sigma_pay=float(cfg.write_sigma_pay), margin=float(cfg.write_margin),
+                barrier=float(cfg.write_barrier), payload_index=d,
+                barrier_pairs="nn",
+                crowd_targets=jnp.asarray(crowd) if len(ids) > 1 else None))
+        except Exception:  # a diagnostic must never break a write
+            loss = float("nan")
+        self._endpoint_losses.append(loss)
+        return loss
+
+    def emission_bytes(self) -> int:
+        """Bytes of the emission head — **0 when the flag is off**.
+
+        ⚠ Arm B moves bytes out of the atom store and into head parameters; a
+        head that is off the ledger is exactly the §A9.6 hidden-capacity failure
+        the trash region's ledger line exists to prevent.
+        """
+        e = getattr(self, "emitter", None)
+        return 0 if e is None else int(e.n_bytes())
 
     def _relaxed_sites(self) -> Optional[np.ndarray]:
         ids, centers, _ = self.codebook()
