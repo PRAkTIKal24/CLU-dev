@@ -291,6 +291,51 @@ def test_k1_the_query_gradient_into_phi_survives_the_partition(scfg):
     assert float(jnp.linalg.norm(g)) > 0.0
 
 
+def _write_channel_grad_into_phi(cell, q_fixed):
+    """``dL/dz`` with the read query held FIXED — the WRITE channel, alone.
+
+    ``z`` is ``phi``'s output. The read is launched from a constant ``q_fixed``,
+    not from ``z``, so the query path of
+    :func:`test_k1_the_query_gradient_into_phi_survives_the_partition` is closed
+    and every remaining route from ``z`` to the loss runs through the store
+    state the write produced.
+    """
+    def loss(z):
+        st = cell.write(cell.init_state(), z, _plan_c(cell, slot=0))
+        return jnp.sum(cell.read(st, q_fixed) ** 2)
+
+    return jax.grad(loss)(_z(cell.cfg, seed=7))
+
+
+def test_the_placement_path_is_a_live_gradient_channel_to_phi(scfg):
+    """⭐⭐ **The `write_sign` docstring, as a test** (charter §A23.3).
+
+    The claim that sign-SGD's zero derivative severs ``d(store state)/d(phi)``
+    holds ONLY for the inner loop: H1b's localized placement assigns ``z`` into
+    the atom centers outside it, so at ``atom_place_radius > 0`` — the shipped
+    run-1/2/3 config — the write is a live channel to ``phi`` and the trajectory
+    read is NOT the only one. ``erosion_partition`` is what closes it. If this
+    test ever reds, the docstring has drifted back to the false claim.
+    """
+    k = jax.random.PRNGKey(2)
+    q = _z(scfg, seed=99)
+    # (a) shipped config, partition OFF: the leak is live (the 27 % of §A22).
+    leak = _write_channel_grad_into_phi(
+        CluStoreCell(scfg, _mcfg(), key=k), q)
+    assert float(jnp.linalg.norm(leak)) > 0.0, "placement leak vanished"
+    # (b) the SAME config with the partition ON: exactly 0.0, not small.
+    shut = _write_channel_grad_into_phi(
+        CluStoreCell(scfg, _mcfg(erosion_partition=True), key=k), q)
+    assert np.all(np.asarray(shut) == 0.0), \
+        f"partition leaked {np.abs(np.asarray(shut)).max():.3e}"
+    # (c) the condition the docstring now states: with placement OFF the sign
+    #     write really does sever the write channel, bitwise.
+    severed = _write_channel_grad_into_phi(
+        CluStoreCell(scfg, _mcfg(atom_place_radius=0.0), key=k), q)
+    assert np.all(np.asarray(severed) == 0.0), \
+        f"sign write leaked {np.abs(np.asarray(severed)).max():.3e} at radius 0"
+
+
 def test_k1_the_partition_does_not_change_the_forward(scfg):
     """Values identical, gradients different — that IS the partition."""
     off, on = _pair(scfg, erosion_partition=True)
