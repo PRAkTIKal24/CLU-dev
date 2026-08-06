@@ -2766,6 +2766,15 @@ class ExperimentClEntryConfig:
     permanent_per_task: int = 10  # cap on the leak=0 cohort (permanence costs budget)
 
     laundering_tie_band: float = 0.03
+
+    # ---- ⭐ C2W8 (`c2w8-cifar-strong-phi`): the strong-φ re-price of the CIFAR null --
+    # charter §A4.3: **φ parameters ride on the byte ledger of every arm**, the
+    # kNN-in-φ laundering control included, because the launder reads through the
+    # SAME φ the store does. A strong encoder that is off the ledger is a hidden
+    # capacity increase — the matched-bytes violation in its most obvious form.
+    # Additive: switching it off restores the pre-C2W8 (memory-only) ledger columns;
+    # it never changes an accuracy number.
+    count_phi_param_floats: bool = True
     seed: int = 0
 
 
