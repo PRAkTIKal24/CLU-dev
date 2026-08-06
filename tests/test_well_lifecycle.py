@@ -432,6 +432,39 @@ def test_label_to_payload_separates_classes_above_the_merge_threshold():
     assert abs(label_to_payload(9, 9.0)) <= 0.5         # bounded, for the reach certificate
 
 
+def test_census_survives_x64_the_ordering_hazard_that_bit_this_file():
+    """§7.23 regression, **function-scoped** (module-scoped x64 is the hazard).
+
+    Under `jax_enable_x64` a float64 JAX array converts zero-copy, so
+    `np.asarray(...)` returns a READ-ONLY view and any in-place write raises.
+    `flatten_unused_groups` did exactly that: green alone, red in the full suite
+    the moment an x64-enabling module ran first. This test pins the x64 path so
+    the next such write is caught in one file rather than in a 55-minute suite.
+    """
+    from jax import config as jax_config
+
+    was = bool(jax_config.read("jax_enable_x64"))
+    jax_config.update("jax_enable_x64", True)
+    try:
+        sysm = _tiny_system(capacity=4, seed=3)
+        plant_item(sysm, 0, np.array([0.5, 0.0]), payload=0.0, depth=0.7, width=0.25)
+        flatten_unused_groups(sysm)          # the exact line that failed
+        out = census(sysm, UsageTelemetry(), well_budget=1, n_admitted=1,
+                     measure_capture=False)
+        assert out["n_live"] == 1
+        assert np.isfinite(out["depth_raw_median"])
+        # ...and the same for the trash region: a float64 field would promote p
+        # and break the scan carry, so the field is pinned to float32.
+        holed = _tiny_system(capacity=4, seed=3, gamma_phi=True)
+        plant_item(holed, 0, np.array([0.5, 0.0]), payload=0.0, depth=0.7, width=0.25)
+        holed.trash_route(np.array([5.0, 0.0, 0.0]))
+        q0 = np.zeros((1, holed.store.dim), dtype=np.float32)
+        q0[:, :2] = np.array([0.52, 0.0])
+        assert np.all(np.isfinite(np.asarray(holed.read(q0).state.q_star)))
+    finally:
+        jax_config.update("jax_enable_x64", was)
+
+
 def test_mergeable_pairs_use_certificate_radius_and_payload_tol():
     sysm = _tiny_system(capacity=4, d_safe=0.001)
     plant_item(sysm, 0, np.array([0.0, 0.0]), payload=0.0, depth=0.6, width=0.25)

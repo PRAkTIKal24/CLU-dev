@@ -593,13 +593,18 @@ class CluSystem:
         if self.cfg.gamma_phi:
             from chlu.core.friction_field import FrictionField
 
-            self.trash = FrictionField(
+            # ⚠ float32, unconditionally: the read casts `q0` to float32 (see
+            # :meth:`read`), and under `jax_enable_x64` a float64 field would
+            # promote `p` inside the damping and break the scan carry's dtype
+            # ("carry input float32[d] vs output float64[d]"). Found by §7.23's
+            # ordering hazard, pinned in `tests/test_well_lifecycle.py`.
+            self.trash = _as_f32(FrictionField(
                 dim=self.store.dim, centers=jnp.zeros((0, self.store.dim)),
                 gamma_max=float(self.cfg.gamma_phi_max),
                 width=float(self.cfg.gamma_phi_width),
                 gate=str(self.cfg.gamma_phi_gate),
                 trainable=bool(self.cfg.gamma_phi_trainable),
-            )
+            ))
 
     # -- model -------------------------------------------------------------
     def model(self, store: Optional[LearnedVStore] = None,
@@ -1033,11 +1038,11 @@ class CluSystem:
         z = np.zeros((self.store.dim,), dtype=float)
         c = np.asarray(center, dtype=float).reshape(-1)
         z[: min(c.size, self.store.dim)] = c[: self.store.dim]
-        self.trash = add_hole(
-            self.trash, jnp.asarray(z),
+        self.trash = _as_f32(add_hole(
+            self.trash, jnp.asarray(z, dtype=self.trash.centers.dtype),
             float(self.cfg.gamma_phi_radius if radius is None else radius),
             float(self.cfg.gamma_phi_strength if strength is None else strength),
-        )
+        ))
         return int(self.trash.k)
 
     # ------------------------------------------------------------------
@@ -1655,6 +1660,20 @@ def store_relative_trajectory(traj: Trajectory, state: ReadState,
 # --------------------------------------------------------------------------
 # small numeric helpers
 # --------------------------------------------------------------------------
+def _as_f32(tree):
+    """Cast every inexact leaf to float32 — the dtype the read path runs in.
+
+    The trash field is the only object attached to the read model from outside
+    the store, so it is the only one that can disagree with ``q0``'s dtype; under
+    ``jax_enable_x64`` that disagreement is a ``lax.scan`` carry-dtype error, not
+    a rounding difference.
+    """
+    return jax.tree_util.tree_map(
+        lambda x: (jnp.asarray(x, dtype=jnp.float32) if eqx.is_inexact_array(x) else x),
+        tree,
+    )
+
+
 @eqx.filter_jit
 def _rollout(model, q, p, steps: int, dt: float, gamma: float):
     return jax.vmap(lambda a, b: model(a, b, steps, dt, gamma))(q, p)

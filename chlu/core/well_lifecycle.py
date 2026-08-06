@@ -431,7 +431,12 @@ def flatten_unused_groups(system) -> None:
     keep = np.zeros((system.store.V.learned.n_atoms,), dtype=bool)
     for s in used:
         keep |= np.asarray(system.store.group_rows(int(s)), dtype=bool)
-    amp = np.asarray(system.store.V.learned.amp, dtype=float)
+    # ⚠ `np.array(..., copy=True)`, never `np.asarray`: under `jax_enable_x64` a
+    # float64 JAX array converts zero-copy and `asarray` hands back a READ-ONLY
+    # view, so the in-place write below raises — but only when an x64-enabling
+    # module ran first (§7.23's ordering hazard, which is how this was found: the
+    # test passed alone and failed in the full suite).
+    amp = np.array(system.store.V.learned.amp, dtype=float, copy=True)
     amp[~keep] = 0.0
     V = eqx.tree_at(lambda t: t.learned.amp, system.store.V,
                     jnp.asarray(amp, dtype=system.store.V.learned.amp.dtype))
