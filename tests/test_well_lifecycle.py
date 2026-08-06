@@ -243,6 +243,104 @@ def test_unlock_verdict_is_mechanical():
     assert UNLOCK_THRESHOLD == 0.05
 
 
+# --------------------------------------------------------------------------
+# the rig end to end, on synthetic labelled data (no MNIST download in tests)
+# --------------------------------------------------------------------------
+def _toy_data(n_per_class=30, dim=24, seed=0):
+    rng = np.random.default_rng(seed)
+    centers = rng.normal(size=(10, dim)) * 3.0
+    X = np.concatenate([centers[c] + rng.normal(size=(n_per_class, dim)) * 0.35
+                        for c in range(10)]).astype(np.float32)
+    y = np.concatenate([np.full(n_per_class, c) for c in range(10)])
+    idx = rng.permutation(len(X))
+    X, y = X[idx], y[idx]
+    cut = int(0.7 * len(X))
+    return (X[:cut], y[:cut]), (X[cut:], y[cut:])
+
+
+def _toy_cfg():
+    from chlu.config import get_default_config
+    from chlu.experiments.exp_well_lifecycle import apply_quick
+
+    cfg = get_default_config()
+    apply_quick(cfg)
+    w = cfg.experiment_well_lifecycle
+    w.addr_dim = 3
+    w.capacity = 4
+    w.well_budget = 2
+    w.n_offer_per_task = 3
+    w.write_steps = 15
+    w.read_steps = 40
+    w.address_steps = 30
+    w.read_batch = 4
+    w.capture_dirs = 4
+    w.capture_bisect_steps = 3
+    w.loo_repeats = 2
+    cl = cfg.experiment_cl_entry
+    cl.n_tasks = 2
+    cl.n_train_per_task = 12
+    cl.n_test_per_task = 8
+    cl.n_fit_region = 100
+    cl.n_fit_pool = 50
+    return cfg
+
+
+def test_census_cell_runs_end_to_end_and_reports_both_curves():
+    from chlu.experiments.exp_well_lifecycle import run_census_cell
+
+    cfg = _toy_cfg()
+    out = run_census_cell(cfg, seed=0, data=_toy_data(), verbose=False)
+    cen = out["census"]
+    assert cen["n_live"] >= 1
+    assert out["stream"]["n_admitted"] >= 1
+    assert 0.0 <= cen["P"] <= 1.0 and 0.0 <= cen["M"] <= 1.0
+    # every depth curve exists RAW and NETTED (B1), per well and in aggregate
+    assert "depth_raw_median" in cen and "depth_netted_median" in cen
+    for wl in cen["wells"]:
+        assert "depth_raw" in wl and "depth_netted" in wl and "decay_factor" in wl
+    # theta_att is measured on this rig, and both populations are reported
+    assert "theta_att" in cen["theta_att_block"]
+    assert "population_eroded_not_attractor" in cen
+    assert "population_live_attractor_never_read" in cen
+    # the launder and the byte ledger ride along, gamma_phi holes included (at 0)
+    assert out["bytes"]["knn_launder_bytes"] >= 0
+    assert out["bytes"]["gamma_phi_hole_bytes"] == 0
+    # the reading is labelled non-promotable, with its reason
+    assert out["flags"]["promotable"] is False and out["flags"]["why_not_promotable"]
+    # the usage telemetry is item-id keyed and the LOO leg carries its ICC
+    assert out["usage"]["key"] == "item_id" and out["usage"]["proxy"] == "read_hits"
+    assert "icc_1_1" in out["loo"] or out["loo"]["status"] == "NOT RUN"
+
+
+def test_phi_address_is_idempotent_on_store_space_points():
+    """The system re-embeds its own sites; phi must pass those through."""
+    from chlu.experiments.exp_well_lifecycle import PhiAddress
+
+    class _Phi:
+        def __call__(self, X):
+            return np.asarray(X, dtype=np.float32)[:, :3] * 2.0
+
+    emb = PhiAddress(_Phi(), dim=4, addr_dim=3, scale=0.5)
+    store_pt = np.arange(4, dtype=np.float32)[None, :]
+    assert np.allclose(np.asarray(emb(store_pt)), store_pt)
+    img = np.ones((2, 24), dtype=np.float32)
+    out = np.asarray(emb(img))
+    assert out.shape == (2, 4)
+    assert np.allclose(out[:, 3], 0.0)          # payload channels are launched at 0
+    assert np.allclose(out[:, :3], 1.0)         # phi * scale
+
+
+def test_label_to_payload_separates_classes_above_the_merge_threshold():
+    from chlu.core.clu_system import CluSystemConfig
+    from chlu.experiments.exp_well_lifecycle import label_to_payload
+
+    tol = CluSystemConfig().payload_tol
+    gap = abs(label_to_payload(1, 9.0) - label_to_payload(0, 9.0))
+    assert gap > tol                                    # different class => NOT mergeable
+    assert label_to_payload(3, 9.0) == label_to_payload(3, 9.0)  # same class => distance 0
+    assert abs(label_to_payload(9, 9.0)) <= 0.5         # bounded, for the reach certificate
+
+
 def test_mergeable_pairs_use_certificate_radius_and_payload_tol():
     sysm = _tiny_system(capacity=4, d_safe=0.001)
     plant_item(sysm, 0, np.array([0.0, 0.0]), payload=0.0, depth=0.6, width=0.25)

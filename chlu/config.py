@@ -2770,6 +2770,66 @@ class ExperimentClEntryConfig:
 
 
 @dataclass
+class ExperimentWellLifecycleConfig:
+    """⭐ C2W8 — the WELL LIFECYCLE census (``exp_well_lifecycle``), stage 1.
+
+    The CL stream of :mod:`chlu.experiments.exp_cl_entry` ported onto the **full
+    CLU system** (``CluSystem``, learned ``V_theta``) so that the K1 census —
+    *is there anything to prune, is there anything to merge?* — is measured on
+    the arm the wave would actually build on, at genuine capacity pressure.
+
+    ⛔ The arm's store is the learned ``V_theta``. The CL harness supplies
+    **only** the stream, the ``phi`` (``task1_only``, the binding primary), the
+    baseline table and the kNN-in-``phi`` launder; its designed per-item Gaussian
+    array is a labelled reference row and **never an arm** (intervention §8.2).
+
+    ⚠ ``addr_dim`` is the store's address dimension **and** the ``phi`` output
+    dimension: they are one number. See ``ERRATA-C2W8.md`` §3 for why the census
+    runs below the CL entry's ``phi_dim >= 16`` band (the learned store is
+    measurably inert at 16 on this rig) and why every reading taken here is
+    therefore labelled non-promotable as a CL benchmark entry.
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    dataset: str = "mnist"
+    phi_arm: str = "pca"
+    phi_regime: str = "task1_only"  # the binding primary; no leakage
+    addr_dim: int = 8  # = phi output dim = the store's address dimension
+    payload_dim: int = 1
+
+    # ---- the over-dug store ----
+    well_budget: int = 8  # the DESIGNED budget stage 2 would merge down to
+    capacity: int = 16  # slots available while over-digging (>= 2 x well_budget)
+    n_offer_per_task: int = 8  # items offered per task before the read batch
+    overdig_target: float = 2.0  # prereg §3.4: admitted / well_budget >= 2.0
+    payload_scale: float = 9.0  # label -> payload: (label - 4.5) / payload_scale
+
+    # ---- lifetimes (so B1 has a designed decay to net out) ----
+    leak: float = 0.02
+    permanent_per_task: int = 1  # the protected (leak = 0) cohort, per task
+    ticks_per_task: int = 1
+
+    # ---- the reads that make "never read" computable (B2) ----
+    read_batch: int = 16  # held-out queries per read event
+    read_every: int = 4  # admissions between read events
+
+    # ---- the census instrument ----
+    capture_dirs: int = 16  # SC-6 bisection directions (theta_att is MEASURED)
+    capture_bisect_steps: int = 8
+    measure_capture: bool = True
+    loo_repeats: int = 2  # the SECONDARY leg, reported only with its ICC(1,1)
+    run_loo: bool = True
+
+    # ---- store geometry (the shipped CluSystem band unless stated) ----
+    d_safe_frac: float = 0.88  # d_safe = d_safe_frac x median-NN(task-1 phi keys)
+    write_steps: int = 300
+    read_steps: int = 800
+    address_steps: int = 400
+    n_query_per_item: int = 8
+    quick: bool = False
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -2865,6 +2925,9 @@ class CHLUConfig:
     )
     experiment_sharded_store: ExperimentShardedStoreConfig = field(
         default_factory=ExperimentShardedStoreConfig
+    )
+    experiment_well_lifecycle: ExperimentWellLifecycleConfig = field(
+        default_factory=ExperimentWellLifecycleConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -3048,6 +3111,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_sharded_store", {}),
             )
         ),
+        experiment_well_lifecycle=ExperimentWellLifecycleConfig(
+            **filter_valid_fields(
+                ExperimentWellLifecycleConfig,
+                data.get("experiment_well_lifecycle", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -3094,6 +3163,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_phi_stream": asdict(config.experiment_phi_stream),
         "experiment_cl_entry": asdict(config.experiment_cl_entry),
         "experiment_sharded_store": asdict(config.experiment_sharded_store),
+        "experiment_well_lifecycle": asdict(config.experiment_well_lifecycle),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
