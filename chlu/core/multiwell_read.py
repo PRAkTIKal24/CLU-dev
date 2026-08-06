@@ -84,6 +84,13 @@ __all__ = [
     "apply_reader_mw",
     "score_readers_mw",
     "READERS_MW",
+    # -- the ZERO-PARAMETER identity twins (C2W7 reconciliation 1) -----------
+    "READERS_MW_IDENTITY",
+    "READERS_MW_PLUS_IDENTITY",
+    "soft_well_identity_fit",
+    "soft_well_identity_apply",
+    "gated_well_identity_fit",
+    "gated_well_identity_apply",
     "read_loss",
     "train_launch_head",
     "organize_store_mw",
@@ -706,28 +713,113 @@ def soft_well_table_apply(mdl, latent):
 
 READERS_MW = ("sum_linear", "well_table", "knn", "mlp", "soft_well_table")
 
+# ==========================================================================
+# ⭐ the ZERO-PARAMETER identity twins (C2W7 reconciliation 1, `reader-fitting-audit`)
+# ==========================================================================
+# ⛔ Every fitted member above is fitted by **least squares** while the metric is a
+# **thresholded** exact-set accuracy; ``c2w7-read-cardinality`` §4 measured a cell
+# where that combination scores a 72-parameter reader at 0.0000 on a latent a
+# **zero-parameter** reader decodes at 0.0539. The twins below are the unfitted
+# forms of the two store-dependent members, so a table can carry fitted AND
+# identity columns and nothing is quietly re-based. ⛔ ``READERS_MW`` — the default
+# ``which=`` of :func:`fit_readers_mw` — is **unchanged**, so every prior code path
+# stays bit-identical.
+#
+# ⚠ Their standing assumption: the latent is **already in the target's units**.
+# ``soft_well_identity`` inherits whatever mass ``pi`` carries (it sums to the
+# number of occupied wells, not to ``F``), so it is exact only when the read
+# commits to the right cardinality; ``gated_well_identity`` is exact only when the
+# gated set is exactly ``A(x)``. Both have no gain with which to fix a scale error.
+
+#: the zero-parameter twins added to the multi-well class.
+READERS_MW_IDENTITY = ("soft_well_identity", "gated_well_identity",
+                       "well_identity", "sum_identity")
+
+#: the shipped class **plus** its identity twins (the audit's scored class).
+READERS_MW_PLUS_IDENTITY = READERS_MW + READERS_MW_IDENTITY
+
+
+def soft_well_identity_fit(latent: Dict[str, np.ndarray], y, *, well_payloads
+                           ) -> Dict[str, Any]:
+    """``yhat = pi @ V_table`` — the **0-parameter** twin of ``soft_well_table``."""
+    del latent, y
+    return {"kind": "soft_well_identity",
+            "well_payloads": np.asarray(well_payloads), "n_params": 0}
+
+
+def soft_well_identity_apply(mdl, latent) -> np.ndarray:
+    return np.asarray(latent["pi"]) @ np.asarray(mdl["well_payloads"])
+
+
+def gated_well_identity_fit(latent: Dict[str, np.ndarray], y, *, well_payloads,
+                            gate: float = 0.5) -> Dict[str, Any]:
+    """⭐ ``yhat = sum_{j : pi_j >= gate} v_j`` — **0 parameters**.
+
+    The reader of the set the read actually **asserts** — i.e. of R1's own
+    statistic (:func:`read_stats`' ``exact_set_occupancy_gated``), and the direct
+    analogue of ``multiplicity_read.count_identity``, which is the member that
+    exposed the fitting pathology in the first place. Its accuracy is bounded above
+    by the gated exact-set occupancy: with payloads on a sphere of radius ``R`` a
+    single wrong well costs ``~sqrt(2) R`` of residual against ``tol = 0.25 RMS``,
+    i.e. ~3x tol, so it cannot absorb even one substitution.
+    """
+    del latent, y
+    return {"kind": "gated_well_identity",
+            "well_payloads": np.asarray(well_payloads), "gate": float(gate),
+            "n_params": 0}
+
+
+def gated_well_identity_apply(mdl, latent) -> np.ndarray:
+    pi = np.asarray(latent["pi"])
+    return (pi >= float(mdl["gate"])).astype(np.float64) \
+        @ np.asarray(mdl["well_payloads"])
+
 
 def fit_readers_mw(latent_seen: Dict[str, np.ndarray], y_seen, *, anchors,
                    well_payloads, seed: int = 0,
                    which: Sequence[str] = READERS_MW) -> Dict[str, Any]:
-    """Fit the reader class on the **SEEN split only** (``PREREG-TierII.md`` §0)."""
-    from chlu.core.factored_store import fit_readers
+    """Fit the reader class on the **SEEN split only** (``PREREG-TierII.md`` §0).
 
-    base = [w for w in which if w != "soft_well_table"]
+    ⛔ ``which`` defaults to the **shipped** class; the zero-parameter twins of
+    ``READERS_MW_IDENTITY`` are opt-in (``which=READERS_MW_PLUS_IDENTITY``) and are
+    *added* to the class, never substituted for it.
+    """
+    from chlu.core.factored_store import fit_readers
+    from chlu.core.null_arms import sum_identity_fit, well_identity_fit
+
+    special = ("soft_well_table",) + READERS_MW_IDENTITY
+    base = [w for w in which if w not in special]
     out = fit_readers(latent_seen["z"], y_seen, anchors=anchors,
                       well_payloads=well_payloads, seed=seed, which=base)
     if "soft_well_table" in which:
         out["soft_well_table"] = soft_well_table_fit(
             latent_seen, y_seen, well_payloads=well_payloads)
+    if "soft_well_identity" in which:
+        out["soft_well_identity"] = soft_well_identity_fit(
+            latent_seen, y_seen, well_payloads=well_payloads)
+    if "gated_well_identity" in which:
+        out["gated_well_identity"] = gated_well_identity_fit(
+            latent_seen, y_seen, well_payloads=well_payloads)
+    if "well_identity" in which:
+        out["well_identity"] = well_identity_fit(
+            latent_seen["z"], y_seen, anchors=anchors,
+            well_payloads=well_payloads)
+    if "sum_identity" in which:
+        out["sum_identity"] = sum_identity_fit(
+            latent_seen["z"], y_seen, addr_dim=int(np.asarray(anchors).shape[1]))
     return out
 
 
 def apply_reader_mw(mdl, latent: Dict[str, np.ndarray]) -> np.ndarray:
-    from chlu.core.factored_store import apply_reader
+    from chlu.core.null_arms import apply_reader_plus_identity
 
     if mdl["kind"] == "soft_well_table":
         return soft_well_table_apply(mdl, latent)
-    return apply_reader(mdl, latent["z"])
+    if mdl["kind"] == "soft_well_identity":
+        return soft_well_identity_apply(mdl, latent)
+    if mdl["kind"] == "gated_well_identity":
+        return gated_well_identity_apply(mdl, latent)
+    return apply_reader_plus_identity(mdl, latent["z"])
 
 
 def score_readers_mw(readers, latent, y, tol) -> Dict[str, float]:

@@ -500,8 +500,11 @@ def setup_experiment_parsers(subparsers):
                                     'seeds, short grids)')
     exp_na_parser.add_argument(
         '--stages', nargs='+',
-        choices=['grid', 'score', 'gridmax', 'mechanism', 'ceiling', 'oracle'],
-        help='Stages to run (default: all, in the registered order)')
+        choices=['grid', 'score', 'gridmax', 'mechanism', 'reader_audit',
+                 'ceiling', 'oracle'],
+        help='Stages to run (default: all, in the registered order; '
+             '"reader_audit" re-scores the banked cells through the '
+             'zero-parameter identity readers and is opt-in)')
     exp_na_parser.add_argument('--arms', nargs='+',
                                choices=['N1', 'N2', 'N3', 'N4', 'N5'],
                                help='Subset of arms (default: all five)')

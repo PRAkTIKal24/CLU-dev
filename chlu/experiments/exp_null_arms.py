@@ -64,8 +64,10 @@ from chlu.core.factored_store import (
 )
 from chlu.core.null_arms import (
     ARMS,
+    READERS_PLUS_IDENTITY,
     NullArmGrid,
     arm_ledger,
+    fit_readers_plus_identity,
     launch_points,
     n1_apply,
     n1_gradient_placed,
@@ -76,11 +78,14 @@ from chlu.core.null_arms import (
     n5_titans,
     phi_decodability_ceiling,
     read_flops,
+    score_readers_plus_identity,
+    shrinkage_report,
     shuffle_launches,
 )
 
 __all__ = ["run_null_arms", "stage_grid", "stage_score", "stage_ceiling",
-           "stage_oracle", "seed_setup"]
+           "stage_oracle", "stage_reader_audit", "seed_setup",
+           "READER_AUDIT_CELLS"]
 
 
 def _j(o):
@@ -684,6 +689,188 @@ def stage_mechanism(cfg: CatTestConfig, grid: NullArmGrid, selected: Dict[str, A
 
 
 # ==========================================================================
+# STAGE 2d — ⭐ THE READER-FITTING AUDIT (C2W7 reconciliation 1)
+# ==========================================================================
+#: ⛔ The re-scored cells, FROZEN in ``.claude/outputs/reader-fitting-audit/
+#: PREREG.md`` §3 before this stage existed: the selected N1 cell (the
+#: "memorises perfectly, composes not at all" arm) plus each arm's own grid-max
+#: argmax, of which N5's IS the published ``null* = 0.00117``. ⛔ The full
+#: 584-config grid is deliberately NOT re-scored.
+READER_AUDIT_CELLS = (
+    ("N1_selected", "N1", {"lr": 0.1, "atoms_per_well": 64, "tau": 1.0,
+                           "init": "written", "read": "soft"}),
+    ("N1_gridmax", "N1", {"lr": 1e-3, "atoms_per_well": 12, "tau": 1.0,
+                          "init": "written", "read": "soft"}),
+    ("N2_gridmax", "N2", {"variant": "product_vq", "n_codes": 32,
+                          "payload_source": "fitted", "commitment": 0.0,
+                          "lr": 0.0}),
+    ("N3_gridmax", "N3", {"lr": 1e-2, "level": "csb",
+                          "payload_source": "written", "tau": 0.2}),
+    ("N4_gridmax", "N4", {"key": "set_code", "k": 2, "weight": "idw"}),
+    ("N5_nullstar", "N5", {"lr": 3e-3, "hidden": 64, "momentum": 0.9,
+                           "decay": 0.01, "gate": "none", "chunk": 1}),
+)
+
+
+def stage_reader_audit(cfg: CatTestConfig, grid: NullArmGrid,
+                       cells: Sequence = READER_AUDIT_CELLS,
+                       out: Optional[Path] = None,
+                       seeds: Optional[Sequence[int]] = None) -> Dict[str, Any]:
+    """⭐ Re-score banked cells through an ADDITIONAL **zero-parameter** reader.
+
+    ``c2w7-read-cardinality`` §4 measured, on one latent, a 72-parameter
+    least-squares reader scoring **0.0000** where a 0-parameter identity reader
+    scored **0.0539 +/- 0.0207**: lstsq shrinks ``diag(W)`` and pushes the
+    *correct* queries past ``tol``. This stage asks whether that pathology voids
+    this audit's published zeros.
+
+    ⛔ **Nothing is re-tuned, re-trained or re-initialised**: same configs, same
+    seeds, same frozen ``phi``, same launch keys, same fits. The ONLY change is
+    that :data:`~chlu.core.null_arms.READERS_PLUS_IDENTITY` adds ``well_identity``
+    and ``sum_identity`` to the class — **added, never substituted**, so every
+    table carries fitted and identity columns side by side.
+
+    ⛔ ``Q_unseen`` is scored and never fitted on; the identity members have
+    nothing to select.
+    """
+    seeds = tuple(grid.score_seeds if seeds is None else seeds)
+    rows: List[Dict[str, Any]] = []
+    for s in seeds:
+        S = seed_setup(cfg, s, n_val=grid.n_val)
+        fam = S["family"]
+        allidx = np.arange(len(fam.seen))
+        for label, arm, conf in cells:
+            t0 = time.time()
+            fitted = _fit_arm(arm, conf, S, cfg, grid, idx=allidx)
+            row: Dict[str, Any] = {
+                "seed": int(s), "cell": label, "arm": arm, "config": conf,
+                "chance": S["chance"], "tol": float(fam.tol),
+                "n_params_arm": fitted["ledger"]["n_params"]}
+            if "z" not in fitted:
+                # ⛔ N4/N5 have no latent and no codebook: their own read is
+                # ALREADY zero-parameter, so it IS the identity column. Reported
+                # as such rather than recomputed (a declared NOT-RUN would be a
+                # null; this is a measurement).
+                pu = _arm_predict(fitted, S["q0_u"], S["ind_u"], cfg)
+                ps = _arm_predict(fitted, S["q0_s"], S["ind_s"], cfg)
+                a_u = exact_set_accuracy(np.nan_to_num(pu, nan=1e9),
+                                         fam.y_unseen, fam.tol)
+                a_s = exact_set_accuracy(np.nan_to_num(ps, nan=1e9),
+                                         fam.y_seen, fam.tol)
+                row.update({"has_latent": False,
+                            "unseen": {"native_zero_param": a_u},
+                            "seen": {"native_zero_param": a_s},
+                            "reader_params": {"native_zero_param": 0}})
+            else:
+                z_s = fitted["z"](S["q0_s"], S["ind_s"])
+                z_u = fitted["z"](S["q0_u"], S["ind_u"])
+                anc, pay = fitted["codebook"]
+                anc, pay = np.asarray(anc), np.asarray(pay)
+                rd = fit_readers_plus_identity(
+                    z_s, fam.y_seen, anchors=anc, well_payloads=pay,
+                    addr_dim=int(cfg.addr_dim), seed=int(s),
+                    which=READERS_PLUS_IDENTITY)
+                row.update({
+                    "has_latent": True,
+                    "unseen": score_readers_plus_identity(rd, z_u, fam.y_unseen,
+                                                          fam.tol),
+                    "seen": score_readers_plus_identity(rd, z_s, fam.y_seen,
+                                                        fam.tol),
+                    "reader_params": {k: int(v.get("n_params", 0))
+                                      for k, v in rd.items()}})
+                # -- ⭐ THE MECHANISM: shrinkage + the tol crossing ------------
+                occ_u = occupancy(z_u, anc)
+                sets_u = [np.unique(o) for o in occ_u]
+                from chlu.core.null_arms import apply_reader_plus_identity
+                row["mechanism_well_table_vs_identity"] = shrinkage_report(
+                    rd["well_table"]["w"],
+                    apply_reader_plus_identity(rd["well_table"], z_u),
+                    apply_reader_plus_identity(rd["well_identity"], z_u),
+                    fam.y_unseen, fam.tol,
+                    asserted_sets=sets_u, subsets=fam.unseen)
+                row["mechanism_sum_linear_vs_identity"] = shrinkage_report(
+                    rd["sum_linear"]["w"],
+                    apply_reader_plus_identity(rd["sum_linear"], z_u),
+                    apply_reader_plus_identity(rd["sum_identity"], z_u),
+                    fam.y_unseen, fam.tol,
+                    asserted_sets=sets_u, subsets=fam.unseen)
+            row["wall_s"] = round(time.time() - t0, 1)
+            rows.append(row)
+            print(f"[reader-audit] seed={s} {label} "
+                  f"unseen={ {k: round(v, 5) for k, v in row['unseen'].items()} } "
+                  f"({row['wall_s']:.0f}s)", flush=True)
+    res = {"rows": rows, "seeds": list(seeds),
+           "cells": [c[0] for c in cells],
+           **_reader_audit_aggregate(rows)}
+    if out:
+        _dump(res, out / "stage_reader_audit.json")
+    return res
+
+
+def _reader_audit_aggregate(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Fitted vs identity, per cell, with the mechanical SURVIVES/MOVES/PARTIAL."""
+    from chlu.core.null_arms import READERS_IDENTITY
+
+    chance = float(np.mean([r["chance"] for r in rows]))
+    bar = chance + 0.05
+    agg: Dict[str, Any] = {}
+    for label in dict.fromkeys(r["cell"] for r in rows):
+        sub = [r for r in rows if r["cell"] == label]
+        per = {}
+        for k in sorted({kk for r in sub for kk in r["unseen"]}):
+            v = np.array([r["unseen"][k] for r in sub], float)
+            sd = float(v.std(ddof=1)) if len(v) > 1 else 0.0
+            se2 = float(2 * sd / np.sqrt(len(v))) if len(v) > 1 else 0.0
+            per[k] = {"mean": float(v.mean()), "two_se": se2,
+                      "per_seed": v.tolist(),
+                      "n_params": sub[0]["reader_params"].get(k, 0),
+                      "clears_bar": bool(v.mean() - se2 > bar)}
+        idn = [k for k in per if k in READERS_IDENTITY
+               or k == "native_zero_param"]
+        fit = [k for k in per if k not in idn]
+        best_i = max((per[k]["mean"] for k in idn), default=float("nan"))
+        best_f = max((per[k]["mean"] for k in fit), default=float("nan"))
+        # the per-seed identity-minus-fitted gain, so the gain has its own SE.
+        # ⛔ A cell with NO fitted column (N4/N5 have no latent — their published
+        # read is ALREADY zero-parameter) has gain 0 BY DEFINITION; scoring it
+        # against an absent fitted reader would manufacture a spurious gain.
+        gi = np.array([max(r["unseen"][k] for k in idn) for r in sub])
+        if fit:
+            gf = np.array([max(r["unseen"][k] for k in fit) for r in sub])
+            g = gi - gf
+        else:
+            g = np.zeros_like(gi)
+        sd = float(g.std(ddof=1)) if len(g) > 1 else 0.0
+        agg[label] = {
+            "per_reader": per,
+            "has_fitted_column": bool(fit),
+            "best_identity": best_i, "best_fitted": best_f,
+            "identity_minus_fitted": {"mean": float(g.mean()),
+                                      "two_se": float(2 * sd / np.sqrt(len(g)))
+                                      if len(g) > 1 else 0.0,
+                                      "per_seed": g.tolist()},
+            "identity_clears_bar": bool(any(per[k]["clears_bar"] for k in idn)),
+            "seen_best_identity": float(np.mean(
+                [max((r["seen"][k] for k in idn), default=0.0) for r in sub])),
+            "seen_best_fitted": float(np.mean(
+                [max((r["seen"][k] for k in fit), default=0.0) for r in sub])),
+        }
+    moves = any(a["identity_clears_bar"] for a in agg.values())
+    gains = {k: a["identity_minus_fitted"] for k, a in agg.items()}
+    partial = any(v["mean"] >= 0.01 and v["mean"] - v["two_se"] > 0
+                  for v in gains.values())
+    return {"aggregate": agg, "chance": chance, "bar": bar,
+            "max_identity_minus_fitted": float(max(v["mean"]
+                                                   for v in gains.values())),
+            "verdict": "MOVES" if moves else ("PARTIAL" if partial
+                                              else "SURVIVES"),
+            "verdict_rule": ("MOVES iff any identity mean-2SE > chance+0.05; "
+                             "PARTIAL iff any (identity-fitted) >= 0.01 and "
+                             ">2SE from 0; else SURVIVES "
+                             "(PREREG reader-fitting-audit §1)")}
+
+
+# ==========================================================================
 # STAGE 3 — the declared OUT-OF-CLASS phi-decodability ceiling
 # ==========================================================================
 def stage_ceiling(cfg: CatTestConfig, grid: NullArmGrid, out: Optional[Path] = None,
@@ -839,6 +1026,9 @@ def run_null_arms(project: Optional[str] = None, seed: int = 0, quick: bool = Fa
         res["stage_gridmax"] = stage_gridmax(cfg, g, arms=arms, out=out)
     if "mechanism" in stages:
         res["stage_mechanism"] = stage_mechanism(cfg, g, _sel(), arms=arms, out=out)
+    if "reader_audit" in stages:
+        res["stage_reader_audit"] = stage_reader_audit(
+            cfg, g, out=out, seeds=(0, 1) if quick else None)
     if "ceiling" in stages:
         res["stage_ceiling"] = stage_ceiling(cfg, g, out=out)
     if "oracle" in stages:
