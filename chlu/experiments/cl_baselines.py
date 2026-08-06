@@ -182,7 +182,16 @@ class ConvNet(eqx.Module):
         self.head = eqx.nn.Linear(width, n_classes, key=k5)
 
     def features(self, x):
-        h = x.reshape(self.shape)
+        # ⚠ `lax.conv_general_dilated` is dtype-STRICT (it refuses float32 input
+        # against float64 weights), and these weights are built at the **ambient**
+        # JAX dtype while `build_cl_stream` always hands us **float32** images ⇒
+        # under `jax_enable_x64` the whole `backbone="cnn"` path raised
+        # "requires arguments to have the same dtypes" and was therefore
+        # untestable inside the full suite (§7.23 / N211 hazard class).
+        # Promoting the input to the parameter dtype is a **no-op at x64-off**
+        # (float32 → float32 ⇒ bit-identical, asserted in
+        # `tests/test_cl_baselines_x64.py`) and closes the coverage gap.
+        h = jnp.asarray(x, dtype=self.conv[0].weight.dtype).reshape(self.shape)
         for conv in self.conv:
             h = jax.nn.relu(conv(h))
             h = eqx.nn.MaxPool2d(2, 2)(h)
