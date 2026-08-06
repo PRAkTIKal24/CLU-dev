@@ -2839,6 +2839,49 @@ class ExperimentWellLifecycleConfig:
 
 
 @dataclass
+class ExperimentCaptureArmAConfig:
+    """⭐ C2W8 **PASS 2, ARM A** — *make the store capture by bounding how far each
+    atom reaches* (``exp_capture_armA``).
+
+    ⛔ The census itself is **FROZEN**: this experiment calls
+    :func:`chlu.experiments.exp_well_lifecycle.run_census_cell` unmodified, on the
+    unmodified :mod:`chlu.core.well_lifecycle` instrument, so arm A and arm B are
+    raced on one arithmetic. Everything here configures **the store**, never the
+    measurement.
+
+    The one thing pass 1 diagnosed is **reach**: C3 locality holds in parameter
+    space and fails in function space because Gaussian atoms have tails. So the
+    atom influence profile becomes **compact** (``atom_kernel``) with its support
+    radius ``R = cutoff x s`` and the width ``s`` **co-scaled to the MEASURED key
+    spacing of that seed's own run** (``atom_width_frac_spacing x
+    median_nn_task1``, recovered inside the cell as ``d_safe / d_safe_frac`` —
+    ⛔ never hardcoded).
+    """
+
+    #: census seeds (the gate is >= 3 seeds); pilot seeds are DISJOINT
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    pilot_seeds: List[int] = field(default_factory=lambda: [7, 8])
+
+    # ---- the designed lever ----
+    atom_kernel: str = "wendland"  # compact, C^2; "gaussian" = the pass-1 store
+    atom_kernel_cutoff: float = 2.5  # support radius in units of the atom width s
+    #: atom width as a fraction of the MEASURED task-1 median-NN key spacing.
+    #: ``None`` => leave the shipped ``atom_width`` (0.3) alone.
+    atom_width_frac_spacing: Optional[float] = 0.5
+    #: the companion lever (see ``CluSystemConfig.atom_site_local_init``): the
+    #: admitted slot's atoms are re-drawn in a ball of ``radius_frac x s`` around
+    #: the item's own address, because at the shipped scattered init the nearest
+    #: of ALL atoms is 4x further away than a co-scaled compact support radius and
+    #: the write gradient is then exactly zero.
+    site_local_init: bool = True
+    site_local_radius_frac: float = 1.0  # in units of the resulting atom width s
+
+    # ---- arms to run (the OFF arm is the pass-1 store, re-run here) ----
+    run_baseline_gaussian: bool = False  # re-measure pass 1 on this branch
+    quick: bool = False
+
+
+@dataclass
 class DataConfig:
     """Data generation and processing parameters."""
 
@@ -2937,6 +2980,9 @@ class CHLUConfig:
     )
     experiment_well_lifecycle: ExperimentWellLifecycleConfig = field(
         default_factory=ExperimentWellLifecycleConfig
+    )
+    experiment_capture_arm_a: ExperimentCaptureArmAConfig = field(
+        default_factory=ExperimentCaptureArmAConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
@@ -3126,6 +3172,12 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_well_lifecycle", {}),
             )
         ),
+        experiment_capture_arm_a=ExperimentCaptureArmAConfig(
+            **filter_valid_fields(
+                ExperimentCaptureArmAConfig,
+                data.get("experiment_capture_arm_a", {}),
+            )
+        ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
@@ -3173,6 +3225,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_cl_entry": asdict(config.experiment_cl_entry),
         "experiment_sharded_store": asdict(config.experiment_sharded_store),
         "experiment_well_lifecycle": asdict(config.experiment_well_lifecycle),
+        "experiment_capture_arm_a": asdict(config.experiment_capture_arm_a),
         "data": asdict(config.data),
         "project": asdict(config.project),
     }
