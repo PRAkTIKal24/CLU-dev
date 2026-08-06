@@ -445,6 +445,101 @@ def _uniform_ball(key: jax.random.PRNGKey, n: int, dim: int) -> jnp.ndarray:
     return g * rad[:, None]
 
 
+#: ⭐ **C2W8 pass-2 ARM A** — the selectable atom influence profile. ``gaussian``
+#: is the shipped kernel and is **bit-identical** to the pre-C2W8-pass-2 path
+#: (K6); the other two have **COMPACT SUPPORT** — identically zero beyond
+#: ``R = kernel_cutoff * s``.
+ATOM_KERNELS = ("gaussian", "wendland", "truncated_gaussian")
+
+
+def atom_profile(d2: jnp.ndarray, s: jnp.ndarray, kernel: str = "gaussian",
+                 cutoff: float = 2.5) -> jnp.ndarray:
+    """The radial influence profile of one atom — **how far an atom reaches**.
+
+    ``d2`` is the squared distance to the atom center and ``s`` its width; the
+    return value multiplies the atom's depth ``A_j``. Every kernel satisfies
+    ``profile(0) = 1``, so the depth parameterisation is unchanged.
+
+    ================== ================================================ ==========================
+    kernel             form (``t = r / R``, ``R = cutoff * s``)          support / smoothness
+    ================== ================================================ ==========================
+    ``gaussian``       ``exp(-r^2 / 2 s^2)``                             GLOBAL, ``C^inf``
+    ``wendland``       ``(1-t)^4 (1+4t)``                                COMPACT ``r<=R``, ``C^2``
+    ``truncated_gaussian`` ``(exp(-r^2/2s^2) - e_R) / (1 - e_R)``        COMPACT ``r<=R``, ``C^0``
+    ================== ================================================ ==========================
+
+    ⭐ **Why this exists (C2W8 pass 1's diagnosis).** C3 locality **holds in
+    parameter space** (a masked write touches only its own atom block; measured
+    violation rate 0.000) and **fails in function space**: 78–84 % of writes
+    raise the *foreign* contribution at other items' sites, and foreign exceeds
+    own on 45 of 48 wells. **Atoms have TAILS**, and a Gaussian tail makes a
+    "local" change global — the same failure the K2 trash region had to fix with
+    a compact gate one level up. These kernels apply that lesson to the atoms.
+
+    ⚠ **What the compact kernels do to the WRITE gradient, stated because it is
+    a mechanism and not a detail.** ``wendland`` has ``phi'(R) = phi''(R) = 0``,
+    so the potential and its force are continuous *and* the gradient w.r.t.
+    ``amp``/``centers``/``log_width`` is **exactly zero for any atom further than
+    ``R`` from every sampled point**: such an atom is inert, permanently, and can
+    never be recruited by a write. ``truncated_gaussian`` is only ``C^0`` — its
+    force jumps at ``R`` — which is the contrast case. The consequence at the
+    shipped scattered init (nearest of ALL atoms to a site is 0.738 at
+    ``addr_dim = 8``, ``ERRATA-C2W8.md`` §3) is that a co-scaled compact kernel
+    is **dead unless the atoms are initialised near the site they must dig**; see
+    :func:`localize_group_atoms`.
+    """
+    if kernel not in ATOM_KERNELS:
+        raise ValueError(f"atom kernel must be one of {ATOM_KERNELS}, got {kernel!r}")
+    if kernel == "gaussian":
+        return jnp.exp(-d2 / (2.0 * s**2 + 1e-9))
+    R = jnp.maximum(float(cutoff) * s, 1e-12)
+    if kernel == "wendland":
+        t = jnp.clip(jnp.sqrt(jnp.maximum(d2, 0.0)) / R, 0.0, 1.0)
+        return (1.0 - t) ** 4 * (1.0 + 4.0 * t)
+    # truncated_gaussian: the Gaussian minus its boundary value, renormalised
+    g = jnp.exp(-d2 / (2.0 * s**2 + 1e-9))
+    gR = jnp.exp(-(R**2) / (2.0 * s**2 + 1e-9))
+    return jnp.where(d2 <= R**2, (g - gR) / jnp.maximum(1.0 - gR, 1e-12), 0.0)
+
+
+def localize_group_atoms(learned: eqx.Module, rows, center, radius: float, key):
+    """Re-draw one group's atom **centers** into a ball of ``radius`` around ``center``.
+
+    ⭐ **C2W8 pass-2 ARM A, the companion lever to a compact kernel.** This is the
+    N98 localized init (:class:`AtomDictionaryPotential`'s ``group_centers`` /
+    ``local_radius``) moved from **build time to admission time** — the only time
+    a ``phi``-addressed stream knows the address it must dig at
+    (``ERRATA-C2W8.md`` §3 records exactly this as why the build-time lever is
+    unusable on a stream, and §7.24 records it as dead in the store path anyway).
+
+    ⛔ **What this is NOT.** It does not pin, snap or regularize the *attractor*:
+    it moves *initial atom parameters*, after which the write learns depth, width
+    and center freely and the settled point is whatever the landscape does. The
+    write objective is **already** handed the target site (``DesignFreedomPotential``
+    honesty note 2), so this hands the optimizer nothing it did not have — it only
+    puts atoms inside the radius where a compact kernel can feel them at all.
+    Placement stays learned and continuous; basins stay free to interact.
+
+    ``center`` is padded/truncated to the store dimension; the payload channels of
+    ``center`` are supplied by the caller (0 for an address-only localization).
+    """
+    import numpy as np
+
+    rows = np.asarray(rows, dtype=bool)
+    n = int(rows.sum())
+    if n == 0 or float(radius) <= 0.0:
+        return learned
+    dim = int(learned.centers.shape[1])
+    z = np.zeros((dim,), dtype=float)
+    c = np.asarray(center, dtype=float).reshape(-1)
+    z[: min(c.size, dim)] = c[: dim]
+    offs = np.asarray(_uniform_ball(key, n, dim)) * float(radius)
+    idx = jnp.asarray(np.nonzero(rows)[0])
+    new = jnp.asarray(z[None, :] + offs, dtype=learned.centers.dtype)
+    return eqx.tree_at(lambda t: t.centers, learned,
+                       learned.centers.at[idx].set(new))
+
+
 class RBFAtoms(eqx.Module):
     """A learned dictionary of LOCALIZED wells: ``V = -sum_j d_j exp(-|q-c_j|^2/2s_j^2)``.
 
@@ -532,6 +627,11 @@ class AtomDictionaryPotential(eqx.Module):
     # under ``eqx.is_inexact_array`` and can never be picked up by the write's
     # ``trainable_filter``; it is a read-time knob only.
     axis_width_scale: Optional[tuple] = None
+    # ⭐ C2W8 pass-2 ARM A: the atom influence profile (:func:`atom_profile`).
+    # STATIC and parameter-free, so `"gaussian"` (the default) is bit-identical
+    # AND parameter-count-identical to the pre-pass-2 path (K6).
+    kernel: str = eqx.field(static=True, default="gaussian")
+    kernel_cutoff: float = eqx.field(static=True, default=2.5)
 
     def __init__(
         self,
@@ -546,6 +646,8 @@ class AtomDictionaryPotential(eqx.Module):
         group_centers=None,
         local_radius: float = 0.0,
         axis_width_scale=None,
+        kernel: str = "gaussian",
+        kernel_cutoff: float = 2.5,
     ):
         """
         Args:
@@ -607,6 +709,10 @@ class AtomDictionaryPotential(eqx.Module):
             None if axis_width_scale is None
             else tuple(float(x) for x in axis_width_scale)
         )
+        if kernel not in ATOM_KERNELS:
+            raise ValueError(f"kernel must be one of {ATOM_KERNELS}, got {kernel!r}")
+        self.kernel = str(kernel)
+        self.kernel_cutoff = float(kernel_cutoff)
 
     @property
     def n_atoms(self) -> int:
@@ -635,7 +741,10 @@ class AtomDictionaryPotential(eqx.Module):
             diff = diff / jnp.asarray(self.axis_width_scale, dtype=diff.dtype)[None, :]
         d2 = jnp.sum(diff**2, axis=-1)
         depth = self.amp**2
-        v = -jnp.sum(depth * jnp.exp(-d2 / (2.0 * s**2 + 1e-9)))
+        # ⛔ K6: with `kernel = "gaussian"` (the default) `atom_profile` returns the
+        # literal pre-pass-2 expression `exp(-d2 / (2 s^2 + 1e-9))`, so this line is
+        # bit-identical (asserted in `tests/test_compact_atoms.py`).
+        v = -jnp.sum(depth * atom_profile(d2, s, self.kernel, self.kernel_cutoff))
         return v + self.confine * jnp.sum(q**2)
 
 
@@ -872,6 +981,8 @@ class DesignFreedomPotential(eqx.Module):
         atom_init_scale: float = 1.0,
         atom_group_centers=None,
         atom_local_radius: float = 0.0,
+        atom_kernel: str = "gaussian",
+        atom_kernel_cutoff: float = 2.5,
     ):
         """
         Args:
@@ -893,6 +1004,10 @@ class DesignFreedomPotential(eqx.Module):
                 (w25), forwarded verbatim to :class:`AtomDictionaryPotential`.
                 ``atom_local_radius = 0.0`` (default) is the historical scatter,
                 bit-identical.
+            atom_kernel / atom_kernel_cutoff: ⭐ **C2W8 pass-2 ARM A** — the atom
+                influence profile (:func:`atom_profile`), forwarded verbatim.
+                ``"gaussian"`` (default) is the shipped kernel, bit-identical and
+                parameter-count-identical.
         """
         if rung not in DESIGN_RUNGS:
             raise ValueError(f"rung must be one of {DESIGN_RUNGS}, got {rung!r}")
@@ -962,6 +1077,8 @@ class DesignFreedomPotential(eqx.Module):
                 n_groups=atom_groups,
                 group_centers=atom_group_centers,
                 local_radius=atom_local_radius,
+                kernel=atom_kernel,
+                kernel_cutoff=atom_kernel_cutoff,
             )
         elif learned_family == "hopfield":
             self.learned = HopfieldPotential(
