@@ -29,19 +29,35 @@ anchor is stated precisely, because emitting a center *is* nearly the pinning
 operation:
 
 * the objective contains **no term of the form** ``|c - phi|^2`` (or any other
-  strictly-positive function of that displacement). The only term that mentions
-  ``phi`` at all is :func:`reach_penalty`, a **hinge on reachability with a free
-  width**;
-* the hinge is **exactly zero — bitwise, with an exactly zero gradient in the
-  center** — as soon as the launch point ``(phi, 0)`` lies inside ``rho * s`` of
-  the well. A pinning term has a *unique* minimizer ``c = phi``, is never zero,
-  and pulls at every step;
-* the hinge is satisfiable **without moving the center at all**, by growing the
-  emitted width ``s``. Its zero set is a manifold, not a point;
+  strictly-positive function of that displacement). Exactly two terms mention
+  ``phi`` at all, and neither is a pin:
+* :func:`reach_penalty` — a **hinge on reachability with a free width**. It is
+  **exactly zero, bitwise, with an exactly zero gradient in the center** as soon
+  as the launch point ``(phi, 0)`` lies inside ``rho * s`` of the well; it is
+  satisfiable **without moving the center at all**, by growing ``s``; its zero
+  set is a manifold. A pinning term has a *unique* minimizer ``c = phi``, is
+  never zero, and pulls at every step.
+* :func:`attribution_margin_penalty` — the DESIGNED write->phi organization
+  gradient (charter §A28.1). It is **competitive**: each launch must be
+  attributed to its OWN well rather than to anybody else's, so its gradient
+  depends on the nearest *other* well and it says nothing about ``|c - phi|``
+  alone. Its zero set is an open Voronoi region, and it is **vacuous for a
+  single item** — precisely where a pin is most active.
 * ``|c - phi|`` is consequently a **measured, reported, non-zero** quantity of
-  the arm, never a target.
+  the arm, never a target. Measured on the shipped arm: median **0.94 - 1.13**,
+  i.e. **6.8x - 8.0x the key spacing**.
 
-Both properties are pytest-asserted (``test_reach_penalty_is_not_a_pin_*``).
+⚠ **Registered honestly (C2W8 pass 2, `ERRATA-ARMB.md` §1): the reach hinge
+ALONE is not enough, and that is this arm's theoretical finding.** At any usable
+emitted width a Gaussian basin (``rho * s``) is comparable to the whole address
+ball, so *"the launch must be inside the basin"* is near-vacuous and the head
+collapses to a **constant** placement map. The only way to make that hinge bite
+is to shrink its slack to the key spacing — at which point it IS a pin. The
+competitive form is the escape.
+
+Every property above is pytest-asserted
+(``test_reach_penalty_is_not_a_pin_*``, ``test_attribution_margin_*``,
+``test_center_skip_is_an_initialisation_not_a_constraint``).
 """
 
 from __future__ import annotations
