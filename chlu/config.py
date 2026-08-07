@@ -2878,6 +2878,9 @@ class ExperimentCaptureArmAConfig:
 
     # ---- arms to run (the OFF arm is the pass-1 store, re-run here) ----
     run_baseline_gaussian: bool = False  # re-measure pass 1 on this branch
+
+
+@dataclass
 class ExperimentCaptureArmBConfig:
     """⭐ C2W8 PASS 2, **ARM B** — the emission head (``exp_capture_armB``).
 
