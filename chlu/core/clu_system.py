@@ -125,6 +125,34 @@ class CluSystemConfig:
     atom_local_radius: float = 0.0  # N98 localized init; 0.0 = historical scatter
     confine: float = 0.05  # learned_confine (coercivity alpha)
 
+    # -- C2W8 PASS 2, ARM A: how far each atom's influence REACHES ----------
+    # ⭐ Pass 1's diagnosis: C3 locality HOLDS in parameter space (own-leg
+    # violation rate 0.000) and FAILS in function space (78-84 % of writes raise
+    # the foreign contribution; foreign exceeds own on 45 of 48 wells). A write
+    # touches only its own atom block, but **atoms have TAILS**. `atom_kernel`
+    # selects the influence profile (:func:`chlu.core.memory_potentials.atom_profile`):
+    # `"wendland"` / `"truncated_gaussian"` are COMPACT — identically zero beyond
+    # `R = atom_kernel_cutoff * s` — which is the K2 compact-gate lesson applied
+    # one level down, to the atoms.
+    # ⛔ `"gaussian"` (the default) is the shipped kernel: **bit-identical AND
+    # parameter-count-identical** to `main @ 80d7d4b` (K6; asserted in
+    # `tests/test_compact_atoms.py`). Both new fields are static/parameter-free.
+    atom_kernel: str = "gaussian"
+    atom_kernel_cutoff: float = 2.5  # support radius in units of the atom width s
+    # ⭐ The companion lever a compact kernel needs to be runnable at all: at the
+    # shipped scattered init the nearest of ALL atoms to a site is 0.738 at
+    # addr_dim = 8 (`ERRATA-C2W8.md` §3), so a co-scaled compact atom feels
+    # nothing and the write gradient is exactly zero. This re-draws the admitted
+    # slot's atom CENTERS into a ball around the item's own address **at
+    # admission time** — the N98 localized init moved from build time (where a
+    # phi-addressed stream cannot use it) to the moment the address is known.
+    # ⛔ It initialises atom parameters; it does NOT pin, snap or regularize the
+    # attractor toward phi(item) — the write still learns depth/width/center, the
+    # settled point stays free and basins stay free to interact.
+    # ⛔ `False` (the default) => the shipped admission path, bit-identical.
+    atom_site_local_init: bool = False
+    atom_site_local_radius: float = 0.0  # 0.0 => use `atom_width`
+
     # -- the write ---------------------------------------------------------
     write_steps: int = 300
     write_lr: float = 3e-3
@@ -442,6 +470,8 @@ class LearnedVStore(eqx.Module):
             atom_depth_init=float(cfg.atom_depth_init),
             atom_groups=self.capacity,
             atom_init_scale=float(cfg.atom_init_scale),
+            atom_kernel=str(cfg.atom_kernel),
+            atom_kernel_cutoff=float(cfg.atom_kernel_cutoff),
         )
 
     # -- introspection -----------------------------------------------------
@@ -691,6 +721,15 @@ class CluSystem:
             # --- the LEARNED write: masked, into V_theta ---
             self._prev_store = self.store
             pre = self._relaxed_sites()
+            # ⭐ C2W8 pass-2 ARM A: site-local atom init, at the only moment a
+            # phi-addressed stream knows its address. Touches ONLY this slot's
+            # rows (C3-local in parameter space, like the masked write itself),
+            # and is counted INSIDE the measured C3 drift because `pre` is taken
+            # above it. ⛔ OFF (the default) leaves the key stream untouched too:
+            # the key is FOLDED from `k_w`, never split off it.
+            if self.cfg.atom_site_local_init:
+                self._localize_slot_atoms(slot, address, payload,
+                                          jax.random.fold_in(k_w, int(slot)))
             loss = self._write_item(slot, address, payload, k_w)
             self._losses.append(loss)
             rep.losses.append(loss)
@@ -1062,6 +1101,26 @@ class CluSystem:
             if r.item_id == int(item_id):
                 return int(r.slot)
         raise KeyError(item_id)
+
+    def _localize_slot_atoms(self, slot: int, address, payload, key) -> None:
+        """ARM A wiring: re-draw ``slot``'s atom centers around the item's site.
+
+        One call into :func:`~chlu.core.memory_potentials.localize_group_atoms`,
+        which carries the mechanism and the compliance note. The payload channels
+        are included in the target point, so an atom can reach the payload well
+        it must dig; the ball radius defaults to the atom width.
+        """
+        from chlu.core.memory_potentials import localize_group_atoms
+
+        z = np.zeros((self.store.dim,), dtype=float)
+        z[: self.store.addr_dim] = np.asarray(address, dtype=float)[: self.store.addr_dim]
+        z[self.store.addr_dim: self.store.addr_dim + self.store.payload_dim] = payload
+        r = float(self.cfg.atom_site_local_radius or self.cfg.atom_width)
+        learned = localize_group_atoms(
+            self.store.V.learned, np.asarray(self.store.group_rows(int(slot))),
+            z, r, key)
+        V = eqx.tree_at(lambda t: t.learned, self.store.V, learned)
+        self.store = eqx.tree_at(lambda s: s.V, self.store, V)
 
     def _write_item(self, slot: int, address, payload, key) -> float:
         cfg = self.cfg
