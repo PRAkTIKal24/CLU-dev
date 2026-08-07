@@ -332,6 +332,159 @@ def sc6_state(lambda_mins: Sequence[float], *, sigma_q: float,
 
 
 # --------------------------------------------------------------------------
+# ⭐ K9 — the merge criterion, RE-REGISTERED (C2W8 pass 2, rider 2)
+#
+# `ERRATA-C2W8-PASS2.md` §2 is the registration; this is its implementation.
+# ⛔ **This is a PREDICATE, not a merge verb.** Nothing here merges, prunes or
+# writes; merge stays unbuilt until the capture gate passes
+# (`PREREG-C2W8-PASS2.md` §6). `well_lifecycle.mergeable_pairs` — pass 1's
+# criterion — is untouched and still the harness's own rule.
+#
+# **Why pass 1's criterion had to be retired.** It admitted a pair iff
+# ``payload_dist <= 0.1`` and ``center_sep <= R_cert``. On the frozen census
+# ``R_cert`` was **10.31-11.23x the measured key spacing**, so the geometric leg
+# refused **nothing** (monitor #3 ``vacuous_gate`` tripped 3/3 at refusal rate
+# **0.000**), and every admitted pair's ``payload_dist`` was **exactly 0.0** —
+# true by construction in a class-incremental stream. ``M`` measured *"the stream
+# contains two items of the same class"*.
+# --------------------------------------------------------------------------
+
+#: K9: ``r_merge = rho_geom * key_spacing``. **1.0 = one address resolution** —
+#: two centres are one well only when the store cannot tell them apart.
+MERGE_RHO_GEOM = 1.0
+
+#: K9: the payload leg's tolerance as a fraction of the **measured** payload
+#: spread. An absolute tolerance is what made pass 1 vacuous.
+MERGE_TAU_PAYLOAD = 0.25
+
+#: K9 anti-vacuity clause: a payload spread at or below this carries no
+#: discriminative content ⇒ the leg is INAPPLICABLE and **refuses**.
+MERGE_PAYLOAD_DEGENERATE = 1e-9
+
+
+@dataclass
+class MergeCriterionConfig:
+    """The re-registered merge criterion's knobs (defaults = the registration)."""
+
+    rho_geom: float = MERGE_RHO_GEOM
+    tau_payload: float = MERGE_TAU_PAYLOAD
+    payload_degenerate: float = MERGE_PAYLOAD_DEGENERATE
+
+    def as_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+def payload_scale_from_pairs(payload_dists: Sequence[float]) -> float:
+    """The payload channel's **measured** spread: median pairwise ``||a_i - a_j||``.
+
+    ⚠ Measured over the **whole** live-well pair population, never over the
+    admitted subset — scaling the tolerance by the spread of the pairs the
+    tolerance already selected is circular, and would reproduce pass 1's vacuity
+    with extra steps. Returns 0.0 for an empty population (⇒ degenerate ⇒ the
+    payload leg refuses, never silently passes).
+    """
+    d = np.asarray([x for x in np.asarray(payload_dists, dtype=float).ravel()
+                    if np.isfinite(x)], dtype=float)
+    return float(np.median(d)) if d.size else 0.0
+
+
+def merge_admissible(center_sep: float, payload_dist: float, *,
+                     key_spacing: float, payload_scale: float,
+                     cfg: Optional[MergeCriterionConfig] = None) -> Dict[str, Any]:
+    """⭐ **K9**: is one pair admissible for merge? Two legs, both able to refuse.
+
+    * **geometry** — ``center_sep <= rho_geom * key_spacing`` with ``key_spacing``
+      the **measured** ``median_nn_task1``. INAPPLICABLE (⇒ **refuse**) if the
+      spacing is missing/non-finite/non-positive: an unmeasured ruler certifies
+      nothing.
+    * **payload** — ``payload_dist <= tau_payload * payload_scale`` with
+      ``payload_scale`` **measured** (:func:`payload_scale_from_pairs`).
+      INAPPLICABLE (⇒ **refuse**) when the spread is degenerate — the clause that
+      kills pass 1's "all payloads are 0.0, so all payloads match" vacuity.
+
+    Returns the verdict **with the leg that refused it** (``refused_on``), so a
+    refusal is never anonymous.
+    """
+    c = cfg or MergeCriterionConfig()
+    ks, ps = float(key_spacing), float(payload_scale)
+    dc, dp = float(center_sep), float(payload_dist)
+
+    geom_applicable = bool(np.isfinite(ks) and ks > 0.0)
+    r_merge = float(c.rho_geom) * ks if geom_applicable else float("nan")
+    geom_ok = bool(geom_applicable and np.isfinite(dc) and dc <= r_merge)
+
+    pay_applicable = bool(np.isfinite(ps) and ps > float(c.payload_degenerate))
+    pay_tol = float(c.tau_payload) * ps if pay_applicable else float("nan")
+    pay_ok = bool(pay_applicable and np.isfinite(dp) and dp <= pay_tol)
+
+    refused_on = []
+    if not geom_ok:
+        refused_on.append("geometry_inapplicable" if not geom_applicable else "geometry")
+    if not pay_ok:
+        refused_on.append("payload_degenerate" if not pay_applicable else "payload")
+    return {
+        "admitted": bool(geom_ok and pay_ok),
+        "refused_on": refused_on,
+        "center_sep": dc, "payload_dist": dp,
+        "key_spacing": ks, "payload_scale": ps,
+        "r_merge": r_merge, "payload_tol": pay_tol,
+        "rho_geom": float(c.rho_geom), "tau_payload": float(c.tau_payload),
+        "geometry_applicable": geom_applicable, "geometry_ok": geom_ok,
+        "payload_applicable": pay_applicable, "payload_ok": pay_ok,
+        #: commensurability with the address resolution: `rho_geom` by
+        #: construction (pass 1's identified radius was 10.31-11.23x)
+        "commensurability": (float(r_merge / ks) if geom_applicable else float("nan")),
+    }
+
+
+def merge_criterion_report(pairs: Sequence[Dict[str, float]], *, key_spacing: float,
+                           payload_scale: Optional[float] = None,
+                           cfg: Optional[MergeCriterionConfig] = None) -> Dict[str, Any]:
+    """⭐ **K9** over a pair population: refusal rate + the two-sided vacuity check.
+
+    ``pairs`` are dicts with ``center_sep`` and ``payload_dist``. If
+    ``payload_scale`` is None it is measured from the population itself
+    (:func:`payload_scale_from_pairs`) — so pass **all** live-well pairs, not a
+    pre-selected subset.
+
+    ⚠ ``vacuous_gate_would_trip`` applies monitor #3's own ``f in {0, 1}``
+    convention **in both directions**: a criterion that refuses *everything* is as
+    uninformative as one that refuses *nothing*, and is reported as such.
+    """
+    c = cfg or MergeCriterionConfig()
+    rows = [dict(p) for p in (pairs or [])]
+    scale = (payload_scale_from_pairs([p.get("payload_dist", np.nan) for p in rows])
+             if payload_scale is None else float(payload_scale))
+    verdicts = [merge_admissible(p.get("center_sep", np.nan),
+                                 p.get("payload_dist", np.nan),
+                                 key_spacing=key_spacing, payload_scale=scale, cfg=c)
+                for p in rows]
+    n = len(verdicts)
+    n_adm = sum(1 for v in verdicts if v["admitted"])
+    rate = float((n - n_adm) / n) if n else float("nan")
+    return {
+        "n_pairs": n, "n_admitted": n_adm,
+        "M_prime": float(n_adm / n) if n else float("nan"),
+        "refusal_rate": rate,
+        "n_refused_geometry": sum(1 for v in verdicts if "geometry" in v["refused_on"]),
+        "n_refused_payload": sum(1 for v in verdicts if "payload" in v["refused_on"]),
+        "n_refused_payload_degenerate": sum(
+            1 for v in verdicts if "payload_degenerate" in v["refused_on"]),
+        "n_refused_geometry_inapplicable": sum(
+            1 for v in verdicts if "geometry_inapplicable" in v["refused_on"]),
+        "key_spacing": float(key_spacing), "payload_scale": scale,
+        "r_merge": float(c.rho_geom) * float(key_spacing),
+        "commensurability": float(c.rho_geom),
+        "criterion": c.as_dict(),
+        "vacuous_gate_would_trip": bool(n > 0 and rate in (0.0, 1.0)),
+        "verdicts": verdicts,
+        "note": ("K9 (ERRATA-C2W8-PASS2 §2): a PREDICATE, not a merge verb; "
+                 "pass 1's criterion refused 0.000 at R_cert = 10.31-11.23x the "
+                 "key spacing with every payload_dist exactly 0.0"),
+    }
+
+
+# --------------------------------------------------------------------------
 # the whole report
 # --------------------------------------------------------------------------
 def soft_certificate_report(cfg: SoftCertificateConfig, *, sep_expected: float,
@@ -376,4 +529,8 @@ __all__ = [
     "SC7_FALSIFIER", "SoftCertificateConfig", "expected_separation",
     "soft_d_safe", "cert_radius", "cert_margin", "budget_state",
     "c3_calibration", "capture_radius", "sc6_state", "soft_certificate_report",
+    # K9 — the re-registered merge criterion (a predicate; NOT a merge verb)
+    "MERGE_RHO_GEOM", "MERGE_TAU_PAYLOAD", "MERGE_PAYLOAD_DEGENERATE",
+    "MergeCriterionConfig", "payload_scale_from_pairs", "merge_admissible",
+    "merge_criterion_report",
 ]
