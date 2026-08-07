@@ -129,7 +129,13 @@ def cl_config(cfg: CHLUConfig):
     return cl
 
 
-def store_config(cfg: CHLUConfig, seed: int, d_safe: float) -> CluSystemConfig:
+def store_config(cfg: CHLUConfig, seed: int, d_safe: float,
+                 overrides: Optional[Dict[str, Any]] = None) -> CluSystemConfig:
+    """⭐ ``overrides`` (C2W8 pass 2, additive): extra ``CluSystemConfig`` fields
+    an *arm* sets on top of the census's own store config, so both pass-2 arms
+    re-run **this** rig rather than a copy of it. ``None`` (the default) is the
+    pass-1 path, unchanged.
+    """
     w = cfg.experiment_well_lifecycle
     return CluSystemConfig(
         addr_dim=int(w.addr_dim), payload_dim=int(w.payload_dim),
@@ -140,6 +146,7 @@ def store_config(cfg: CHLUConfig, seed: int, d_safe: float) -> CluSystemConfig:
         address_steps=int(w.address_steps),
         n_query_per_item=int(w.n_query_per_item),
         quick=bool(w.quick),
+        **dict(overrides or {}),
     )
 
 
@@ -158,8 +165,19 @@ def label_to_payload(label: int, scale: float) -> float:
 # one census cell
 # ---------------------------------------------------------------------------
 def run_census_cell(cfg: CHLUConfig, seed: int, *, data=None,
-                    verbose: bool = True) -> Dict[str, Any]:
-    """Stream -> full-CLU store -> reads -> census, for one seed."""
+                    verbose: bool = True,
+                    clu_overrides: Optional[Dict[str, Any]] = None,
+                    post_build: Optional[Any] = None) -> Dict[str, Any]:
+    """Stream -> full-CLU store -> reads -> census, for one seed.
+
+    ⭐ **C2W8 pass-2 arm seams (additive; both ``None`` = the pass-1 path,
+    unchanged).** ``clu_overrides`` are extra :class:`CluSystemConfig` fields the
+    arm sets (its own flag); ``post_build(system, stream=..., embed=..., cfg=...,
+    seed=...)`` runs once, after the system is built and **before the first
+    write**, which is where an arm that must train something (arm B's emission
+    head) pays its amortised cost. The census itself is untouched: pass 2's race
+    is only a race if both arms are censused by this same function.
+    """
     w = cfg.experiment_well_lifecycle
     cl = cl_config(cfg)
     t0 = time.time()
@@ -180,8 +198,10 @@ def run_census_cell(cfg: CHLUConfig, seed: int, *, data=None,
     med_nn = _median_nn(task1_keys)
     d_safe = float(w.d_safe_frac) * med_nn
 
-    sysm = build_system(store_config(cfg, seed, d_safe), key=jax.random.PRNGKey(seed),
-                        phi=embed, loud=False)
+    sysm = build_system(store_config(cfg, seed, d_safe, overrides=clu_overrides),
+                        key=jax.random.PRNGKey(seed), phi=embed, loud=False)
+    if post_build is not None:
+        post_build(sysm, stream=stream, embed=embed, cfg=cfg, seed=seed)
     tel = UsageTelemetry()
     launder = RingBufferKNN(int(w.well_budget))
 
@@ -399,9 +419,14 @@ def _byte_ledger(system, launder, addr_dim: int) -> Dict[str, int]:
     is a hidden capacity increase (§A9.6)."""
     n_knn = len(getattr(launder, "keys", []))
     trash = int(system.trash_bytes())
+    # ⭐ C2W8 pass 2 arm B: head parameters are bytes and must not be silently
+    # booked as "codebook". 0 with the flag off => this ledger is unchanged.
+    head = int(getattr(system, "emission_bytes", lambda: 0)())
     return {
         "clu_store_bytes": int(system.store.n_bytes()),
-        "clu_codebook_bytes": int(system.n_bytes() - system.store.n_bytes() - trash),
+        "clu_codebook_bytes": int(system.n_bytes() - system.store.n_bytes()
+                                  - trash - head),
+        "emission_head_bytes": head,
         "clu_total_bytes": int(system.n_bytes()),
         "knn_launder_bytes": int(n_knn * (addr_dim + 1) * 4),
         # ⚠ the trash region's holes ARE bytes; 0 only because no hole is placed
