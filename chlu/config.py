@@ -2838,6 +2838,84 @@ class ExperimentWellLifecycleConfig:
     quick: bool = False
 
 
+# --- BEGIN c2w8p3-phi-geometry (additive; owner: experiment-engineer) --------
+@dataclass
+class ExperimentPhiGeometryConfig:
+    """⭐ C2W8 **PASS 3, wt2** — *does strong ``phi`` actually SEPARATE at ``addr_dim``?*
+    (:mod:`chlu.experiments.exp_phi_geometry`).
+
+    This is **instrumentation, not a claim cell**: it builds the ``phi_dim ->
+    addr_dim`` map that ``exp_well_lifecycle.PhiAddress`` never had (it forces
+    ``phi_dim = addr_dim`` and truncates) and then MEASURES the address geometry the
+    spine would inherit, on the substrate where the strong encoders were built and
+    priced (**Split-CIFAR-10**, Head ruling R1).
+
+    ⚠ Everything geometric is reported as a **dimensionless ratio with the scale
+    stated**: addresses are normalised to unit radius (``scale = 1 / r95``) while
+    ``sigma_q`` is absolute, so an absolute-units leg can be moved by rescaling
+    ``phi`` with zero information gain (``PREREG-C2W8-PASS3`` §4).
+
+    ⛔ ``(addr_dim, atom budget)`` is ONE joint dial: ``n_atoms = round(512 *
+    sqrt(2)**d)`` makes ``d = 256`` cost 1.7e41 atoms, so the feasible band is
+    ``d in {8, 12, 16}`` and every table states both numbers together.
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    dataset: str = "cifar10"  # Head ruling R1: the substrate is where phi was priced
+
+    #: the joint dial's first half — the candidate address dimensions
+    addr_dims: List[int] = field(default_factory=lambda: [8, 12, 16])
+
+    #: the strong arm (built + priced by `c2w8-cifar-strong-phi`) and its controls
+    phi_arm_strong: str = "simclr"
+    phi_arm_control: str = "randconv"  # the cheap unfitted encoder control
+    phi_arm_reference: str = "pca"  # ⛔ the weak-phi reference, at MATCHING d
+    phi_dim_strong: int = 256
+    phi_regime: str = "task1_only"  # binding; no leakage from unseen tasks
+    enc_steps: int = 8000  # the priced encoder, unchanged
+    n_fit_region: int = 25000
+    n_fit_pool: int = 6000
+
+    #: the declared map and the maps it is measured against
+    projection: str = "pca"  # the PRIMARY declared phi -> addr map
+    projection_controls: List[str] = field(
+        default_factory=lambda: ["truncate", "gaussian"]
+    )
+
+    #: key populations. Spacing is essentially geometric in ``(n, d)``, so ``n`` is
+    #: declared, never implicit. The primary is the pass-1/2 store item population.
+    n_keys_primary: int = 16
+    n_keys_grid: List[int] = field(default_factory=lambda: [16, 64, 200])
+    n_offer_per_task: int = 8  # the census's offer order, reproduced for the keys
+
+    #: geometry constants, taken from shipped config, never tuned here
+    query_sigma: float = 0.15  # sigma_q (CluSystemConfig.query_sigma)
+    d_safe_frac: float = 0.88  # the rig's own sizing rule
+    d_safe_sizing_n: int = 200  # the rig sizes d_safe on THIS many task-1 keys
+
+    #: the GO/NO-GO rule (registered; computed mechanically, never argued)
+    go_min_seeds_positive: int = 3
+    go_se_multiple: float = 2.0
+
+    #: rider (a) — the revived (d, atom-budget) cell: does the store dig at all?
+    depth_probe: bool = True
+    depth_probe_dims: List[int] = field(default_factory=lambda: [8, 12, 16])
+    depth_probe_writes: int = 6
+    depth_probe_seed: int = 0
+    depth_inert_tol: float = 1e-6  # median fitted depth below this ⇒ INERT
+    capacity: int = 16
+    well_budget: int = 8
+    write_steps: int = 300
+    read_steps: int = 800
+    address_steps: int = 400
+    n_query_per_item: int = 8
+
+    quick: bool = False
+
+
+# --- END c2w8p3-phi-geometry -------------------------------------------------
+
+
 @dataclass
 class ExperimentCaptureArmAConfig:
     """⭐ C2W8 **PASS 2, ARM A** — *make the store capture by bounding how far each
@@ -3053,6 +3131,11 @@ class CHLUConfig:
     experiment_well_lifecycle: ExperimentWellLifecycleConfig = field(
         default_factory=ExperimentWellLifecycleConfig
     )
+    # --- BEGIN c2w8p3-phi-geometry (additive) ---
+    experiment_phi_geometry: ExperimentPhiGeometryConfig = field(
+        default_factory=ExperimentPhiGeometryConfig
+    )
+    # --- END c2w8p3-phi-geometry ---
     experiment_capture_arm_a: ExperimentCaptureArmAConfig = field(
         default_factory=ExperimentCaptureArmAConfig
     )
@@ -3248,6 +3331,14 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_well_lifecycle", {}),
             )
         ),
+        # --- BEGIN c2w8p3-phi-geometry (additive) ---
+        experiment_phi_geometry=ExperimentPhiGeometryConfig(
+            **filter_valid_fields(
+                ExperimentPhiGeometryConfig,
+                data.get("experiment_phi_geometry", {}),
+            )
+        ),
+        # --- END c2w8p3-phi-geometry ---
         experiment_capture_arm_a=ExperimentCaptureArmAConfig(
             **filter_valid_fields(
                 ExperimentCaptureArmAConfig,
@@ -3307,6 +3398,9 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_cl_entry": asdict(config.experiment_cl_entry),
         "experiment_sharded_store": asdict(config.experiment_sharded_store),
         "experiment_well_lifecycle": asdict(config.experiment_well_lifecycle),
+        # --- BEGIN c2w8p3-phi-geometry (additive) ---
+        "experiment_phi_geometry": asdict(config.experiment_phi_geometry),
+        # --- END c2w8p3-phi-geometry ---
         "experiment_capture_arm_a": asdict(config.experiment_capture_arm_a),
         "experiment_capture_armb": asdict(config.experiment_capture_armb),
         "data": asdict(config.data),
