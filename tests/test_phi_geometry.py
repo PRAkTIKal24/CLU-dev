@@ -254,7 +254,27 @@ def test_geometry_verdict_favours_the_d_with_the_lowest_sigma_over_spacing():
 
 
 # ---------------------------------------------------------------------------
-# 8. the config knob is real and additive
+# 8. a row may never claim an n it did not have
+# ---------------------------------------------------------------------------
+def test_achieved_n_grid_clips_to_the_offer_population_and_dedupes():
+    """⚠ The census offers ``n_tasks x n_offer_per_task`` items and no more, so a
+    requested n above that cap becomes the cap — and must not then be reported twice
+    under two different labels."""
+    assert pg.achieved_n_grid([16, 64, 200], 40) == [16, 40]
+    assert pg.achieved_n_grid([16, 64, 200], 500) == [16, 64, 200]
+    assert pg.achieved_n_grid([2, 16], 40) == [16]  # < 3 keys has no NN spacing
+
+
+def test_offer_order_keys_follows_the_census_offer_order():
+    stream = {"train_X": [np.full((10, 4), t, np.float32) for t in range(5)]}
+    X = pg.offer_order_keys(stream, 20, n_offer_per_task=8)
+    assert len(X) == 20
+    assert list(X[:8, 0]) == [0.0] * 8 and list(X[8:16, 0]) == [1.0] * 8
+    assert len(pg.offer_order_keys(stream, 200, n_offer_per_task=8)) == 40  # the cap
+
+
+# ---------------------------------------------------------------------------
+# 9. the config knob is real and additive
 # ---------------------------------------------------------------------------
 def test_config_group_exists_with_the_declared_defaults():
     g = get_default_config().experiment_phi_geometry

@@ -146,6 +146,11 @@ def offer_order_keys(stream, n: int, n_offer_per_task: int) -> np.ndarray:
     ⚠ ``n`` is a declared quantity, not an implicit one: with ``n`` items in a unit
     ``d``-ball the spacing is essentially geometric in ``(n, d)``, so a spacing quoted
     without its ``n`` is not comparable to anything.
+
+    ⚠ **The population is CAPPED** at ``n_tasks * n_offer_per_task`` — the census offers
+    no more than that — so a requested ``n`` above the cap silently becomes the cap.
+    :func:`achieved_n_grid` resolves the request against the cap so a row can never
+    claim an ``n`` it did not have.
     """
     out = []
     for t in range(len(stream["train_X"])):
@@ -155,6 +160,13 @@ def offer_order_keys(stream, n: int, n_offer_per_task: int) -> np.ndarray:
             break
     X = np.concatenate(out, axis=0)
     return X[: int(n)]
+
+
+def achieved_n_grid(requested, n_available: int) -> List[int]:
+    """The requested key counts, clipped to what the offer order actually supplies,
+    **de-duplicated** — so the same population is never reported twice under two
+    different ``n`` labels."""
+    return sorted({int(min(int(n), int(n_available))) for n in requested if int(n) >= 3})
 
 
 def build_arm(config: CHLUConfig, stream, seed: int, arm: str, phi_dim: int,
@@ -555,6 +567,10 @@ def run_seed(config: CHLUConfig, seed: int, data=None,
     depth_rows: List[Dict[str, Any]] = []
     n_max = max(int(max(g.n_keys_grid)), int(g.d_safe_sizing_n))
     pop_X = offer_order_keys(stream, n_max, int(g.n_offer_per_task))
+    if verbose:
+        print(f"  offer-order population: requested up to {n_max}, available "
+              f"{len(pop_X)} ⇒ n grid {achieved_n_grid(g.n_keys_grid, len(pop_X))}",
+              flush=True)
     task1_X = np.asarray(stream["train_X"][0], np.float32)[: int(g.d_safe_sizing_n)]
 
     phi_cache: Dict[Any, Any] = {}
@@ -592,7 +608,7 @@ def run_seed(config: CHLUConfig, seed: int, data=None,
             pop_keys = np.asarray(embed.keys(pop_X), float)
             pricing = d_safe_pricing(t1_keys, pop_keys[: int(g.n_keys_primary)],
                                      float(g.d_safe_frac))
-            for n in [int(x) for x in g.n_keys_grid]:
+            for n in achieved_n_grid(g.n_keys_grid, len(pop_keys)):
                 k = pop_keys[:n]
                 if k.shape[0] < 3:
                     continue
@@ -849,6 +865,7 @@ if __name__ == "__main__":
 
 __all__ = [
     "atom_budget", "atom_budget_table", "cl_config", "build_arm", "address_scale",
+    "offer_order_keys", "achieved_n_grid",
     "assert_no_truncation", "geometry_row", "geometry_verdict", "refusal_simulation",
     "d_safe_pricing", "launder_audit", "byte_ledger", "depth_probe_cell",
     "run_seed", "run_experiment_phi_geometry", "apply_quick",
