@@ -46,7 +46,7 @@ import numpy as np
 
 from chlu.config import CHLUConfig, get_default_config
 from chlu.core.clu_system import CluSystemConfig, build_system
-from chlu.core.well_lifecycle import census, unlock_verdict
+from chlu.core.well_lifecycle import census, gate_addr_verdict, unlock_verdict
 from chlu.experiments.usage_telemetry import (
     UsageTelemetry,
     attach_reads,
@@ -189,7 +189,12 @@ def run_census_cell(cfg: CHLUConfig, seed: int, *, data=None,
     pool = np.asarray(stream[f"fit_pool_{w.phi_regime}"], dtype=np.float32)
     f_pool = np.asarray(phi(pool), dtype=float)
     r95 = float(np.percentile(np.linalg.norm(f_pool, axis=1), 95.0))
-    scale = float(1.0 / max(r95, 1e-9))
+    # ⭐ C2W8 pass 3, the SCALE-ONLY control (PREREG-C2W8-PASS3 §4): identical
+    # phi, address scale x a declared constant. 1.0 (the default) is the pass-1/2
+    # path bit-for-bit. Every geometric quantity downstream (d_safe, the arms'
+    # co-scaled atom widths, the G-ADDR cue jitter) is MEASURED from the keys, so
+    # it co-scales; if G-ADDR still moves, the leg is reading the scale.
+    scale = float(1.0 / max(r95, 1e-9)) * float(w.addr_scale_mult)
     embed = PhiAddress(phi, dim=int(w.addr_dim + w.payload_dim), addr_dim=int(w.addr_dim),
                        scale=scale)
 
@@ -315,10 +320,16 @@ def run_census_cell(cfg: CHLUConfig, seed: int, *, data=None,
 
     probe = sysm.self_probe()
     trips = _trip_state(sysm)
+    usage = tel.summary(live_ids=[int(i) for i in ids])
+    g_addr = _gate_addr_block(sysm, cfg, cen, depth_trace, med_nn, seed, usage)
     out = {
         "seed": int(seed),
         "census": cen,
-        "usage": tel.summary(live_ids=[int(i) for i in ids]),
+        # ⭐ C2W8 PASS 3 (charter §A30.1): the addressability leg the pass-2 gate
+        # was blind to. Additive — the `census` dict above is untouched, and both
+        # pass-2 arms inherit it because both are censused by THIS function.
+        "g_addr": g_addr,
+        "usage": usage,
         "loo": loo,
         "decay_netting_audit": audit,
         "depth_trace": depth_trace,
@@ -340,6 +351,13 @@ def run_census_cell(cfg: CHLUConfig, seed: int, *, data=None,
         "bytes": _byte_ledger(sysm, launder, int(w.addr_dim)),
         "wall_s": float(time.time() - t0),
     }
+    if verbose and isinstance(g_addr.get("A1"), dict):
+        print(f"  seed {seed}: G-ADDR A1={g_addr['A1']['correct_basin_rate']:.4f} "
+              f"(thr {g_addr['A1']['threshold']:.4f}, {g_addr['A1']['pass']}) "
+              f"A2={g_addr['A2']['never_addressed_frac']:.4f} ({g_addr['A2']['pass']}) "
+              f"A3a={g_addr['A3']['A3a_cue_margin']:+.4f} "
+              f"A3b={g_addr['A3']['A3b_stream_margin']} "
+              f"-> gate_addr_pass={g_addr['gate_addr_pass']}", flush=True)
     if verbose:
         print(f"  seed {seed}: P={cen['P']:.4f} M={cen['M']:.4f} "
               f"overdig={cen['overdig']:.2f} n_live={cen['n_live']} "
@@ -347,6 +365,66 @@ def run_census_cell(cfg: CHLUConfig, seed: int, *, data=None,
               f"depth_med(raw/netted)={cen['depth_raw_median']:.4g}/"
               f"{cen['depth_netted_median']:.4g} [{out['wall_s']:.0f}s]", flush=True)
     return out
+
+
+def _gate_addr_block(system, cfg: CHLUConfig, cen: Dict[str, Any],
+                     depth_trace: List[Dict[str, Any]], med_nn: float,
+                     seed: int, usage: Dict[str, Any]) -> Dict[str, Any]:
+    """⭐ G-ADDR on this cell (C2W8 pass 3) — wiring only; the leg lives in
+    :func:`chlu.core.well_lifecycle.gate_addr`.
+
+    Two ingredients are handed in rather than re-measured, so the leg costs one
+    extra read and nothing else:
+
+    * the **measured** capture radii, straight off the census's own wells
+      (same order: both iterate the sorted codebook);
+    * ``A3b``, the stream's own launder margin — the mean over read events of
+      ``read_acc - knn_acc``, i.e. the census's held-out class accuracy against
+      the ring-buffer kNN-in-``phi`` launder, **matched items**.
+
+    ⚠ The banked telemetry ``n_never_read`` is attached here as
+    ``banked_frac_never_read`` **with its caveat**: it counts a read only when
+    ``covered = True``, and ``covered`` is a LAUNCH-POINT test
+    (``min_j |q0 - c_j| <= 1/2 min-sep``), not a settle test. That is why pass 1
+    and pass 2 arm A report digit-identical 58/62/62-of-64 unassigned reads while
+    every capture metric moved: at fixed ``phi`` and a fixed admitted codebook the
+    statistic is very nearly a constant of the query distribution.
+    """
+    from chlu.core.well_lifecycle import gate_addr
+
+    w = cfg.experiment_well_lifecycle
+    if not bool(w.run_gate_addr):
+        return {"status": "NOT RUN — run_gate_addr = False (declared, not a null)"}
+    margins = [float(t["read_acc"]) - float(t["knn_acc"]) for t in depth_trace]
+    stream_margin = float(np.mean(margins)) if margins else None
+    # pooled binomial SE over ALL stream queries (ERRATA §1: the per-event SE at
+    # n_events = 4 is unstable enough to flip a verdict).
+    n_stream = int(len(depth_trace) * int(w.read_batch))
+    p_s = float(np.mean([t["read_acc"] for t in depth_trace])) if depth_trace else 0.0
+    p_l = float(np.mean([t["knn_acc"] for t in depth_trace])) if depth_trace else 0.0
+    se_stream = (float(np.sqrt((p_s * (1 - p_s) + p_l * (1 - p_l)) / max(n_stream, 1)))
+                 if depth_trace else None)
+    cap = [float(x["capture_radius"]) for x in cen["wells"]]
+    g = gate_addr(system, spacing=float(med_nn), kappa_q=float(w.gaddr_kappa_q),
+                  n_query_per_item=int(w.gaddr_n_query_per_item), seed=int(seed),
+                  capture=cap, stream_margin=stream_margin,
+                  stream_margin_se=se_stream)
+    g["banked_telemetry"] = {
+        "frac_never_read": usage.get("frac_never_read"),
+        "n_never_read": usage.get("n_never_read"),
+        "n_unassigned": usage.get("n_unassigned"),
+        "n_read_events": usage.get("n_read_events"),
+        "caveat": ("`covered` (hence `n_unassigned`, hence `n_never_read`) is a "
+                   "LAUNCH-POINT coverage test on q0, not a settle test — it is "
+                   "very nearly a constant of the query distribution against the "
+                   "codebook and is NOT the A2 leg"),
+    }
+    g["A3"]["A3b_n_stream_queries"] = n_stream
+    g["A3"]["A3b_read_acc_by_event"] = [float(t["read_acc"]) for t in depth_trace]
+    g["A3"]["A3b_knn_acc_by_event"] = [float(t["knn_acc"]) for t in depth_trace]
+    g["spacing_source"] = "median_nn_task1 (the cell's own measured key spacing)"
+    g["addr_scale_mult"] = float(w.addr_scale_mult)
+    return g
 
 
 def _query_batch(stream, t: int, n: int, seed: int):
@@ -480,6 +558,7 @@ def run_experiment_well_lifecycle(
 
     verdict = unlock_verdict([c["census"]["P"] for c in cells],
                              [c["census"]["M"] for c in cells])
+    legs = [c["g_addr"] for c in cells if isinstance(c.get("g_addr", {}).get("A1"), dict)]
     results = {
         "experiment": "well_lifecycle_census",
         "stage": 1,
@@ -487,6 +566,9 @@ def run_experiment_well_lifecycle(
         "cells": cells,
         "k1": verdict,
         "stage2_unlock": bool(verdict["stage2_unlock"]),
+        # ⭐ C2W8 pass 3: the arm-level G-ADDR verdict, computed mechanically
+        "g_addr": (gate_addr_verdict(legs) if legs else
+                   {"status": "NOT RUN — run_gate_addr = False (declared)"}),
         "overdig_by_seed": [c["census"]["overdig"] for c in cells],
         "depth_raw_median_by_seed": [c["census"]["depth_raw_median"] for c in cells],
         "depth_netted_median_by_seed": [c["census"]["depth_netted_median"] for c in cells],
@@ -530,6 +612,7 @@ def apply_quick(config: CHLUConfig) -> None:
     w.capture_dirs = 6
     w.capture_bisect_steps = 4
     w.loo_repeats = 2
+    w.gaddr_n_query_per_item = 4
     cl = config.experiment_cl_entry
     cl.n_tasks = 3
     cl.n_train_per_task = 60
