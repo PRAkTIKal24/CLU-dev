@@ -41,6 +41,12 @@ import optax
 #: Arms served by this module (dispatched from ``exp_phi_read_in.build_read_in``).
 ENCODER_ARMS = ("randconv", "convae", "simclr")
 
+#: ⭐ The ``phi_dim -> addr_dim`` maps (C2W8 pass 3, Head ruling R2). See
+#: :class:`PhiProjection`. ``truncate`` is the SHIPPED behaviour of
+#: ``exp_well_lifecycle.PhiAddress`` and is kept only so the defect it names can be
+#: MEASURED against a genuine projection, never as a recommended map.
+PROJECTION_FORMS = ("pca", "pca_whiten", "gaussian", "truncate", "identity")
+
 
 def module_param_floats(tree) -> int:
     """Number of float parameters an ``eqx`` module (or PyTree of them) keeps.
@@ -430,6 +436,192 @@ class ConvEncoderReadIn:
             "n_fit": self.n_fit, "frozen": True,
             "phi_param_floats": self.param_floats(),
         }
+
+
+# ---------------------------------------------------------------------------
+# ⭐ The φ_dim → addr_dim map (C2W8 pass 3 — Head ruling R2)
+# ---------------------------------------------------------------------------
+
+
+class PhiProjection:
+    """⭐ **The declared ``φ(phi_dim) → addr_dim`` read-in head.**
+
+    **The defect this closes.** ``exp_well_lifecycle.PhiAddress`` forces
+    ``phi_dim = addr_dim`` and then *truncates* (``out[:, :addr_dim] = f[:, :addr_dim]``).
+    There is **no projection**, so "the strong φ at ``addr_dim = 8``" is today either a
+    *weak 8-dim encoder refit at d = 8* (not the encoder that was built and priced) or
+    *8 of 256 coordinates* (248 discarded). Neither is the φ that measured 0.161 → 0.319.
+
+    **The declared map** (``form``):
+
+    * ``pca`` — **the primary.** Mean-centre, then the top-``addr_dim`` principal
+      directions of ``φ(fit_pool)``. Linear, unsupervised, **fitted on the same
+      ``task1_only`` pool the encoder itself was fitted on** (no leakage from unseen
+      tasks), frozen thereafter. Chosen because it is the variance-optimal *linear*
+      ``d``-dimensional summary of φ — the honest "keep as much of φ as ``d`` dims can
+      hold" — and because it makes the weak-φ reference **exactly** the shipped one:
+      PCA-of-(PCA-256-of-pixels) fit on the same pool *is* PCA-``d``-of-pixels, so the
+      map is provably neutral on the reference arm (asserted in
+      ``tests/test_phi_geometry.py``).
+    * ``pca_whiten`` — the same, with per-axis variance equalisation. A declared
+      SECONDARY: whitening is an axis-wise rescale, and §4 of ``PREREG-C2W8-PASS3``
+      warns that rescales can move an absolute-units leg with zero information gain.
+    * ``gaussian`` — a random ``N(0, 1/d)`` Johnson–Lindenstrauss projection. The
+      *unfitted* control: it sees no data at all, so any geometry a fitted map buys
+      over it is bought by the fitting.
+    * ``truncate`` — the SHIPPED behaviour, kept **only** so the defect is measurable.
+    * ``identity`` — a no-op, legal only at ``addr_dim == phi_dim``.
+
+    ⛔ **Byte-ledger contract (§A4.3, Head ruling R2).** ``param_floats()`` is the
+    number of floats the map must *carry* at read time, and it lands on the ledger of
+    **every** arm that reads through it — the store, the baselines **and the launder**.
+    ``gaussian``/``truncate``/``identity`` carry **0** (a seed / an index list
+    regenerates them); ``param_floats_materialised()`` reports the dense matrix size
+    for anyone who prefers to price the materialised form.
+    """
+
+    def __init__(self, fit_features, addr_dim: int, form: str = "pca", seed: int = 0):
+        F = np.asarray(fit_features, np.float64)
+        if F.ndim != 2:
+            raise ValueError(f"fit_features must be (n, phi_dim), got {F.shape}")
+        self.form = str(form)
+        self.addr_dim = int(addr_dim)
+        self.in_dim = int(F.shape[1])
+        self.n_fit = int(F.shape[0])
+        self.seed = int(seed)
+        if self.form not in PROJECTION_FORMS:
+            raise ValueError(
+                f"unknown φ→addr map {self.form!r}; expected one of {PROJECTION_FORMS}"
+            )
+        if self.addr_dim > self.in_dim:
+            raise ValueError(
+                f"addr_dim={self.addr_dim} > phi_dim={self.in_dim}: a φ→addr map may "
+                f"reduce the address dimension, never invent one"
+            )
+        if self.form == "identity" and self.addr_dim != self.in_dim:
+            raise ValueError(
+                f"identity map needs addr_dim == phi_dim ({self.addr_dim} != {self.in_dim})"
+            )
+        if self.form in ("pca", "pca_whiten"):
+            self.mean = F.mean(axis=0).astype(np.float32)
+            _, S, Vt = np.linalg.svd(F - F.mean(axis=0), full_matrices=False)
+            self.components = np.asarray(Vt[: self.addr_dim], np.float32)
+            sd = S[: self.addr_dim] / np.sqrt(max(self.n_fit - 1, 1))
+            self.scale = (
+                (1.0 / np.maximum(sd, 1e-8)).astype(np.float32)
+                if self.form == "pca_whiten"
+                else np.ones(self.addr_dim, np.float32)
+            )
+            self.explained = np.asarray(
+                (S[: self.addr_dim] ** 2) / max(float((S**2).sum()), 1e-12), float
+            )
+            self._fitted = True
+        elif self.form == "gaussian":
+            rng = np.random.default_rng(self.seed + 20260809)
+            self.mean = np.zeros(self.in_dim, np.float32)
+            self.components = rng.normal(
+                0.0, 1.0 / np.sqrt(self.addr_dim), (self.addr_dim, self.in_dim)
+            ).astype(np.float32)
+            self.scale = np.ones(self.addr_dim, np.float32)
+            self.explained = None
+            self._fitted = False
+        else:  # truncate | identity
+            self.mean = np.zeros(self.in_dim, np.float32)
+            self.components = np.eye(self.in_dim, dtype=np.float32)[: self.addr_dim]
+            self.scale = np.ones(self.addr_dim, np.float32)
+            self.explained = None
+            self._fitted = False
+
+    def __call__(self, F):
+        F = np.asarray(F, np.float32)
+        if F.ndim == 1:
+            F = F[None, :]
+        if F.shape[1] != self.in_dim:
+            raise ValueError(
+                f"φ→addr map expects {self.in_dim}-dim features, got {F.shape[1]}"
+            )
+        return ((F - self.mean) @ self.components.T) * self.scale
+
+    def param_floats(self) -> int:
+        """Floats CARRIED at read time — the §A4.3 ledger term for the map."""
+        if self.form in ("pca", "pca_whiten"):
+            n = int(self.mean.size + self.components.size)
+            if self.form == "pca_whiten":
+                n += int(self.scale.size)
+            return n
+        return 0  # seed-regenerable (gaussian) / an index list (truncate, identity)
+
+    def param_floats_materialised(self) -> int:
+        """Floats the DENSE form would cost, for anyone pricing it that way."""
+        return int(self.mean.size + self.components.size + self.scale.size)
+
+    def provenance(self) -> dict:
+        return {
+            "form": self.form,
+            "in_dim": self.in_dim,
+            "addr_dim": self.addr_dim,
+            "fitted": bool(self._fitted),
+            "fit_pool_n": self.n_fit if self._fitted else 0,
+            "seed": self.seed,
+            "param_floats": self.param_floats(),
+            "param_floats_materialised": self.param_floats_materialised(),
+            "explained_variance_fraction": (
+                float(np.sum(self.explained)) if self.explained is not None else None
+            ),
+        }
+
+
+class ProjectedReadIn:
+    """``φ_proj(x) = P(φ(x))`` — a read-in composed with a :class:`PhiProjection`.
+
+    It *is* a read-in (callable, ``k``, ``param_floats``), so anything that already
+    takes a φ — the store's ``PhiAddress``, the kNN launder, the baselines — takes this
+    one unchanged. ⛔ **That is the mechanism by which Head ruling R2(b) is honoured:
+    the launder cannot read the 256-dim φ because it is handed this object, whose
+    output is ``addr_dim``-dimensional and whose ledger includes the map.**
+    """
+
+    def __init__(self, phi, projection: PhiProjection):
+        self.phi = phi
+        self.projection = projection
+        self.k = int(projection.addr_dim)
+
+    def __call__(self, X):
+        F = np.asarray(self.phi(X), np.float32)
+        return jnp.asarray(self.projection(F), jnp.float32)
+
+    def param_floats(self) -> int:
+        """φ's own floats **plus** the map's — both ride on every arm's ledger."""
+        base = getattr(self.phi, "param_floats", None)
+        if base is None:
+            raise TypeError(
+                f"read-in {type(self.phi).__name__} cannot report its parameter count; "
+                f"a φ that is not on the byte ledger may not be used in a matched-bytes "
+                f"cell"
+            )
+        return int(base()) + int(self.projection.param_floats())
+
+    def provenance(self, arm=None) -> dict:
+        base = getattr(self.phi, "provenance", None)
+        inner = base(arm) if callable(base) else {"arm": arm}
+        return {
+            **inner,
+            "projected_to": self.k,
+            "projection": self.projection.provenance(),
+            "phi_param_floats_total": self.param_floats(),
+        }
+
+
+def build_projection(phi, fit_pool, addr_dim: int, form: str = "pca", seed: int = 0):
+    """Fit a :class:`PhiProjection` on ``φ(fit_pool)`` and return the composed read-in.
+
+    ⚠ ``fit_pool`` must be the **regime's own** pool (``task1_only`` for every primary
+    number in this programme) — the map is fitted like every other φ here, on data the
+    store never stores and from tasks the stream has already shown.
+    """
+    F = np.asarray(phi(np.asarray(fit_pool, np.float32)), np.float32)
+    proj = PhiProjection(F, addr_dim, form=form, seed=seed)
+    return ProjectedReadIn(phi, proj)
 
 
 def build_encoder_read_in(arm, dataset, store_pool, fit_pool, cfg, seed):

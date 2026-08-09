@@ -41,6 +41,11 @@ from ..experiments.exp_well_lifecycle import (
 from ..experiments.exp_capture_armB import (
     run_experiment_capture_armb,
 )
+# --- BEGIN c2w8p3-phi-geometry (additive) ---
+from ..experiments.exp_phi_geometry import (
+    run_experiment_phi_geometry,
+)
+# --- END c2w8p3-phi-geometry ---
 from ..experiments.exp_sharded_store import (
     run_experiment_sharded_store,
     apply_quick as apply_sharded_store_quick,
@@ -409,6 +414,21 @@ def setup_experiment_parsers(subparsers):
     exp_wl_parser.add_argument('--quick', action='store_true',
                                help='Quick mode (d=4, 1 seed, tiny stream)')
     exp_wl_parser.set_defaults(func=cmd_exp_well_lifecycle)
+    # --- BEGIN c2w8p3-phi-geometry (additive) ---
+    # exp-phi-geometry (C2W8 pass 3: the φ→addr map + the geometry it buys)
+    exp_pg_parser = subparsers.add_parser(
+        'exp-phi-geometry',
+        help='C2W8 pass 3: build the phi_dim->addr_dim map the rig never had, then '
+             'MEASURE whether strong phi separates at d in {8,12,16} on CIFAR-10 '
+             '(sigma_q/spacing vs the PCA reference at matching d). Instrumentation.'
+    )
+    exp_pg_parser.add_argument('--project', help='Project name to use')
+    exp_pg_parser.add_argument('--seeds', help='Comma-separated seeds, e.g. 0,1,2')
+    exp_pg_parser.add_argument('--dims', help='Address dims, e.g. 8,12,16')
+    exp_pg_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (tiny stream, 2 steps of phi)')
+    exp_pg_parser.set_defaults(func=cmd_exp_phi_geometry)
+    # --- END c2w8p3-phi-geometry ---
     # exp-capture-armb (C2W8 pass 2, ARM B: the emission head on pass 1's census)
     exp_armb_parser = subparsers.add_parser(
         'exp-capture-armb',
@@ -1902,6 +1922,46 @@ def cmd_exp_well_lifecycle(args):
         return 1
 
     return 0
+
+
+# --- BEGIN c2w8p3-phi-geometry (additive) ---
+def cmd_exp_phi_geometry(args):
+    """C2W8 pass 3: the φ→addr map and the address geometry it buys."""
+    console.print(
+        "[bold cyan]Running Experiment PHI-GEOMETRY (C2W8 pass 3): the "
+        "phi_dim->addr_dim map, then does strong phi actually separate?[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+    if getattr(args, 'dims', None):
+        config.experiment_phi_geometry.addr_dims = [
+            int(x) for x in str(args.dims).split(',')
+        ]
+    seeds = ([int(s) for s in str(args.seeds).split(',')]
+             if getattr(args, 'seeds', None) else None)
+
+    try:
+        res = run_experiment_phi_geometry(
+            config=config,
+            save_dir=str(paths['plots']),
+            seeds=seeds,
+            quick=getattr(args, 'quick', False),
+        )
+        console.print(
+            f"✓ Experiment PHI-GEOMETRY completed: geometry_go={res['geometry_go']} "
+            f"d_favoured={res['d_favoured_by_geometry']} -> {res['json_path']}",
+            style="bold green",
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+# --- END c2w8p3-phi-geometry ---
 
 
 def cmd_exp_capture_armb(args):
