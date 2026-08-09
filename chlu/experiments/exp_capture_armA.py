@@ -64,7 +64,8 @@ _FROZEN_STORE_CONFIG = ewl.store_config
 # ---------------------------------------------------------------------------
 # the arm: a store config, and nothing else
 # ---------------------------------------------------------------------------
-def arm_store_config(cfg: CHLUConfig, seed: int, d_safe: float) -> CluSystemConfig:
+def arm_store_config(cfg: CHLUConfig, seed: int, d_safe: float,
+                     overrides: Optional[Dict[str, Any]] = None) -> CluSystemConfig:
     """Pass 1's store config with **the reach lever** applied — nothing else.
 
     ⭐ The width co-scaling is to the **measured** key spacing of this seed's own
@@ -73,7 +74,17 @@ def arm_store_config(cfg: CHLUConfig, seed: int, d_safe: float) -> CluSystemConf
     the store-config factory, so the spacing is recovered exactly as
     `d_safe / d_safe_frac`.
     """
-    base = _FROZEN_STORE_CONFIG(cfg, seed, d_safe)      # the FROZEN pass-1 config
+    # ⚠ C2W8 pass 3 (blocking-bug fix, reconciliation item): the `overrides`
+    # keyword is the pass-2 arm-B seam that `run_census_cell` ALWAYS passes. Arm
+    # A's substituted factory did not accept it, so `exp_capture_armA` raised
+    # `TypeError: got an unexpected keyword argument 'overrides'` at
+    # `main @ 1eda6a0` — i.e. **arm A could not run at all on main**; the two arms
+    # were merged independently and neither merge re-ran the other. Arm A never
+    # sets overrides, so forwarding them is behaviour-preserving and the pass-2
+    # numbers are unaffected. Pinned by
+    # `tests/test_gate_addr.py::test_arm_a_store_config_accepts_the_overrides_seam`.
+    base = _FROZEN_STORE_CONFIG(cfg, seed, d_safe,
+                                overrides=overrides)   # the FROZEN pass-1 config
     a = cfg.experiment_capture_arm_a
     w = cfg.experiment_well_lifecycle
     med_nn = float(d_safe) / float(w.d_safe_frac)
@@ -96,7 +107,8 @@ def run_cell(cfg: CHLUConfig, seed: int, *, data=None, verbose: bool = True) -> 
     `finally`, so nothing leaks into a later cell or a later arm.
     """
     original = ewl.store_config
-    ewl.store_config = lambda c, s, d: arm_store_config(c, s, d)
+    ewl.store_config = lambda c, s, d, overrides=None: arm_store_config(
+        c, s, d, overrides=overrides)
     try:
         cell = ewl.run_census_cell(cfg, seed, data=data, verbose=verbose)
     finally:

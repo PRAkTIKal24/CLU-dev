@@ -2829,6 +2829,20 @@ class ExperimentWellLifecycleConfig:
     loo_repeats: int = 2  # the SECONDARY leg, reported only with its ICC(1,1)
     run_loo: bool = True
 
+    # ---- ⭐ C2W8 PASS 3: G-ADDR, the addressability leg (charter §A30.1) ----
+    # Additive. `run_gate_addr = False` restores the pass-1/pass-2 cell exactly
+    # (the census dict itself is untouched either way; G-ADDR is a new key).
+    run_gate_addr: bool = True
+    #: cue jitter as a DIMENSIONLESS multiple of the measured key spacing.
+    #: ⛔ Never an absolute sigma — see `well_lifecycle.GADDR_KAPPA_Q` and the
+    #: scale-invariance guard (PREREG-C2W8-PASS3 §4).
+    gaddr_kappa_q: float = 1.0
+    gaddr_n_query_per_item: int = 8
+    #: ⭐ the SCALE-ONLY control (PREREG-C2W8-PASS3 §4): multiply the address
+    #: scale by a declared constant with `phi` otherwise identical. G-ADDR must
+    #: move by ~0; if it moves, the leg measures the scale and does not ship.
+    addr_scale_mult: float = 1.0
+
     # ---- store geometry (the shipped CluSystem band unless stated) ----
     d_safe_frac: float = 0.88  # d_safe = d_safe_frac x median-NN(task-1 phi keys)
     write_steps: int = 300

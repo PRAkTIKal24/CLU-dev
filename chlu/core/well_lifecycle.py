@@ -29,6 +29,27 @@ exist"*, never through *"is this well useful"* (mechanic 2, §A23.5 ACTIVE).
 is a bookkeeping problem; only ``{live attractor, never read}`` is prunable. A
 census that merges them would license a prune verb on wells that are already
 gone.
+
+---
+
+⭐⭐ **C2W8 PASS 3 — this module also carries `G-ADDR` (:func:`gate_addr`), the
+ADDRESSABILITY leg** (charter §A30.1, ``PREREG-C2W8-PASS3.md`` §2), plus Ruling
+3's compliance counterfactual (:func:`displaced_write_counterfactual`).
+
+*Why.* Three times in one wave this programme shipped **a gate that cannot fail
+on the thing that matters**: pass 1's vacuous ``M`` (geometric leg ~10x the
+address resolution, refused nothing), monitor #3's admission gate (refusal rate
+0.000, still open), and the pass-2 capture gate, which passed **arm B on 3/3
+seeds with 16/16 items never read**. G-CAP/G-DEC/G-DRIFT all measure
+retrievability *at the sites*; **nothing measured whether a query reaches its
+site.** G-ADDR does, with ground truth by construction, designed negatives AND a
+designed positive, all pytest-asserted in ``tests/test_gate_addr.py``.
+
+Three instrument findings this module now documents rather than carrying
+silently: the SC-6 capture instrument's ``tol/expansion_rate`` floor and its
+confinement-minimum false positive (:func:`capture_radii`), ``theta_att``'s
+arm-dependent dynamic range (:func:`measure_theta_att`), and the kernel-mismatch
+repair of :func:`own_foreign_site_depth`.
 """
 
 from __future__ import annotations
@@ -100,6 +121,34 @@ def designed_decay_factors(controller) -> Dict[int, float]:
     return out
 
 
+def _atom_profile_np(d2, s, kernel: str = "gaussian", cutoff: float = 2.5):
+    """float64 mirror of :func:`chlu.core.memory_potentials.atom_profile`.
+
+    The shipped profile is written in ``jnp`` and therefore evaluates in
+    **float32**; this census estimator is a float64 diagnostic and must not
+    inherit a 1e-7 relative wobble into a banked number. The two are pinned
+    against each other for **all three kernels** in
+    ``tests/test_gate_addr.py::test_numpy_atom_profile_mirrors_the_shipped_one``.
+    ⛔ If a kernel is added to ``ATOM_KERNELS``, that test fails until it is
+    mirrored here — which is the point.
+    """
+    from chlu.core.memory_potentials import ATOM_KERNELS
+
+    if kernel not in ATOM_KERNELS:
+        raise ValueError(f"atom kernel must be one of {ATOM_KERNELS}, got {kernel!r}")
+    d2 = np.asarray(d2, dtype=float)
+    s = np.asarray(s, dtype=float)
+    if kernel == "gaussian":
+        return np.exp(-d2 / (2.0 * s**2 + 1e-9))
+    R = np.maximum(float(cutoff) * s, 1e-12)
+    if kernel == "wendland":
+        t = np.clip(np.sqrt(np.maximum(d2, 0.0)) / R, 0.0, 1.0)
+        return (1.0 - t) ** 4 * (1.0 + 4.0 * t)
+    g = np.exp(-d2 / (2.0 * s**2 + 1e-9))
+    gR = np.exp(-(R**2) / (2.0 * s**2 + 1e-9))
+    return np.where(d2 <= R**2, (g - gR) / np.maximum(1.0 - gR, 1e-12), 0.0)
+
+
 def own_foreign_site_depth(store, slot: int, site) -> Tuple[float, float]:
     """``(own, foreign)`` atom-sum depth at ``site`` — the interference split.
 
@@ -109,14 +158,39 @@ def own_foreign_site_depth(store, slot: int, site) -> Tuple[float, float]:
     what :func:`chlu.experiments.exp_anti_erosion._interference_audit` consumes,
     which is how this wave reuses C2W6's residual-vs-decay-law instrument
     **without editing that file**.
+
+    ⭐ **C2W8 pass-3 fix (pass-2 reconciliation item 1).** This estimator used to
+    hard-code the **Gaussian** atom profile ``exp(-d2 / (2 s^2 + 1e-12))``. Under
+    any compact-atom arm (``atom_kernel = "wendland" | "truncated_gaussian"``,
+    C2W8 pass 2 arm A) that is **kernel-mismatched**: it credits every atom with a
+    tail the landscape does not have, so **both legs are over-read**, the foreign
+    leg worst (foreign atoms are the far ones). Arm A's own/foreign was reported
+    *through* the mismatched form, labelled. It now reads the store's **own**
+    profile (:func:`chlu.core.memory_potentials.atom_profile`) with the store's
+    own ``kernel``/``kernel_cutoff`` and, if present, its ``axis_width_scale`` —
+    i.e. exactly the expression ``AtomDictionaryStore.__call__`` sums.
+
+    ⛔ **Continuity with every banked number is a designed invariant.** Under
+    ``kernel = "gaussian"`` the only difference from the pre-pass-3 form is the
+    epsilon in the denominator (``1e-9``, the store's own, vs the ``1e-12`` this
+    function used), a **3e-8 relative** change — six orders below the least
+    significant digit ever quoted (4 dp). It is pinned numerically in
+    ``tests/test_gate_addr.py::test_own_foreign_matches_the_legacy_gaussian_form``.
+    Every pass-1/pass-2 own/foreign reading was taken on a Gaussian store or was
+    explicitly labelled kernel-mismatched, so no banked number moves silently.
     """
     atoms = store.atoms
     A = np.asarray(atoms.amp, dtype=float) ** 2
-    s = np.exp(np.asarray(atoms.log_width, dtype=float))
+    s = np.asarray(np.exp(np.asarray(atoms.log_width, dtype=float)), dtype=float)
     c = np.asarray(atoms.centers, dtype=float)
     z = np.asarray(site, dtype=float).reshape(1, -1)[:, : c.shape[1]]
-    d2 = np.sum((c - z) ** 2, axis=-1)
-    w = A * np.exp(-d2 / (2.0 * s**2 + 1e-12))
+    diff = c - z
+    axis = getattr(atoms, "axis_width_scale", None)
+    if axis is not None:
+        diff = diff / np.asarray(axis, dtype=float)[None, : diff.shape[1]]
+    d2 = np.sum(diff**2, axis=-1)
+    w = A * _atom_profile_np(d2, s, str(getattr(atoms, "kernel", "gaussian")),
+                             float(getattr(atoms, "kernel_cutoff", 2.5)))
     m = np.asarray(store.group_rows(int(slot)), dtype=bool)
     return float(np.sum(w[m])), float(np.sum(w[~m]))
 
@@ -131,6 +205,29 @@ def capture_radii(system, sites, *, n_dirs: int = 16, steps: int = 8,
     ``lambda_min > 0`` certifies a *local minimum*, not a nonempty basin (the
     theorist measured a basin of 0.000 at ``lambda_min = +0.910``), so the floor
     is measured here rather than inferred.
+
+    ⚠⚠ **TWO PROPERTIES OF THIS INSTRUMENT, MEASURED BY K7 (C2W8 pass 2, arm A
+    §2) AND DOCUMENTED HERE BECAUSE THEY CHANGE HOW A POSITIVE READING MUST BE
+    READ.** They are pytest-pinned in ``tests/test_compact_atoms.py`` (the arm's
+    file); the census is the instrument, so the census documents them itself
+    (pass-2 reconciliation item 2).
+
+    1. **There is a POSITIVE FLOOR of ``tol / expansion_rate``, not 0.** The
+       bisection only asks whether the relaxed point lands within ``tol`` of the
+       site, so **a site whose relaxation barely moves reports a positive radius
+       with no basin at all**. K7-2 measured ``0.001953`` on a deliberately
+       *expanding* map (``z + 5(x-z)``, ``tol = 0.01``) — exactly ``tol/λ`` to one
+       bisection cell — where the registered prediction was exactly 0.0.
+       ⇒ a majority-positive G-CAP is **never** read alone: quote it beside
+       ``lambda_min`` at the relaxed site **and the magnitude** of the radius
+       (at the census operating point ``tol = sigma_q``, so the floor is
+       ``sigma_q / expansion_rate``).
+    2. **A flat site at the CONFINEMENT MINIMUM is a false positive of ~``r_hi``.**
+       K7-5 planted a depth-``1e-9`` site at the origin, where ``V = alpha|q|^2``
+       only, and measured ``0.99902`` at ``r_hi = 1.0``: everything relaxes back to
+       the bowl's bottom, so the bisection saturates. Benign for this census only
+       because real ``phi`` sites sit at ``|z| ~ 0.5-1.0``; ⛔ **any rig whose
+       sites approach the origin must re-check this before quoting G-CAP.**
     """
     from chlu.core.soft_certificate import capture_radius
 
@@ -159,6 +256,17 @@ def measure_theta_att(depths, capture, sigma_q: float) -> Dict[str, Any]:
     > capture was *observed to fail on this rig*, not a constant.
 
     Returned alongside the ingredients, so the number is auditable.
+
+    ⚠⚠ **``theta_att``'s DYNAMIC RANGE IS ARM-DEPENDENT, AND IT DEGENERATES TO
+    EXACTLY 0.0000 WHEN EVERY WELL CAPTURES** (C2W8 pass 2 housekeeping; §A29.7).
+    The rule above returns ``0.0`` by construction when ``n_non_capturing == 0``,
+    which is a *floor that was never exercised*, not a measurement that the floor
+    is low. Because ``is_attractor`` tests ``depth > theta_att``, an arm in which
+    everything captures admits every well as an attractor on a **vacuous**
+    comparison. ⛔ **Consequence, binding on every cross-arm reading: ``P`` (whose
+    numerator counts live attractors) is NOT comparable across arms without
+    quoting ``n_non_capturing`` beside it.** Compare ``P`` only between arms with
+    a non-degenerate ``theta_att``, or state the degeneracy on the number.
     """
     d = np.asarray(depths, dtype=float)
     r = np.asarray(capture, dtype=float)
@@ -360,6 +468,373 @@ def unlock_verdict(P_by_seed: Sequence[float], M_by_seed: Sequence[float],
 
 
 # --------------------------------------------------------------------------
+# ⭐⭐ G-ADDR — the ADDRESSABILITY leg (C2W8 PASS 3, prereg §2; charter §A30.1)
+# --------------------------------------------------------------------------
+#: The cue jitter, **as a dimensionless multiple of the measured key spacing**
+#: (prereg-pass-3 §4). ⛔ Never an absolute sigma: the rig normalises addresses to
+#: unit radius, so an absolute jitter makes `sigma / spacing` movable by
+#: rescaling `phi` alone, with zero information gain — a leg expressed in
+#: absolute units measures the SCALE, not the memory. 1.0 is the census's own
+#: operating point to within 7 % (`sigma_q / spacing = 0.15 / 0.138..0.147`).
+GADDR_KAPPA_Q = 1.0
+
+#: A1 must clear BOTH `4 x chance` and `chance + 2 SE` (registered before the
+#: first cell; see `.claude/outputs/c2w8p3-gate-addr/PREREG.md` §1).
+GADDR_A1_CHANCE_MULT = 4.0
+#: A2 (never-addressed fraction) ceiling.
+GADDR_A2_MAX = 0.5
+
+
+def _median_nn_dist(pts: np.ndarray) -> float:
+    p = np.asarray(pts, dtype=float)
+    if p.shape[0] < 2:
+        return float("nan")
+    d = np.linalg.norm(p[:, None, :] - p[None, :, :], axis=-1)
+    np.fill_diagonal(d, np.inf)
+    return float(np.median(np.min(d, axis=1)))
+
+
+def _sites_of(system) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """``(ids, centers, sites)`` — sites are full store-space ``(c_i | a_i | 0)``."""
+    ids, centers, pays = system.codebook()
+    addr_dim, pay_dim = system.store.addr_dim, system.store.payload_dim
+    sites = np.zeros((len(ids), system.store.dim), dtype=float)
+    if len(ids):
+        sites[:, :addr_dim] = centers
+        sites[:, addr_dim: addr_dim + pay_dim] = pays
+    return ids, np.asarray(centers, dtype=float), sites
+
+
+def cue_queries(centers: np.ndarray, dim: int, *, spacing: float,
+                kappa_q: float = GADDR_KAPPA_Q, n_per_item: int = 8,
+                seed: int = 0, permute: bool = False
+                ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """The G-ADDR cue set: ``(q0, targets, declared_targets)``.
+
+    For each live item ``i``, ``n_per_item`` queries ``c_i + kappa_q * spacing *
+    eps`` (per-coordinate Gaussian) in the ADDRESS channels; payload channels are
+    zero, which is what the read path enforces anyway.
+
+    ``targets[k]`` is the index of the item the query was **generated from** —
+    the ground truth that makes "correct basin" meaningful and that the pass-2
+    instrument never had (it only ever asked "*some* basin").
+
+    ``permute=True`` is **designed negative 2**: the *declared* target of each
+    query is rotated to a different item (``i -> (i+1) % n``) while the queries
+    themselves are unchanged, so a leg that cannot tell right from wrong scores
+    the same on both. Returns ``declared_targets`` (what the leg is scored
+    against) separately from ``targets`` (where the query really came from).
+    """
+    c = np.asarray(centers, dtype=float)
+    n = c.shape[0]
+    rng = np.random.default_rng(int(seed) + 60_000)
+    tgt = np.repeat(np.arange(n), int(n_per_item))
+    sig = float(kappa_q) * float(spacing)
+    q0 = np.zeros((tgt.size, int(dim)), dtype=np.float32)
+    q0[:, : c.shape[1]] = c[tgt] + rng.normal(size=(tgt.size, c.shape[1])) * sig
+    declared = ((tgt + 1) % max(n, 1)) if permute else tgt
+    return q0, tgt, declared
+
+
+def gate_addr(system, *, spacing: Optional[float] = None,
+              kappa_q: float = GADDR_KAPPA_Q, n_query_per_item: Optional[int] = None,
+              seed: int = 0, capture: Optional[Sequence[float]] = None,
+              stream_margin: Optional[float] = None,
+              stream_margin_se: Optional[float] = None,
+              launder_bytes: Optional[int] = None,
+              permute: bool = False,
+              n_dirs: int = 16, bisect_steps: int = 8) -> Dict[str, Any]:
+    """⭐⭐ **G-ADDR** — *does a query reach the well of the item it asked for?*
+
+    The leg the C2W8 gate was missing, and the reason it was missing is a defect
+    class this wave caught three times: **a gate that cannot fail on the thing
+    that matters.** Pass 1's ``M`` was vacuous (geometric leg ~10x the address
+    resolution); monitor #3's admission gate refuses nothing (rate 0.000, still
+    open); and the pass-2 capture gate passed **arm B on 3/3 seeds with 16/16
+    items never read** — because G-CAP/G-DEC/G-DRIFT all measure retrievability
+    *at the sites*, and **nothing measured whether a query reaches its site.**
+
+    Three sub-legs, all two-sided, thresholds registered before the first cell
+    (``.claude/outputs/c2w8p3-gate-addr/PREREG.md`` §1):
+
+    * **A1 — correct-basin rate.** A cue query is correct iff its settled point
+      ``q*`` (i) resolves to the **QUERIED** item in the address channels
+      (``argmin_j |q*_addr - c_j| == i``, the shipped ``_assign`` rule) **and**
+      (ii) lies inside that item's **measured** SC-6 capture radius in full store
+      space (``|q* - z_i| <= rho_i``; ``rho_i`` NaN or 0 => there is no basin, so
+      no query can be correct). ⛔ *"Some basin"* is reported (``any_basin_rate``)
+      and is **not** the leg.
+    * **A2 — never-addressed fraction:** live items with **zero** correct cue
+      reads. ⚠ Deliberately **not** the banked telemetry ``n_never_read``: that
+      counter credits a read only when ``covered = True``, and ``covered`` is
+      computed on the **launch point** (``min_j |q0 - c_j| <= 1/2 min-sep``), so it
+      is a property of the query distribution against the codebook and is very
+      nearly independent of the store. The banked figure is reported beside this
+      one by the caller.
+    * **A3 — launder margin, at the DECLARED matching.** ``A3a`` compares the
+      store and a **kNN-in-phi launder** on the *same queries under the same
+      decision rule* (which item did you resolve to). ``A3b`` is the census
+      stream's held-out class-accuracy margin (``read_acc - knn_acc``), supplied
+      by the caller as ``stream_margin``; where no stream exists it is a declared
+      **NOT-APPLICABLE**, never a null. ⛔ Both are **matched-ITEMS**, not
+      matched-bytes: the ratio is reported and travels with every quotation.
+
+      ⚠⚠ **The criterion is "does NOT LOSE beyond 2 SE", not "beats".**
+      (``ERRATA`` §1, filed before any arm was scored.) The cue set draws
+      ``q = c_i + sigma * eps`` with equal priors, under which **1-NN over the
+      stored keys IS the Bayes-optimal decoder** — so requiring the physics to
+      beat it on its own metric-native protocol is the metric-native-ceiling
+      theorem written as a gate leg, and it makes G-ADDR **unpassable**. The
+      designed positive control measured exactly that: A1 = 1.000, launder
+      1.000, margin **0.000**. Whether daylight exists above the launder is the
+      spine's question (PREREG-C2W8-PASS3 §6), not this gate's; both margins are
+      reported **two-sided**.
+
+    ``permute=True`` runs designed negative 2 in place (same store, same queries,
+    wrong declared targets).
+    """
+    ids, centers, sites = _sites_of(system)
+    n = int(len(ids))
+    n_per = int(system.cfg.n_query_per_item if n_query_per_item is None
+                else n_query_per_item)
+    addr_dim = int(system.store.addr_dim)
+    if n == 0:
+        return {"status": "NOT RUN — empty codebook", "n_items": 0,
+                "gate_addr_pass": False}
+    sp = float(_median_nn_dist(centers) if spacing is None else spacing)
+    rho = (np.asarray(capture, dtype=float) if capture is not None
+           else capture_radii(system, sites, n_dirs=int(n_dirs),
+                              steps=int(bisect_steps), seed=int(seed)))
+    rho = np.where(np.isfinite(rho), rho, 0.0)
+
+    q0, true_tgt, tgt = cue_queries(centers, int(system.store.dim), spacing=sp,
+                                    kappa_q=float(kappa_q), n_per_item=n_per,
+                                    seed=int(seed), permute=bool(permute))
+    res = system.read(q0)
+    q_star = np.asarray(res.state.q_star, dtype=float)
+    a_star = q_star[:, :addr_dim]
+
+    # -- leg (i): which item did the settle resolve to (shipped _assign rule) --
+    d_addr = np.linalg.norm(a_star[:, None, :] - centers[None, :, :], axis=-1)
+    resolved = np.argmin(d_addr, axis=1)
+    voronoi_ok = resolved == tgt
+    # -- leg (ii): is the settle INSIDE the queried item's measured basin -----
+    d_full = np.linalg.norm(q_star - sites[tgt], axis=-1)
+    in_own_basin = (rho[tgt] > 0.0) & (d_full <= rho[tgt])
+    correct = voronoi_ok & in_own_basin
+    # "some basin" — the pass-2-style question, reported and NOT the leg
+    d_any = np.linalg.norm(q_star[:, None, :] - sites[None, :, :], axis=-1)
+    any_basin = np.any(d_any <= np.maximum(rho, 0.0)[None, :], axis=1)
+
+    # -- the launder: 1-NN in phi over the live keys, SAME queries ------------
+    d_l = np.linalg.norm(q0[:, None, :addr_dim] - centers[None, :, :], axis=-1)
+    launder_ok = np.argmin(d_l, axis=1) == tgt
+
+    N = int(tgt.size)
+    chance = 1.0 / float(n)
+    se = float(np.sqrt(max(chance * (1.0 - chance), 0.0) / max(N, 1)))
+    A1 = float(np.mean(correct))
+    A1_vor = float(np.mean(voronoi_ok))
+    A1_launder = float(np.mean(launder_ok))
+    hits = np.array([int(np.sum(correct[tgt == i])) for i in range(n)], dtype=int)
+    A2 = float(np.mean(hits == 0))
+    A3a = float(A1_vor - A1_launder)
+    # McNemar SE of a PAIRED difference in proportions (the two decoders see the
+    # same queries), so "does not lose beyond 2 SE" is a paired statement.
+    b = int(np.sum(voronoi_ok & ~launder_ok))
+    c = int(np.sum(~voronoi_ok & launder_ok))
+    se_a3a = float(np.sqrt(b + c) / max(N, 1))
+    thr_a1 = float(max(GADDR_A1_CHANCE_MULT * chance, chance + 2.0 * se))
+    a1_pass = bool(A1 >= thr_a1)
+    a2_pass = bool(A2 <= GADDR_A2_MAX)
+    a3a_pass = bool(A3a >= -2.0 * se_a3a)
+    a3b_applicable = stream_margin is not None and np.isfinite(
+        float(stream_margin if stream_margin is not None else np.nan))
+    se_a3b = float(stream_margin_se) if stream_margin_se is not None else 0.0
+    a3b_pass = (bool(float(stream_margin) >= -2.0 * se_a3b) if a3b_applicable
+                else True)
+    clu_bytes = int(system.n_bytes())
+    knn_bytes = int(n * (addr_dim + int(system.store.payload_dim)) * 4
+                    if launder_bytes is None else launder_bytes)
+    return {
+        "n_items": n, "n_queries": N,
+        "kappa_q": float(kappa_q), "spacing_ref": sp,
+        "cue_sigma": float(kappa_q) * sp,
+        # ⭐ §4's guard: every geometric quantity as a DIMENSIONLESS RATIO with
+        # the scale stated. `spacing_ref` is the rig's DECLARED measured key
+        # spacing (the census hands in its own `median_nn_task1`, the number
+        # G-DRIFT is scored against); `codebook_spacing` is the live store's own
+        # median-NN, which is the resolution the read must actually beat.
+        "codebook_spacing": float(_median_nn_dist(centers)),
+        "cue_sigma_over_spacing_ref": float(kappa_q),
+        "cue_sigma_over_codebook_spacing": float(
+            (float(kappa_q) * sp) / max(_median_nn_dist(centers), 1e-12)),
+        "cue_displacement_over_codebook_spacing": float(
+            (float(kappa_q) * sp * np.sqrt(addr_dim))
+            / max(_median_nn_dist(centers), 1e-12)),
+        "permuted_targets": bool(permute),
+        "A1": {
+            "correct_basin_rate": A1, "chance": chance, "se": se,
+            "threshold": thr_a1,
+            "rule": ("settle resolves to the QUERIED item (address argmin) AND "
+                     "lies inside that item's MEASURED capture radius in full "
+                     "store space; threshold max(4 x chance, chance + 2 SE)"),
+            "margin_in_se": float((A1 - chance) / se) if se > 0 else float("nan"),
+            "pass": a1_pass,
+            # reported, never the leg
+            "voronoi_only_rate": A1_vor,
+            "any_basin_rate": float(np.mean(any_basin)),
+            "in_own_basin_rate": float(np.mean(in_own_basin)),
+            "n_items_with_zero_basin": int(np.sum(rho <= 0.0)),
+            "capture_radius_median": float(np.median(rho)),
+        },
+        "A2": {
+            "never_addressed_frac": A2,
+            "n_never_addressed": int(np.sum(hits == 0)),
+            "threshold": float(GADDR_A2_MAX), "pass": a2_pass,
+            "correct_hits_by_item": {int(ids[i]): int(hits[i]) for i in range(n)},
+            "rule": ("live items with ZERO correct cue reads; NOT the banked "
+                     "telemetry n_never_read (which is launch-point coverage)"),
+        },
+        "A3": {
+            "matching": "matched-ITEMS (same keys, same queries) — NOT matched-bytes",
+            "clu_total_bytes": clu_bytes, "knn_launder_bytes": knn_bytes,
+            "byte_ratio_clu_over_launder": float(clu_bytes / max(knn_bytes, 1)),
+            "A3a_cue_margin": A3a,
+            "A3a_store_rate": A1_vor, "A3a_launder_rate": A1_launder,
+            "A3a_se_paired": se_a3a, "A3a_threshold": float(-2.0 * se_a3a),
+            "A3a_discordant_store_only": b, "A3a_discordant_launder_only": c,
+            "A3a_pass": a3a_pass,
+            "A3a_strict_margin": float(A1 - A1_launder),
+            "A3b_stream_margin": (float(stream_margin) if a3b_applicable else None),
+            "A3b_se_pooled": (se_a3b if a3b_applicable else None),
+            "A3b_threshold": (float(-2.0 * se_a3b) if a3b_applicable else None),
+            "A3b_applicable": bool(a3b_applicable),
+            "A3b_status": ("measured" if a3b_applicable else
+                           "NOT-APPLICABLE (declared): no stream on this rig — "
+                           "never reported as a null"),
+            "A3b_pass": a3b_pass,
+            "pass": bool(a3a_pass and a3b_pass),
+        },
+        "gate_addr_pass": bool(a1_pass and a2_pass and a3a_pass and a3b_pass),
+        "rule": ("G-ADDR (PREREG-C2W8-PASS3 §2, thresholds in this spoke's "
+                 "PREREG.md §1 as amended by its ERRATA §1): A1 correct-basin "
+                 ">= max(4 x chance, chance + 2 SE) AND A2 never-addressed "
+                 "<= 0.5 AND the store does NOT LOSE to its own kNN-in-phi "
+                 "launder beyond 2 SE on the cue set (A3a) nor on the stream "
+                 "(A3b, where applicable). ⛔ 'beats the launder' is NOT the "
+                 "criterion: 1-NN is Bayes-optimal on a metric-native cue."),
+    }
+
+
+def gate_addr_verdict(legs_by_seed: Sequence[Dict[str, Any]],
+                      *, min_seeds: int = 3) -> Dict[str, Any]:
+    """The arm-level G-ADDR verdict — mechanical, never a judgement call.
+
+    ``pass`` iff every seed passes every leg and at least ``min_seeds`` were run.
+    Single-cell rigs (the designed controls) call it with ``min_seeds = 1``.
+    """
+    legs = list(legs_by_seed)
+    ok = [bool(g.get("gate_addr_pass", False)) for g in legs]
+    return {
+        "n_seeds": len(legs),
+        "min_seeds": int(min_seeds),
+        "A1_pass_seeds": int(sum(bool(g["A1"]["pass"]) for g in legs)),
+        "A2_pass_seeds": int(sum(bool(g["A2"]["pass"]) for g in legs)),
+        "A3_pass_seeds": int(sum(bool(g["A3"]["pass"]) for g in legs)),
+        "all_legs_same_seed": int(sum(ok)),
+        "gate_addr_pass": bool(len(legs) >= int(min_seeds) and all(ok) and legs),
+        "A1_by_seed": [float(g["A1"]["correct_basin_rate"]) for g in legs],
+        "A2_by_seed": [float(g["A2"]["never_addressed_frac"]) for g in legs],
+        "A3a_by_seed": [float(g["A3"]["A3a_cue_margin"]) for g in legs],
+        "A3b_by_seed": [g["A3"]["A3b_stream_margin"] for g in legs],
+        "rule": ("every leg on every seed, >= min_seeds seeds "
+                 "(PREREG-C2W8-PASS3 §2)"),
+    }
+
+
+# --------------------------------------------------------------------------
+# RULING 3's counterfactual — outcome, not identity (prereg-pass-3 §7)
+# --------------------------------------------------------------------------
+def displaced_write_counterfactual(system, item_id: int, address, payload: float, *,
+                                   delta, seed: int = 0) -> Dict[str, Any]:
+    """⭐ Can the attractor MOVE OFF the stored key when the write objective asks?
+
+    ``atom_site_local_init`` (C2W8 pass 2 arm A) is ruled COMPLIANT **conditional
+    on this check** (charter §A30.3): initialising the admitted slot's atoms at
+    the item's own site is a designed *starting point*, not a constraint on where
+    the attractor ends up — **unless it is**, in which case the near-zero site
+    drift arm A measured is an algebraic identity, capture was bought by pinning,
+    and the ruling REVERSES.
+
+    The counterfactual is deliberately the harshest honest one:
+
+    1. admit the item at ``address`` (the codebook records ``address``);
+    2. run the **site-local init at ``address``** — atoms placed exactly at the
+       stored key, i.e. the lever under scrutiny, at full strength;
+    3. run the shipped learned write with its target **displaced to
+       ``address + delta``** — the write objective now prefers a minimum that is
+       NOT the stored key;
+    4. relax from the stored key and see where the attractor is.
+
+    Returns ``follow = |q* - address| / |delta|`` (0 = provably pinned, 1 = the
+    attractor went exactly where the objective asked). ⛔ ``follow < 0.5`` is the
+    reversal condition; the caller escalates rather than shipping.
+    """
+    import jax
+
+    d = int(system.store.addr_dim)
+    m = int(system.store.payload_dim)
+    a = np.asarray(address, dtype=float).reshape(-1)[:d]
+    dl = np.asarray(delta, dtype=float).reshape(-1)
+    if dl.size < d:
+        dl = np.pad(dl, (0, d - dl.size))
+    dl = dl[:d]
+    pay = np.atleast_1d(np.asarray(payload, dtype=float))
+
+    res = system.controller.admit(int(item_id), a, float(pay[0]))
+    if not res.applied:
+        raise RuntimeError(f"counterfactual: admission refused: {res.reason}")
+    system._payloads[int(item_id)] = pay
+    system._born[int(item_id)] = system._t
+    slot = system._slot_of(int(item_id))
+    key = jax.random.PRNGKey(int(seed) + 5171)
+
+    site = np.zeros((system.store.dim,), dtype=float)
+    site[:d] = a
+    site[d: d + m] = pay
+    target = site.copy()
+    target[:d] = a + dl
+
+    # (2) the lever at full strength: atoms initialised AT the stored key
+    if system.cfg.atom_site_local_init:
+        system._localize_slot_atoms(slot, a, pay, jax.random.fold_in(key, int(slot)))
+    # (3) the write objective prefers the DISPLACED minimum
+    loss = system._write_item(slot, a + dl, pay, key)
+
+    settled = np.asarray(system._relax_points(site[None, :]))[0]
+    move = float(np.linalg.norm(settled[:d] - a))
+    norm_delta = float(np.linalg.norm(dl))
+    to_target = float(np.linalg.norm(settled[:d] - (a + dl)))
+    follow = float(move / norm_delta) if norm_delta > 0 else float("nan")
+    return {
+        "item_id": int(item_id), "slot": int(slot),
+        "delta_norm": norm_delta,
+        "moved_off_key": move,
+        "residual_to_displaced_target": to_target,
+        "follow_fraction": follow,
+        "attractor_can_move": bool(follow >= 0.5),
+        "write_loss": float(loss),
+        "atom_site_local_init": bool(system.cfg.atom_site_local_init),
+        "settled_point": settled.tolist(),
+        "rule": ("follow = |q* - stored key| / |delta|; PASS iff >= 0.5 "
+                 "(PREREG c2w8p3-gate-addr §3 P6). follow < 0.5 => the attractor "
+                 "is algebraically pinned to the key => §A30.3 REVERSES the "
+                 "atom_site_local_init compliance ruling => ESCALATE"),
+    }
+
+
+# --------------------------------------------------------------------------
 # planting — the designed negatives' construction kit
 # --------------------------------------------------------------------------
 def plant_item(system, item_id: int, address, payload: float, *,
@@ -448,4 +923,8 @@ __all__ = [
     "own_foreign_site_depth", "capture_radii", "measure_theta_att",
     "well_states", "mergeable_pairs", "census", "unlock_verdict",
     "plant_item", "flatten_unused_groups",
+    # ⭐ C2W8 pass 3 — the addressability leg and Ruling 3's counterfactual
+    "GADDR_KAPPA_Q", "GADDR_A1_CHANCE_MULT", "GADDR_A2_MAX",
+    "cue_queries", "gate_addr", "gate_addr_verdict",
+    "displaced_write_counterfactual",
 ]
