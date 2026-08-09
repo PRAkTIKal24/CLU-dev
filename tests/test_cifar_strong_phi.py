@@ -63,12 +63,16 @@ def _toy_cfg(arm="randconv", phi_dim=8):
     cfg.clu_steps = 20
     cfg.rollout_chunk = 32
     cfg.baselines = ["finetune"]
-    # ⚠ the MLP backbone, not the CIFAR "cnn" one, deliberately: ``cl_baselines.ConvNet``
-    # builds its weights at the JAX default dtype while ``build_cl_stream`` always
-    # hands it float32 images, so under the suite-wide ``jax_enable_x64`` the conv
-    # raises `lax.conv_general_dilated requires arguments to have the same dtypes`.
-    # That is a pre-existing property of a file this task does not own (the real
-    # CIFAR runs are x64-off and unaffected); it is reported, not worked around here.
+    # ⚠ the MLP backbone, not the CIFAR "cnn" one — a **COST** choice, nothing more.
+    # ⛔ The reason this comment used to give is STALE and has been corrected (C2W8
+    # pass 3, rider 4c): the x64 dtype bug it described (``ConvNet`` building weights
+    # at the ambient JAX dtype against float32 images ⇒
+    # `lax.conv_general_dilated requires arguments to have the same dtypes`) was
+    # **FIXED** by pass-2 wt3 in `42b781c` — the input is now promoted to the
+    # parameter dtype, a no-op at x64-off asserted bit-identically in
+    # `tests/test_cl_baselines_x64.py`, which also exercises the CNN forward AND one
+    # `_train_task` step under x64 behind a function-scoped fixture. The `"cnn"` path
+    # is therefore testable; it is simply slower than this test needs to be.
     cfg.backbone = "mlp"
     cfg.mlp_width = 16
     cfg.mlp_depth = 1
