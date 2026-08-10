@@ -2843,6 +2843,46 @@ class ExperimentWellLifecycleConfig:
     #: move by ~0; if it moves, the leg measures the scale and does not ship.
     addr_scale_mult: float = 1.0
 
+    # ---- ⭐⭐ C2W8 CLOSE-OUT: the gate-hardening knobs (charter §A32.3) ----
+    # All additive. Two of them CHANGE a default deliberately, per the ratified
+    # instrument debts; both legacy behaviours stay reachable by config.
+
+    #: ⭐ item (i) — the TWO-SIDED drift leg's FLOOR, as a fraction of the
+    #: **measured codebook spacing**. ⛔ Never an absolute constant: the leg
+    #: must fail when drift -> 0 (D2a, table-expressible, §A29.6/§A31.5) exactly
+    #: as it fails when drift exceeds the spacing. 0.01 is registered in this
+    #: spoke's `PREREG.md` §1 (2x above the measured table-expressible point).
+    gdrift_floor_frac_spacing: float = 0.01
+    #: the ceiling, unchanged from pass 2 (`median site_drift < key spacing`).
+    gdrift_ceil_frac_spacing: float = 1.0
+
+    #: ⭐⭐ item (v) — which POPULATION `d_safe` is sized on.
+    #: ``"store"`` (the repaired default, §A31.2): the NN spacing of a key set
+    #: the size of the **store's own population**, estimated by subsampling the
+    #: sizing pool. ``"sizing"`` restores the pre-close-out behaviour — the NN
+    #: spacing of the full ~200-key sizing set applied to a 16-item store, which
+    #: made monitor #3's 0.000 refusal rate **arithmetic, not a finding**.
+    d_safe_population: str = "store"  # "store" | "sizing"
+    #: how many keys the sizing set draws (the pre-existing hard-coded 200).
+    d_safe_sizing_n: int = 200
+    #: subsample draws used to estimate the store-population spacing.
+    d_safe_population_draws: int = 64
+
+    #: ⭐ item (vi.6) — which spacing the G-ADDR cue jitter is normalised on.
+    #: ``"codebook"`` (repaired default) is the resolution the read must actually
+    #: beat; ``"sizing"`` is the pre-close-out `median_nn_task1`, which made the
+    #: cue difficulty ARM-DEPENDENT (0.927 / 0.875 / 0.710, a 30 % spread).
+    gaddr_spacing_population: str = "codebook"  # "codebook" | "sizing"
+
+    #: ⭐ item (vi.5) — the census REFUSES to run at a width nobody selected.
+    #: The effective atom width is recovered as a fraction of the cell's own
+    #: measured key spacing and must match a DECLARED selection. `None` here
+    #: means "resolve the selection from the arm configs"; set it to pin the
+    #: width explicitly (it then takes absolute priority).
+    atom_width_selection: Optional[float] = None
+    refuse_unselected_atom_width: bool = True
+    atom_width_selection_rtol: float = 1e-6
+
     # ---- store geometry (the shipped CluSystem band unless stated) ----
     d_safe_frac: float = 0.88  # d_safe = d_safe_frac x median-NN(task-1 phi keys)
     write_steps: int = 300
