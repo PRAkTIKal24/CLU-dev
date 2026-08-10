@@ -483,10 +483,26 @@ def test_l6_a_well_with_no_writes_nets_to_the_analytic_law_x64():
 
 
 def test_l6_a_well_with_no_writes_nets_to_the_analytic_law_float32_floor():
-    """The same law at the SHIPPED dtype: exact to the float32 floor, not to 1e-9."""
-    got = _no_write_cum_factor(0.02, 7)
-    assert got == pytest.approx(math.exp(-0.02 * 7), abs=1e-6)
-    assert got != pytest.approx(math.exp(-0.02 * 7), abs=1e-9)
+    """The same law at the SHIPPED dtype: exact to the float32 floor, not to 1e-9.
+
+    ⚠ **§7.23's ordering hazard, and the full suite caught it on this very test.**
+    The dtype must be PINNED, not inherited: run alone the store is float32 and
+    the 1e-9 bound fails as asserted, but after any module that enables
+    ``jax_enable_x64`` the same store is float64 and the bound *holds*, turning a
+    correct negative assertion red. Green in isolation, red in the suite — which
+    is the whole defect class. Function-scoped, because a module-scoped x64
+    fixture is itself the N211 hazard.
+    """
+    from jax import config as jax_config
+
+    was = bool(jax_config.read("jax_enable_x64"))
+    jax_config.update("jax_enable_x64", False)
+    try:
+        got = _no_write_cum_factor(0.02, 7)
+        assert got == pytest.approx(math.exp(-0.02 * 7), abs=1e-6)
+        assert got != pytest.approx(math.exp(-0.02 * 7), abs=1e-9)
+    finally:
+        jax_config.update("jax_enable_x64", was)
 
 
 def test_l6_every_emitted_curve_carries_both_forms():
