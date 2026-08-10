@@ -117,6 +117,8 @@ def make_regime_switcher(
     seed: int = 0,
     schedule: Optional[Sequence[int]] = None,
     drift_free: bool = False,
+    n_anchors: int = 96,
+    jitter: float = 0.02,
 ) -> Stream:
     """The scripted regime-switcher.
 
@@ -125,6 +127,18 @@ def make_regime_switcher(
             default ``(0,1,2,0,1,2)`` gives **6 streams, 5 change points and one
             revisit per regime** — i.e. ``k = 3`` stream boundaries are available
             for L3, and the revisit the whole wave is about actually happens.
+        n_anchors: ⭐ the number of **distinct addressable items**. Instances are
+            drawn from a fixed anchor set (plus ``jitter``) that is **shared by
+            every stream**, so a revisit returns to the *same addresses* and not
+            merely to the same label map. Without this the store is asked to
+            remember addresses no query ever visits again, its read lands in no
+            basin (measured: 66 of 68 reads unassigned), the usage proxy is
+            identically zero, and every lifecycle verb downstream of usage is
+            unexercised for an instrument reason rather than a store reason.
+            ``n_anchors > well_budget`` is this rig's **capacity pressure**.
+        jitter: per-instance noise around the anchor, as a fraction of the
+            anchor radius. It must stay well below half the admission spacing or
+            coverage fails again; the rig reports the achieved coverage.
         drift_free: ⭐ **the control condition.** Every stream runs regime
             ``schedule[0]``, so there is nothing to re-learn: the *correct*
             behaviour of a persistent store here is **no benefit**, and a "win"
@@ -135,14 +149,20 @@ def make_regime_switcher(
         sched = [sched[0]] * len(sched)
     rng = np.random.default_rng(int(seed))
     W = regime_maps(int(n_regimes), int(n_features), int(n_classes), int(seed))
+    anchors = rng.normal(size=(int(n_anchors), int(n_features)))
+    anchors /= np.maximum(np.linalg.norm(anchors, axis=1, keepdims=True), 1e-12)
     Xs, ys, sid, reg = [], [], [], []
     for s, r in enumerate(sched):
-        # ⭐ the SHARED input space: every stream draws X from the same
-        # distribution, so the only thing that changes at a boundary is the map.
-        Xt = rng.normal(size=(int(n_per_stream), int(n_features)))
+        # ⭐ the SHARED input space: every stream visits the SAME anchors, so the
+        # only thing that changes at a boundary is the map from address to label.
+        pick = rng.integers(0, int(n_anchors), size=int(n_per_stream))
+        Xt = anchors[pick] + float(jitter) * rng.normal(
+            size=(int(n_per_stream), int(n_features)))
         Xt /= np.maximum(np.linalg.norm(Xt, axis=1, keepdims=True), 1e-12)
         Xs.append(Xt)
-        ys.append(label_of(Xt, W[int(r) % int(n_regimes)]))
+        # ⛔ the label follows the ANCHOR under the current regime, so the same
+        # address genuinely carries a different y per regime.
+        ys.append(label_of(anchors[pick], W[int(r) % int(n_regimes)]))
         sid.append(np.full((int(n_per_stream),), s, dtype=int))
         reg.append(np.full((int(n_per_stream),), int(r), dtype=int))
     X = np.concatenate(Xs, axis=0)
@@ -161,6 +181,7 @@ def make_regime_switcher(
             "n_regimes": int(n_regimes), "n_classes": int(n_classes),
             "n_per_stream": int(n_per_stream), "seed": int(seed),
             "drift_free": bool(drift_free),
+            "n_anchors": int(n_anchors), "jitter": float(jitter),
             "n_streams": len(sched), "n_boundaries": max(len(sched) - 1, 0),
             "decimation_m": 1,
         },
