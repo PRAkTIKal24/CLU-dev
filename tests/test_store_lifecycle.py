@@ -117,10 +117,15 @@ def test_l1_construction_refuses_a_non_binding_hysteresis():
 # L2 DEMOTION — the rich-get-richer negative
 # ==========================================================================
 def test_l2_demotion_predicate():
+    """⚠ Demotion is scored on the chunk's OWN hits, not on the trailing window:
+    a window of length ``W`` would carry the last pre-abandonment hits forward and
+    delay demotion to ``W - 1 + d_demote``, breaking the registered "within
+    ``d_demote`` chunks". Promotion sticky, demotion prompt."""
     p = params()
     h = _sustained(4, 3) + [0] * REG["d_demote"]
     assert should_demote(h, len(h) - 1, p)
     assert not should_demote(h, 3, p)
+    assert not should_demote(h, 4, p)  # one chunk below h_lo is not yet d_demote
 
 
 def test_l2_early_popular_then_abandoned_well_demotes():
@@ -178,7 +183,8 @@ def test_l2_demotion_restores_the_designed_decay():
     for _ in range(5):
         ctl.tick()
     a2 = float(np.asarray(ctl.store.amps)[ctl.live_slots()[0]])
-    assert a2 == pytest.approx(a1 * math.exp(-0.02 * 5), rel=1e-9)
+    # the designed law, to the shipped store's float32 floor (see the L6 pair)
+    assert a2 == pytest.approx(a1 * math.exp(-0.02 * 5), rel=1e-6)
 
 
 # ==========================================================================
@@ -398,8 +404,14 @@ def test_l5b_cross_implementation_against_c2w6_recorded_events(cell, expected_pr
         # E1: the violation flag reproduces the block-level one exactly
         assert rep["n_flag_mismatch"] == 0
         assert rep["n_violations_pre"] == exp
+        assert rep["rate_pre"] == pytest.approx(rec["rewrite_violation_rate"],
+                                                abs=1e-12)
         # E3: no post-guard violation survives
         assert rep["n_violations_post"] == 0
+        # ...and the guard is load-bearing ON THESE REAL EVENTS: with it off, the
+        # recorded destructive rewrites reduce the depth, exactly `exp` of them.
+        off = replay_rewrite_events(ev, params(refresh_monotonic=False))
+        assert off["n_violations_post"] == exp
 
 
 def test_l5b_refresh_factor_matches_the_recorded_block_level_factor():
@@ -437,20 +449,44 @@ def test_l6_netted_exceeds_raw_under_decay():
         assert net_depth(raw, cum) > raw
 
 
-def test_l6_a_well_with_no_writes_nets_to_the_analytic_law():
+def _no_write_cum_factor(leak, dt):
     from chlu.core.clu_controller import CluControllerV0
     from chlu.core.controller import Controller
     from chlu.core.memory_potentials import AtomStorePotential
 
-    leak, dt = 0.02, 7
     store = AtomStorePotential(dim=3, capacity=4, addr_dim=2)
     alloc = Controller(store, d_safe=0.1, budget=4, leak=leak, amp_floor=1e-12)
     ctl = CluControllerV0(alloc)
     ctl.admit(11, np.array([0.0, 0.0]), 0.1, leak=leak)
     for _ in range(dt):
         ctl.decay(1)
-    cum = cumulative_decay(ctl)
-    assert cum[11] == pytest.approx(math.exp(-leak * dt), abs=1e-9)
+    return cumulative_decay(ctl)[11]
+
+
+def test_l6_a_well_with_no_writes_nets_to_the_analytic_law_x64():
+    """⭐ The registered L6 assertion, **1e-9**, which needs float64 amplitudes.
+
+    Function-scoped x64 (module-scoped is the §7.23/N211 hazard). The shipped
+    store holds its amplitudes in float32, whose eps is 1.2e-7 — see the
+    companion test for the achievable floor there. The netting law itself is
+    exact; the tolerance is a dtype fact and is reported as one.
+    """
+    from jax import config as jax_config
+
+    was = bool(jax_config.read("jax_enable_x64"))
+    jax_config.update("jax_enable_x64", True)
+    try:
+        assert _no_write_cum_factor(0.02, 7) == pytest.approx(
+            math.exp(-0.02 * 7), abs=1e-9)
+    finally:
+        jax_config.update("jax_enable_x64", was)
+
+
+def test_l6_a_well_with_no_writes_nets_to_the_analytic_law_float32_floor():
+    """The same law at the SHIPPED dtype: exact to the float32 floor, not to 1e-9."""
+    got = _no_write_cum_factor(0.02, 7)
+    assert got == pytest.approx(math.exp(-0.02 * 7), abs=1e-6)
+    assert got != pytest.approx(math.exp(-0.02 * 7), abs=1e-9)
 
 
 def test_l6_every_emitted_curve_carries_both_forms():
