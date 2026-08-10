@@ -150,6 +150,76 @@ def test_the_lifecycle_off_arm_fires_no_verb():
     assert out["bytes"]["gamma_phi_enabled"] is False
 
 
+# ------------------------------------------- L5 on the LIVE store path
+def _tiny_rig(seed=0, **over):
+    import jax
+
+    from chlu.core.clu_system import CluSystemConfig, build_system
+
+    cfg = CluSystemConfig(
+        addr_dim=2, payload_dim=1, capacity=4, budget=4, atoms_per_item=8,
+        min_atoms=32, min_atoms_base=8, min_atoms_c=1.0, seed=seed,
+        d_safe_override=0.05, write_steps=20, read_steps=60, address_steps=40,
+        n_query_per_item=2, leak=0.0, **over)
+    return build_system(cfg, key=jax.random.PRNGKey(seed), loud=False)
+
+
+def _plant_and_rewrite(guard: bool, seed: int = 0):
+    """Write an item, then rewrite its own well from a displaced address."""
+    import jax
+
+    from chlu.core.store_lifecycle import guarded_rewrite
+
+    sysm = _tiny_rig(seed=seed)
+    site = np.array([0.4, 0.0])
+    sysm.write_stream([{"item_id": 0, "address": site, "payload": 0.2}])
+    p = LifecycleParams(lifecycle=True, refresh_monotonic=guard)
+    events = []
+    for j, (dx, pay) in enumerate([(0.6, -0.4), (-0.7, 0.45), (0.9, -0.45)]):
+        events.append(guarded_rewrite(sysm, 0, site + np.array([dx, 0.0]), pay,
+                                      jax.random.PRNGKey(seed * 100 + j), p))
+    return events
+
+
+def test_l5_guard_off_a_destructive_rewrite_reduces_depth_on_the_live_store():
+    """⭐ L5's designed negative on the SHIPPED write path, not on replayed
+    numbers: with the guard OFF at least one planted rewrite must actually
+    reduce the well's depth. If none does, the guard is unfalsifiable here and
+    the leg must not ship on this evidence."""
+    off = _plant_and_rewrite(guard=False)
+    destructive = [e for e in off if e["depth_after"] < e["depth_before"]]
+    assert destructive, "no destructive rewrite could be planted: the negative is vacuous"
+    for e in destructive:
+        assert e["depth_guarded"] == pytest.approx(e["depth_after"], rel=1e-6)
+        assert e["depth_guarded"] < e["depth_before"]
+
+
+def test_l5_the_guard_repairs_the_same_rewrite_on_the_live_store():
+    """...and with the guard ON the same events are repaired **up to the declared
+    budget**: ``depth_guarded = min(depth_before, depth_after * gain^2)``.
+
+    ⚠ The cap is not a caveat, it is the registered semantics (§A23.2: "rewrites
+    refresh/deepen **up to budget**") and it is the SAME cap ``blocks.py`` applies
+    (``amp *= f``, ``f <= refresh_max_gain``, so depth scales by ``f^2``). A
+    rewrite that destroyed more than ``gain^2 = 16x`` of the depth is restored by
+    16x and no further — and the test says which of the two branches it is in
+    rather than quietly asserting only the easy one.
+    """
+    gain = 4.0
+    on = _plant_and_rewrite(guard=True)
+    repaired = [e for e in on if e["violation"] > 0.5]
+    assert repaired, "no violating rewrite on the guarded arm: nothing to repair"
+    capped = 0
+    for e in repaired:
+        assert e["refresh_factor"] > 1.0
+        assert e["depth_guarded"] >= e["depth_after"]      # never worse than unguarded
+        target = min(e["depth_before"], e["depth_after"] * gain ** 2)
+        assert e["depth_guarded"] == pytest.approx(target, rel=1e-5)
+        capped += int(e["depth_after"] * gain ** 2 < e["depth_before"])
+    # both branches must be reachable; this rig exercises the capped one
+    assert capped >= 1
+
+
 def test_lifecycle_params_come_from_the_config_group_unchanged():
     p = _cfg(h_hi=5, d_dwell=9, window=4, f_max=0.5).experiment_persistent_store
     lp = LifecycleParams.from_config(p)
