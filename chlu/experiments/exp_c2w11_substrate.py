@@ -1154,8 +1154,16 @@ def stage_coverage(cfg: CatTestConfig, seeds: Sequence[int] = (0, 1, 2),
 # ==========================================================================
 # ⭐⭐ THE DELIVERABLE — the mechanical gate the other two spokes wait on
 # ==========================================================================
-def freeze_interfaces(cfg: CatTestConfig, results: Dict[str, Any],
-                      path: Path) -> Dict[str, Any]:
+def _chance_per_seed(cfg: CatTestConfig, seeds) -> list:
+    out = []
+    for sd in seeds:
+        f = build_family(cfg, seed=int(sd))
+        out.append(float(chance_accuracy(f.y_seen, f.y_unseen, f.tol)))
+    return out
+
+
+def freeze_interfaces(cfg: CatTestConfig, results: Dict[str, Any], path: Path,
+                      seeds: Sequence[int] = (0, 1, 2)) -> Dict[str, Any]:
     """Write ``FROZEN-INTERFACES-C2W11.json``.
 
     ⛔ **Every ledger number is emitted from the code that computes it, never
@@ -1235,7 +1243,8 @@ def freeze_interfaces(cfg: CatTestConfig, results: Dict[str, Any],
     ds = float(np.median([c["ds_measured"] for c in reg])) if reg else None
     spacings = ([c["store_population_spacing"]["median_nn"] for c in reg]
                 if reg else [])
-    fam0 = build_family(cfg, seed=0)
+    seeds_used = list(map(int, seeds))
+    fam0 = build_family(cfg, seed=seeds_used[0])
     phi0 = build_phi(cfg)
     head0 = _head(cfg, phi0)
     k = int(cfg.n_channels) if cfg.n_channels is not None else int(cfg.f_subset)
@@ -1272,7 +1281,12 @@ def freeze_interfaces(cfg: CatTestConfig, results: Dict[str, Any],
                             "alpha||q||^2 SUBTRACTED ANALYTICALLY (1.44x inflation "
                             "otherwise); R^2 reported per cell"),
             "tol": float(fam0.tol),
-            "chance": float(chance_accuracy(fam0.y_seen, fam0.y_unseen, fam0.tol)),
+            # ⚠ chance is PER SEED and is emitted per seed: at m = 8 the
+            # constant predictor lands inside `tol` on 0-1 of 512 queries, so a
+            # single-seed scalar reads 0.0 and would be mistaken for "no chance
+            # level was computed".
+            "chance_per_seed": _chance_per_seed(cfg, seeds_used),
+            "chance": float(np.mean(_chance_per_seed(cfg, seeds_used))),
             "depth_heterogeneity_ratio": float(cfg.depth_ratio),
             "gamma_address": float(cfg.gamma_address),
             "gamma_read": float(cfg.gamma_read),
@@ -1517,6 +1531,19 @@ def run_c2w11_substrate(project: Optional[str] = None,
                            "flags_vs_default": cfg.as_flag_table(),
                            "seeds": list(map(int, seeds)), "quick": bool(quick)}
     want = set(stages)
+    # ⭐ Re-loadable stages: a stage that is not requested but whose artifact is
+    # already on disk is loaded, so `--stages freeze` can re-emit the frozen
+    # interfaces from banked cells instead of re-running hours of settles.
+    for _name, _fn in (("k0", "stage_k0"), ("width", "stage_width_selection"),
+                       ("m6", "stage_m6"), ("k6_k7cap", "stage_k6_k7cap"),
+                       ("k1", "stage_k1"), ("k2", "stage_k2"),
+                       ("k3_k4_k5", "stage_k3_k4_k5"), ("k8", "stage_k8"),
+                       ("m4", "stage_m4"), ("coverage", "stage_coverage")):
+        _p = out / f"{_fn}.json"
+        if _name.split("_")[0] not in want and _p.exists():
+            res[_name] = json.loads(_p.read_text())
+            if _name == "width":
+                selected_w_frac = res[_name]["selected_w_frac"]
 
     if "k0" in want:
         print("\n=== K0 (no store; the cheapest kill in the wave) ===", flush=True)
@@ -1581,7 +1608,7 @@ def run_c2w11_substrate(project: Optional[str] = None,
     if "freeze" in want:
         print("\n=== FREEZE ===", flush=True)
         res["frozen"] = freeze_interfaces(
-            cfg, res, out / "FROZEN-INTERFACES-C2W11.json")
+            cfg, res, out / "FROZEN-INTERFACES-C2W11.json", seeds=seeds)
 
     _dump(res, out / "c2w11_substrate_summary.json")
     return res
