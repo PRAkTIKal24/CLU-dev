@@ -132,6 +132,19 @@ class UsageTelemetry:
             "n_unassigned": int(self.n_unassigned),
             "n_never_read": int(np.sum(h == 0)) if h.size else 0,
             "frac_never_read": float(np.mean(h == 0)) if h.size else float("nan"),
+            # ⭐ C2W8 close-out item (iv): the caption travels with the number so
+            # no reader re-derives the retired launch-point sentence.
+            "coverage_side": ("SETTLE (chlu.core.clu_system diagnostics key "
+                              "`settle_covered`) when the read result carries "
+                              "it; `covered` (LAUNCH-side) only as a fallback "
+                              "for pre-close-out read paths"),
+            "caption": ("⚠ n_never_read / frac_never_read banked BEFORE the "
+                        "C2W8 close-out were gated on the LAUNCH-point "
+                        "`covered` statistic, which is store-invariant by "
+                        "construction (§A31.1) — those values are NOT "
+                        "comparable to values emitted after it, and the "
+                        "'58/62/62 unassigned, digit-identical' reading taken "
+                        "from them is RETIRED"),
             "hits_mean": float(np.mean(h)) if h.size else float("nan"),
             "hits_median": float(np.median(h)) if h.size else float("nan"),
             "hits_max": float(np.max(h)) if h.size else float("nan"),
@@ -145,15 +158,30 @@ def attach_reads(system, telemetry: UsageTelemetry, read_result, t: int) -> int:
     The assignment is the read's own ``assign_settle`` diagnostic — the settled
     address matched against the **live codebook** — so the telemetry uses exactly
     the basin the system itself resolved, not a re-derivation.
+
+    ⭐⭐ **C2W8 close-out item (iv) (charter §A31.1).** The coverage gate is now
+    the **settle-side** ``settle_covered``, not the launch-side ``covered``. The
+    old wiring assigned the basin on the **settle** and then credited the hit
+    only if the **launch point** was covered — and ``covered`` is store-invariant
+    by construction, so ``n_never_read`` / ``frac_never_read`` were very nearly
+    constants of the query distribution against the codebook (``frac_never_read
+    = 1.0000`` on 9/9 pass-3 CIFAR cells while the settle-side G-ADDR ``A2`` ran
+    0.125–1.000). ⚠ **Every ``n_never_read`` banked before this commit is a
+    launch-gated number and is not comparable to one emitted after it.**
+    ``diag.get("covered")`` remains the fallback for read results produced by
+    older code paths that never emitted the settle-side key.
     """
     ids, _, _ = system.codebook()
     diag = getattr(read_result, "diagnostics", {}) or {}
     basins = diag.get("assign_settle")
     if basins is None or len(ids) == 0:
         return 0
+    cov = diag.get("settle_covered")
+    if cov is None:
+        cov = diag.get("covered")
     return telemetry.observe_basins(ids, basins, t,
                                     controller=system.controller.allocator,
-                                    covered=diag.get("covered"))
+                                    covered=cov)
 
 
 # --------------------------------------------------------------------------
