@@ -646,6 +646,28 @@ def stage_k2(cfg: CatTestConfig, seeds: Sequence[int] = (0, 1, 2, 3, 4),
 # ==========================================================================
 # K6 / K7-CAP — computed BEFORE any reader is fitted
 # ==========================================================================
+def _sp1_probe(ind_seen, y_seen, ind_eval, y_eval, payloads, tol):
+    """⭐ The SP-1 out-of-class probe: OLS of ``y`` on the TRUE indicator.
+
+    ``N_a*m`` degrees of freedom, fitted on SEEN, evaluated on ``ind_eval``.
+    ⛔ **DECLARED OUT-OF-CLASS DIAGNOSTIC** -- never an arm, never a K4 leg. It
+    exists to show *why* the reader class is capacity-bounded below ``N_a*m``:
+    the ground truth ``1_A -> y`` is a linear code, so a reader that big solves
+    the family with no store at all, on any arm, including a blank one.
+
+    ⛔ **No intercept column** -- see the note at the call site: an all-ones
+    column is exactly collinear with the indicator block and turns a payload
+    recovery measurement into a gauge measurement.
+
+    Returns ``(exact_set_accuracy, ||v_hat - v||_inf)``.
+    """
+    A = np.asarray(ind_seen, dtype=np.float64)
+    w, *_ = np.linalg.lstsq(A, np.asarray(y_seen, dtype=np.float64), rcond=None)
+    pred = np.asarray(ind_eval, dtype=np.float64) @ w
+    return (exact_set_accuracy(pred, y_eval, tol),
+            float(np.abs(w - np.asarray(payloads)).max()))
+
+
 def _zero_param_reader_score(z, y, anchors, well_payloads, tol) -> float:
     """⭐ The MANDATORY ZERO-PARAMETER member of the reader class (§A26.3).
 
@@ -695,12 +717,16 @@ def stage_k6_k7cap(cfg: CatTestConfig, seeds: Sequence[int] = (0, 1, 2),
         params["zero_parameter_identity"] = 0
 
         # -- SP-1: the linear-code escape, on a BLANK store ----------------
-        Xs = np.concatenate([ind_s, np.ones((len(ind_s), 1))], 1)
-        w, *_ = np.linalg.lstsq(Xs, fam.y_seen, rcond=None)
-        Xu = np.concatenate([ind_u, np.ones((len(ind_u), 1))], 1)
-        sp1_acc = exact_set_accuracy(Xu @ w, fam.y_unseen, fam.tol)
-        vhat = w[: cfg.n_wells]
-        sp1_err = float(np.abs(vhat - fam.payloads).max())
+        # ⛔ NO intercept column. `y = sum_{j in A} v_j` has no intercept by
+        # construction, and an all-ones column is EXACTLY COLLINEAR with the
+        # indicator block (every row sums to F), so adding one makes lstsq
+        # return a minimum-norm solution that splits weight into the intercept.
+        # It leaves `y` exact and shifts `v_hat` by a constant -- which is a
+        # measurement of the fit's gauge, not of payload recovery. (Measured:
+        # ||v_hat - v||_inf = 0.055-0.110 WITH the intercept vs ~1e-16 without,
+        # against the banked 4.25e-15.)
+        sp1_acc, sp1_err = _sp1_probe(ind_s, fam.y_seen, ind_u, fam.y_unseen,
+                                      fam.payloads, fam.tol)
         rank = int(np.linalg.matrix_rank(ind_s))
 
         cells.append({"seed": int(seed), **k6,
@@ -914,12 +940,10 @@ def stage_k8(cfg: CatTestConfig, seeds: Sequence[int] = (0, 1, 2),
         ind_s = fam.indicator(fam.seen, c.n_wells)
         ind_u = fam.indicator(fam.unseen, c.n_wells)
         rank = int(np.linalg.matrix_rank(ind_s))
-        Xs = np.concatenate([ind_s, np.ones((len(ind_s), 1))], 1)
-        w, *_ = np.linalg.lstsq(Xs, fam.y_seen, rcond=None)
-        Xu = np.concatenate([ind_u, np.ones((len(ind_u), 1))], 1)
-        sp1_unseen = exact_set_accuracy(Xu @ w, fam.y_unseen, fam.tol)
-        sp1_seen = exact_set_accuracy(Xs @ w, fam.y_seen, fam.tol)
-        v_err = float(np.abs(w[: c.n_wells] - fam.payloads).max())
+        sp1_unseen, v_err = _sp1_probe(ind_s, fam.y_seen, ind_u, fam.y_unseen,
+                                       fam.payloads, fam.tol)
+        sp1_seen, _ = _sp1_probe(ind_s, fam.y_seen, ind_s, fam.y_seen,
+                                 fam.payloads, fam.tol)
         cells.append({
             "seed": int(seed), "n_wells": int(c.n_wells), "K": int(n_items),
             "F": int(c.f_subset), "m": int(c.payload_dim),

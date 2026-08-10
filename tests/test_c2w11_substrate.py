@@ -432,3 +432,66 @@ def test_the_selection_seeds_are_disjoint_from_the_claim_seeds():
     from chlu.experiments.exp_c2w11_substrate import SELECTION_SEEDS
 
     assert not (set(SELECTION_SEEDS) & {0, 1, 2, 3, 4})
+
+
+# ==========================================================================
+# regressions found by RUNNING the harness (each named for its defect)
+# ==========================================================================
+def test_the_stationarity_shift_survives_a_MIXED_dtype_call(rig):
+    """⚠ Found by the full suite, invisible in isolation.
+
+    An earlier test module enables ``jax_enable_x64`` **globally**, so
+    :func:`place_write` is reached with a float64 jitter draw and a float32
+    target. ``lax.scan`` requires the carry's dtype to be invariant, so the
+    mixed call raised ``TypeError`` — six tests failed in-suite and all six
+    passed alone. Every array is now promoted to one dtype first.
+    """
+    from chlu.core.factored_store import _rigid_stationarity_shift
+
+    jit64 = jnp.zeros((6, 10), dtype=jnp.float64)
+    amps32 = jnp.full((6,), 0.05, dtype=jnp.float32)
+    tgt32 = jnp.ones((10,), dtype=jnp.float32)
+    out = _rigid_stationarity_shift(jit64, amps32, 0.3, tgt32, 0.05, 8)
+    assert out.shape == (10,)
+    assert np.all(np.isfinite(np.asarray(out)))
+    # and the all-float32 call still agrees with it
+    out32 = _rigid_stationarity_shift(
+        jnp.zeros((6, 10), dtype=jnp.float32), amps32, 0.3, tgt32, 0.05, 8)
+    assert np.allclose(np.asarray(out), np.asarray(out32), atol=1e-5)
+
+
+def test_place_write_follows_the_stores_dtype_rather_than_pinning_float32(rig):
+    cfg, fam, anchors = rig["cfg"], rig["fam"], rig["anchors"]
+    key = jax.random.PRNGKey(21)
+    store = FactoredStore(cfg, anchors, key)
+    st, _ = place_write(store, cfg, anchors, fam.payloads, key)
+    assert st.V.centers.dtype == store.V.centers.dtype
+    assert st.V.log_width.dtype == store.V.log_width.dtype
+    assert st.V.amp.dtype == store.V.amp.dtype
+
+
+def test_SP1_probe_takes_NO_intercept_because_it_is_collinear_with_the_indicator():
+    """⚠ Found by reading the measured number, not by a crash.
+
+    ``y = sum_{j in A} v_j`` has no intercept, and an all-ones column is EXACTLY
+    collinear with the indicator block (every row sums to ``F``). With one
+    appended, lstsq returns a minimum-norm solution that splits weight into the
+    intercept: ``y`` stays exact while ``v_hat`` is shifted by a constant, so
+    ``||v_hat - v||_inf`` measures the fit's gauge instead of payload recovery
+    (measured 0.055-0.110 with, ~1e-16 without, against a banked 4.25e-15).
+    """
+    from chlu.experiments.exp_c2w11_substrate import _sp1_probe
+
+    cfg = CatTestConfig()
+    fam = build_family(cfg, seed=0)
+    ind_s = fam.indicator(fam.seen, cfg.n_wells)
+    ind_u = fam.indicator(fam.unseen, cfg.n_wells)
+    acc, err = _sp1_probe(ind_s, fam.y_seen, ind_u, fam.y_unseen, fam.payloads,
+                          fam.tol)
+    assert acc == 1.0                      # the linear code solves the family
+    assert err < 1e-10, err                # ... and RECOVERS the payloads
+    # the collinear-intercept form leaves `y` exact but does NOT recover v
+    X = np.concatenate([ind_s, np.ones((len(ind_s), 1))], 1)
+    w, *_ = np.linalg.lstsq(X, fam.y_seen, rcond=None)
+    assert np.abs(X @ w - fam.y_seen).max() < 1e-8
+    assert np.abs(w[: cfg.n_wells] - fam.payloads).max() > 1e-3

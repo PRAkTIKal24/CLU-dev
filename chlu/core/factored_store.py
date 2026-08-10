@@ -840,13 +840,26 @@ def _rigid_stationarity_shift(jit: jnp.ndarray, amps2: jnp.ndarray, s: float,
     300-step gradient write opened (foreign > own on 45/48) stays closed. Its
     magnitude is ``~2 alpha s^2 |t| / D`` -- 0.075 at the registered operating
     point, i.e. ~9 % of a well spacing.
+
+    ⚠ **Every array is promoted to ONE dtype before the scan.** ``lax.scan``
+    requires the carry's dtype to be invariant, and this function is reached
+    with a float64 jitter draw and a float32 target whenever another test in the
+    same process has enabled ``jax_enable_x64`` globally — which the suite does.
+    That is a real defect class here, not a lint: it fails only in-suite and
+    passes in isolation.
     """
+    dt = jnp.result_type(jit, amps2, target)
+    jit = jnp.asarray(jit, dtype=dt)
+    amps2 = jnp.asarray(amps2, dtype=dt)
+    target = jnp.asarray(target, dtype=dt)
+
     def body(delta, _):
         u = delta[None, :] + jit
         w = amps2 * jnp.exp(-jnp.sum(u ** 2, axis=-1) / (2.0 * s ** 2))
         W = jnp.sum(w) + 1e-12
         M = jnp.sum(w[:, None] * jit, axis=0)
-        return (2.0 * alpha * (s ** 2) * target - M) / W, None
+        out = (2.0 * alpha * (s ** 2) * target - M) / W
+        return jnp.asarray(out, dtype=dt), None
 
     delta, _ = jax.lax.scan(body, jnp.zeros_like(target), None, length=int(iters))
     return delta
@@ -883,7 +896,12 @@ def place_write(store: FactoredStore, cfg: CatTestConfig, anchors: np.ndarray,
     tgt = np.zeros((cfg.n_wells, cfg.dim), dtype=np.float64)
     tgt[:, :d] = anchors[:, :d]
     tgt[:, d:d + m] = payloads
-    tgt_j = jnp.asarray(tgt, dtype=jnp.float32)
+    # ⚠ Follow the STORE's own dtype rather than pinning float32: the suite
+    # enables `jax_enable_x64` globally in an earlier module, and a hard-coded
+    # float32 here silently mixes precisions (and hard-fails `lax.scan`'s
+    # carry-invariance). Fails only in-suite; passes in isolation.
+    dtype = store.V.centers.dtype
+    tgt_j = jnp.asarray(tgt, dtype=dtype)
 
     # per-well atom jitter: a uniform draw in the ball of radius r_jit
     r_jit = float(cfg.place_jitter_frac_s) * s
@@ -893,7 +911,7 @@ def place_write(store: FactoredStore, cfg: CatTestConfig, anchors: np.ndarray,
     rr = jax.random.uniform(k_rad, (int(cfg.n_wells), a, 1)) ** (1.0 / cfg.dim)
     jit = g * rr * r_jit
 
-    depth = jnp.asarray(float(cfg.place_depth) * ds, dtype=jnp.float32)  # (N_a,)
+    depth = jnp.asarray(float(cfg.place_depth) * ds, dtype=dtype)  # (N_a,)
     amp_per_atom = jnp.sqrt(depth / float(a))  # A_i = amp^2 => sum_i A_i = depth
     amps2 = jnp.broadcast_to(depth[:, None] / float(a), (int(cfg.n_wells), a))
 
@@ -908,9 +926,9 @@ def place_write(store: FactoredStore, cfg: CatTestConfig, anchors: np.ndarray,
     centers = tgt_j[:, None, :] + delta[:, None, :] + jit  # (N_a, a, dim)
 
     # scatter into the store's atom rows, group by group (C3-local by row)
-    C = np.asarray(store.V.centers, dtype=np.float32).copy()
-    LW = np.asarray(store.V.log_width, dtype=np.float32).copy()
-    AM = np.asarray(store.V.amp, dtype=np.float32).copy()
+    C = np.asarray(store.V.centers).copy()
+    LW = np.asarray(store.V.log_width).copy()
+    AM = np.asarray(store.V.amp).copy()
     cen = np.asarray(centers)
     for j in range(int(cfg.n_wells)):
         rows = np.asarray(store.group_rows(j), dtype=bool)
@@ -918,8 +936,11 @@ def place_write(store: FactoredStore, cfg: CatTestConfig, anchors: np.ndarray,
         C[idx] = cen[j][: len(idx)]
         LW[idx] = float(np.log(s))
         AM[idx] = float(np.asarray(amp_per_atom)[j])
-    V = eqx.tree_at(lambda t: [t.centers, t.log_width, t.amp], store.V,
-                    replace=[jnp.asarray(C), jnp.asarray(LW), jnp.asarray(AM)])
+    V = eqx.tree_at(
+        lambda t: [t.centers, t.log_width, t.amp], store.V,
+        replace=[jnp.asarray(C, dtype=store.V.centers.dtype),
+                 jnp.asarray(LW, dtype=store.V.log_width.dtype),
+                 jnp.asarray(AM, dtype=store.V.amp.dtype)])
     store = eqx.tree_at(lambda t: t.V, store, V)
 
     # the endpoint write loss, on the FINAL store over ALL wells -- the same
