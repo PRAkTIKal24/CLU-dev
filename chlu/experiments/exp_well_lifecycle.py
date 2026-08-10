@@ -309,6 +309,13 @@ def run_census_cell(cfg: CHLUConfig, seed: int, *, data=None,
     # the G-ADDR cue jitter (=> arm-dependent cue difficulty, 30 % spread), and it
     # produced the RETRACTED §A29.5 mechanism. Fixing the population choice fixes
     # all three; `d_safe_population = "sizing"` restores the old behaviour exactly.
+    # ⚠⚠ DECLARED CONSEQUENCE FOR THE ARMS: every arm store-config factory
+    # recovers the spacing as `d_safe / d_safe_frac` (see
+    # `exp_capture_armA.arm_store_config`), so an arm's CO-SCALED ATOM WIDTH now
+    # co-scales to the STORE population's spacing too — which is the same repair,
+    # at the same defect. ⛔ Banked arm-A / spine cells are therefore NOT
+    # bit-reproducible at this default: set `d_safe_population = "sizing"` to
+    # reproduce them exactly.
     task1_keys = embed.keys(
         stream["train_X"][0][: min(int(w.d_safe_sizing_n), len(stream["train_X"][0]))])
     med_nn = _median_nn(task1_keys)
