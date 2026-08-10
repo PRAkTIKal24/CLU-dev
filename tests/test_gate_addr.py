@@ -36,6 +36,7 @@ from chlu.config import get_default_config, load_config, save_config
 from chlu.core.clu_system import CluSystemConfig, build_system
 from chlu.core.well_lifecycle import (
     GADDR_A2_MAX,
+    LEGAL_RESCALE,
     cue_queries,
     displaced_write_counterfactual,
     flatten_unused_groups,
@@ -43,6 +44,7 @@ from chlu.core.well_lifecycle import (
     gate_addr_verdict,
     own_foreign_site_depth,
     plant_item,
+    scale_guard,
 )
 
 #: The planted rigs live at the census's own address dimension. Below ~6 dims the
@@ -146,42 +148,103 @@ def test_negative_narrow_wells_are_retrievable_but_not_addressable():
 ARM_B_BANKED_A3B = (-0.609375, -0.609375, -0.5625)
 
 
+#: ⭐⭐ **C2W8 CLOSE-OUT, item (iv) + acceptance 3 — N1 IS REWRITTEN, NOT DELETED.**
+#: As originally filed, N1 fed ``a2 = 1.0`` from arm B's banked
+#: ``usage.frac_never_read``. That is the **launch-point** statistic Advisor
+#: erratum 1 (§A31.1) RETIRED: ``covered`` is computed on ``q0`` against the
+#: codebook, so it is store-invariant by construction. Arm B's **measured**
+#: settle-side G-ADDR legs (`GATE-ADDR-VALIDATED.json::arm_rescores`) are
+#: ``A1 = 0.9297 / 0.9844 / 0.8750`` (pass 3/3) and ``A2 = 0.0625 / 0.0 / 0.125``
+#: (pass 3/3); it failed **only** on A3, the launder margin — which charter
+#: §A33.1 now labels a **DIAGNOSTIC, never a pass condition**.
+#: ⇒ Under the repaired instrument arm B's banked configuration **PASSES the two
+#: MECHANICS legs.** That is a mechanical consequence of a ratified rule, ⛔ not a
+#: re-scoring into a claim and ⛔ not an arm-race adjudication (§A30.1: the race
+#: is VOID and stays unadjudicated; arm B is claim-barred regardless).
+#: The live designed negatives that make G-ADDR falsifiable are N1' and N2 below
+#: — planted, ground-truth, and running the shipped code, not banked arithmetic.
+ARM_B_BANKED_A2_SETTLE_SIDE = (0.0625, 0.0, 0.125)
+ARM_B_BANKED_A1 = (0.9296875, 0.984375, 0.875)
+
+
 def _legs(a1, a2, a3a, a3b, n_items=16, n_q=128):
-    """A leg dict in `gate_addr`'s shape, for pinning the verdict ARITHMETIC."""
+    """A leg dict in `gate_addr`'s shape, for pinning the verdict ARITHMETIC.
+
+    ⭐ Mirrors the shipped rule **as amended by the close-out**: the pass
+    condition is the two MECHANICS legs (A1, A2); A3 is measured, reported and
+    excluded (§A33.1).
+    """
     chance = 1.0 / n_items
     se = float(np.sqrt(chance * (1 - chance) / n_q))
     thr = max(4.0 * chance, chance + 2 * se)
+    n_correct = int(round(a1 * n_q))
+    n_needed = int(np.ceil(thr * n_q - 1e-9))
+    a1_pass = bool(a1 >= thr)
     return {
-        "A1": {"correct_basin_rate": a1, "pass": bool(a1 >= thr),
-               "threshold": thr, "chance": chance},
-        "A2": {"never_addressed_frac": a2, "pass": bool(a2 <= GADDR_A2_MAX)},
+        "A1": {"correct_basin_rate": a1, "pass": a1_pass,
+               "threshold": thr, "chance": chance, "se": se,
+               "margin_in_se_vs_threshold": float((a1 - thr) / se),
+               "n_correct": n_correct, "n_correct_needed": n_needed,
+               "reads_to_flip": (n_correct - n_needed + 1 if a1_pass
+                                 else n_needed - n_correct),
+               "label": "MECHANICS"},
+        "A2": {"never_addressed_frac": a2, "pass": bool(a2 <= GADDR_A2_MAX),
+               "label": "MECHANICS"},
         "A3": {"A3a_cue_margin": a3a, "A3a_pass": bool(a3a > 0),
                "A3b_stream_margin": a3b, "A3b_applicable": True,
                "A3b_pass": bool(a3b > 0),
+               "label": "DIAGNOSTIC", "in_pass_condition": False,
                "pass": bool(a3a > 0 and a3b > 0)},
-        "gate_addr_pass": bool(a1 >= thr and a2 <= GADDR_A2_MAX and a3a > 0
-                               and a3b > 0),
+        # ⛔ A3 is NOT in the pass condition (close-out acceptance 3)
+        "gate_addr_pass": bool(a1 >= thr and a2 <= GADDR_A2_MAX),
     }
 
 
-def test_arm_b_banked_configuration_fails_gate_addr():
-    legs = [_legs(a1=1.0, a2=1.0, a3a=+1.0, a3b=m) for m in ARM_B_BANKED_A3B]
+def test_arm_b_banked_configuration_fails_only_on_the_diagnostic_leg():
+    """⭐ The rewritten N1, stated honestly and in both directions."""
+    legs = [_legs(a1=a1, a2=a2, a3a=-0.0625, a3b=m)
+            for a1, a2, m in zip(ARM_B_BANKED_A1, ARM_B_BANKED_A2_SETTLE_SIDE,
+                                 ARM_B_BANKED_A3B, strict=True)]
     v = gate_addr_verdict(legs, min_seeds=3)
-    assert v["gate_addr_pass"] is False, v
-    assert v["A2_pass_seeds"] == 0 and v["A3_pass_seeds"] == 0, v
-    # ⛔ and it fails on the two legs the pass-2 gate could not see, on EVERY seed
-    for lg in legs:
-        assert lg["A2"]["pass"] is False
-        assert lg["A3"]["A3b_pass"] is False
+    # the MECHANICS legs pass on the MEASURED (settle-side) numbers ...
+    assert v["A1_pass_seeds"] == 3 and v["A2_pass_seeds"] == 3, v
+    # ... and A3, the launder margin, fails 3/3 — as a DIAGNOSTIC column
+    assert v["A3_pass_seeds"] == 0, v
+    assert "DIAGNOSTIC" in v["A3_label"]
+    assert v["gate_addr_pass"] is True, v
+    # ⛔ the retired launch-side statistic must never be substituted for A2 again
+    launch_side_a2 = 1.0   # arm B's banked usage.frac_never_read, 3/3 seeds
+    assert launch_side_a2 != ARM_B_BANKED_A2_SETTLE_SIDE[0]
+
+
+def test_the_launder_margin_is_a_diagnostic_and_cannot_decide_the_verdict():
+    """⭐⭐ Acceptance 3 (§A33.1): A3 out of the pass condition, pinned.
+
+    Two leg sets identical except for A3 must produce the **same** verdict.
+    """
+    good_a3 = [_legs(a1=0.9, a2=0.0, a3a=+1.0, a3b=+1.0) for _ in range(3)]
+    bad_a3 = [_legs(a1=0.9, a2=0.0, a3a=-1.0, a3b=-1.0) for _ in range(3)]
+    v_good = gate_addr_verdict(good_a3, min_seeds=3)
+    v_bad = gate_addr_verdict(bad_a3, min_seeds=3)
+    assert v_good["gate_addr_pass"] == v_bad["gate_addr_pass"] is True
+    assert v_good["A3_pass_seeds"] == 3 and v_bad["A3_pass_seeds"] == 0
+    # ... while a MECHANICS leg still decides it
+    assert gate_addr_verdict([_legs(a1=0.0, a2=0.0, a3a=+1.0, a3b=+1.0)] * 3,
+                             min_seeds=3)["gate_addr_pass"] is False
 
 
 def test_arm_b_would_have_passed_the_pass_two_gate_legs():
     """The defect class, stated as a test: arm B's banked G-CAP/G-DEC/G-DRIFT all
-    pass 3/3 (`census_armB.json::gate`), and G-ADDR is what changes the verdict."""
+    pass 3/3 (`census_armB.json::gate`) — the pass-2 gate could not see
+    addressability at all. ⚠ What G-ADDR changed about arm B's verdict was
+    re-read by the close-out (§A33.1): its A1/A2 pass and only the DIAGNOSTIC
+    launder margin fails."""
     pass2 = {"G_CAP": [True] * 3, "G_DEC": [True] * 3, "G_DRIFT": [True] * 3}
     assert all(all(v) for v in pass2.values())
-    legs = [_legs(a1=1.0, a2=1.0, a3a=+1.0, a3b=m) for m in ARM_B_BANKED_A3B]
-    assert gate_addr_verdict(legs, min_seeds=3)["gate_addr_pass"] is False
+    # the leg that can still fail arm-B-class stores is A1/A2 — proven live by
+    # the planted N1' (narrow wells) above, not by banked arithmetic.
+    assert gate_addr_verdict([_legs(a1=0.0, a2=1.0, a3a=+1.0, a3b=+1.0)] * 3,
+                             min_seeds=3)["gate_addr_pass"] is False
 
 
 # --------------------------------------------------------------------------
@@ -199,7 +262,115 @@ def test_scale_only_control_does_not_move_gate_addr(a):
     assert g1["cue_sigma_over_codebook_spacing"] == pytest.approx(
         g0["cue_sigma_over_codebook_spacing"], rel=1e-6)
     d = abs(g1["A1"]["correct_basin_rate"] - g0["A1"]["correct_basin_rate"])
+    # ⭐ close-out item (iii): the metric bound is now the DIAGNOSTIC ...
     assert d <= 0.05, (d, g0["A1"], g1["A1"])
+    # ... and the VERDICT is the pass condition
+    guard = scale_guard([("1.0", g0), (str(a), g1)])
+    assert guard["verdict_stable"] is True, guard
+    assert guard["scale_guard_pass"] is True, guard
+
+
+# --------------------------------------------------------------------------
+# ⭐⭐ C2W8 CLOSE-OUT item (iii) — THE REPAIRED SCALE GUARD ASSERTS THE VERDICT
+# --------------------------------------------------------------------------
+#: The exact banked pair the OLD guard passed and should not have
+#: (`c2w8p3-capture-strong-phi` §7): a **legal** full-state co-scaled rescale
+#: (a = 0.8, payload co-scaled) moved A1 0.24219 -> 0.28906 across the registered
+#: 0.25 threshold. |dA1| = 0.04688 <= 0.05 => the metric bound HELD, and the
+#: leg's verdict flipped False -> True, the baseline sitting ONE READ below the
+#: threshold.
+BANKED_SCALE_FLIP = (0.24219, 0.28906)
+
+
+def test_scale_guard_fails_on_the_banked_metric_bounded_verdict_flip():
+    """⛔ The designed negative of the repaired guard: bounded metric, flipped
+    verdict, and the guard must FAIL. The old guard passed this exact pair."""
+    a1_lo, a1_hi = BANKED_SCALE_FLIP
+    lo = _legs(a1=a1_lo, a2=0.375, a3a=-0.078, a3b=-0.031)
+    hi = _legs(a1=a1_hi, a2=0.375, a3a=-0.117, a3b=+0.016)
+    # the registered threshold is 0.25 at n_items = 16, and the pair straddles it
+    assert lo["A1"]["threshold"] == pytest.approx(0.25, abs=1e-9)
+    assert lo["A1"]["pass"] is False and hi["A1"]["pass"] is True
+    g = scale_guard([("a=1.0", lo), ("a=0.8 (full-state co-scaled)", hi)])
+    # the OLD guard's condition still holds — and is reported as a DIAGNOSTIC ...
+    assert abs(a1_hi - a1_lo) <= 0.05
+    assert g["metric_bounded_DIAGNOSTIC"] is True, g
+    # ... while the REPAIRED guard fails, because the verdict moved
+    assert g["verdict_stable"] is False, g
+    assert g["scale_guard_pass"] is False, g
+    assert "A1" in " ".join(g["legs_flipped"]) and "gate_addr_pass" in " ".join(
+        g["legs_flipped"]), g
+
+
+def test_scale_guard_passes_only_when_every_leg_boolean_is_stable():
+    stable = [("a=1.0", _legs(a1=0.90, a2=0.0, a3a=+1.0, a3b=+1.0)),
+              ("a=0.8", _legs(a1=0.61, a2=0.0, a3a=+1.0, a3b=+1.0))]
+    g = scale_guard(stable)
+    assert g["verdict_stable"] is True and g["scale_guard_pass"] is True
+    # ⛔ a HUGE metric move with a stable verdict passes the guard: the guard is
+    # about the verdict, and the metric movement is reported beside it
+    assert g["metric_bounded_DIAGNOSTIC"] is False, g
+    assert g["by_scale"][0]["abs_delta_A1"] == pytest.approx(0.29, abs=1e-9)
+    # one scale is not a guard — declared, never a null
+    assert scale_guard(stable[:1])["scale_guard_pass"] is False
+    assert "NOT INFORMATIVE" in scale_guard(stable[:1])["status"]
+
+
+def test_the_legal_rescale_is_full_state_co_scaling_including_the_payload():
+    """§A31.6, Head-ratified: address-only rescaling is NOT a symmetry."""
+    from chlu.experiments.exp_well_lifecycle import full_state_coscaled_config
+
+    cfg = get_default_config()
+    w0 = cfg.experiment_well_lifecycle
+    base_addr, base_pay = float(w0.addr_scale_mult), float(w0.payload_scale)
+    out = full_state_coscaled_config(cfg, 0.8).experiment_well_lifecycle
+    assert out.addr_scale_mult == pytest.approx(base_addr * 0.8)
+    # payload = (label - 4.5) / payload_scale, so /0.8 multiplies the PAYLOAD
+    assert out.payload_scale == pytest.approx(base_pay / 0.8)
+    assert cfg.experiment_well_lifecycle.addr_scale_mult == base_addr  # no mutation
+    assert "payload" in LEGAL_RESCALE and "NOT a symmetry" in LEGAL_RESCALE
+    with pytest.raises(ValueError):
+        full_state_coscaled_config(cfg, 0.0)
+
+
+# --------------------------------------------------------------------------
+# ⭐⭐ C2W8 CLOSE-OUT item (ii) — A1's MARGIN-IN-SE BESIDE THE BOOLEAN
+# --------------------------------------------------------------------------
+def test_a1_reports_its_margin_and_reads_to_flip_beside_the_boolean():
+    """⚠ `randconv` scored 31 / 31 / 29 of 128 against a 32/128 threshold — it
+    failed by ONE read on 2 of 3 seeds. A discrete threshold reported without its
+    margin turns a tie into a verdict."""
+    n_items, n_q = 16, 128
+    thr = max(4.0 / n_items, 1.0 / n_items + 2.0 * float(
+        np.sqrt((1 / 16) * (15 / 16) / n_q)))
+    assert thr == pytest.approx(0.25, abs=1e-9)
+    assert int(np.ceil(thr * n_q - 1e-9)) == 32          # the 32/128 threshold
+    for n_correct, expect_pass, flip in ((31, False, 1), (29, False, 3),
+                                         (32, True, 1), (40, True, 9)):
+        lg = _legs(a1=n_correct / n_q, a2=0.0, a3a=0.0, a3b=0.0)
+        assert lg["A1"]["pass"] is expect_pass
+        assert lg["A1"]["reads_to_flip"] == flip, (n_correct, lg["A1"])
+    # and the margin is emitted in SE units against the THRESHOLD, not chance
+    lg = _legs(a1=31 / n_q, a2=0.0, a3a=0.0, a3b=0.0)
+    assert lg["A1"]["margin_in_se_vs_threshold"] < 0.0
+    assert lg["A1"]["margin_in_se_vs_threshold"] == pytest.approx(
+        (31 / n_q - thr) / lg["A1"]["se"], rel=1e-9)
+
+
+def test_gate_addr_emits_the_margin_everywhere_a1_is_emitted():
+    sysm, _ = _planted_system(n=6, depth=1.0, width=0.30)
+    g = _addr(sysm, seed=0)
+    for k in ("margin_in_se", "margin_in_se_vs_chance",
+              "margin_in_se_vs_threshold", "n_correct", "n_correct_needed",
+              "reads_to_flip", "label"):
+        assert k in g["A1"], (k, sorted(g["A1"]))
+    assert g["A1"]["label"] == "MECHANICS"
+    assert g["A3"]["label"] == "DIAGNOSTIC" and g["A3"]["in_pass_condition"] is False
+    # the arm-level emitter carries them too
+    v = gate_addr_verdict([g], min_seeds=1)
+    assert v["A1_margin_in_se_vs_threshold_by_seed"][0] == pytest.approx(
+        g["A1"]["margin_in_se_vs_threshold"])
+    assert v["A1_reads_to_flip_by_seed"] == [g["A1"]["reads_to_flip"]]
 
 
 # --------------------------------------------------------------------------
