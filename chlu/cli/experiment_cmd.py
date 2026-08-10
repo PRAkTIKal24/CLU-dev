@@ -562,6 +562,63 @@ def setup_experiment_parsers(subparsers):
     exp_ct_parser.add_argument('--out-dir', help='Output directory for artifacts')
     exp_ct_parser.set_defaults(func=cmd_exp_cat_test)
 
+    # ==================================================================
+    # C2W11 (THE COMPOSITIONAL WAVE) -- all THREE subcommands are landed
+    # together, by spoke A, in one commit. This is the wave's declared
+    # conflict-elimination measure: `experiment_cmd.py` is a shared file and
+    # three concurrent spokes would otherwise collide in it. Spokes B and C
+    # own their MODULES, never this file.
+    # ==================================================================
+    # exp-c2w11-substrate (spoke A): the repaired substrate + K0-K8 + M1-M6
+    exp_c11a_parser = subparsers.add_parser(
+        'exp-c2w11-substrate',
+        help='C2W11 spoke A: the repaired substrate (placing write, re-selected '
+             'co-scaled widths, feature-factored launches) and every '
+             'kill-condition K0-K8, run FIRST'
+    )
+    exp_c11a_parser.add_argument('--project', help='Project name to use')
+    exp_c11a_parser.add_argument('--seeds', type=int, nargs='+', default=[0, 1, 2],
+                                 help='Claim seeds (selection uses 100/101/102)')
+    exp_c11a_parser.add_argument('--quick', action='store_true',
+                                 help='Quick mode (small family, short settles)')
+    exp_c11a_parser.add_argument(
+        '--stages', nargs='+',
+        choices=['k0', 'm6', 'width', 'k1', 'k2', 'k3', 'k4', 'k5', 'k6',
+                 'k7cap', 'k8', 'm4', 'm5', 'coverage', 'freeze'],
+        help='Stages to run (default: all, in the PRE-REGISTERED order '
+             'k0 -> m6 -> width -> k7cap/k6 -> k1 -> k2 -> k3 -> k4 -> k5 -> k8)')
+    exp_c11a_parser.add_argument('--out-dir', help='Output directory for artifacts')
+    exp_c11a_parser.set_defaults(func=cmd_exp_c2w11_substrate)
+
+    # exp-c2w11-organizer (spoke B): the physics organizer + psi + the read
+    exp_c11b_parser = subparsers.add_parser(
+        'exp-c2w11-organizer',
+        help='C2W11 spoke B: the physics organizer, the DeepSets psi read and '
+             'the V-leg scores (GATED on spoke A freezing the interfaces)'
+    )
+    exp_c11b_parser.add_argument('--project', help='Project name to use')
+    exp_c11b_parser.add_argument('--seeds', type=int, nargs='+',
+                                 default=[0, 1, 2, 3, 4], help='Score seeds')
+    exp_c11b_parser.add_argument('--quick', action='store_true', help='Quick mode')
+    exp_c11b_parser.add_argument('--stages', nargs='+', help='Stages to run')
+    exp_c11b_parser.add_argument('--out-dir', help='Output directory for artifacts')
+    exp_c11b_parser.set_defaults(func=cmd_exp_c2w11_organizer)
+
+    # exp-c2w11-nulls (spoke C): the matched-capacity organizer swap
+    exp_c11c_parser = subparsers.add_parser(
+        'exp-c2w11-nulls',
+        help='C2W11 spoke C: the matched-capacity non-physics organizers on the '
+             'frozen interfaces (GATED on spoke A freezing the interfaces)'
+    )
+    exp_c11c_parser.add_argument('--project', help='Project name to use')
+    exp_c11c_parser.add_argument('--seeds', type=int, nargs='+',
+                                 default=[0, 1, 2, 3, 4], help='Score seeds')
+    exp_c11c_parser.add_argument('--quick', action='store_true', help='Quick mode')
+    exp_c11c_parser.add_argument('--arms', nargs='+', help='Subset of null arms')
+    exp_c11c_parser.add_argument('--stages', nargs='+', help='Stages to run')
+    exp_c11c_parser.add_argument('--out-dir', help='Output directory for artifacts')
+    exp_c11c_parser.set_defaults(func=cmd_exp_c2w11_nulls)
+
     # exp-null-arms (C2W5, the matched-capacity organizer audit: N1-N5)
     exp_na_parser = subparsers.add_parser(
         'exp-null-arms',
@@ -1021,6 +1078,79 @@ def cmd_exp_cat_test(args):
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
     return 0
+
+
+def cmd_exp_c2w11_substrate(args):
+    """C2W11 spoke A: the repaired substrate and every kill-condition."""
+    console.print("[bold cyan]Running C2W11 spoke A "
+                  "(repaired substrate + K0-K8, kills FIRST)[/bold cyan]")
+
+    from ..experiments.exp_c2w11_substrate import run_c2w11_substrate
+    try:
+        kw = {}
+        if getattr(args, 'stages', None):
+            kw['stages'] = tuple(args.stages)
+        run_c2w11_substrate(
+            project=getattr(args, 'project', None),
+            seeds=tuple(getattr(args, 'seeds', (0, 1, 2)) or (0, 1, 2)),
+            quick=bool(getattr(args, 'quick', False)),
+            out_dir=getattr(args, 'out_dir', None),
+            **kw,
+        )
+        console.print("✓ C2W11 substrate + kill-conditions completed",
+                      style="bold green")
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+    return 0
+
+
+def _c2w11_gated(name: str, module: str, fn: str):
+    """The two GATED C2W11 spokes share one stub body.
+
+    ⛔ Spoke A lands these subcommands so that spokes B and C never touch this
+    shared file. Until their modules exist the stub says so **by name** rather
+    than dying in an import traceback — a missing spoke is a declared NOT-RUN,
+    not a crash.
+    """
+    def run(args):
+        console.print(f"[bold cyan]Running C2W11 {name}[/bold cyan]")
+        try:
+            mod = __import__(f"chlu.experiments.{module}", fromlist=[fn])
+        except ImportError:
+            console.print(
+                f"✗ C2W11 {name} is NOT LANDED: chlu/experiments/{module}.py "
+                "does not exist yet. The subcommand is registered by spoke A "
+                "(the wave's conflict-elimination measure); its owner spoke "
+                "supplies the module.", style="bold yellow")
+            return 1
+        kw = {}
+        for opt in ('stages', 'arms'):
+            if getattr(args, opt, None):
+                kw[opt] = tuple(getattr(args, opt))
+        try:
+            getattr(mod, fn)(
+                project=getattr(args, 'project', None),
+                seeds=tuple(getattr(args, 'seeds', ()) or ()),
+                quick=bool(getattr(args, 'quick', False)),
+                out_dir=getattr(args, 'out_dir', None),
+                **kw,
+            )
+        except Exception as e:  # pragma: no cover - owner spoke's territory
+            console.print(f"✗ Error: {e}", style="bold red")
+            return 1
+        console.print(f"✓ C2W11 {name} completed", style="bold green")
+        return 0
+
+    return run
+
+
+cmd_exp_c2w11_organizer = _c2w11_gated(
+    "spoke B (physics organizer + psi)", "exp_c2w11_organizer",
+    "run_c2w11_organizer")
+cmd_exp_c2w11_nulls = _c2w11_gated(
+    "spoke C (matched-capacity organizer swap)", "exp_c2w11_nulls",
+    "run_c2w11_nulls")
 
 
 def cmd_exp_null_arms(args):
