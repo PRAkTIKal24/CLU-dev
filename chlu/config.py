@@ -2930,6 +2930,75 @@ class ExperimentPhiGeometryConfig:
 # --- END c2w8p3-phi-geometry -------------------------------------------------
 
 
+# --- BEGIN c2w8p3-capture-strong-phi (additive) ------------------------------
+@dataclass
+class ExperimentCaptureStrongPhiConfig:
+    """⭐ C2W8 **PASS 3, THE SPINE** — *does the physics add anything once the
+    encoder is not the bottleneck?* (:mod:`chlu.experiments.exp_capture_strong_phi`).
+
+    The frozen census + the **COMPLETED** gate (G-CAP · G-DEC · G-DRIFT ·
+    **G-ADDR**) run on arm A's **co-scaled-width** store over the strong-φ rig,
+    on **Split-CIFAR-10** (Head ruling R1: the substrate where the encoders were
+    built and priced). ⛔ Pass-1/pass-2 census numbers are MNIST and are **not**
+    the baseline; the weak-φ comparison is the ``pca`` reference arm **in this
+    same run, at the same** ``addr_dim``.
+
+    ⛔ **The store arm is "CO-SCALED WIDTH", not "compact"** (§A29.4(i)): kernel
+    form is a declared SECONDARY axis, never the headline. ⚠ The banked arm-A
+    census ran at ``atom_width_frac_spacing = 1.5``, which is **not** the
+    :class:`ExperimentCaptureArmAConfig` default (0.5, the pilot cell); it is
+    therefore declared explicitly here so the spine cannot silently score a
+    different store (`c2w8p3-gate-addr` reconciliation item 2).
+
+    ⛔ ``(addr_dim, atom budget)`` is **ONE joint dial**: ``n_atoms = round(512 *
+    sqrt(2)**d)``. ``addr_dim = 12`` ⇒ **32 768 atoms**. The geometry-favoured
+    ``d = 16`` is **NOT** run: wt2 measured the store **inert** there
+    (median fitted depth 5.44e-7 at a fully honoured 131 072-atom budget), and an
+    inert store makes a census vacuous for a reason that is **not** the gate's
+    reason (Head ruling R1's attached risk; R3 resolved by measurement).
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    dataset: str = "cifar10"  # Head ruling R1
+
+    #: ⭐ the joint dial's first half. 12 ⇒ 32 768 atoms. ⛔ never 16 (inert).
+    addr_dim: int = 12
+
+    #: the arms, in run order. ``pca`` is the INTERNAL weak-φ reference at the
+    #: SAME ``addr_dim``, run in this same harness — never a banked number.
+    arms: List[str] = field(default_factory=lambda: ["randconv", "simclr", "pca"])
+    phi_arm_strong: str = "simclr"  # the primary (built + priced, enc_steps=8000)
+    phi_arm_control: str = "randconv"  # the cheap unfitted control arm
+    phi_arm_reference: str = "pca"  # ⛔ the weak-φ reference, at MATCHING d
+    phi_dim_strong: int = 256  # the conv arms' φ width, BEFORE the map
+    phi_regime: str = "task1_only"  # binding; no leakage from unseen tasks
+    enc_steps: int = 8000  # the priced encoder, unchanged
+    n_fit_region: int = 25000
+    n_fit_pool: int = 6000
+
+    #: the declared φ_dim → addr_dim map (wt2's; Head ruling R2). The ``pca``
+    #: reference is built at ``phi_dim = addr_dim`` and mapped by ``identity``,
+    #: which is provably neutral (PCA-of-PCA = PCA).
+    projection: str = "pca"
+
+    # ---- the store: arm A's CO-SCALED WIDTH, declared not inherited ----
+    atom_width_frac_spacing: Optional[float] = 1.5  # ⭐ the BANKED value, not 0.5
+    atom_kernel: str = "wendland"  # SECONDARY axis (§A29.4(i)), never the headline
+    atom_kernel_cutoff: float = 2.5
+    site_local_init: bool = True
+    site_local_radius_frac: float = 1.0
+
+    #: ⭐ the D2a diagnostic (§A29.6): does the settled point approach a
+    #: deterministic function of the stored key? Reported TWO-SIDED; ⛔ never a
+    #: target. Costs one extra read on the G-ADDR cue set.
+    d2a_probe: bool = True
+
+    quick: bool = False
+
+
+# --- END c2w8p3-capture-strong-phi -------------------------------------------
+
+
 @dataclass
 class ExperimentCaptureArmAConfig:
     """⭐ C2W8 **PASS 2, ARM A** — *make the store capture by bounding how far each
@@ -3150,6 +3219,11 @@ class CHLUConfig:
         default_factory=ExperimentPhiGeometryConfig
     )
     # --- END c2w8p3-phi-geometry ---
+    # --- BEGIN c2w8p3-capture-strong-phi (additive) ---
+    experiment_capture_strong_phi: ExperimentCaptureStrongPhiConfig = field(
+        default_factory=ExperimentCaptureStrongPhiConfig
+    )
+    # --- END c2w8p3-capture-strong-phi ---
     experiment_capture_arm_a: ExperimentCaptureArmAConfig = field(
         default_factory=ExperimentCaptureArmAConfig
     )
@@ -3353,6 +3427,14 @@ def load_config(path: Path) -> CHLUConfig:
             )
         ),
         # --- END c2w8p3-phi-geometry ---
+        # --- BEGIN c2w8p3-capture-strong-phi (additive) ---
+        experiment_capture_strong_phi=ExperimentCaptureStrongPhiConfig(
+            **filter_valid_fields(
+                ExperimentCaptureStrongPhiConfig,
+                data.get("experiment_capture_strong_phi", {}),
+            )
+        ),
+        # --- END c2w8p3-capture-strong-phi ---
         experiment_capture_arm_a=ExperimentCaptureArmAConfig(
             **filter_valid_fields(
                 ExperimentCaptureArmAConfig,
@@ -3415,6 +3497,9 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         # --- BEGIN c2w8p3-phi-geometry (additive) ---
         "experiment_phi_geometry": asdict(config.experiment_phi_geometry),
         # --- END c2w8p3-phi-geometry ---
+        # --- BEGIN c2w8p3-capture-strong-phi (additive) ---
+        "experiment_capture_strong_phi": asdict(config.experiment_capture_strong_phi),
+        # --- END c2w8p3-capture-strong-phi ---
         "experiment_capture_arm_a": asdict(config.experiment_capture_arm_a),
         "experiment_capture_armb": asdict(config.experiment_capture_armb),
         "data": asdict(config.data),

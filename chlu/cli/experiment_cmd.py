@@ -41,6 +41,11 @@ from ..experiments.exp_well_lifecycle import (
 from ..experiments.exp_capture_armB import (
     run_experiment_capture_armb,
 )
+# --- BEGIN c2w8p3-capture-strong-phi (additive) ---
+from ..experiments.exp_capture_strong_phi import (
+    run_experiment_capture_strong_phi,
+)
+# --- END c2w8p3-capture-strong-phi ---
 # --- BEGIN c2w8p3-phi-geometry (additive) ---
 from ..experiments.exp_phi_geometry import (
     run_experiment_phi_geometry,
@@ -429,6 +434,26 @@ def setup_experiment_parsers(subparsers):
                                help='Quick mode (tiny stream, 2 steps of phi)')
     exp_pg_parser.set_defaults(func=cmd_exp_phi_geometry)
     # --- END c2w8p3-phi-geometry ---
+    # --- BEGIN c2w8p3-capture-strong-phi (additive) ---
+    # exp-capture-strong-phi (C2W8 pass 3, THE SPINE: the completed gate at strong phi)
+    exp_csp_parser = subparsers.add_parser(
+        'exp-capture-strong-phi',
+        help='C2W8 pass 3 SPINE: the frozen census + the COMPLETED gate '
+             '(G-CAP/G-DEC/G-DRIFT/G-ADDR) on arm A co-scaled-width store over the '
+             'strong-phi Split-CIFAR-10 rig, with an INTERNAL pca-phi reference at '
+             'the same d. Both branches (daylight / no daylight) are reportable.'
+    )
+    exp_csp_parser.add_argument('--project', help='Project name to use')
+    exp_csp_parser.add_argument('--seeds', help='Comma-separated seeds, e.g. 0,1,2')
+    exp_csp_parser.add_argument('--arms', help='Comma-separated arms, '
+                                               'e.g. randconv,simclr,pca')
+    exp_csp_parser.add_argument('--addr-dim', type=int, dest='addr_dim',
+                                help='Address dim (the joint dial with the atom '
+                                     'budget); 12 => 32768 atoms. 16 is INERT.')
+    exp_csp_parser.add_argument('--quick', action='store_true',
+                                help='Quick mode (tiny stream, tiny phi, 1 seed)')
+    exp_csp_parser.set_defaults(func=cmd_exp_capture_strong_phi)
+    # --- END c2w8p3-capture-strong-phi ---
     # exp-capture-armb (C2W8 pass 2, ARM B: the emission head on pass 1's census)
     exp_armb_parser = subparsers.add_parser(
         'exp-capture-armb',
@@ -1962,6 +1987,49 @@ def cmd_exp_phi_geometry(args):
 
     return 0
 # --- END c2w8p3-phi-geometry ---
+
+
+# --- BEGIN c2w8p3-capture-strong-phi (additive) ---
+def cmd_exp_capture_strong_phi(args):
+    """C2W8 pass 3, THE SPINE: the completed gate at strong φ."""
+    console.print(
+        "[bold cyan]Running Experiment CAPTURE-STRONG-PHI (C2W8 pass 3, the "
+        "SPINE): frozen census + the COMPLETED gate (G-CAP/G-DEC/G-DRIFT/G-ADDR) "
+        "at strong phi on Split-CIFAR-10[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+    if getattr(args, 'addr_dim', None):
+        config.experiment_capture_strong_phi.addr_dim = int(args.addr_dim)
+    seeds = ([int(s) for s in str(args.seeds).split(',')]
+             if getattr(args, 'seeds', None) else None)
+    arms = ([s.strip() for s in str(args.arms).split(',')]
+            if getattr(args, 'arms', None) else None)
+
+    try:
+        res = run_experiment_capture_strong_phi(
+            config=config,
+            save_dir=str(paths['plots']),
+            seeds=seeds,
+            arms=arms,
+            quick=getattr(args, 'quick', False),
+        )
+        console.print(
+            f"✓ Experiment CAPTURE-STRONG-PHI completed: "
+            f"branch={res['branch_by_arm']} gate={res['gate_pass_by_arm']} "
+            f"-> {res['json_path']}",
+            style="bold green",
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+# --- END c2w8p3-capture-strong-phi ---
 
 
 def cmd_exp_capture_armb(args):
