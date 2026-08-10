@@ -46,6 +46,7 @@ import numpy as np
 
 from chlu.config import CHLUConfig, get_default_config
 from chlu.core.clu_system import CluSystemConfig, build_system
+from chlu.core.soft_certificate import population_median_nn
 from chlu.core.well_lifecycle import census, gate_addr_verdict, unlock_verdict
 from chlu.experiments.usage_telemetry import (
     UsageTelemetry,
@@ -150,6 +151,109 @@ def store_config(cfg: CHLUConfig, seed: int, d_safe: float,
     )
 
 
+#: ⛔ Bound ONCE at import, so the width guard below can recover the census's own
+#: (un-substituted) store config even while an arm has substituted `store_config`.
+_BASE_STORE_CONFIG = store_config
+
+
+class UnselectedAtomWidth(RuntimeError):
+    """⭐⭐ **C2W8 close-out item (vi.5)** — the census REFUSED to run.
+
+    Arm A's banked pass-2/pass-3 runs used ``atom_width_frac_spacing = 1.5``,
+    passed on the CLI, while the shipped :class:`ExperimentCaptureArmAConfig`
+    default is **0.5** — a width `c2w8p3-gate-addr` measured **does not clear the
+    pass-2 gate**. A census that silently runs at a width nobody selected
+    produces numbers **nobody can attribute**, and the spine came within one
+    explicit declaration of scoring a different store than the one it reports.
+
+    So the census now recovers the width it is *about* to run at as a fraction of
+    the cell's own **measured** key spacing and refuses, loudly, unless that
+    fraction is **explicitly declared** somewhere in config.
+    """
+
+
+def _declared_atom_width_fractions(cfg: CHLUConfig) -> Dict[str, float]:
+    """Every atom-width fraction that is EXPLICITLY declared in config.
+
+    Resolution order (``experiment_well_lifecycle.atom_width_selection`` takes
+    absolute priority when set): the census's own pin, then each arm's own
+    declared fraction. An arm that co-scales its width without writing the
+    fraction into a config dataclass is exactly the unattributable case.
+    """
+    w = cfg.experiment_well_lifecycle
+    if w.atom_width_selection is not None:
+        return {"experiment_well_lifecycle.atom_width_selection":
+                float(w.atom_width_selection)}
+    out: Dict[str, float] = {}
+    for name in ("experiment_capture_arm_a", "experiment_capture_strong_phi"):
+        arm = getattr(cfg, name, None)
+        frac = getattr(arm, "atom_width_frac_spacing", None) if arm else None
+        if frac is not None:
+            out[f"{name}.atom_width_frac_spacing"] = float(frac)
+    return out
+
+
+def _assert_selected_atom_width(cfg: CHLUConfig, scfg: CluSystemConfig,
+                                spacing: float, *, seed: int,
+                                overrides: Optional[Dict[str, Any]] = None
+                                ) -> Dict[str, Any]:
+    """⭐ Refuse to census a store whose atom width nobody selected (item vi.5).
+
+    The width is **not** refused for being unusual — it is refused for being
+    **unattributable**. Three cases:
+
+    * the width equals the census's own un-substituted store config ⇒ the pass-1
+      path, nothing was co-scaled, **allowed**;
+    * the width equals a **declared** fraction of the measured key spacing ⇒
+      attributable, **allowed** (the source is recorded in the flag table);
+    * anything else ⇒ :class:`UnselectedAtomWidth`, naming the effective
+      fraction, every declared fraction, and how to declare this one.
+    """
+    w = cfg.experiment_well_lifecycle
+    base = _BASE_STORE_CONFIG(cfg, seed, float(scfg.d_safe_override or 0.0),
+                              overrides=overrides)
+    frac_eff = (float(scfg.atom_width) / float(spacing)
+                if float(spacing) > 0 else float("nan"))
+    declared = _declared_atom_width_fractions(cfg)
+    rtol = float(w.atom_width_selection_rtol)
+    source, matched = None, None
+    if abs(float(scfg.atom_width) - float(base.atom_width)) <= rtol * max(
+            abs(float(base.atom_width)), 1e-12):
+        source = "census default (not co-scaled; the pass-1 path)"
+    else:
+        for name, frac in declared.items():
+            if np.isfinite(frac_eff) and abs(frac_eff - frac) <= rtol * max(abs(frac), 1e-12):
+                source, matched = name, float(frac)
+                break
+    block = {
+        "atom_width": float(scfg.atom_width),
+        "key_spacing_used": float(spacing),
+        "atom_width_frac_spacing_effective": frac_eff,
+        "declared_selections": declared,
+        "selection_source": source,
+        "selection_value": matched,
+        "refuse_unselected_atom_width": bool(w.refuse_unselected_atom_width),
+        "rule": ("C2W8 close-out item (vi.5): the census REFUSES to run at a "
+                 "width nobody selected — the effective width fraction must "
+                 "match a fraction explicitly declared in config, or equal the "
+                 "census's own un-substituted default"),
+    }
+    if source is None and bool(w.refuse_unselected_atom_width):
+        raise UnselectedAtomWidth(
+            "⛔ THE CENSUS REFUSES TO RUN AT AN UNSELECTED ATOM WIDTH.\n"
+            f"  effective atom_width           = {float(scfg.atom_width):.6g}\n"
+            f"  measured key spacing           = {float(spacing):.6g}\n"
+            f"  => atom_width_frac_spacing     = {frac_eff:.6g}\n"
+            f"  census default atom_width      = {float(base.atom_width):.6g}\n"
+            f"  declared selections in config  = {declared or '{} (NONE)'}\n"
+            "  A census run at a width nobody selected produces numbers nobody "
+            "can attribute (charter §A31.6; arm A's banked 1.5 vs the shipped "
+            "default 0.5). Declare it: set "
+            "`experiment_well_lifecycle.atom_width_selection` to the fraction "
+            "you mean, or set the arm's own `atom_width_frac_spacing`.")
+    return block
+
+
 def label_to_payload(label: int, scale: float) -> float:
     """``(label - 4.5) / scale`` — a bounded, monotone, class-separating value.
 
@@ -199,12 +303,33 @@ def run_census_cell(cfg: CHLUConfig, seed: int, *, data=None,
                        scale=scale)
 
     # --- the admission radius: the CL entry's own sizing rule, frozen on task 1 ---
-    task1_keys = embed.keys(stream["train_X"][0][: min(200, len(stream["train_X"][0]))])
+    # ⭐⭐ C2W8 close-out item (v) + (vi.6) — ONE defect at three sites: the
+    # ~200-key SIZING spacing standing in for the ~16-item STORE spacing. It sized
+    # `d_safe` (=> monitor #3's 0.000 refusal rate was arithmetic), it normalised
+    # the G-ADDR cue jitter (=> arm-dependent cue difficulty, 30 % spread), and it
+    # produced the RETRACTED §A29.5 mechanism. Fixing the population choice fixes
+    # all three; `d_safe_population = "sizing"` restores the old behaviour exactly.
+    task1_keys = embed.keys(
+        stream["train_X"][0][: min(int(w.d_safe_sizing_n), len(stream["train_X"][0]))])
     med_nn = _median_nn(task1_keys)
-    d_safe = float(w.d_safe_frac) * med_nn
+    # ⛔ the population is the STORE's, i.e. `capacity` (16 on the shipped rig —
+    # the number the Advisor's erratum names), never the ~200-key sizing set.
+    spacing_pop = population_median_nn(task1_keys, int(w.capacity),
+                                       n_draws=int(w.d_safe_population_draws),
+                                       seed=int(seed))
+    med_nn_store = float(spacing_pop["median_nn_population"])
+    use_store_pop = str(w.d_safe_population).lower() == "store"
+    med_nn_for_d_safe = (med_nn_store if use_store_pop and np.isfinite(med_nn_store)
+                         else med_nn)
+    d_safe = float(w.d_safe_frac) * med_nn_for_d_safe
 
-    sysm = build_system(store_config(cfg, seed, d_safe, overrides=clu_overrides),
-                        key=jax.random.PRNGKey(seed), phi=embed, loud=False)
+    scfg = store_config(cfg, seed, d_safe, overrides=clu_overrides)
+    # ⭐ item (vi.5): the width the store will actually run at is recovered from
+    # the SAME spacing the store-config factory recovers it from
+    # (`d_safe / d_safe_frac`), and refused unless someone selected it.
+    width_block = _assert_selected_atom_width(cfg, scfg, med_nn_for_d_safe,
+                                              seed=seed, overrides=clu_overrides)
+    sysm = build_system(scfg, key=jax.random.PRNGKey(seed), phi=embed, loud=False)
     if post_build is not None:
         post_build(sysm, stream=stream, embed=embed, cfg=cfg, seed=seed)
     tel = UsageTelemetry()
@@ -311,7 +436,9 @@ def run_census_cell(cfg: CHLUConfig, seed: int, *, data=None,
     cen = census(sysm, tel, well_budget=int(w.well_budget), n_admitted=n_admitted,
                  seed=seed, n_dirs=int(w.capture_dirs),
                  bisect_steps=int(w.capture_bisect_steps),
-                 measure_capture=bool(w.measure_capture))
+                 measure_capture=bool(w.measure_capture),
+                 drift_floor_frac=float(w.gdrift_floor_frac_spacing),
+                 drift_ceil_frac=float(w.gdrift_ceil_frac_spacing))
     ids, _, _ = sysm.codebook()
     loo = (loo_loss_contribution(sysm, [int(i) for i in ids],
                                  repeats=int(w.loo_repeats), seed=seed)
@@ -321,7 +448,9 @@ def run_census_cell(cfg: CHLUConfig, seed: int, *, data=None,
     probe = sysm.self_probe()
     trips = _trip_state(sysm)
     usage = tel.summary(live_ids=[int(i) for i in ids])
-    g_addr = _gate_addr_block(sysm, cfg, cen, depth_trace, med_nn, seed, usage)
+    g_addr = _gate_addr_block(sysm, cfg, cen, depth_trace, med_nn, seed, usage,
+                              codebook_spacing=float(cen.get("codebook_spacing",
+                                                             float("nan"))))
     out = {
         "seed": int(seed),
         "census": cen,
@@ -345,31 +474,53 @@ def run_census_cell(cfg: CHLUConfig, seed: int, *, data=None,
             "n_live_end": cen["n_live"],
         },
         "geometry": {"phi_scale": scale, "median_nn_task1": med_nn, "d_safe": d_safe,
-                     "r95_phi_norm": r95},
+                     "r95_phi_norm": r95,
+                     # ⭐ item (v): the population the admission radius was sized
+                     # on, stated beside the sizing-set number it replaces.
+                     "median_nn_store_population": med_nn_store,
+                     "d_safe_population": str(w.d_safe_population),
+                     "d_safe_spacing_used": float(med_nn_for_d_safe),
+                     "spacing_population_block": spacing_pop},
+        # ⭐ item (vi.5): the width this cell actually ran at, and who selected it
+        "atom_width_selection": width_block,
         "phi_provenance": phi_prov,
         "flags": _flag_table(cfg, sysm, seed, d_safe),
         "bytes": _byte_ledger(sysm, launder, int(w.addr_dim)),
         "wall_s": float(time.time() - t0),
     }
     if verbose and isinstance(g_addr.get("A1"), dict):
+        # ⭐ item (ii): the margin-in-SE and reads-to-flip travel with the boolean
         print(f"  seed {seed}: G-ADDR A1={g_addr['A1']['correct_basin_rate']:.4f} "
-              f"(thr {g_addr['A1']['threshold']:.4f}, {g_addr['A1']['pass']}) "
+              f"(thr {g_addr['A1']['threshold']:.4f}, {g_addr['A1']['pass']}, "
+              f"margin {g_addr['A1']['margin_in_se_vs_threshold']:+.2f} SE, "
+              f"{g_addr['A1']['reads_to_flip']} read(s) from flipping) "
               f"A2={g_addr['A2']['never_addressed_frac']:.4f} ({g_addr['A2']['pass']}) "
-              f"A3a={g_addr['A3']['A3a_cue_margin']:+.4f} "
-              f"A3b={g_addr['A3']['A3b_stream_margin']} "
+              f"| A3 [DIAGNOSTIC, not in the pass condition] "
+              f"a={g_addr['A3']['A3a_cue_margin']:+.4f} "
+              f"b={g_addr['A3']['A3b_stream_margin']} "
               f"-> gate_addr_pass={g_addr['gate_addr_pass']}", flush=True)
     if verbose:
-        print(f"  seed {seed}: P={cen['P']:.4f} M={cen['M']:.4f} "
+        gd = cen["G_DRIFT_two_sided"]
+        pc = cen["P_comparability"]
+        print(f"  seed {seed}: P={cen['P']:.4f} (n_non_capturing="
+              f"{pc['n_non_capturing']}, comparable={pc['P_comparable_across_arms']}) "
+              f"M={cen['M']:.4f} "
               f"overdig={cen['overdig']:.2f} n_live={cen['n_live']} "
               f"theta_att={cen['theta_att_block']['theta_att']:.4g} "
               f"depth_med(raw/netted)={cen['depth_raw_median']:.4g}/"
               f"{cen['depth_netted_median']:.4g} [{out['wall_s']:.0f}s]", flush=True)
+        print(f"  seed {seed}: G-DRIFT two-sided ratio={gd['ratio']:.4g} in "
+              f"[{gd['floor_frac_spacing']:g}, {gd['ceil_frac_spacing']:g}) x "
+              f"codebook spacing -> {gd['pass']} "
+              f"(fails_low_D2a={gd['fails_low_D2a_table_expressible']}, "
+              f"fails_high={gd['fails_high_cannot_address']})", flush=True)
     return out
 
 
 def _gate_addr_block(system, cfg: CHLUConfig, cen: Dict[str, Any],
                      depth_trace: List[Dict[str, Any]], med_nn: float,
-                     seed: int, usage: Dict[str, Any]) -> Dict[str, Any]:
+                     seed: int, usage: Dict[str, Any],
+                     codebook_spacing: float = float("nan")) -> Dict[str, Any]:
     """⭐ G-ADDR on this cell (C2W8 pass 3) — wiring only; the leg lives in
     :func:`chlu.core.well_lifecycle.gate_addr`.
 
@@ -382,13 +533,24 @@ def _gate_addr_block(system, cfg: CHLUConfig, cen: Dict[str, Any],
       ``read_acc - knn_acc``, i.e. the census's held-out class accuracy against
       the ring-buffer kNN-in-``phi`` launder, **matched items**.
 
-    ⚠ The banked telemetry ``n_never_read`` is attached here as
-    ``banked_frac_never_read`` **with its caveat**: it counts a read only when
-    ``covered = True``, and ``covered`` is a LAUNCH-POINT test
-    (``min_j |q0 - c_j| <= 1/2 min-sep``), not a settle test. That is why pass 1
-    and pass 2 arm A report digit-identical 58/62/62-of-64 unassigned reads while
-    every capture metric moved: at fixed ``phi`` and a fixed admitted codebook the
-    statistic is very nearly a constant of the query distribution.
+    ⭐⭐ **C2W8 close-out item (vi.6): the cue jitter is normalised on the
+    CODEBOOK spacing.** ``kappa_q`` used to multiply ``median_nn_task1``, the
+    ~200-key **sizing** spacing, while the read must beat the **codebook**
+    spacing — which made the cue's real difficulty **arm-dependent** (0.927 /
+    0.875 / **0.710** across the pass-3 arms, a 30 % spread, so no cross-arm A1
+    comparison was scale-matched). ``gaddr_spacing_population = "sizing"``
+    restores the banked behaviour exactly. **Both** ratios are emitted on every
+    cell either way, so the comparison can never again be made blind to it.
+
+    ⭐⭐ **C2W8 close-out item (iv): the banked telemetry's caption is CORRECTED
+    here** (charter §A31.1). ``n_never_read`` was gated on ``covered``, a
+    LAUNCH-POINT test (``min_j |q0 - c_j| <= 1/2 min-sep``) — store-invariant by
+    construction, which is the mechanical explanation of the digit-identical
+    "58 / 62 / 62 of 64 unassigned reads" that was read as decisive and was
+    **vacuous**. The telemetry is now gated on the **settle-side**
+    ``settle_covered`` (:func:`chlu.experiments.usage_telemetry.attach_reads`),
+    and the launch-side quantity is emitted here **under its own name**,
+    ``launch_coverage_*``, so the retired sentence cannot be re-derived from it.
     """
     from chlu.core.well_lifecycle import gate_addr
 
@@ -405,26 +567,79 @@ def _gate_addr_block(system, cfg: CHLUConfig, cen: Dict[str, Any],
     se_stream = (float(np.sqrt((p_s * (1 - p_s) + p_l * (1 - p_l)) / max(n_stream, 1)))
                  if depth_trace else None)
     cap = [float(x["capture_radius"]) for x in cen["wells"]]
-    g = gate_addr(system, spacing=float(med_nn), kappa_q=float(w.gaddr_kappa_q),
+    use_codebook = str(w.gaddr_spacing_population).lower() == "codebook"
+    sp = (float(codebook_spacing) if use_codebook and np.isfinite(codebook_spacing)
+          else float(med_nn))
+    g = gate_addr(system, spacing=sp, kappa_q=float(w.gaddr_kappa_q),
                   n_query_per_item=int(w.gaddr_n_query_per_item), seed=int(seed),
                   capture=cap, stream_margin=stream_margin,
                   stream_margin_se=se_stream)
-    g["banked_telemetry"] = {
+    g["telemetry_launch_side"] = {
+        "launch_coverage_n_unassigned": usage.get("n_unassigned"),
+        "launch_coverage_n_read_events": usage.get("n_read_events"),
+        "label": ("LAUNCH-SIDE — a property of the query distribution against "
+                  "the codebook, ⛔ NOT of the store"),
+        "caveat": ("`covered` is a LAUNCH-POINT test on q0 "
+                   "(min_j |q0 - c_j| <= 1/2 min-sep): same phi + same admitted "
+                   "codebook ⇒ the same number whatever the store does. That is "
+                   "the mechanical explanation of the digit-identical "
+                   "58/62/62-of-64 'unassigned reads' reading, which is RETIRED "
+                   "(§A31.1). ⛔ It is NOT the A2 leg and never was."),
+    }
+    g["telemetry_settle_side"] = {
         "frac_never_read": usage.get("frac_never_read"),
         "n_never_read": usage.get("n_never_read"),
-        "n_unassigned": usage.get("n_unassigned"),
-        "n_read_events": usage.get("n_read_events"),
-        "caveat": ("`covered` (hence `n_unassigned`, hence `n_never_read`) is a "
-                   "LAUNCH-POINT coverage test on q0, not a settle test — it is "
-                   "very nearly a constant of the query distribution against the "
-                   "codebook and is NOT the A2 leg"),
+        "label": ("SETTLE-SIDE from the C2W8 close-out onward (gated on "
+                  "`settle_covered`); ⚠ values banked BEFORE it were "
+                  "launch-gated and are not comparable"),
+        "coverage_side": usage.get("coverage_side"),
     }
     g["A3"]["A3b_n_stream_queries"] = n_stream
     g["A3"]["A3b_read_acc_by_event"] = [float(t["read_acc"]) for t in depth_trace]
     g["A3"]["A3b_knn_acc_by_event"] = [float(t["knn_acc"]) for t in depth_trace]
-    g["spacing_source"] = "median_nn_task1 (the cell's own measured key spacing)"
+    # ⭐ item (vi.6): which population the cue jitter was normalised on, and BOTH
+    # ratios, on every cell — so no cross-arm comparison is made blind to it.
+    g["spacing_source"] = ("codebook_spacing (the live store's own median-NN — "
+                           "the resolution the read must beat)" if use_codebook
+                           else "median_nn_task1 (the ~200-key SIZING spacing)")
+    g["gaddr_spacing_population"] = str(w.gaddr_spacing_population)
+    g["median_nn_task1_sizing"] = float(med_nn)
+    g["cue_sigma_over_sizing_spacing"] = (
+        float(g["cue_sigma"] / med_nn) if med_nn > 0 else float("nan"))
     g["addr_scale_mult"] = float(w.addr_scale_mult)
     return g
+
+
+def full_state_coscaled_config(cfg: CHLUConfig, alpha: float) -> CHLUConfig:
+    """⭐⭐ **C2W8 close-out item (iii): the LEGAL rescale of this rig.**
+
+    Head-ratified (§A31.6): **address-only rescaling is NOT a symmetry of the
+    system — the payload channel is absolute.** An address-only rescale walks the
+    store across its own payload wall, which is why it moved arm A's ``A1`` by
+    −0.125 at ``a = 0.8`` and moved the *rig* (self-probe ``acq`` 0.4844 → 0.3203,
+    ``G-DEC`` 0.1484 → 0.1094, ``G-DRIFT`` ratio ×3.8) — a finding about the rig,
+    not a leg failure.
+
+    The legal rescale is **FULL-STATE co-scaling**: address **and** payload
+    together. On this rig that is exactly two knobs — ``addr_scale_mult x= a``
+    (the address ball) and ``payload_scale /= a`` (payloads are
+    ``(label - 4.5) / payload_scale``, so dividing the scale multiplies the
+    payload). Everything else geometric is **measured** from the keys and
+    co-scales for free (``d_safe``, the arms' co-scaled atom widths, the G-ADDR
+    cue jitter, the codebook spacing).
+
+    Returns a deep copy; ``cfg`` is untouched. Feed the resulting legs to
+    :func:`chlu.core.well_lifecycle.scale_guard`, whose pass condition is
+    **verdict stability**, not bounded metric movement.
+    """
+    a = float(alpha)
+    if not np.isfinite(a) or a <= 0.0:
+        raise ValueError(f"full-state co-scaling needs alpha > 0, got {alpha!r}")
+    out = copy.deepcopy(cfg)
+    w = out.experiment_well_lifecycle
+    w.addr_scale_mult = float(w.addr_scale_mult) * a
+    w.payload_scale = float(w.payload_scale) / a
+    return out
 
 
 def _query_batch(stream, t: int, n: int, seed: int):
@@ -569,6 +784,10 @@ def run_experiment_well_lifecycle(
         # ⭐ C2W8 pass 3: the arm-level G-ADDR verdict, computed mechanically
         "g_addr": (gate_addr_verdict(legs) if legs else
                    {"status": "NOT RUN — run_gate_addr = False (declared)"}),
+        # ⭐ C2W8 close-out: the hardened legs, per seed, at the top level
+        "g_drift_two_sided_by_seed": [c["census"]["G_DRIFT_two_sided"] for c in cells],
+        "P_comparability_by_seed": [c["census"]["P_comparability"] for c in cells],
+        "atom_width_selection_by_seed": [c["atom_width_selection"] for c in cells],
         "overdig_by_seed": [c["census"]["overdig"] for c in cells],
         "depth_raw_median_by_seed": [c["census"]["depth_raw_median"] for c in cells],
         "depth_netted_median_by_seed": [c["census"]["depth_netted_median"] for c in cells],
@@ -654,4 +873,6 @@ if __name__ == "__main__":
 __all__ = [
     "PhiAddress", "cl_config", "store_config", "label_to_payload",
     "run_census_cell", "run_experiment_well_lifecycle", "apply_quick",
+    # ⭐ C2W8 close-out (charter §A32.3)
+    "UnselectedAtomWidth", "full_state_coscaled_config",
 ]
