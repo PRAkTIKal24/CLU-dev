@@ -50,6 +50,29 @@ silently: the SC-6 capture instrument's ``tol/expansion_rate`` floor and its
 confinement-minimum false positive (:func:`capture_radii`), ``theta_att``'s
 arm-dependent dynamic range (:func:`measure_theta_att`), and the kernel-mismatch
 repair of :func:`own_foreign_site_depth`.
+
+---
+
+⭐⭐ **C2W8 CLOSE-OUT (charter §A32.3: "no future census number is quotable until
+these land") — three repairs live in this module:**
+
+* :func:`drift_leg` — **G-DRIFT is now TWO-SIDED.** Across all nine pass-3 cells
+  the gate's score was a near-monotone function of settle-collapse
+  (``rho(A1, G-DRIFT ratio) = -0.967``), i.e. **it rewarded table-behaviour** —
+  the D2a configuration §8.2 prohibits. ``drift -> 0`` now **fails**, on a floor
+  derived from the **measured codebook spacing**, with a planted designed
+  negative in ``tests/test_well_lifecycle.py``.
+* :func:`gate_addr` — **A3 (the launder margin) is re-labelled DIAGNOSTIC and
+  REMOVED from the pass condition** (§A33.1: a launder margin on a component gate
+  is never a pass condition; §A34.8 re-scopes G-ADDR as a per-feature MECHANICS
+  instrument, permanently barred from VALUE duty). Every A1 boolean is emitted
+  **beside its margin in SE and its ``reads_to_flip``** — pass 3's `randconv`
+  failed A1 by ONE read on 2 of 3 seeds.
+* :func:`scale_guard` — the repaired §4 guard. The old one **bounded the METRIC
+  and not the VERDICT**: a legal rescale moved A1 by +0.0469 (inside the
+  registered 0.05 bound) and still flipped the leg's verdict. The pass condition
+  is now **verdict stability**, and the legal rescale is **FULL-STATE
+  co-scaling, address AND payload** (§A31.6, Head-ratified).
 """
 
 from __future__ import annotations
@@ -62,6 +85,12 @@ import numpy as np
 #: K1's registered threshold (prereg §5). Not a tunable: it is the number the
 #: unlock verdict was registered against before any cell ran.
 UNLOCK_THRESHOLD = 0.05
+
+#: ⭐⭐ C2W8 close-out item (i) — the TWO-SIDED drift leg's bounds, as fractions
+#: of the **measured codebook spacing**. Declared here (above :func:`census`,
+#: whose signature defaults to them) and documented on :func:`drift_leg`.
+GDRIFT_FLOOR_FRAC_SPACING = 0.01
+GDRIFT_CEIL_FRAC_SPACING = 1.0
 
 
 @dataclass(frozen=True)
@@ -387,13 +416,28 @@ def mergeable_pairs(system, states: Sequence[WellState], *,
 def census(system, telemetry=None, *, well_budget: Optional[int] = None,
            n_admitted: Optional[int] = None, seed: int = 0,
            n_dirs: int = 16, bisect_steps: int = 8,
-           measure_capture: bool = True) -> Dict[str, Any]:
+           measure_capture: bool = True,
+           drift_floor_frac: float = GDRIFT_FLOOR_FRAC_SPACING,
+           drift_ceil_frac: float = GDRIFT_CEIL_FRAC_SPACING) -> Dict[str, Any]:
     """The K1 instrument: ``P``, ``M``, both well populations, ``theta_att``.
 
     ``P`` = fraction of **live wells** that are live attractors, never read, and
     not protected. ``M`` = fraction of **live-well pairs** admissible for merge.
     Denominators are stated in the result (``n_live`` and ``n_pairs``) because
     the designed negatives are expressed against them.
+
+    ⭐⭐ **C2W8 close-out, two additive emissions that are ENFORCED here rather
+    than left to the caller** (charter §A32.3):
+
+    * ``G_DRIFT_two_sided`` — item (i), :func:`drift_leg`, scored on this
+      census's own wells against the **live codebook** spacing. ⛔ ``drift -> 0``
+      now FAILS (D2a) instead of scoring perfectly.
+    * ``P_comparability`` — item (vi.2). ``theta_att`` degenerates to exactly
+      0.0000 when every well captures, and ``is_attractor`` tests
+      ``depth > theta_att``, so ``P``'s numerator is then admitted on a **vacuous**
+      comparison. ⛔ **``P`` is not comparable across arms without
+      ``n_non_capturing`` beside it**, so the emitter attaches it to every census
+      dict — a reader can no longer obtain ``P`` without it.
     """
     states, theta = well_states(system, telemetry, n_dirs=n_dirs,
                                 bisect_steps=bisect_steps,
@@ -411,9 +455,31 @@ def census(system, telemetry=None, *, well_budget: Optional[int] = None,
     n_adm = int(n_admitted if n_admitted is not None else n_live)
     depths = np.asarray([s.depth_raw for s in states], dtype=float)
     netted = np.asarray([s.depth_netted for s in states], dtype=float)
+    _, centers_c, _ = _sites_of(system)
+    cb_spacing = _median_nn_dist(centers_c)
+    g_drift = drift_leg([s.site_drift for s in states], cb_spacing,
+                        floor_frac=float(drift_floor_frac),
+                        ceil_frac=float(drift_ceil_frac))
+    n_non_cap = int(theta.get("n_non_capturing", 0))
     return {
         "P": P,
         "M": M,
+        # ⭐ item (vi.2): P is NEVER emitted without the degeneracy qualifier.
+        "P_comparability": {
+            "n_non_capturing": n_non_cap,
+            "theta_att": float(theta.get("theta_att", float("nan"))),
+            "theta_att_degenerate": bool(n_non_cap == 0),
+            "P_comparable_across_arms": bool(n_non_cap > 0),
+            "rule": ("theta_att = 0.0000 by construction when n_non_capturing "
+                     "== 0 (a floor never exercised, NOT a measurement that the "
+                     "floor is low); is_attractor tests depth > theta_att, so P "
+                     "is then admitted on a vacuous comparison. ⛔ P is NOT "
+                     "comparable across arms without n_non_capturing beside it "
+                     "(C2W8 pass-2 housekeeping, §A29.7 / close-out item vi.2)"),
+        },
+        # ⭐ item (i): the TWO-SIDED drift leg. MECHANICS.
+        "G_DRIFT_two_sided": g_drift,
+        "codebook_spacing": float(cb_spacing),
         "n_live": n_live,
         "n_pairs": n_pairs,
         "n_prunable": len(prunable),
@@ -433,6 +499,83 @@ def census(system, telemetry=None, *, well_budget: Optional[int] = None,
         "depth_netted_geomean": _geomean(netted),
         "mergeable_pairs": pairs,
         "wells": [asdict(s) for s in states],
+    }
+
+
+# --------------------------------------------------------------------------
+# ⭐⭐ C2W8 CLOSE-OUT item (i) — THE TWO-SIDED DRIFT LEG (charter §A31.5/§A32.3)
+# --------------------------------------------------------------------------
+# :data:`GDRIFT_FLOOR_FRAC_SPACING` — the drift FLOOR, as a fraction of the
+# **measured codebook spacing**. ⛔ Never an absolute constant, and never the
+# ~200-key *sizing* spacing. Registered in
+# `.claude/outputs/c2w8-close/PREREG.md` §1 **before** this function existed: the
+# banked D2a signature (settle = same-keys kNN to ±0.0007 against a codebook
+# spacing of order 0.14) puts an already-adjudicated table-expressible store at
+# ≈0.005 x spacing, so the floor sits at 0.01 — strictly above it, with a
+# factor-2 margin so the rule is not knife-edge on it.
+# :data:`GDRIFT_CEIL_FRAC_SPACING` — the ceiling: pass 2's rule, unchanged.
+def drift_leg(site_drift, codebook_spacing: float, *,
+              floor_frac: float = GDRIFT_FLOOR_FRAC_SPACING,
+              ceil_frac: float = GDRIFT_CEIL_FRAC_SPACING) -> Dict[str, Any]:
+    """⭐⭐ **G-DRIFT, TWO-SIDED** — the repair of the leg that rewarded collapse.
+
+    **Label: MECHANICS** (§A33.1) — *does the mechanism work*, pass/fail at
+    component level. ⛔ It is not a VALUE leg and carries no launder margin.
+
+    *The defect this replaces.* Across all nine pass-3 cells the completed gate's
+    score was a near-monotone function of **settle-collapse**: Spearman
+    ``rho(A1, G-DRIFT ratio) = -0.967`` and ``rho(A1, settle<->launder
+    agreement) = +0.933`` (§A31.5). The pass-2 rule is one-sided —
+    ``median(site_drift) < spacing`` — so a store whose settled point collapses
+    onto the stored key scores **perfectly**. That limit is **D2a**: the settle
+    becomes a deterministic function of the stored key, i.e. **table-expressible**,
+    which is precisely the configuration intervention §8.2 prohibits. The gate
+    was **rewarding table-behaviour**, and the per-arm boolean
+    ``best_is_also_lowest_drift`` hid it (False on all three arms, decided by
+    drift ties of 0.004).
+
+    The repaired rule, both bounds fractions of a **measured** quantity::
+
+        PASS iff  floor <= median(site_drift) < ceiling
+        ceiling = ceil_frac  x codebook_spacing   (pass 2's rule, unchanged)
+        floor   = floor_frac x codebook_spacing   (NEW — the D2a side)
+
+    ⛔ ``codebook_spacing`` is the **live store's own** median-NN key spacing, not
+    the ~200-key *sizing* spacing (that substitution is the same defect that
+    produced monitor #3's arithmetic 0.000 refusal rate and the retracted §A29.5
+    mechanism; see :func:`chlu.core.soft_certificate.population_median_nn`).
+
+    Two failure modes are reported **separately and by name**, because they mean
+    opposite things: ``fails_high`` = the site cannot be addressed at all;
+    ``fails_low`` = **D2a, table-expressible** — a "success" that is a failure.
+    """
+    d = np.asarray(site_drift, dtype=float)
+    d = d[np.isfinite(d)]
+    sp = float(codebook_spacing)
+    med = float(np.median(d)) if d.size else float("nan")
+    floor = float(floor_frac) * sp
+    ceil = float(ceil_frac) * sp
+    ratio = float(med / sp) if sp > 0 else float("nan")
+    fails_high = bool(np.isfinite(med) and np.isfinite(ceil) and med >= ceil)
+    fails_low = bool(np.isfinite(med) and np.isfinite(floor) and med < floor)
+    return {
+        "label": "MECHANICS",
+        "median_site_drift": med,
+        "n_wells": int(d.size),
+        "codebook_spacing": sp,
+        "ratio": ratio,
+        "floor": floor, "ceiling": ceil,
+        "floor_frac_spacing": float(floor_frac),
+        "ceil_frac_spacing": float(ceil_frac),
+        "fails_high_cannot_address": fails_high,
+        "fails_low_D2a_table_expressible": fails_low,
+        "pass": bool(np.isfinite(med) and not fails_high and not fails_low),
+        "one_sided_pass2_pass": bool(np.isfinite(med) and not fails_high),
+        "rule": ("TWO-SIDED (C2W8 close-out item (i), charter §A31.5): PASS iff "
+                 "floor <= median(site_drift) < ceiling, both fractions of the "
+                 "MEASURED codebook spacing. ⛔ drift -> 0 is D2a = "
+                 "table-expressible and FAILS; it is never a target and never a "
+                 "reward. Floor registered in PREREG.md §1 before the code."),
     }
 
 
@@ -646,6 +789,14 @@ def gate_addr(system, *, spacing: Optional[float] = None,
     se_a3a = float(np.sqrt(b + c) / max(N, 1))
     thr_a1 = float(max(GADDR_A1_CHANCE_MULT * chance, chance + 2.0 * se))
     a1_pass = bool(A1 >= thr_a1)
+    # ⭐ item (ii): the discrete threshold's own instability, reported BESIDE the
+    # boolean. `randconv` scored 31 / 31 / 29 of 128 against a 32/128 threshold —
+    # it failed by ONE read on 2 of 3 seeds, and a bare boolean turns that tie
+    # into a verdict.
+    n_correct = int(np.sum(correct))
+    n_needed = int(np.ceil(thr_a1 * N - 1e-9))
+    reads_to_flip = (int(n_correct - n_needed) + 1 if a1_pass
+                     else int(n_needed - n_correct))
     a2_pass = bool(A2 <= GADDR_A2_MAX)
     a3a_pass = bool(A3a >= -2.0 * se_a3a)
     a3b_applicable = stream_margin is not None and np.isfinite(
@@ -674,12 +825,29 @@ def gate_addr(system, *, spacing: Optional[float] = None,
             / max(_median_nn_dist(centers), 1e-12)),
         "permuted_targets": bool(permute),
         "A1": {
+            "label": "MECHANICS",
             "correct_basin_rate": A1, "chance": chance, "se": se,
             "threshold": thr_a1,
             "rule": ("settle resolves to the QUERIED item (address argmin) AND "
                      "lies inside that item's MEASURED capture radius in full "
                      "store space; threshold max(4 x chance, chance + 2 SE)"),
             "margin_in_se": float((A1 - chance) / se) if se > 0 else float("nan"),
+            # ⭐⭐ item (ii): the margin the VERDICT is decided by, beside the
+            # boolean, everywhere A1 is emitted. `margin_in_se` above is against
+            # CHANCE; `margin_in_se_vs_threshold` is against the number the leg
+            # actually thresholds on, and `reads_to_flip` states the verdict's
+            # discreteness in the unit it is decided in (single reads).
+            "margin_in_se_vs_chance": float((A1 - chance) / se) if se > 0 else float("nan"),
+            "margin_in_se_vs_threshold": (float((A1 - thr_a1) / se) if se > 0
+                                          else float("nan")),
+            "n_correct": n_correct, "n_queries_scored": N,
+            "n_correct_needed": n_needed,
+            "reads_to_flip": reads_to_flip,
+            "margin_note": ("⚠ a discrete threshold reported without its margin "
+                            "turns a tie into a verdict: pass 3's `randconv` "
+                            "scored 31/31/29 of 128 against a 32/128 threshold "
+                            "and FAILED BY ONE READ on 2 of 3 seeds "
+                            "(close-out item ii)"),
             "pass": a1_pass,
             # reported, never the leg
             "voronoi_only_rate": A1_vor,
@@ -689,6 +857,7 @@ def gate_addr(system, *, spacing: Optional[float] = None,
             "capture_radius_median": float(np.median(rho)),
         },
         "A2": {
+            "label": "MECHANICS",
             "never_addressed_frac": A2,
             "n_never_addressed": int(np.sum(hits == 0)),
             "threshold": float(GADDR_A2_MAX), "pass": a2_pass,
@@ -697,6 +866,21 @@ def gate_addr(system, *, spacing: Optional[float] = None,
                      "telemetry n_never_read (which is launch-point coverage)"),
         },
         "A3": {
+            # ⭐⭐ C2W8 close-out item / acceptance 3 (charter §A33.1, binding
+            # program-wide): a LAUNDER MARGIN ON A COMPONENT GATE IS A
+            # DIAGNOSTIC, NEVER A PASS CONDITION. VALUE legs exist only at tier
+            # level with the tier's own control (organizer / system swap), and
+            # §A34.8 re-scopes G-ADDR as a per-feature MECHANICS instrument,
+            # permanently barred from VALUE duty. A3 is still MEASURED and still
+            # reported two-sided — it is simply no longer in `gate_addr_pass`.
+            "label": "DIAGNOSTIC",
+            "in_pass_condition": False,
+            "why_not_a_pass_condition": (
+                "§A33.1: a launder margin on a component gate is a diagnostic, "
+                "never a pass condition; pass 3's A3 leg was the last of its "
+                "kind and its 'failure' is re-read accordingly. ⛔ Whether "
+                "daylight exists above the launder is a TIER-level VALUE "
+                "question with the tier's own control, not this gate's."),
             "matching": "matched-ITEMS (same keys, same queries) — NOT matched-bytes",
             "clu_total_bytes": clu_bytes, "knn_launder_bytes": knn_bytes,
             "byte_ratio_clu_over_launder": float(clu_bytes / max(knn_bytes, 1)),
@@ -716,14 +900,25 @@ def gate_addr(system, *, spacing: Optional[float] = None,
             "A3b_pass": a3b_pass,
             "pass": bool(a3a_pass and a3b_pass),
         },
-        "gate_addr_pass": bool(a1_pass and a2_pass and a3a_pass and a3b_pass),
+        "gate_addr_pass": bool(a1_pass and a2_pass),
+        "leg_labels": {"A1": "MECHANICS", "A2": "MECHANICS", "A3": "DIAGNOSTIC"},
+        "pass_condition": "A1 AND A2 (MECHANICS only); A3 is a DIAGNOSTIC column",
         "rule": ("G-ADDR (PREREG-C2W8-PASS3 §2, thresholds in this spoke's "
-                 "PREREG.md §1 as amended by its ERRATA §1): A1 correct-basin "
-                 ">= max(4 x chance, chance + 2 SE) AND A2 never-addressed "
-                 "<= 0.5 AND the store does NOT LOSE to its own kNN-in-phi "
-                 "launder beyond 2 SE on the cue set (A3a) nor on the stream "
-                 "(A3b, where applicable). ⛔ 'beats the launder' is NOT the "
-                 "criterion: 1-NN is Bayes-optimal on a metric-native cue."),
+                 "PREREG.md §1 as amended by its ERRATA §1), ⭐ AS AMENDED BY "
+                 "THE C2W8 CLOSE-OUT under charter §A33.1: PASS iff A1 "
+                 "correct-basin >= max(4 x chance, chance + 2 SE) AND A2 "
+                 "never-addressed <= 0.5 — both MECHANICS legs. ⛔ A3, the "
+                 "kNN-in-phi launder margin, is a DIAGNOSTIC and is REMOVED "
+                 "from the pass condition: a launder margin on a component gate "
+                 "is never a pass condition (§A33.1), and 'beats the launder' "
+                 "was never the criterion anyway (1-NN is Bayes-optimal on a "
+                 "metric-native cue). A3 is still measured and reported "
+                 "two-sided on every cell."),
+        "amendment": ("C2W8 close-out (charter §A33.1 + §A34.8): A3 re-labelled "
+                      "DIAGNOSTIC and removed from `gate_addr_pass`. ⚠ Banked "
+                      "pass-3 `gate_addr_pass` values were computed under the "
+                      "OLD rule (A1 AND A2 AND A3) and are not comparable to "
+                      "values emitted after this commit."),
     }
 
 
@@ -731,8 +926,15 @@ def gate_addr_verdict(legs_by_seed: Sequence[Dict[str, Any]],
                       *, min_seeds: int = 3) -> Dict[str, Any]:
     """The arm-level G-ADDR verdict — mechanical, never a judgement call.
 
-    ``pass`` iff every seed passes every leg and at least ``min_seeds`` were run.
-    Single-cell rigs (the designed controls) call it with ``min_seeds = 1``.
+    ``pass`` iff every seed passes every **MECHANICS** leg (A1, A2) and at least
+    ``min_seeds`` were run. Single-cell rigs (the designed controls) call it with
+    ``min_seeds = 1``.
+
+    ⭐ **C2W8 close-out:** ``A3_pass_seeds`` is still counted and still reported —
+    as a **DIAGNOSTIC column** (§A33.1) — but it does not enter the verdict, and
+    every A1 boolean is emitted **beside its margin in SE and its
+    ``reads_to_flip``** (item ii): pass 3's `randconv` failed A1 by ONE read on
+    2 of 3 seeds, which a bare boolean reports as a verdict.
     """
     legs = list(legs_by_seed)
     ok = [bool(g.get("gate_addr_pass", False)) for g in legs]
@@ -742,14 +944,132 @@ def gate_addr_verdict(legs_by_seed: Sequence[Dict[str, Any]],
         "A1_pass_seeds": int(sum(bool(g["A1"]["pass"]) for g in legs)),
         "A2_pass_seeds": int(sum(bool(g["A2"]["pass"]) for g in legs)),
         "A3_pass_seeds": int(sum(bool(g["A3"]["pass"]) for g in legs)),
+        "A3_label": "DIAGNOSTIC — counted, reported, ⛔ NOT in the verdict (§A33.1)",
+        "leg_labels": {"A1": "MECHANICS", "A2": "MECHANICS", "A3": "DIAGNOSTIC"},
         "all_legs_same_seed": int(sum(ok)),
         "gate_addr_pass": bool(len(legs) >= int(min_seeds) and all(ok) and legs),
         "A1_by_seed": [float(g["A1"]["correct_basin_rate"]) for g in legs],
+        # ⭐ item (ii) — the margin travels with the boolean, per seed.
+        "A1_margin_in_se_vs_threshold_by_seed": [
+            float(g["A1"].get("margin_in_se_vs_threshold", float("nan")))
+            for g in legs],
+        "A1_reads_to_flip_by_seed": [
+            g["A1"].get("reads_to_flip") for g in legs],
+        "A1_threshold_by_seed": [float(g["A1"].get("threshold", float("nan")))
+                                 for g in legs],
         "A2_by_seed": [float(g["A2"]["never_addressed_frac"]) for g in legs],
         "A3a_by_seed": [float(g["A3"]["A3a_cue_margin"]) for g in legs],
         "A3b_by_seed": [g["A3"]["A3b_stream_margin"] for g in legs],
-        "rule": ("every leg on every seed, >= min_seeds seeds "
-                 "(PREREG-C2W8-PASS3 §2)"),
+        "rule": ("every MECHANICS leg (A1, A2) on every seed, >= min_seeds "
+                 "seeds (PREREG-C2W8-PASS3 §2 as amended by the C2W8 close-out "
+                 "under charter §A33.1: A3 is a DIAGNOSTIC, not a pass "
+                 "condition)"),
+    }
+
+
+# --------------------------------------------------------------------------
+# ⭐⭐ C2W8 CLOSE-OUT item (iii) — THE REPAIRED SCALE GUARD (charter §A31.6)
+# --------------------------------------------------------------------------
+#: The **legal** rescale, Head-ratified (§A31.6): address-only rescaling is NOT a
+#: symmetry of this system — the payload channel is **absolute**. The legal
+#: rescale is FULL-STATE co-scaling, address AND payload together, under which
+#: A1/A3 return to 4 dp and G-DEC/G-DRIFT survive.
+LEGAL_RESCALE = ("FULL-STATE co-scaling: address AND payload together. ⛔ "
+                 "address-only rescaling is NOT a symmetry (§A31.6) — the "
+                 "payload channel is absolute, so an address-only rescale walks "
+                 "the store across its own payload wall and moves the RIG, not "
+                 "just the leg.")
+
+#: The registered metric bound the OLD guard used. Kept only so the repaired
+#: guard can report that it holds while the verdict flips — which is exactly the
+#: failure this repair exists to catch.
+SCALE_GUARD_METRIC_BOUND = 0.05
+
+
+def scale_guard(legs_by_scale: Sequence[Tuple[Any, Dict[str, Any]]], *,
+                metric_bound: float = SCALE_GUARD_METRIC_BOUND,
+                leg_keys: Sequence[str] = ("A1", "A2", "A3"),
+                metric_key: str = "A1",
+                metric_field: str = "correct_basin_rate") -> Dict[str, Any]:
+    """⭐⭐ **The scale guard, repaired: it asserts VERDICT stability.**
+
+    *The defect being repaired, in the numbers that produced it.* The
+    ``PREREG-C2W8-PASS3`` §4 guard **bounded the METRIC and not the VERDICT**.
+    Under a legal, scale-covariant rescale (``a = 0.8``, payload co-scaled) the
+    spine measured ``A1 = 0.24219 -> 0.28906``: ``|dA1| = 0.0469 <= 0.05``, so the
+    registered guard **HELD** — and the leg's verdict flipped ``False -> True``,
+    because the baseline sat **one read** below the 0.25 threshold. A guard that
+    passes while the verdict it guards flips is not a guard.
+
+    Repaired rule::
+
+        PASS iff every leg BOOLEAN is identical at every declared scale.
+
+    The metric movement is still computed and still reported — as a
+    **DIAGNOSTIC** column (``metric_bounded``), never as the pass condition. The
+    two are reported separately precisely so the pathological combination
+    (``metric_bounded = True`` with ``verdict_stable = False``) is visible rather
+    than absorbed.
+
+    ``legs_by_scale`` is a sequence of ``(scale_label, gate_addr_leg_dict)``; the
+    **first** entry is the reference. Every scale must be a
+    :data:`LEGAL_RESCALE` of the reference — the caller declares it (see
+    :func:`chlu.experiments.exp_well_lifecycle.full_state_coscaled_config`);
+    feeding an address-only rescale here is a **category error**, not a test.
+    """
+    rows = [(str(lbl), dict(leg)) for lbl, leg in legs_by_scale]
+    if len(rows) < 2:
+        return {"status": ("NOT INFORMATIVE — a scale guard needs >= 2 scales "
+                           "(declared, never a null)"),
+                "n_scales": len(rows), "verdict_stable": None,
+                "scale_guard_pass": False, "legal_rescale": LEGAL_RESCALE}
+    ref_lbl, ref = rows[0]
+
+    def _booleans(g: Dict[str, Any]) -> Dict[str, Any]:
+        out = {k: bool(g[k]["pass"]) for k in leg_keys if isinstance(g.get(k), dict)}
+        out["gate_addr_pass"] = bool(g.get("gate_addr_pass", False))
+        return out
+
+    ref_b = _booleans(ref)
+    ref_m = float(ref.get(metric_key, {}).get(metric_field, float("nan")))
+    per_scale, flipped = [], []
+    for lbl, g in rows[1:]:
+        b = _booleans(g)
+        m = float(g.get(metric_key, {}).get(metric_field, float("nan")))
+        diffs = sorted(k for k in ref_b if b.get(k) != ref_b[k])
+        flipped.extend(f"{lbl}:{k}" for k in diffs)
+        per_scale.append({
+            "scale": lbl,
+            "booleans": b, "reference_booleans": ref_b,
+            "legs_flipped": diffs,
+            "verdict_stable": bool(not diffs),
+            f"delta_{metric_key}": float(m - ref_m),
+            f"abs_delta_{metric_key}": float(abs(m - ref_m)),
+            "metric_within_bound": bool(abs(m - ref_m) <= float(metric_bound)),
+        })
+    verdict_stable = bool(all(r["verdict_stable"] for r in per_scale))
+    metric_bounded = bool(all(r["metric_within_bound"] for r in per_scale))
+    return {
+        "n_scales": len(rows),
+        "reference_scale": ref_lbl,
+        "legal_rescale": LEGAL_RESCALE,
+        "verdict_stable": verdict_stable,
+        "legs_flipped": flipped,
+        # ⛔ the pass condition is the VERDICT, not the metric
+        "scale_guard_pass": verdict_stable,
+        "metric_bounded_DIAGNOSTIC": metric_bounded,
+        "metric_bound": float(metric_bound),
+        "metric": f"{metric_key}.{metric_field}",
+        "by_scale": per_scale,
+        "defect_repaired": (
+            "the PREREG-C2W8-PASS3 §4 guard bounded the METRIC and not the "
+            "VERDICT: a legal full-state rescale moved A1 by +0.0469 (inside the "
+            "registered 0.05 bound, so the guard HELD) and still flipped the "
+            "leg's verdict False -> True, the baseline sitting ONE READ below "
+            "the 0.25 threshold (c2w8p3-capture-strong-phi §7)"),
+        "rule": ("PASS iff every leg boolean is identical at every declared "
+                 "scale. Metric movement is a DIAGNOSTIC, never the pass "
+                 "condition. Scales must be FULL-STATE co-scalings (§A31.6)."),
     }
 
 
@@ -927,4 +1247,7 @@ __all__ = [
     "GADDR_KAPPA_Q", "GADDR_A1_CHANCE_MULT", "GADDR_A2_MAX",
     "cue_queries", "gate_addr", "gate_addr_verdict",
     "displaced_write_counterfactual",
+    # ⭐⭐ C2W8 close-out — the hardened legs (charter §A32.3)
+    "GDRIFT_FLOOR_FRAC_SPACING", "GDRIFT_CEIL_FRAC_SPACING", "drift_leg",
+    "LEGAL_RESCALE", "SCALE_GUARD_METRIC_BOUND", "scale_guard",
 ]

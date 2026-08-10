@@ -170,6 +170,84 @@ def soft_d_safe(sep_expected: float, zeta: float = SC1_ZETA) -> float:
     return float(zeta) * float(sep_expected)
 
 
+def population_median_nn(keys: np.ndarray, n_population: int, *,
+                         n_draws: int = 64, seed: int = 0) -> Dict[str, Any]:
+    """⭐⭐ **C2W8 close-out item (v): size the admission radius on the population
+    it will actually gate.**
+
+    *The defect.* The census sized ``d_safe = d_safe_frac x median_nn`` where
+    ``median_nn`` is the nearest-neighbour spacing of a **~200-key sizing set**,
+    and then applied it to a store holding **16 items**. NN spacing is a strong,
+    monotone function of the population size (it grows as ``n`` falls, roughly as
+    ``n**(-1/d)`` for a fixed region), so the 200-key number **under-states** the
+    16-item store's true spacing by a large factor. Two banked consequences
+    followed: monitor #3's ``0.000`` refusal rate was **arithmetic, not a
+    finding** (the gate's radius was far below anything the population could
+    violate), and the same substitution produced the **retracted** §A29.5
+    mechanism (``sigma_q/spacing ~ 1`` "not separable by any read", where the
+    true store-population ratio is 0.19–0.37 — queries are ~3x *closer* to their
+    own key than to a neighbour). Charter §A31.2, ratified.
+
+    *The fix, and it is the same fix for three sites.* Estimate the NN spacing
+    **at the store's own population size** by subsampling the sizing pool to
+    ``n_population`` keys, ``n_draws`` times, and taking the median of the
+    per-draw median-NN. This is a measured quantity, it costs nothing, and the
+    sizing-set value is returned beside it so the substitution can never be made
+    silently again.
+
+    ⚠ **The refusal rate this changes is REPORTED, never tuned to a target** — a
+    gate that refuses *because it was tuned to* is the same defect in new
+    clothes.
+    """
+    k = np.atleast_2d(np.asarray(keys, dtype=float))
+    n_pop = int(max(2, n_population))
+    out: Dict[str, Any] = {
+        "n_sizing_keys": int(k.shape[0]),
+        "n_population": n_pop,
+        "n_draws": int(n_draws),
+        "rule": ("median over n_draws subsamples of size n_population of the "
+                 "median nearest-neighbour distance; ⛔ the sizing-set spacing "
+                 "is NOT a substitute for it (C2W8 close-out item v, §A31.2)"),
+    }
+    if k.shape[0] < 2:
+        out.update({"median_nn_sizing": float("nan"),
+                    "median_nn_population": float("nan"),
+                    "ratio_population_over_sizing": float("nan"),
+                    "applicable": False})
+        return out
+
+    def _med_nn(p: np.ndarray) -> float:
+        if p.shape[0] < 2:
+            return float("nan")
+        d = np.linalg.norm(p[:, None, :] - p[None, :, :], axis=-1)
+        np.fill_diagonal(d, np.inf)
+        return float(np.median(np.min(d, axis=1)))
+
+    sizing = _med_nn(k)
+    if k.shape[0] <= n_pop:
+        # nothing to subsample: the sizing set IS the population
+        out.update({"median_nn_sizing": sizing, "median_nn_population": sizing,
+                    "ratio_population_over_sizing": 1.0, "applicable": True,
+                    "note": ("sizing set is not larger than the store "
+                             "population — the two coincide, declared")})
+        return out
+    rng = np.random.default_rng(int(seed) + 90_210)
+    draws = np.asarray(
+        [_med_nn(k[rng.choice(k.shape[0], size=n_pop, replace=False)])
+         for _ in range(int(n_draws))], dtype=float)
+    draws = draws[np.isfinite(draws)]
+    pop = float(np.median(draws)) if draws.size else float("nan")
+    out.update({
+        "median_nn_sizing": sizing,
+        "median_nn_population": pop,
+        "population_p10": float(np.percentile(draws, 10)) if draws.size else float("nan"),
+        "population_p90": float(np.percentile(draws, 90)) if draws.size else float("nan"),
+        "ratio_population_over_sizing": float(pop / sizing) if sizing > 0 else float("nan"),
+        "applicable": True,
+    })
+    return out
+
+
 def cert_radius(s_max: float, sigma_q: float, kappa_prime: float = 2.576) -> float:
     """``R_cert = 2 s_max + kappa' sigma_q`` — **still computed, no longer the gate.**
 
@@ -527,7 +605,8 @@ __all__ = [
     "SC1_ZETA", "SC3_BUDGET_B", "BUDGET_DOMAIN", "C3_KAPPA", "C3_ETA",
     "C3_RHO_BAND", "C3_DELTA_NUM", "SC6_LAMBDA_FLOOR", "SC5_STATEMENT",
     "SC7_FALSIFIER", "SoftCertificateConfig", "expected_separation",
-    "soft_d_safe", "cert_radius", "cert_margin", "budget_state",
+    "soft_d_safe", "population_median_nn", "cert_radius", "cert_margin",
+    "budget_state",
     "c3_calibration", "capture_radius", "sc6_state", "soft_certificate_report",
     # K9 — the re-registered merge criterion (a predicate; NOT a merge verb)
     "MERGE_RHO_GEOM", "MERGE_TAU_PAYLOAD", "MERGE_PAYLOAD_DEGENERATE",

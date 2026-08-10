@@ -1615,6 +1615,37 @@ class CluSystem:
         rep.log.append(row)
 
     def _read_diagnostics(self, q0, q_addr, q_star, g0, gs, rho) -> dict:
+        """Per-read diagnostics.
+
+        ⭐⭐ **C2W8 close-out item (iv) — ``covered`` IS A LAUNCH-POINT STATISTIC,
+        and it is now labelled as one** (Advisor erratum 1, charter §A31.1).
+
+        ``covered = min_j |q0_addr - c_j| <= 1/2 min-sep`` is computed on the
+        **launch point** ``q0``. It is therefore **store-invariant by
+        construction**: the same ``phi`` and the same admitted codebook give the
+        same number *whatever the store does*. That is the mechanical explanation
+        of the "58 / 62 / 62 of 64 unassigned reads, digit-identical across
+        passes" that was read as decisive and was **vacuous** — and the banked
+        ``n_never_read`` inherited it (``frac_never_read = 1.0000`` on 9/9 CIFAR
+        cells while the settle-side ``A2`` ran 0.125–1.000).
+
+        Three keys are emitted, and the distinction is the point:
+
+        * ``launch_covered`` — the launch-point test, under its true name;
+        * ``settle_covered`` — the **settle-side** equivalent: the same
+          half-min-separation test applied to the point the read actually settles
+          to (the same address the ``assign_settle`` diagnostic is taken at), so
+          it moves when the store moves;
+        * ``covered`` — kept as a **deprecated alias of ``launch_covered``**
+          because monitor ``settle_argmin`` needs the launch-side quantity for
+          Prop D1 (``D <= U`` compares the settle assignment against the
+          launch-point argmin, so ``U`` must be launch-side there).
+
+        ⛔ The two are pinned apart by a designed negative in
+        ``tests/test_well_lifecycle.py``: a store mutated so reads land
+        differently leaves ``launch_covered`` **bit-identical** and moves
+        ``settle_covered``.
+        """
         ids, centers, pays = self.codebook()
         q0n = np.asarray(q0)[:, : self.store.addr_dim]
         addr = np.asarray(q_addr)[:, : self.store.addr_dim]
@@ -1629,10 +1660,22 @@ class CluSystem:
             a_settle = _assign(addr, centers)
             a_argmin = _assign(q0n, centers)
             r_i = 0.5 * _min_separation(centers)
-            cov = np.min(np.linalg.norm(q0n[:, None, :] - centers[None, :, :], axis=-1),
-                         axis=1) <= r_i
+            # ⭐ item (iv): LAUNCH-side (q0) — store-invariant by construction.
+            launch_cov = np.min(
+                np.linalg.norm(q0n[:, None, :] - centers[None, :, :], axis=-1),
+                axis=1) <= r_i
+            # ⭐ item (iv): SETTLE-side — the same test at the point the read
+            # settles to, i.e. the quantity a "was this read assigned to a well"
+            # counter was always meant to gate on.
+            settle_cov = np.min(
+                np.linalg.norm(addr[:, None, :] - centers[None, :, :], axis=-1),
+                axis=1) <= r_i
             out.update({"assign_settle": a_settle, "assign_argmin": a_argmin,
-                        "covered": cov})
+                        "launch_covered": launch_cov,
+                        "settle_covered": settle_cov,
+                        # deprecated alias — monitor `settle_argmin` needs the
+                        # LAUNCH-side U for Prop D1 (D <= U)
+                        "covered": launch_cov})
         return out
 
     # -- the store-side sink the controller's verbs reach ------------------

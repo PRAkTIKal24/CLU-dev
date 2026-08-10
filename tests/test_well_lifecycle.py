@@ -36,11 +36,14 @@ from chlu.experiments.usage_telemetry import UsageTelemetry
 
 def _tiny_system(capacity=8, d_safe=0.05, seed=0, **over):
     """A small CluSystem whose atoms are cheap and whose gate admits neighbours."""
+    # the two step budgets are defaults an `over` may raise (the close-out's
+    # settle-side control needs a settle that has actually settled)
+    over.setdefault("read_steps", 60)
+    over.setdefault("address_steps", 40)
     cfg = CluSystemConfig(
         addr_dim=2, payload_dim=1, capacity=capacity, atoms_per_item=8,
         min_atoms=32, min_atoms_base=8, min_atoms_c=1.0, seed=seed,
-        d_safe_override=float(d_safe), read_steps=60, address_steps=40,
-        n_query_per_item=2, **over,
+        d_safe_override=float(d_safe), n_query_per_item=2, **over,
     )
     return build_system(cfg, key=jax.random.PRNGKey(seed), loud=False)
 
@@ -401,6 +404,22 @@ def test_census_cell_runs_end_to_end_and_reports_both_curves():
     # the usage telemetry is item-id keyed and the LOO leg carries its ICC
     assert out["usage"]["key"] == "item_id" and out["usage"]["proxy"] == "read_hits"
     assert "icc_1_1" in out["loo"] or out["loo"]["status"] == "NOT RUN"
+    # ⭐⭐ C2W8 close-out: every hardened block rides on the cell
+    assert cen["G_DRIFT_two_sided"]["label"] == "MECHANICS"          # item (i)
+    assert cen["P_comparability"]["rule"]                            # item (vi.2)
+    assert out["geometry"]["d_safe_population"] == "store"           # item (v)
+    assert np.isfinite(out["geometry"]["median_nn_store_population"])
+    assert out["atom_width_selection"]["selection_source"]           # item (vi.5)
+    g = out["g_addr"]
+    if isinstance(g.get("A1"), dict):
+        assert "margin_in_se_vs_threshold" in g["A1"]                # item (ii)
+        assert g["A3"]["in_pass_condition"] is False                 # §A33.1
+        assert g["gaddr_spacing_population"] == "codebook"           # item (vi.6)
+        # BOTH ratios on every cell, so no cross-arm comparison is made blind
+        assert "cue_sigma_over_codebook_spacing" in g
+        assert "cue_sigma_over_sizing_spacing" in g
+        assert "LAUNCH-SIDE" in g["telemetry_launch_side"]["label"]   # item (iv)
+        assert "SETTLE-SIDE" in g["telemetry_settle_side"]["label"]
 
 
 def test_phi_address_is_idempotent_on_store_space_points():
@@ -480,3 +499,239 @@ def test_mergeable_pairs_use_certificate_radius_and_payload_tol():
     pairs3, _ = mergeable_pairs(sysm, states, r_cert=1e-6)
     assert pairs3 == []
     assert meta["r_cert"] > 0.0
+
+
+# ==========================================================================
+# ⭐⭐ C2W8 CLOSE-OUT — the gate-hardening repairs (charter §A32.3 / §A33.1)
+#
+# Two of these are the task's MANDATORY DESIGNED NEGATIVES:
+#   (i)  a planted near-zero-drift, table-like store must FAIL the drift leg;
+#   (iv) a store mutated so reads land differently must leave the LAUNCH-side
+#        statistic unchanged and move the SETTLE-side one.
+# A leg that cannot fail on the degenerate configuration is not a repair.
+# ==========================================================================
+from chlu.core.well_lifecycle import (  # noqa: E402
+    GDRIFT_FLOOR_FRAC_SPACING,
+    drift_leg,
+)
+
+
+def _table_like_system(n=4, r=0.9, depth=4.0, width=0.12, capacity=8, **over):
+    """A store whose atoms sit EXACTLY at their own sites.
+
+    The relaxed site is then the recorded site to numerical tolerance, i.e.
+    ``site_drift -> 0``: the settled point is a deterministic function of the
+    stored key. **That is D2a — table-expressible** (§A29.6), the configuration
+    intervention §8.2 prohibits, and the pass-2 one-sided rule scored it
+    *perfectly*.
+
+    ⚠ The wells are planted **deep and narrow relative to the confinement bowl**
+    (depth 4.0, width 0.12, radius 0.9). A shallow planted well still relaxes a
+    measurable distance toward the origin, and that residual is the *census
+    relaxation's own* floor, not the store's. Measured on this rig:
+    ``median site_drift / codebook_spacing = 0.0042``, 2.4x below the registered
+    0.01 floor. (Measured for reference on the real rig: the banked pass-3 arm-A
+    seed-0 cell sits at **0.0071**, i.e. the floor fires on real cells too — it
+    is not a bound only a toy can reach.)
+    """
+    sysm = _tiny_system(capacity=capacity, d_safe=0.001, **over)
+    sites = _ring(n, r=r)
+    for i in range(n):
+        plant_item(sysm, i, sites[i], payload=0.1 * (i - n / 2.0),
+                   depth=float(depth), width=float(width), jitter=0.0)
+    flatten_unused_groups(sysm)
+    return sysm
+
+
+# --------------------------------------------------------------------------
+# ⛔⛔ DESIGNED NEGATIVE — item (i): drift -> 0 must FAIL
+# --------------------------------------------------------------------------
+def test_designed_negative_table_like_store_fails_the_two_sided_drift_leg():
+    sysm = _table_like_system()
+    cen = census(sysm, UsageTelemetry(), measure_capture=False)
+    g = cen["G_DRIFT_two_sided"]
+    # the store IS the degenerate one: the settle collapses onto the stored key
+    assert g["ratio"] < GDRIFT_FLOOR_FRAC_SPACING, g
+    # ⛔ the repaired leg FAILS it, and names WHY (D2a, not "cannot address")
+    assert g["pass"] is False, g
+    assert g["fails_low_D2a_table_expressible"] is True, g
+    assert g["fails_high_cannot_address"] is False, g
+    # ⭐ and the pass-2 one-sided rule scored this exact store PERFECTLY —
+    #    which is the defect, stated as an assertion
+    assert g["one_sided_pass2_pass"] is True, g
+    assert g["label"] == "MECHANICS"
+
+
+def test_the_two_sided_drift_leg_still_fails_on_the_high_side():
+    """The ceiling is unchanged: drift beyond the key spacing still fails."""
+    g = drift_leg([0.9, 1.1, 1.0], codebook_spacing=0.5)
+    assert g["fails_high_cannot_address"] is True and g["pass"] is False
+    assert g["one_sided_pass2_pass"] is False
+    # ... and a healthy store in between PASSES (a leg that cannot pass is as
+    # vacuous as one that cannot fail)
+    ok = drift_leg([0.10, 0.12, 0.11], codebook_spacing=0.5)
+    assert ok["pass"] is True and ok["ratio"] == pytest.approx(0.22, abs=1e-9)
+
+
+def test_the_drift_floor_is_a_fraction_of_a_MEASURED_spacing_not_a_constant():
+    """⛔ 'derive it from a measured quantity, never a bare constant'."""
+    a = drift_leg([0.004], codebook_spacing=1.0)
+    b = drift_leg([0.004 * 10.0], codebook_spacing=10.0)
+    assert a["floor"] == pytest.approx(GDRIFT_FLOOR_FRAC_SPACING)
+    assert b["floor"] == pytest.approx(10.0 * GDRIFT_FLOOR_FRAC_SPACING)
+    # the same DIMENSIONLESS store gets the same verdict at any scale
+    assert a["ratio"] == pytest.approx(b["ratio"])
+    assert a["pass"] is b["pass"] is False
+    assert a["fails_low_D2a_table_expressible"] is True
+
+
+# --------------------------------------------------------------------------
+# ⛔⛔ DESIGNED NEGATIVE — item (iv): launch-side vs settle-side coverage
+# --------------------------------------------------------------------------
+def test_designed_negative_launch_coverage_is_store_invariant_settle_is_not():
+    """⭐⭐ **The single test that proves the two are different quantities.**
+
+    ``covered`` is computed on ``q0`` against the codebook, so the same φ and the
+    same admitted codebook give the same number **whatever the store does** —
+    which is why "58 / 62 / 62 unassigned, digit-identical" looked decisive and
+    was vacuous (§A31.1). Here the store is mutated so the reads land somewhere
+    else entirely, and the launch-side statistic does not move by one bit.
+    """
+    import equinox as eqx
+    import jax.numpy as jnp
+
+    # ⚠ the settle must be given time to actually move: at the tiny default step
+    # budget the flattened landscape has not yet pulled the read off its launch
+    # point, and the test would pass for the wrong reason.
+    sysm = _table_like_system(n=4, capacity=4, read_steps=800, address_steps=400)
+    q0 = np.zeros((8, sysm.store.dim), dtype=np.float32)
+    q0[:, :2] = _ring(4, r=0.9).repeat(2, axis=0) + 0.02
+    before = sysm.read(q0).diagnostics
+    # --- mutate the STORE so reads land differently (codebook untouched) ---
+    V = eqx.tree_at(lambda t: t.learned.amp, sysm.store.V,
+                    jnp.zeros_like(sysm.store.V.learned.amp))
+    sysm.store = eqx.tree_at(lambda s: s.V, sysm.store, V)
+    after = sysm.read(q0).diagnostics
+
+    launch0 = np.asarray(before["launch_covered"], dtype=bool)
+    launch1 = np.asarray(after["launch_covered"], dtype=bool)
+    settle0 = np.asarray(before["settle_covered"], dtype=bool)
+    settle1 = np.asarray(after["settle_covered"], dtype=bool)
+    # ⛔ the launch-side statistic is BIT-IDENTICAL: it never saw the store
+    assert np.array_equal(launch0, launch1), (launch0, launch1)
+    # ⭐ the settle-side statistic MOVED: it is a property of the store
+    assert not np.array_equal(settle0, settle1), (settle0, settle1)
+    assert int(settle1.sum()) < int(settle0.sum())
+    # and `covered` is the launch-side alias monitor #settle_argmin still needs
+    assert np.array_equal(np.asarray(before["covered"], dtype=bool), launch0)
+
+
+def test_never_read_telemetry_is_gated_on_the_settle_side():
+    """``n_never_read`` inherited the launch-point defect; it no longer does."""
+    from chlu.experiments.usage_telemetry import attach_reads
+
+    class _Res:
+        diagnostics = {"assign_settle": np.array([0, 0, 1]),
+                       "launch_covered": np.array([True, True, True]),
+                       "covered": np.array([True, True, True]),
+                       "settle_covered": np.array([True, False, False])}
+
+    sysm = _tiny_system(capacity=2, d_safe=0.001)
+    plant_item(sysm, 0, np.array([0.5, 0.0]), payload=0.0, depth=0.6, width=0.25)
+    plant_item(sysm, 1, np.array([-0.5, 0.0]), payload=0.1, depth=0.6, width=0.25)
+    tel = UsageTelemetry()
+    tel.note_admitted(0, 0)
+    tel.note_admitted(1, 0)
+    n = attach_reads(sysm, tel, _Res(), 1)
+    assert n == 1                       # only the settle-covered read is credited
+    assert tel.hits(0) == 1 and tel.hits(1) == 0
+    assert tel.n_unassigned == 2        # the two settle-uncovered reads
+    s = tel.summary(live_ids=[0, 1])
+    assert s["frac_never_read"] == pytest.approx(0.5)
+    assert "SETTLE" in s["coverage_side"] and "RETIRED" in s["caption"]
+
+
+# --------------------------------------------------------------------------
+# item (vi.2) — `P` is never emitted without `n_non_capturing`
+# --------------------------------------------------------------------------
+def test_P_is_never_emitted_without_the_theta_att_degeneracy_qualifier():
+    sysm = _table_like_system(capacity=4)
+    cen = census(sysm, UsageTelemetry(), measure_capture=False)
+    assert "P" in cen and "P_comparability" in cen
+    pc = cen["P_comparability"]
+    assert set(("n_non_capturing", "theta_att_degenerate",
+                "P_comparable_across_arms")) <= set(pc)
+    # measure_capture=False => nothing was measured non-capturing => degenerate
+    assert pc["n_non_capturing"] == 0
+    assert pc["theta_att_degenerate"] is True
+    assert pc["P_comparable_across_arms"] is False
+    assert "not comparable across arms" in pc["rule"].lower()
+
+
+# --------------------------------------------------------------------------
+# item (v) — d_safe is sized on the STORE population, not the sizing set
+# --------------------------------------------------------------------------
+def test_d_safe_population_spacing_is_larger_than_the_sizing_set_spacing():
+    """⚠ NN spacing grows as the population shrinks: a ~200-key sizing set
+    under-states a 16-item store's spacing, which is why monitor #3's 0.000
+    refusal rate was **arithmetic, not a finding** (§A31.2)."""
+    from chlu.core.soft_certificate import population_median_nn
+
+    rng = np.random.default_rng(0)
+    keys = rng.normal(size=(200, 8))
+    out = population_median_nn(keys, 16, n_draws=32, seed=0)
+    assert out["applicable"] is True
+    assert out["median_nn_population"] > out["median_nn_sizing"]
+    assert out["ratio_population_over_sizing"] > 1.0
+    assert out["n_population"] == 16 and out["n_sizing_keys"] == 200
+    # a sizing set no larger than the population: the two coincide, declared
+    same = population_median_nn(keys[:8], 16, n_draws=4, seed=0)
+    assert same["ratio_population_over_sizing"] == 1.0
+    assert "declared" in same["note"]
+
+
+# --------------------------------------------------------------------------
+# item (vi.5) — the census REFUSES to run at a width nobody selected
+# --------------------------------------------------------------------------
+def test_census_refuses_to_run_at_an_unselected_atom_width():
+    """⛔ Designed negative: arm A's banked runs used
+    ``atom_width_frac_spacing = 1.5`` while the shipped default is 0.5. A census
+    that silently runs at a width nobody selected produces numbers nobody can
+    attribute."""
+    import dataclasses
+
+    from chlu.experiments import exp_well_lifecycle as ewl
+
+    cfg = _toy_cfg()
+    original = ewl.store_config
+    try:
+        # a width that is neither the census default nor any declared fraction
+        ewl.store_config = lambda c, s, d, overrides=None: dataclasses.replace(
+            original(c, s, d, overrides=overrides), atom_width=0.777 * float(d))
+        with pytest.raises(ewl.UnselectedAtomWidth) as e:
+            ewl.run_census_cell(cfg, seed=0, data=_toy_data(), verbose=False)
+        assert "REFUSES TO RUN" in str(e.value)
+        assert "atom_width_frac_spacing" in str(e.value)
+        # ... and DECLARING it lets the identical run through
+        cfg2 = _toy_cfg()
+        w = cfg2.experiment_well_lifecycle
+        w.atom_width_selection = 0.777 * float(w.d_safe_frac)
+        out = ewl.run_census_cell(cfg2, seed=0, data=_toy_data(), verbose=False)
+        blk = out["atom_width_selection"]
+        assert blk["selection_source"] == (
+            "experiment_well_lifecycle.atom_width_selection")
+        assert blk["atom_width_frac_spacing_effective"] == pytest.approx(
+            w.atom_width_selection, rel=1e-6)
+    finally:
+        ewl.store_config = original
+
+
+def test_the_width_guard_can_be_switched_off_but_is_on_by_default():
+    from chlu.config import get_default_config
+
+    w = get_default_config().experiment_well_lifecycle
+    assert w.refuse_unselected_atom_width is True
+    assert w.atom_width_selection is None       # resolved from the arm configs
+    assert w.d_safe_population == "store"
+    assert w.gaddr_spacing_population == "codebook"
+    assert w.gdrift_floor_frac_spacing == GDRIFT_FLOOR_FRAC_SPACING
