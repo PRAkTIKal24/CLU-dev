@@ -279,7 +279,16 @@ def test_confidence_channels_are_x64_safe(small, grid):
     that mixes explicitly-cast float32 data with flag-following ``jax.random``
     initialisers then breaks ``lax.scan``'s carry invariance. This runs the whole
     confidence path with the flag ON, which a per-file run would never do.
+
+    ⛔ **The flag is saved and RESTORED TO ITS PREVIOUS VALUE, never to False**
+    (the repo convention in ``test_blocks.py`` / ``test_cl_baselines_x64.py``).
+    Measured the hard way: several modules enable x64 *at import*, so the
+    ambient state during a full-suite run is ON, and restoring a hard-coded
+    ``False`` here turned it OFF for everything downstream — **18 tests in
+    `test_goldstone.py` / `test_friction_field.py` / `test_lattice*.py` failed
+    in-suite and every one of them passed alone.**
     """
+    prev = jax.config.jax_enable_x64
     jax.config.update("jax_enable_x64", True)
     try:
         S = seed_setup(small, 0, n_val=4)
@@ -289,7 +298,7 @@ def test_confidence_channels_are_x64_safe(small, grid):
             c = np.asarray(fitted["conf"](S["q0_u"], S["ind_u"]))
             assert np.isfinite(c).all(), arm
     finally:
-        jax.config.update("jax_enable_x64", False)
+        jax.config.update("jax_enable_x64", prev)
 
 
 # ==========================================================================
