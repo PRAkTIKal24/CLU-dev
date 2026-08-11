@@ -27,8 +27,6 @@ defect class caught three times in C2W8). The negatives here are:
 Each test is named for the defect it prevents from coming back.
 """
 
-from dataclasses import replace
-
 import equinox as eqx
 import jax
 import jax.numpy as jnp
@@ -43,16 +41,11 @@ from chlu.core.factored_store import (
     place_wells,
     write_store,
 )
-from chlu.core.feature_launch import build_launch_head
 from chlu.core.novelty_read import (
     NOVELTY_FEATURES,
-    NoveltyHead,
     auroc,
     collapse_statistic,
     ece,
-    novelty_input,
-    particle_descriptors,
-    psi_input,
 )
 from chlu.core.psi_readout import ParticleSetPsi, set_psi_param_count
 from chlu.experiments.exp_c2w11_organizer import (
@@ -60,7 +53,6 @@ from chlu.experiments.exp_c2w11_organizer import (
     FROZEN,
     OrganizerConfig,
     _JiggedCodes,
-    _settle_points,
     build_organized_cell,
     launch_and_settle,
     load_frozen,
@@ -245,7 +237,6 @@ def _novelty_rig(rig, small, ocfg, dropped):
 def test_v2_designed_negative_blank_store_reports_chance(rig, small, ocfg):
     """⛔ A store where **nothing** was written cannot tell a known channel from a
     novel one: the AUROC of the depth feature must sit at ~0.5."""
-    ep = _novelty_rig(rig, small, ocfg, [0, 1, 2, 3])
     blank = FactoredStore(small, rig["cell"]["anchors"], jax.random.PRNGKey(0),
                           atom_width=rig["cell"]["width"]["atom_width"])
     cell_b = dict(rig["cell"], store=blank)

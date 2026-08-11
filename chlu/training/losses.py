@@ -1,7 +1,7 @@
 """Loss functions for training."""
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Tuple
+from typing import Dict, Optional
 
 import jax
 import jax.numpy as jnp

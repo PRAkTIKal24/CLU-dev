@@ -37,7 +37,7 @@ scattered guesses.** :func:`collapse_statistic` is reported beside every AUROC.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence
 
 import equinox as eqx
 import jax
@@ -107,7 +107,7 @@ def particle_descriptors(V, q_star: np.ndarray, q0: np.ndarray, *,
     vs, gn, l1, l2, pr = [], [], [], [], []
     for lo in range(0, flat.shape[0], int(batch)):
         out = go(flat[lo:lo + int(batch)])
-        for dst, src in zip((vs, gn, l1, l2, pr), out):
+        for dst, src in zip((vs, gn, l1, l2, pr), out, strict=True):
             dst.append(np.asarray(src))
     V_ = np.concatenate(vs).reshape(B, k)
     G_ = np.concatenate(gn).reshape(B, k)

@@ -64,7 +64,6 @@ from chlu.core.factored_store import (
     _settle,
     _trainable_spec,
     _with,
-    apply_reader,
     build_family,
     build_phi,
     byte_ratio,
@@ -88,7 +87,6 @@ from chlu.core.novelty_read import (
     auroc,
     collapse_statistic,
     ece,
-    novelty_head_params,
     novelty_input,
     novelty_ledger,
     novelty_negatives_note,
@@ -116,7 +114,6 @@ from chlu.training.losses import (
     reach_org_loss,
     shape_loss,
     share_loss,
-    soft_min,
     weak_org_loss,
 )
 
@@ -130,9 +127,9 @@ __all__ = [
     "refine_store",
     "launch_and_settle",
     "fit_set_psi",
+    "stage_launch_cap",
     "stage_k5_organized",
     "stage_false_positive_guards",
-    "stage_v1",
     "stage_v2",
     "stage_v3",
     "stage_m3",
@@ -898,8 +895,8 @@ def stage_launch_cap(cfg: CatTestConfig, ocfg: OrganizerConfig,
         head = build_launch_head(phi, cfg)
         ind_s = fam.indicator(fam.seen, cfg.n_wells)
         ind_u = fam.indicator(fam.unseen, cfg.n_wells)
-        picks = np.asarray(jax.vmap(lambda i: head.channels(head.set_code(i)))(
-            jnp.asarray(ind_s)))
+        picks = np.asarray(jax.vmap(
+            lambda i, h=head: h.channels(h.set_code(i)))(jnp.asarray(ind_s)))
         sub_s, sub_u = np.asarray(fam.seen), np.asarray(fam.unseen)
         N = int(cfg.n_wells)
         M = np.zeros((N, N))
@@ -1165,9 +1162,9 @@ def stage_m3(cfg: CatTestConfig, ocfg: OrganizerConfig,
                                                      float(np.median(caps)))])
             z, q0 = launch_and_settle(cell["store"], cell["head"], cfg, ind_u,
                                       jax.random.PRNGKey(5200 + int(seed)))
+            hd = cell["head"]
             picks = np.asarray(jax.vmap(
-                lambda i: cell["head"].channels(cell["head"].set_code(i)))(
-                    jnp.asarray(ind_u)))
+                lambda i, h=hd: h.channels(h.set_code(i)))(jnp.asarray(ind_u)))
             g = per_feature_gaddr(z, picks, np.asarray(fam.unseen), cell["anchors"],
                                   caps, cfg.addr_dim)
             bar = max(4.0 * chance_m3, chance_m3 + 2.0 * (g["se"] or 0.0))
@@ -1238,7 +1235,7 @@ def stage_m7_m8(cfg: CatTestConfig, ocfg: OrganizerConfig,
             V = cell["store"].V
 
             @eqx.filter_jit
-            def spectra(z):
+            def spectra(z, V=V):
                 H = jax.vmap(jax.hessian(lambda q: jnp.reshape(V(q), ())))(z)
                 H = 0.5 * (H + jnp.swapaxes(H, -1, -2))
                 w, U = jnp.linalg.eigh(H)
@@ -1443,7 +1440,7 @@ def stage_v2(cfg: CatTestConfig, ocfg: OrganizerConfig,
         st = opt.init(eqx.filter(head, eqx.is_inexact_array))
 
         @eqx.filter_jit
-        def step(m, st):
+        def step(m, st, Utr=Utr, Ntr=Ntr, opt=opt):
             val, g = eqx.filter_value_and_grad(lambda mm: cal_loss(mm(Utr), Ntr))(m)
             upd, st = opt.update(g, st, eqx.filter(m, eqx.is_inexact_array))
             return eqx.apply_updates(m, upd), st, val
@@ -1563,7 +1560,8 @@ def stage_v3(cfg: CatTestConfig, ocfg: OrganizerConfig,
         sub_u = np.asarray(fam.unseen)
         curve, oracle = {}, {}
         for b in grid:
-            a_s = int(round(b / 3)); r_s = int(b - a_s)
+            a_s = int(round(b / 3))
+            r_s = int(b - a_s)
             kr = jax.random.PRNGKey(5400 + int(seed))
             ps = _read_pack(cell, cfg, ocfg, ind_s, kr, address_steps=a_s,
                             read_steps=r_s)
