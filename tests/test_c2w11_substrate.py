@@ -495,3 +495,108 @@ def test_SP1_probe_takes_NO_intercept_because_it_is_collinear_with_the_indicator
     w, *_ = np.linalg.lstsq(X, fam.y_seen, rcond=None)
     assert np.abs(X @ w - fam.y_seen).max() < 1e-8
     assert np.abs(w[: cfg.n_wells] - fam.payloads).max() > 1e-3
+
+
+# ==========================================================================
+# ⭐⭐ THE PAYLOAD-REACH REPAIR (the ONE measured arithmetic blocker)
+# ==========================================================================
+def test_the_reach_selection_takes_the_LARGEST_radius_that_meets_the_RATIO():
+    """⛔ Selected on the RATIO, in advance — never on K5 or any score.
+
+    The registered target is ``||v_j|| / measured capture <= 0.75``. The rule
+    takes the **largest** grid point that meets it (a smaller payload radius is
+    always "safer" and always less informative, so "largest qualifying" is the
+    only non-fishing choice), and it may only see ratios.
+    """
+    from chlu.experiments.exp_c2w11_substrate import (
+        REACH_RATIO_TARGET,
+        select_payload_radius,
+    )
+
+    ratios = {1.00: 1.172, 0.75: 0.879, 0.60: 0.703, 0.50: 0.586, 0.40: 0.469}
+    sel = select_payload_radius(ratios)
+    assert sel["selected_payload_radius"] == 0.60
+    assert sel["target_met"] is True
+    assert sel["achieved_ratio_max_over_seeds"] <= REACH_RATIO_TARGET
+    assert sel["qualified_radii"] == [0.40, 0.50, 0.60]
+
+
+def test_the_reach_selection_DESIGNED_NEGATIVE_an_unclosable_ratio_is_REPORTED():
+    """⛔ A miss is reported, never selected around.
+
+    If capture collapses with the payload radius the ratio is *unclosable* —
+    the family-construction law ``||v_j|| < capture <~ spacing`` then has no
+    admissible interior at this design point, and that is a finding. The rule
+    must return ``target_met = False`` rather than quietly returning its best
+    point as if it qualified.
+    """
+    from chlu.experiments.exp_c2w11_substrate import select_payload_radius
+
+    sel = select_payload_radius({1.00: 1.17, 0.50: 1.10, 0.20: 1.05})
+    assert sel["target_met"] is False
+    assert sel["qualified_radii"] == []
+    assert sel["selected_payload_radius"] == 0.20   # the smallest, declared UNMET
+    assert sel["achieved_ratio_max_over_seeds"] > 0.75
+
+
+def test_K2s_payload_half_is_SCALE_INVARIANT_in_the_payload_radius():
+    """⚠ **VERIFIED, not assumed** (C2W5 deviation D3 asserts it).
+
+    ``tol = tol_frac * RMS||y - ybar||`` and ``min_B ||y(A) - y(B)||`` are both
+    homogeneous of degree 1 in ``payload_radius``, so their ratio — which is
+    what K2's payload half tests — is invariant. If this ever fails, the
+    payload-reach repair would be buying K5 by shrinking the metric, and the
+    family would need a larger ``m`` instead.
+    """
+    cfg1 = CatTestConfig(n_wells=32, f_subset=4, n_items=128, n_unseen=128,
+                         payload_dim=8, payload_radius=1.0)
+    for r in (0.6, 0.4, 0.2):
+        cfg_r = replace(cfg1, payload_radius=r, atom_payload_init_radius=r)
+        f1, fr = build_family(cfg1, seed=0), build_family(cfg_r, seed=0)
+        assert np.allclose(np.linalg.norm(fr.payloads, axis=1), r)
+        assert np.allclose(fr.payloads, r * f1.payloads, atol=1e-12)
+        assert np.isclose(fr.tol, r * f1.tol, rtol=1e-9)
+        # the scored quantity itself, not merely the tolerance
+        assert fr.k2["frac_payload_sep_ok"] == f1.k2["frac_payload_sep_ok"]
+        assert fr.k2["payload_sep_ok"] == f1.k2["payload_sep_ok"]
+        assert fr.k2["overlap_ok"] == f1.k2["overlap_ok"]
+
+
+def test_the_reach_legs_are_reported_PER_WELL_and_not_only_at_the_median(rig):
+    """⛔ The median is exactly the statistic that hid the reach wall.
+
+    ``||v_j|| / capture`` was 1.172 at the *median* and the per-well spread was
+    never emitted, so "which wells are unreachable" could not be asked. Every
+    reach leg now carries its per-well array and its distribution.
+    """
+    from chlu.experiments.exp_c2w11_substrate import _k1_legs, _targets
+
+    cfg, fam, anchors = rig["cfg"], rig["fam"], rig["anchors"]
+    key = jax.random.PRNGKey(3)
+    store = FactoredStore(cfg, anchors, key)
+    store, wrep = write_store(store, cfg, anchors, fam.payloads, key)
+    arm = {"store": store, "write": wrep,
+           "spacing": store_population_spacing(anchors)}
+    tg = _targets(cfg, anchors, fam.payloads)
+    legs = _k1_legs(arm, cfg, tg, 0, n_cap=2)
+    assert len(legs["capture_radii_per_well"]) == 2
+    assert len(legs["reach_ratio_per_well"]) == 2
+    assert legs["capture_radius_distribution"]["n"] == 2
+    # the per-well ratio is ||v_j|| / capture_j, well by well
+    for cap, l2t, ratio in zip(legs["capture_radii_per_well"],
+                               legs["launch_to_target_per_well"],
+                               legs["reach_ratio_per_well"], strict=True):
+        assert np.isclose(ratio, l2t / max(cap, 1e-12))
+        assert np.isclose(l2t, cfg.payload_radius, atol=1e-5)  # = ||v_j||
+    assert 0.0 <= legs["frac_wells_inside_their_own_basin"] <= 1.0
+
+
+def test_the_payload_radius_grid_is_registered_and_descends_from_the_banked_1p0():
+    from chlu.experiments.exp_c2w11_substrate import (
+        PAYLOAD_RADIUS_GRID,
+        REACH_RATIO_TARGET,
+    )
+
+    assert PAYLOAD_RADIUS_GRID[0] == 1.0          # the banked (broken) point
+    assert list(PAYLOAD_RADIUS_GRID) == sorted(PAYLOAD_RADIUS_GRID, reverse=True)
+    assert REACH_RATIO_TARGET == 0.75             # a 25 % margin, registered
