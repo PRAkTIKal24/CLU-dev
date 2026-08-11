@@ -583,10 +583,12 @@ def setup_experiment_parsers(subparsers):
                                  help='Quick mode (small family, short settles)')
     exp_c11a_parser.add_argument(
         '--stages', nargs='+',
-        choices=['k0', 'm6', 'width', 'k1', 'k2', 'k3', 'k4', 'k5', 'k6',
-                 'k7cap', 'k8', 'm4', 'm5', 'coverage', 'freeze'],
+        choices=['k0', 'm6', 'width', 'reach', 'k1', 'k2', 'k3', 'k4', 'k5',
+                 'k6', 'k7cap', 'k8', 'm4', 'm5', 'coverage', 'freeze'],
         help='Stages to run (default: all, in the PRE-REGISTERED order '
-             'k0 -> m6 -> width -> k7cap/k6 -> k1 -> k2 -> k3 -> k4 -> k5 -> k8)')
+             'k0 -> width -> reach -> m6 -> k7cap/k6 -> k1 -> k2 -> k3 -> k4 '
+             '-> k5 -> k8). "reach" sweeps payload_radius to the REGISTERED '
+             '||v_j||/capture <= 0.75 and every later stage is scored at it.')
     exp_c11a_parser.add_argument('--out-dir', help='Output directory for artifacts')
     exp_c11a_parser.set_defaults(func=cmd_exp_c2w11_substrate)
 

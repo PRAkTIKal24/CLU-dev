@@ -85,6 +85,8 @@ __all__ = [
     "c2w11_config",
     "stage_k0",
     "stage_width_selection",
+    "stage_payload_reach",
+    "select_payload_radius",
     "stage_k1",
     "stage_k2",
     "stage_k3_k4_k5",
@@ -97,12 +99,20 @@ __all__ = [
     "run_c2w11_substrate",
     "SELECTION_SEEDS",
     "WIDTH_GRID",
+    "PAYLOAD_RADIUS_GRID",
+    "REACH_RATIO_TARGET",
     "V3_BUDGET_GRID",
 ]
 
 # ⛔ Selection seeds are DISJOINT from the claim seeds (registered in PREREG §1).
 SELECTION_SEEDS: Tuple[int, ...] = (100, 101, 102)
 WIDTH_GRID: Tuple[float, ...] = (0.20, 0.25, 0.30, 0.37, 0.50, 0.75, 1.00, 1.50)
+# ⭐⭐ THE PAYLOAD-REACH REPAIR (C2W11, after the first spoke-A run measured
+# ||v_j|| / capture = 1.172 > 1 — the needed well outside its own basin BY
+# ARITHMETIC). Grid and target ratio are REGISTERED in PREREG.md's addendum
+# before the sweep; ⛔ the selection is on the RATIO, never on K5 or any score.
+PAYLOAD_RADIUS_GRID: Tuple[float, ...] = (1.00, 0.75, 0.60, 0.50, 0.40, 0.30, 0.20)
+REACH_RATIO_TARGET: float = 0.75  # a 25 % margin, so it holds per well
 PROVISIONAL_SEP = 0.859  # the banked 2.7 x 0.318 (orgdiv-cat-test §4)
 DS_BAND = (2.5, 2.9)
 
@@ -138,6 +148,24 @@ def _mean_2se(xs) -> Dict[str, float]:
     return {"mean": float(a.mean()), "sd": sd, "n": int(n),
             "two_se": float(2.0 * sd / math.sqrt(max(n, 1))),
             "values": a.tolist()}
+
+
+def _dist(xs) -> Dict[str, float]:
+    """⭐ The full spread of a per-well quantity, never the median alone.
+
+    The C2W11 payload-reach repair exists because a **median** capture radius
+    (0.8535) was compared to a per-well launch distance: the median is exactly
+    the statistic that hid a per-well condition, so every per-well quantity in
+    this module is emitted with its distribution beside it.
+    """
+    a = np.asarray([float(x) for x in xs], dtype=float)
+    if a.size == 0:
+        return {"n": 0}
+    return {"n": int(a.size), "min": float(a.min()),
+            "p10": float(np.percentile(a, 10)), "median": float(np.median(a)),
+            "p90": float(np.percentile(a, 90)), "max": float(a.max()),
+            "mean": float(a.mean()),
+            "sd": float(a.std(ddof=1)) if a.size > 1 else 0.0}
 
 
 def c2w11_config(**kw) -> CatTestConfig:
@@ -473,6 +501,188 @@ def stage_width_selection(cfg: CatTestConfig,
 
 
 # ==========================================================================
+# ⭐⭐ C2W11 PAYLOAD-REACH REPAIR — the ONE measured arithmetic blocker
+# ==========================================================================
+def _directional_reach(relax, site: np.ndarray, direction: np.ndarray, *,
+                       r_hi: float = 1.5, steps: int = 8,
+                       tol: float = 0.15) -> float:
+    """Bisect the reach along **one** named direction (SC-6's own protocol).
+
+    SC-6's capture radius is the **min over random directions** — a worst-case
+    number. The read does not cross a worst-case direction: it crosses exactly
+    ``-v_j/||v_j||`` in the payload block (the launch pins the payload block to
+    0). This measures that one direction, and it is reported **beside** the
+    SC-6 number, never instead of it: the selection instrument stays SC-6.
+    """
+    z = np.asarray(site, dtype=float).reshape(-1)
+    u = np.asarray(direction, dtype=float).reshape(-1)
+    u = u / max(float(np.linalg.norm(u)), 1e-12)
+    lo, hi = 0.0, float(r_hi)
+    for _ in range(int(steps)):
+        mid = 0.5 * (lo + hi)
+        end = np.asarray(relax((z + u * mid)[None, :].astype(np.float32)))[0]
+        if float(np.linalg.norm(end - z)) <= float(tol):
+            lo = mid
+        else:
+            hi = mid
+    return float(lo)
+
+
+def select_payload_radius(ratio_max_by_r: Dict[float, float],
+                          target: float = REACH_RATIO_TARGET) -> Dict[str, Any]:
+    """⛔ The MECHANICAL selection rule, registered before the sweep ran.
+
+    Select the **largest** ``payload_radius`` on the grid whose reach ratio
+    ``||v_j|| / median_j capture_j`` is ``<= target`` **on every selection
+    seed** (the max over seeds, not a pooled median — the median is what hid
+    the wall). If no grid point qualifies, take the **smallest** ``r`` and
+    declare the target **UNMET**: a miss is reported, never selected around.
+
+    ⛔ The selection is on the **ratio**, never on K5, ``OD`` or any score.
+    """
+    qualified = sorted([float(r) for r, v in ratio_max_by_r.items()
+                        if float(v) <= float(target)])
+    if qualified:
+        sel = float(max(qualified))
+        met = True
+    else:
+        sel = float(min(float(r) for r in ratio_max_by_r))
+        met = False
+    return {"selected_payload_radius": sel,
+            "target_ratio": float(target),
+            "achieved_ratio_max_over_seeds": float(ratio_max_by_r[sel]),
+            "qualified_radii": qualified,
+            "target_met": bool(met),
+            "rule": ("largest grid payload_radius with max_seed "
+                     "||v_j|| / median_j capture_j <= "
+                     f"{float(target)}; if none qualifies, the smallest r with "
+                     "target_met = false (⛔ a miss is REPORTED, never selected "
+                     "around). ⛔ NOT selected on K5, OD or any score.")}
+
+
+def stage_payload_reach(cfg: CatTestConfig,
+                        seeds: Sequence[int] = SELECTION_SEEDS,
+                        grid: Sequence[float] = PAYLOAD_RADIUS_GRID,
+                        out: Optional[Path] = None) -> Dict[str, Any]:
+    """⭐⭐ Close the reach gap: sweep ``payload_radius`` to the registered ratio.
+
+    **The derived family-construction law this stage enforces:**
+
+        ``||v_j|| < capture_radius <~ min-well-spacing``
+
+    A compositional family whose payload targets sit **outside** the basins that
+    must capture them is unreadable **by construction**, for reasons that have
+    nothing to do with organization. C2W5's deviation D3 cut ``||v||`` from
+    ``sqrt(m) = 2.83`` to 1.0 for exactly this reason and **never measured
+    whether 1.0 was inside**; the C2W11 substrate measured it and it was not
+    (``1.0000 / 0.8535 = 1.172``).
+
+    ⛔ **The direction is forced, not fished.** The other way to close the ratio
+    — raising the capture radius above ``||v_j||`` — is structurally blocked:
+    measured capture (0.8535) already sits at the store-population spacing
+    (0.8586), and a capture radius materially above the spacing means
+    neighbouring basins merge (measured: ``d/s = 0.57`` at the inherited width,
+    K1 FAILS 3/3). **Capture is capped by spacing; only the payload radius can
+    move.**
+
+    ⚠ ``atom_payload_init_radius`` is **co-scaled** with ``payload_radius``
+    (C2W5 deviation D4) at every grid point.
+    """
+    cells = []
+    for r in grid:
+        for seed in seeds:
+            t0 = time.time()
+            c = replace(cfg, payload_radius=float(r),
+                        atom_payload_init_radius=float(r))
+            fam = build_family(c, seed=seed)
+            arm = build_arm(c, fam, seed)
+            tg = _targets(c, arm["anchors"], fam.payloads)
+            k1 = _k1_legs(arm, c, tg, seed, n_cap=int(c.n_wells))
+            caps = k1["capture_radii_per_well"]
+            cap_med = float(np.median(caps))
+            # ⛔ ||v_j|| IS the launch-to-target distance: the launch pins the
+            # payload block to 0, so the read must cross exactly ||v_j|| = r.
+            vnorm = np.linalg.norm(np.asarray(fam.payloads), axis=1)
+            ratio = float(r) / max(cap_med, 1e-12)
+            # the one direction the read actually crosses, beside SC-6's worst case
+            relax = _relax_fn(arm["store"], c)
+            n_dir_probe = min(8, int(c.n_wells))
+            pay_reach = [
+                _directional_reach(relax, tg[j],
+                                   np.concatenate([np.zeros(c.addr_dim),
+                                                   -np.asarray(fam.payloads)[j]]))
+                for j in range(n_dir_probe)]
+            cells.append({
+                "payload_radius": float(r), "seed": int(seed),
+                "atom_payload_init_radius": float(c.atom_payload_init_radius),
+                "capture_radius_median": cap_med,
+                "capture_radius_distribution": _dist(caps),
+                "capture_radii_per_well": caps,
+                "n_capture_censored_at_r_hi": k1["n_capture_censored_at_r_hi"],
+                "payload_norm_distribution": _dist(vnorm),
+                "reach_ratio_median": ratio,
+                "reach_ratio_per_well_distribution": _dist(
+                    k1["reach_ratio_per_well"]),
+                "frac_wells_inside_their_own_basin":
+                    k1["frac_wells_inside_their_own_basin"],
+                "payload_direction_reach": _dist(pay_reach),
+                "payload_direction_reach_n_wells": int(n_dir_probe),
+                "K1": {k: v for k, v in k1.items()
+                       if k not in ("capture_radii_per_well",
+                                    "reach_ratio_per_well",
+                                    "launch_to_target_per_well")},
+                "wall_s": round(time.time() - t0, 1)})
+            print(f"[reach] r={r:.2f} seed={seed} cap_med={cap_med:.4f} "
+                  f"ratio={ratio:.3f} inside={k1['frac_wells_inside_their_own_basin']:.2f} "
+                  f"pay_dir_reach={np.median(pay_reach):.3f} "
+                  f"K1={'PASS' if k1['K1_PASS'] else 'FAIL'} "
+                  f"({time.time()-t0:.0f}s)", flush=True)
+
+    per_r: Dict[float, Dict[str, Any]] = {}
+    for r in grid:
+        rows = [c for c in cells if c["payload_radius"] == float(r)]
+        ratios = [c["reach_ratio_median"] for c in rows]
+        per_r[float(r)] = {
+            "reach_ratio_per_seed": ratios,
+            "reach_ratio_max_over_seeds": float(np.max(ratios)),
+            "capture_radius_median_per_seed": [c["capture_radius_median"]
+                                               for c in rows],
+            "frac_wells_inside_their_own_basin": _mean_2se(
+                [c["frac_wells_inside_their_own_basin"] for c in rows]),
+            "payload_direction_reach_median": float(np.median(
+                [c["payload_direction_reach"]["median"] for c in rows])),
+            "K1_PASS_all": bool(all(c["K1"]["K1_PASS"] for c in rows)),
+            "n_seeds": len(rows)}
+    sel = select_payload_radius(
+        {r: v["reach_ratio_max_over_seeds"] for r, v in per_r.items()})
+    res = {"stage": "payload_reach", "grid": list(map(float, grid)),
+           "selection_seeds": list(map(int, seeds)),
+           "cells": cells, "per_payload_radius": per_r, **sel,
+           "instrument": ("SC-6 capture radius EXACTLY as K1 measures it "
+                          "(n_dirs=8, r_hi=1.0, steps=8, tol=0.15, min over "
+                          "directions), so the number is comparable to the "
+                          "banked 0.8535 and the repair cannot be bought by "
+                          "changing the ruler"),
+           "family_construction_law": (
+               "||v_j|| < capture_radius <~ min-well-spacing. A compositional "
+               "family whose payload targets sit outside the basins that must "
+               "capture them is UNREADABLE BY CONSTRUCTION, for reasons that "
+               "have nothing to do with organization."),
+           "K1_PASS_at_selection": bool(
+               per_r[sel["selected_payload_radius"]]["K1_PASS_all"]),
+           "prereg": ("registered in .claude/outputs/c2w11-substrate-and-kills/"
+                      "PREREG.md ADDENDUM §A1 BEFORE this sweep ran: grid, "
+                      "instrument, selection seeds and rule all fixed in "
+                      "advance; K5 is scored ONCE at the selected point")}
+    print(f"[reach] SELECTED payload_radius = {sel['selected_payload_radius']} "
+          f"(ratio {sel['achieved_ratio_max_over_seeds']:.3f} <= "
+          f"{sel['target_ratio']}: {sel['target_met']})", flush=True)
+    if out:
+        _dump(res, out / "stage_payload_reach.json")
+    return res
+
+
+# ==========================================================================
 # K1 — write admissibility under the PLACING write at the selected width
 # ==========================================================================
 def _k1_legs(arm: Dict[str, Any], cfg: CatTestConfig, targets: np.ndarray,
@@ -485,6 +695,7 @@ def _k1_legs(arm: Dict[str, Any], cfg: CatTestConfig, targets: np.ndarray,
     caps = [capture_radius(relax, targets[j], n_dirs=8, r_hi=1.0, steps=8,
                            tol=0.15, seed=seed)["capture_radius"]
             for j in range(n_cap)]
+    caps = list(map(float, caps))
     loss = float(arm["write"]["endpoint_write_loss"])
     frac_lam = float((lam > 0).mean())
     frac_cap = float(np.mean(np.asarray(caps) >= cfg.query_sigma))
@@ -537,6 +748,16 @@ def _k1_legs(arm: Dict[str, Any], cfg: CatTestConfig, targets: np.ndarray,
            "needed_well_inside_basin": bool(float(np.median(l2t)) <= cap_med),
            "launch_to_target_over_capture_radius": float(
                np.median(l2t) / max(cap_med, 1e-12)),
+           # ⭐ PER WELL, never the median alone (C2W11 payload-reach repair:
+           # the median is exactly what hid the reach wall for a wave).
+           "capture_radii_per_well": caps,
+           "capture_radius_distribution": _dist(caps),
+           "launch_to_target_per_well": [float(x) for x in l2t[:n_cap]],
+           "reach_ratio_per_well": [float(a_ / max(b_, 1e-12))
+                                    for a_, b_ in zip(l2t[:n_cap], caps, strict=True)],
+           "frac_wells_inside_their_own_basin": float(np.mean(
+               np.asarray(l2t[:n_cap]) <= np.asarray(caps))),
+           "n_capture_censored_at_r_hi": int(np.sum(np.asarray(caps) >= 0.99)),
            "reach_note": (
                "the read launches with the payload block pinned to 0 (the "
                "anti-decoration guard), so it must cross ~||v_j|| to reach a "
@@ -1261,6 +1482,7 @@ def freeze_interfaces(cfg: CatTestConfig, results: Dict[str, Any], path: Path,
     m6 = results.get("m6")
     cov = results.get("coverage")
     wsel = results.get("width")
+    rch = results.get("reach")
     k1cells = (k1 or {}).get("cells", [])
     reg = [c for c in k1cells if c["a"] == int(cfg.atoms_per_well)]
     s_meas = float(np.median([c["s_measured"] for c in reg])) if reg else None
@@ -1454,6 +1676,66 @@ def freeze_interfaces(cfg: CatTestConfig, results: Dict[str, Any], path: Path,
             "guard": ("the harness REFUSES a non-selected width "
                       "(UnselectedAtomWidth); pytest-asserted")}),
 
+        # ⭐⭐ (10b) THE PAYLOAD-REACH RATIO — the field spokes B and C must read
+        # before they quote any C2W11 number: the operating point MOVED.
+        "payload_reach_ratio": {
+            "definition": ("||v_j|| / measured SC-6 capture radius. ||v_j|| IS "
+                           "the launch-to-target distance because the launch "
+                           "pins the payload block to 0 (the anti-decoration "
+                           "guard), so this is the distance the read must cross "
+                           "divided by the basin that must capture it. > 1 means "
+                           "the needed well is outside its own basin BY "
+                           "ARITHMETIC."),
+            "registered_target": REACH_RATIO_TARGET,
+            "target_registered_where": (
+                ".claude/outputs/c2w11-substrate-and-kills/PREREG.md ADDENDUM "
+                "§A1, filed BEFORE the sweep. ⛔ Selected on the RATIO, never on "
+                "K5, OD or any score; K5 is scored ONCE at the selected point."),
+            "family_construction_law":
+                "||v_j|| < capture_radius <~ min-well-spacing",
+            "banked_broken_reach": {"payload_radius": 1.0,
+                                    "capture_radius_median": 0.8535,
+                                    "ratio": 1.172,
+                                    "needed_well_inside_basin": False},
+            "selected_payload_radius": float(cfg.payload_radius),
+            "atom_payload_init_radius_coscaled":
+                float(cfg.atom_payload_init_radius),
+            "selection": (None if rch is None else {
+                "grid": rch["grid"], "selection_seeds": rch["selection_seeds"],
+                "target_met": rch["target_met"],
+                "achieved_ratio_max_over_selection_seeds":
+                    rch["achieved_ratio_max_over_seeds"],
+                "qualified_radii": rch["qualified_radii"],
+                "rule": rch["rule"], "instrument": rch["instrument"],
+                "per_payload_radius": rch["per_payload_radius"]}),
+            # ⭐ per CLAIM seed, at the registered `a`, and PER WELL — never the
+            # median alone (the median is what hid the wall for a wave).
+            "per_claim_seed": (None if not reg else
+                               [{"seed": c["seed"],
+                                 "ratio_median": c["K1"][
+                                     "launch_to_target_over_capture_radius"],
+                                 "capture_radius_median":
+                                     c["K1"]["capture_radius_median"],
+                                 "capture_radius_distribution":
+                                     c["K1"].get("capture_radius_distribution"),
+                                 "reach_ratio_per_well":
+                                     c["K1"].get("reach_ratio_per_well"),
+                                 "frac_wells_inside_their_own_basin":
+                                     c["K1"].get(
+                                         "frac_wells_inside_their_own_basin"),
+                                 "needed_well_inside_basin":
+                                     c["K1"]["needed_well_inside_basin"]}
+                                for c in reg]),
+            "consequence_for_spokes_B_and_C": (
+                "⚠ `payload_radius` MOVED off 1.0, so `tol`, `chance` and every "
+                "y-scale in this file moved with it (all three are homogeneous "
+                "of degree 1 in the payload radius, so the family's DIFFICULTY "
+                "is unchanged — K2's payload half is scale-invariant and was "
+                "VERIFIED, not assumed). ⛔ Read `family.tol` and "
+                "`family.chance_per_seed` from THIS file; do not carry the "
+                "pre-repair 0.4783."),
+        },
+
         # (11)
         "v3_budget_grid": {
             "points_total_verlet_steps": list(V3_BUDGET_GRID),
@@ -1530,8 +1812,8 @@ def _phi_hash(phi) -> str:
 # ==========================================================================
 # the driver
 # ==========================================================================
-ALL_STAGES = ("k0", "m6", "width", "k6", "k7cap", "k1", "k2", "k3", "k4", "k5",
-              "k8", "m4", "m5", "coverage", "freeze")
+ALL_STAGES = ("k0", "m6", "width", "reach", "k6", "k7cap", "k1", "k2", "k3",
+              "k4", "k5", "k8", "m4", "m5", "coverage", "freeze")
 
 
 def run_c2w11_substrate(project: Optional[str] = None,
@@ -1539,7 +1821,8 @@ def run_c2w11_substrate(project: Optional[str] = None,
                         quick: bool = False,
                         out_dir: Optional[str] = None,
                         stages: Sequence[str] = ALL_STAGES,
-                        selected_w_frac: Optional[float] = None
+                        selected_w_frac: Optional[float] = None,
+                        selected_payload_radius: Optional[float] = None
                         ) -> Dict[str, Any]:
     """⭐ The binding run order: **K0 -> M6 -> width -> K7-CAP/K6 -> K1 -> K2 ->
     K3 -> K4 -> K5 -> K8**, then the frozen interfaces.
@@ -1559,6 +1842,7 @@ def run_c2w11_substrate(project: Optional[str] = None,
     # already on disk is loaded, so `--stages freeze` can re-emit the frozen
     # interfaces from banked cells instead of re-running hours of settles.
     for _name, _fn in (("k0", "stage_k0"), ("width", "stage_width_selection"),
+                       ("reach", "stage_payload_reach"),
                        ("m6", "stage_m6"), ("k6_k7cap", "stage_k6_k7cap"),
                        ("k1", "stage_k1"), ("k2", "stage_k2"),
                        ("k3_k4_k5", "stage_k3_k4_k5"), ("k8", "stage_k8"),
@@ -1568,6 +1852,8 @@ def run_c2w11_substrate(project: Optional[str] = None,
             res[_name] = json.loads(_p.read_text())
             if _name == "width":
                 selected_w_frac = res[_name]["selected_w_frac"]
+            if _name == "reach":
+                selected_payload_radius = res[_name]["selected_payload_radius"]
 
     if "k0" in want:
         print("\n=== K0 (no store; the cheapest kill in the wave) ===", flush=True)
@@ -1585,6 +1871,23 @@ def run_c2w11_substrate(project: Optional[str] = None,
         cfg = replace(cfg, atom_width_frac_spacing=float(selected_w_frac),
                       atom_width_selected_frac=float(selected_w_frac))
         res["selected_w_frac"] = float(selected_w_frac)
+
+    # ⭐⭐ THE PAYLOAD-REACH REPAIR. Runs AFTER the width (it needs the selected
+    # width to write a store at all) and BEFORE every scored stage, because the
+    # operating point it selects is the point every one of them is scored at.
+    if "reach" in want:
+        print("\n=== PAYLOAD REACH (||v_j|| / capture <= 0.75, REGISTERED) ===",
+              flush=True)
+        r_grid = (1.0, 0.5) if quick else PAYLOAD_RADIUS_GRID
+        sel_seeds = SELECTION_SEEDS[:1] if quick else SELECTION_SEEDS
+        res["reach"] = stage_payload_reach(cfg, seeds=sel_seeds, grid=r_grid,
+                                           out=out)
+        selected_payload_radius = res["reach"]["selected_payload_radius"]
+    if selected_payload_radius is not None:
+        # ⚠ `atom_payload_init_radius` is CO-SCALED (C2W5 deviation D4).
+        cfg = replace(cfg, payload_radius=float(selected_payload_radius),
+                      atom_payload_init_radius=float(selected_payload_radius))
+        res["selected_payload_radius"] = float(selected_payload_radius)
 
     if "m6" in want:
         print("\n=== M6 (DIAGNOSTIC) + M5 ===", flush=True)
