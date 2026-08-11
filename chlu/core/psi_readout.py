@@ -988,3 +988,72 @@ def phi_ledger(phi, spec: Optional[PhiSpec] = None, *, arms=None,
         row["phi_arms"] = list(arms)
     row.update(extra)
     return row
+
+
+# ==========================================================================
+# ⭐⭐ C2W11 — THE SET-LEVEL READ (§A34.1: *binding is the READ + psi's job*)
+# ==========================================================================
+# The `k` feature-factored particles land; a **DeepSets pooled psi** binds them
+# into the downstream answer with a **likelihood weighted by captured-vs-
+# scattered particles**.
+#
+# ⛔ **DeepSets ONLY.** `AttentionPsi` is QUARANTINED for trajectory input
+# (C2W2 reconciliation 1, `AttentionPsiLeakError` above) — the pooled DeepSets
+# psi is explicitly *not* quarantined, and any attention-psi number is a
+# declared NOT-RUN this wave.
+# ⛔ **No binding structure is built**: the latent space may be disjoint /
+# independent per feature. Co-activation / wormhole edges are the C2W9 pointer.
+# ⛔⛔ psi's capacity is NOT chosen — it is **set by the measured leak**
+# (K4-at-full-psi legs 1 and 2, `k4_full_psi_obligation`). psi carries more
+# parameters than the reader class's `N_a*m` SP-1 bound, which is exactly why
+# K4-at-full-psi and the K8 structural cell carry this wave's false-positive
+# load.
+# ==========================================================================
+
+
+class ParticleSetPsi(eqx.Module):
+    """``rho( [ sum_f h(u_f) ; sum_f w_f h(u_f) ] ) -> R^m`` — pooled DeepSets.
+
+    ``u_f`` is the per-particle descriptor of :func:`chlu.core.novelty_read.
+    particle_descriptors`; ``w_f`` is the particle's **capture likelihood**, so a
+    scattered particle is down-weighted in the binding rather than silently
+    counted (§A34.1's *likelihood weighted by captured-vs-scattered particles*).
+
+    ⭐ **Pooled SUM, not mean/max**: the family's target is ``y = sum_{j in A}
+    v_j``, so a sum pool is the permutation-invariant statistic the task is
+    literally written in. The second (weighted) pool is the only place capture
+    enters the binding.
+    """
+
+    enc: eqx.nn.MLP
+    dec: eqx.nn.MLP
+    u_dim: int = eqx.field(static=True)
+    hidden: int = eqx.field(static=True)
+    out_dim: int = eqx.field(static=True)
+
+    def __init__(self, u_dim: int, out_dim: int, key, *, hidden: int = 16,
+                 depth: int = 2):
+        k1, k2 = jax.random.split(key, 2)
+        self.u_dim = int(u_dim)
+        self.hidden = int(hidden)
+        self.out_dim = int(out_dim)
+        self.enc = eqx.nn.MLP(int(u_dim), int(hidden), int(hidden),
+                              max(int(depth) - 1, 1), activation=jax.nn.tanh, key=k1)
+        self.dec = eqx.nn.MLP(2 * int(hidden), int(out_dim), int(hidden),
+                              max(int(depth) - 1, 1), activation=jax.nn.tanh, key=k2)
+
+    def __call__(self, u: jnp.ndarray, w: Optional[jnp.ndarray] = None
+                 ) -> jnp.ndarray:
+        """``(B, k, u_dim) [, (B, k)] -> (B, out_dim)``."""
+        h = jax.vmap(jax.vmap(self.enc))(u)          # (B, k, hidden)
+        pooled = jnp.sum(h, axis=1)
+        if w is None:
+            w = jnp.ones(u.shape[:2], dtype=u.dtype)
+        wpool = jnp.sum(h * w[..., None], axis=1)
+        return jax.vmap(self.dec)(jnp.concatenate([pooled, wpool], axis=-1))
+
+
+def set_psi_param_count(psi: "ParticleSetPsi") -> int:
+    """Fitted-parameter count of the set-level psi — ledgered on every arm."""
+    return int(sum(x.size for x in jax.tree_util.tree_leaves(
+        eqx.filter(psi, eqx.is_inexact_array))))
