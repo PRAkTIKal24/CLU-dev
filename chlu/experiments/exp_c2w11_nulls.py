@@ -127,11 +127,12 @@ __all__ = [
     "stage_v3",
     "stage_ceiling",
     "stage_oracle",
+    "stage_anchors",
     "ALL_STAGES",
 ]
 
 ALL_STAGES = ("guards", "grid", "score", "gridmax", "v2", "v3", "ceiling",
-              "oracle")
+              "oracle", "anchors")
 
 #: ⛔ **R1 (declared rider).** ``FROZEN-INTERFACES-C2W11.json`` freezes launch
 #: keys for k0/k6_k7cap/k3_k4_k5/m6/coverage and registers **none** for the VALUE
@@ -424,15 +425,16 @@ def _fit_arm(arm: str, conf: Dict[str, Any], S: Dict[str, Any],
                           weight=conf["weight"])
 
         def conf_fn(q0, ind):
-            # per-CHANNEL neighbour distance: the key space restricted to one
-            # channel, so the arm emits a per-feature quantity like every other.
-            out = []
-            for c in range(int(cfg.n_particles)):
-                kq = np.asarray(q0)[:, c, : cfg.addr_dim]
-                kt = keys_tr if keys_tr.shape[1] == cfg.addr_dim else \
-                    np.asarray(q0_all[idx])[:, c, : cfg.addr_dim]
-                out.append(n4_confidence(kt, kq))
-            return np.stack(out, 1)
+            # per-CHANNEL neighbour distance in the arm's RAW-KEY space,
+            # restricted to one channel, so the arm emits a per-feature quantity
+            # like every other. ⚠ Deliberately NOT `keys_tr`: `set_code` and
+            # `launch_mean` are query-level statistics that happen to share the
+            # address block's shape, and comparing a channel's launch point to a
+            # set code would be a distance between two different spaces.
+            ref = np.asarray(q0_all[idx])[..., : cfg.addr_dim]
+            return np.stack([n4_confidence(ref[:, c],
+                                           np.asarray(q0)[:, c, : cfg.addr_dim])
+                             for c in range(int(cfg.n_particles))], 1)
 
         return {"predict": predict, "conf": conf_fn,
                 "ledger": arm_ledger("N4", cfg, n_params=0,
@@ -1289,6 +1291,78 @@ def stage_oracle(cfg: CatTestConfig, grid: NullArmGrid,
 
 
 # ==========================================================================
+# ⭐ THE FOUR INTERNAL-VALIDITY ANCHORS — what makes a null a statement about
+# the PROBLEM rather than about my optimiser
+# ==========================================================================
+def stage_anchors(cfg: CatTestConfig, grid_res: Dict[str, Any],
+                  score_res: Dict[str, Any], gridmax_res: Dict[str, Any],
+                  out: Optional[Path] = None) -> Dict[str, Any]:
+    """L1–L4, computed **mechanically from the artifacts** — no new fitting.
+
+    ⭐ Standing doctrine this instantiates: *an organizer audit needs an in-class
+    fit anchor.* ⛔ **No "nothing works" verdict ships without L1.** N1 at
+    1.0000 train / 0.0000 held-out is what makes "no arm clears" a statement
+    about the problem rather than about the optimiser.
+    """
+    recs = grid_res.get("records", {})
+    cells = score_res.get("cells", [])
+    chance = float(score_res.get("chance", 0.0))
+
+    def _train_max(arm, pred=lambda c: True):
+        rr = [r for r in recs.get(arm, []) if pred(r["config"])]
+        return (float(max(r["train_acc"] for r in rr)) if rr else float("nan"),
+                len(rr))
+
+    l1, n1n = _train_max("N1")
+    l2, n4n = _train_max("N4", lambda c: int(c.get("k", 0)) == 1)
+    l3 = float(max([c["launder_shuffle_phi"] for c in cells], default=float("nan")))
+    # L4 — N1's grid-max on Q_unseen, per capacity point
+    by_a: Dict[str, float] = {}
+    for r in gridmax_res.get("arms", {}).get("N1", {}).get("rows", []):
+        a = str(r["config"]["atoms_per_well"])
+        by_a[a] = max(by_a.get(a, -1.0), float(r["mean"]))
+    l4 = (float(max(by_a.values()) - min(by_a.values())) if by_a else float("nan"))
+
+    res = {
+        "stage": "anchors",
+        "L1_N1_fits_its_own_training_items": {
+            "bar": 0.50, "measured": l1, "n_configs": n1n,
+            "banked_C2W5": 1.0, "PASS": bool(l1 >= 0.50)},
+        "L2_N4_k1_memorises_seen": {
+            "bar": 0.95, "measured": l2, "n_configs": n4n,
+            "banked_C2W5": 1.0, "PASS": bool(l2 >= 0.95)},
+        "L3_shuffle_phi_launder": {
+            "bar": chance + 0.005, "measured": l3, "chance": chance,
+            "banked_C2W5": 0.00039, "PASS": bool(l3 <= chance + 0.005)},
+        "L4_N1_capacity_flatness": {
+            "bar": 0.02, "measured": l4, "per_capacity": by_a,
+            "banked_C2W5": 0.0, "PASS": bool(l4 <= 0.02)},
+        "train_fit_liveness": {
+            arm: float(max((r["train_acc"] for r in recs.get(arm, [])),
+                           default=float("nan")))
+            for arm in ("N2", "N3", "N5")},
+        "N3_in_sample_note": ("⚠ banked 0.0799 — the weakest arm-side number in "
+                              "C2W5. This cell gives N3 fitted payloads at every "
+                              "level and reports the optimum it reaches."),
+        "read_compute": {
+            "physics_mult_adds_per_query": int(read_flops("physics", cfg)),
+            "per_arm": {c["arm"]: c["bytes"]["read_mult_adds_per_query"]
+                        for c in cells},
+            "label": ("⚠ a READ-COMPUTE RATIO, not wall-clock and not training "
+                      "cost; banked reference 3 360x at a TIE")},
+    }
+    n1_flops = res["read_compute"]["per_arm"].get("N1", 0)
+    res["read_compute"]["physics_over_N1_ratio"] = (
+        float(res["read_compute"]["physics_mult_adds_per_query"]) / n1_flops
+        if n1_flops else float("nan"))
+    res["ALL_ANCHORS_PASS"] = bool(all(
+        res[k]["PASS"] for k in res if k.startswith("L")))
+    if out:
+        _dump(res, out / "stage_anchors.json")
+    return res
+
+
+# ==========================================================================
 # the runner
 # ==========================================================================
 def run_c2w11_nulls(project: Optional[str] = None,
@@ -1345,7 +1419,8 @@ def run_c2w11_nulls(project: Optional[str] = None,
     for name, fn in (("grid", "stage_grid"), ("score", "stage_score"),
                      ("gridmax", "stage_gridmax"), ("v2", "stage_v2"),
                      ("v3", "stage_v3"), ("ceiling", "stage_ceiling"),
-                     ("guards", "stage_guards"), ("oracle", "stage_oracle")):
+                     ("guards", "stage_guards"), ("oracle", "stage_oracle"),
+                     ("anchors", "stage_anchors")):
         p = out / f"{fn}.json"
         if name not in want and p.exists():
             res[name] = json.loads(p.read_text())
@@ -1398,6 +1473,17 @@ def run_c2w11_nulls(project: Optional[str] = None,
     if "oracle" in want:
         print("\n=== ORACLE-IMITATION (T5.2 rider (i)) ===", flush=True)
         res["oracle"] = stage_oracle(cfg, grid, out=out, frozen=frozen)
+    if "anchors" in want:
+        print("\n=== L1-L4 (the internal-validity anchors) ===", flush=True)
+        gs = res.get("grid_stage") or res.get("grid") or {}
+        if gs and res.get("score") and res.get("gridmax"):
+            res["anchors"] = stage_anchors(cfg, gs, res["score"], res["gridmax"],
+                                           out=out)
+            print(json.dumps({k: v for k, v in res["anchors"].items()
+                              if k.startswith("L") or k == "ALL_ANCHORS_PASS"},
+                             indent=1, default=str), flush=True)
+        else:
+            raise RuntimeError("stage_anchors needs grid + score + gridmax")
 
     _dump(res, out / "c2w11_nulls_summary.json")
     return res
