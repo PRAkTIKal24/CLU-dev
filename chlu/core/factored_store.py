@@ -87,6 +87,13 @@ __all__ = [
     "write_wells",
     "organize_physics",
     "init_grad_norms",
+    # -- C2W11 (the compositional wave): the repaired substrate ------------
+    "UnselectedAtomWidth",
+    "store_population_spacing",
+    "resolve_atom_width",
+    "assert_selected_width",
+    "place_write",
+    "write_store",
 ]
 
 
@@ -197,6 +204,52 @@ class CatTestConfig:
 
     # -- soft certificate (bprime-c6's RE-LOCATED edge) ----------------------
     soft_cert_B: float = 0.542  # ⭐ `bprime-c6` §2: B >= 0.542 unrefuted
+
+    # ======================================================================
+    # ⭐ C2W11 — THE REPAIRED SUBSTRATE (charter §A34.10's carried package).
+    # ⛔ EVERY field below defaults to the C2W5 behaviour, so the OFF path is
+    # bit-identical AND parameter-count-identical (the K6/K2-fingerprint
+    # pattern) and ``CatTestConfig().as_flag_table() == {}`` still holds.
+    # ======================================================================
+    # (i) the PLACING write (§A29.4(ii)). Atoms are **placed**, not dragged
+    #     across the ball by a 300-step gradient write. Banked basis: the
+    #     gradient write gives foreign > own on 45/48 wells because displaced
+    #     atoms become everyone else's background; a placing write gives 0/48.
+    write_mode: str = "gradient"  # "gradient" (C2W5, default) | "placing"
+    place_depth: float = 0.30  # base placed well depth (banked measured 0.284-0.289)
+    place_jitter_frac_s: float = 0.5  # atom scatter ball, as a fraction of `s`
+    # ⭐ An atom cloud placed exactly AT the target does not make the target
+    # stationary: the confinement term contributes ``2*alpha*q``, which at
+    # |q| ~ 2.24 is 0.224 and alone puts the write objective's gradient term at
+    # ~0.05 -- exactly K1's bar. The placing write therefore solves for a RIGID
+    # translation of the well's whole atom cloud that zeroes grad V at the
+    # target. It is a rigid placement, not a per-atom drag: relative atom
+    # geometry is untouched, so the "displaced atoms become background" channel
+    # the gradient write opened stays closed.
+    place_stationarity_shift: bool = True
+    place_shift_iters: int = 40
+
+    # (ii) CO-SCALED WIDTHS, RE-SELECTED (C2W8-close repair (b)).
+    #      ⛔ `atom_width_frac_spacing = 1.5` is NOT inherited: the spacing it
+    #      co-scales against is now the STORE POPULATION's, which is a
+    #      different quantity from the one that value was selected against.
+    #      None => the shipped fixed `atom_width` (bit-identical).
+    atom_width_frac_spacing: Optional[float] = None
+    # The DECLARED selection. When both are set and disagree, the harness
+    # REFUSES to run (repair (d)): a drifting width silently re-scores the
+    # instrument.
+    atom_width_selected_frac: Optional[float] = None
+    width_guard: bool = True
+
+    # (iii) FEATURE-FACTORED LAUNCHES (§A34.1). See
+    #       :mod:`chlu.core.feature_launch`. "designed_offsets" is C2W5's
+    #       P-particle launch from ONE set-code and stays the default.
+    launch_mode: str = "designed_offsets"
+    n_channels: Optional[int] = None  # k; None => f_subset
+    # the launch diamond's radius, as a multiple of MEASURED `s` (the C2W9
+    # coverage instrument, §7 of PREREG-C2W11)
+    reach_radius_frac_s: float = 2.0
+    coverage_trigger_threshold: float = 0.20
 
     @property
     def dim(self) -> int:
@@ -438,6 +491,98 @@ def min_separation(u: np.ndarray) -> float:
 
 
 # ==========================================================================
+# ⭐ C2W11 — the STORE-POPULATION spacing, and the width guard (repairs b/d)
+# ==========================================================================
+class UnselectedAtomWidth(RuntimeError):
+    """Raised when a cell would run at an atom width nobody selected.
+
+    The twin of :class:`chlu.experiments.exp_well_lifecycle.UnselectedAtomWidth`,
+    for the factored store. C2W8-close repair (d): after repair (b) moved the
+    spacing that a co-scaled width co-scales against, an inherited
+    ``atom_width_frac_spacing`` is **no longer a selected value**, and a
+    silently drifting width re-scores every downstream number against a
+    different instrument. So the harness refuses, loudly and by name.
+    """
+
+
+def store_population_spacing(anchors: np.ndarray) -> Dict[str, float]:
+    """Nearest-neighbour spacing measured on the **STORE population**.
+
+    ⭐ C2W8-close repair (b), in the form it takes here. In the census's
+    substrate the store population is a subsample of a much larger sizing pool
+    and the two spacings differ by ~3x (0.445 vs 0.141). In the **factored**
+    store there is no such gap to close by subsampling, and stating why is part
+    of the repair rather than a way around it: *every placed well is a member
+    of the store*, so the store population **is** the ``N_a`` anchors and this
+    function measures the spacing on exactly that set. There is no "sizing set"
+    analogue and ``d_safe_population = 'sizing'`` has no meaning here.
+
+    Returns the ``median`` NN distance (the ruler a co-scaled width uses), the
+    ``min`` (what :func:`min_separation` reports) and the population size.
+    """
+    u = np.asarray(anchors, dtype=float)
+    d = np.linalg.norm(u[:, None, :] - u[None, :, :], axis=-1)
+    np.fill_diagonal(d, np.inf)
+    nn = d.min(axis=1)
+    return {"median_nn": float(np.median(nn)), "min_nn": float(nn.min()),
+            "mean_nn": float(nn.mean()), "max_nn": float(nn.max()),
+            "population": int(u.shape[0])}
+
+
+def resolve_atom_width(cfg: CatTestConfig, anchors: Optional[np.ndarray] = None
+                       ) -> Dict[str, Any]:
+    """The atom width a cell will actually run at, and where it came from.
+
+    ``atom_width_frac_spacing = None`` (default) => the shipped fixed
+    ``cfg.atom_width``, reported with ``source = "fixed"`` so a reader can never
+    mistake an un-co-scaled width for a selected one.
+    """
+    if cfg.atom_width_frac_spacing is None:
+        return {"atom_width": float(cfg.atom_width), "source": "fixed",
+                "frac": None, "spacing": None}
+    if anchors is None:
+        raise ValueError("a co-scaled width needs the store population's anchors")
+    sp = store_population_spacing(anchors)
+    frac = float(cfg.atom_width_frac_spacing)
+    return {"atom_width": float(frac * sp["median_nn"]),
+            "source": "coscaled_store_population", "frac": frac,
+            "spacing": sp["median_nn"], "spacing_stats": sp}
+
+
+def assert_selected_width(cfg: CatTestConfig) -> Dict[str, Any]:
+    """⛔ REFUSE to run at a width nobody selected (C2W8-close repair (d)).
+
+    The guard fires when a co-scaled width is requested and it does **not**
+    match the explicitly declared selection. ``atom_width_selected_frac = None``
+    means "no selection has been declared" and is itself a refusal — the
+    selection sweep declares it. ``width_guard = False`` switches the guard off
+    (for the sweep that DOES the selecting, and for nothing else).
+    """
+    info = {"width_guard": bool(cfg.width_guard),
+            "requested_frac": cfg.atom_width_frac_spacing,
+            "selected_frac": cfg.atom_width_selected_frac}
+    if not cfg.width_guard or cfg.atom_width_frac_spacing is None:
+        info["refused"] = False
+        return info
+    sel = cfg.atom_width_selected_frac
+    if sel is None:
+        raise UnselectedAtomWidth(
+            f"atom_width_frac_spacing={cfg.atom_width_frac_spacing} was "
+            "requested but NO selection has been declared "
+            "(atom_width_selected_frac is None). ⛔ The banked 1.5 is NOT "
+            "inherited: C2W8-close repair (b) moved the spacing it co-scales "
+            "against. Run the selection sweep (width_guard=False) and declare "
+            "the result.")
+    if abs(float(sel) - float(cfg.atom_width_frac_spacing)) > 1e-9:
+        raise UnselectedAtomWidth(
+            f"atom_width_frac_spacing={cfg.atom_width_frac_spacing} != the "
+            f"DECLARED selection {sel}. ⛔ A drifting width silently re-scores "
+            "every downstream number against a different instrument.")
+    info["refused"] = False
+    return info
+
+
+# ==========================================================================
 # the store
 # ==========================================================================
 class FactoredStore(eqx.Module):
@@ -453,16 +598,20 @@ class FactoredStore(eqx.Module):
     payload_dim: int = eqx.field(static=True)
     n_wells: int = eqx.field(static=True)
 
-    def __init__(self, cfg: CatTestConfig, anchors: np.ndarray, key):
+    def __init__(self, cfg: CatTestConfig, anchors: np.ndarray, key,
+                 atom_width: Optional[float] = None):
         self.addr_dim = int(cfg.addr_dim)
         self.payload_dim = int(cfg.payload_dim)
         self.n_wells = int(cfg.n_wells)
+        # ⭐ C2W11: the RESOLVED width (co-scaled to the STORE population when
+        # `atom_width_frac_spacing` is set). `None` reproduces C2W5 exactly.
+        width = float(cfg.atom_width) if atom_width is None else float(atom_width)
         self.V = AtomDictionaryPotential(
             dim=cfg.dim,
             n_atoms=cfg.n_atoms,
             key=key,
             init_scale=float(cfg.atom_init_scale),
-            init_width=float(cfg.atom_width),
+            init_width=width,
             confine=float(cfg.confine),
             depth_init=float(cfg.atom_depth_init),
             n_groups=int(cfg.n_wells),
@@ -667,6 +816,170 @@ def write_wells(store: FactoredStore, cfg: CatTestConfig, anchors: np.ndarray,
                    "endpoint_write_loss": endpoint,
                    "per_well_last_loss_mean": float(np.mean(losses)),
                    "per_well_last_loss_max": float(np.max(losses))}
+
+
+# ==========================================================================
+# ⭐⭐ C2W11 — THE PLACING WRITE (§A29.4(ii)): atoms are PLACED, not dragged
+# ==========================================================================
+def _rigid_stationarity_shift(jit: jnp.ndarray, amps2: jnp.ndarray, s: float,
+                              target: jnp.ndarray, alpha: float,
+                              iters: int) -> jnp.ndarray:
+    """The rigid translation ``delta`` that makes ``target`` stationary.
+
+    One well's ``a`` atoms sit at ``c_i = target + delta + jit_i``. With
+    ``V = alpha|q|^2 - sum_i A_i exp(-|q-c_i|^2/2s^2)`` and ``u_i = delta+jit_i``,
+
+        ``grad V(target) = 2 alpha target - (1/s^2) sum_i A_i u_i exp(-|u_i|^2/2s^2)``
+
+    so stationarity is the fixed point
+    ``delta = (2 alpha s^2 target - M(delta)) / W(delta)`` with
+    ``W = sum_i A_i exp(...)`` and ``M = sum_i A_i jit_i exp(...)``.
+
+    ⭐ It is a **rigid** shift: relative atom geometry is untouched, so the
+    "displaced atoms become everyone else's background" channel that the
+    300-step gradient write opened (foreign > own on 45/48) stays closed. Its
+    magnitude is ``~2 alpha s^2 |t| / D`` -- 0.075 at the registered operating
+    point, i.e. ~9 % of a well spacing.
+
+    ⚠ **Every array is promoted to ONE dtype before the scan.** ``lax.scan``
+    requires the carry's dtype to be invariant, and this function is reached
+    with a float64 jitter draw and a float32 target whenever another test in the
+    same process has enabled ``jax_enable_x64`` globally — which the suite does.
+    That is a real defect class here, not a lint: it fails only in-suite and
+    passes in isolation.
+    """
+    dt = jnp.result_type(jit, amps2, target)
+    jit = jnp.asarray(jit, dtype=dt)
+    amps2 = jnp.asarray(amps2, dtype=dt)
+    target = jnp.asarray(target, dtype=dt)
+
+    def body(delta, _):
+        u = delta[None, :] + jit
+        w = amps2 * jnp.exp(-jnp.sum(u ** 2, axis=-1) / (2.0 * s ** 2))
+        W = jnp.sum(w) + 1e-12
+        M = jnp.sum(w[:, None] * jit, axis=0)
+        out = (2.0 * alpha * (s ** 2) * target - M) / W
+        return jnp.asarray(out, dtype=dt), None
+
+    delta, _ = jax.lax.scan(body, jnp.zeros_like(target), None, length=int(iters))
+    return delta
+
+
+def place_write(store: FactoredStore, cfg: CatTestConfig, anchors: np.ndarray,
+                payloads: np.ndarray, key, *, atom_width: Optional[float] = None,
+                depth_scale: Optional[np.ndarray] = None
+                ) -> Tuple[FactoredStore, Dict[str, Any]]:
+    """⭐ **The placing write.** Every well is written in closed form.
+
+    ``a`` atoms per well: **centers** drawn in a ball of radius
+    ``place_jitter_frac_s * s`` around the well's own full target (address
+    anchor + payload), **widths** set to the co-scaled ``s``, **amplitudes** set
+    so the placed depth is ``place_depth * depth_scale[j]``, then the rigid
+    stationarity shift of :func:`_rigid_stationarity_shift`.
+
+    ⛔ **Why this is the repair and not a shortcut.** The 300-step gradient
+    write drags atoms across the ball; the displaced atoms then sit inside other
+    wells and become their background, which is what produced foreign > own on
+    **45 of 48** wells. A write that *places* gives **0/48**. It also removes
+    the insertion-order pathology by construction: the per-well loop's parameter
+    update touches only that well's rows and depends on nothing another well
+    did, so a placed store is **order-invariant**, asserted in the tests.
+
+    ⚠ The write is still masked per well (one atom group each), so C3 locality
+    is exact rather than approximate, and it costs **zero** extra parameters.
+    """
+    d, m = int(cfg.addr_dim), int(cfg.payload_dim)
+    a = int(cfg.atoms_per_well)
+    s = float(cfg.atom_width) if atom_width is None else float(atom_width)
+    ds = np.ones(cfg.n_wells) if depth_scale is None else np.asarray(depth_scale)
+
+    tgt = np.zeros((cfg.n_wells, cfg.dim), dtype=np.float64)
+    tgt[:, :d] = anchors[:, :d]
+    tgt[:, d:d + m] = payloads
+    # ⚠ Follow the STORE's own dtype rather than pinning float32: the suite
+    # enables `jax_enable_x64` globally in an earlier module, and a hard-coded
+    # float32 here silently mixes precisions (and hard-fails `lax.scan`'s
+    # carry-invariance). Fails only in-suite; passes in isolation.
+    dtype = store.V.centers.dtype
+    tgt_j = jnp.asarray(tgt, dtype=dtype)
+
+    # per-well atom jitter: a uniform draw in the ball of radius r_jit
+    r_jit = float(cfg.place_jitter_frac_s) * s
+    k_dir, k_rad = jax.random.split(key, 2)
+    g = jax.random.normal(k_dir, (int(cfg.n_wells), a, cfg.dim))
+    g = g / (jnp.linalg.norm(g, axis=-1, keepdims=True) + 1e-12)
+    rr = jax.random.uniform(k_rad, (int(cfg.n_wells), a, 1)) ** (1.0 / cfg.dim)
+    jit = g * rr * r_jit
+
+    depth = jnp.asarray(float(cfg.place_depth) * ds, dtype=dtype)  # (N_a,)
+    amp_per_atom = jnp.sqrt(depth / float(a))  # A_i = amp^2 => sum_i A_i = depth
+    amps2 = jnp.broadcast_to(depth[:, None] / float(a), (int(cfg.n_wells), a))
+
+    if bool(cfg.place_stationarity_shift):
+        delta = jax.vmap(
+            lambda jj, aa, tt: _rigid_stationarity_shift(
+                jj, aa, s, tt, float(cfg.confine), int(cfg.place_shift_iters))
+        )(jit, amps2, tgt_j)
+    else:
+        delta = jnp.zeros((int(cfg.n_wells), cfg.dim))
+
+    centers = tgt_j[:, None, :] + delta[:, None, :] + jit  # (N_a, a, dim)
+
+    # scatter into the store's atom rows, group by group (C3-local by row)
+    C = np.asarray(store.V.centers).copy()
+    LW = np.asarray(store.V.log_width).copy()
+    AM = np.asarray(store.V.amp).copy()
+    cen = np.asarray(centers)
+    for j in range(int(cfg.n_wells)):
+        rows = np.asarray(store.group_rows(j), dtype=bool)
+        idx = np.nonzero(rows)[0]
+        C[idx] = cen[j][: len(idx)]
+        LW[idx] = float(np.log(s))
+        AM[idx] = float(np.asarray(amp_per_atom)[j])
+    V = eqx.tree_at(
+        lambda t: [t.centers, t.log_width, t.amp], store.V,
+        replace=[jnp.asarray(C, dtype=store.V.centers.dtype),
+                 jnp.asarray(LW, dtype=store.V.log_width.dtype),
+                 jnp.asarray(AM, dtype=store.V.amp.dtype)])
+    store = eqx.tree_at(lambda t: t.V, store, V)
+
+    # the endpoint write loss, on the FINAL store over ALL wells -- the same
+    # number K1 is adjudicated on for the gradient write, so the two writes are
+    # scored by one instrument.
+    k_end = jax.random.fold_in(key, 987654)
+    endpoint = float(well_write_loss(
+        V, tgt_j, k_end, addr_dim=d, payload_dim=m,
+        n_perturb=int(cfg.write_n_perturb), sigma_addr=float(cfg.write_sigma_addr),
+        sigma_pay=float(cfg.write_sigma_pay), margin=float(cfg.write_margin),
+        barrier=float(cfg.write_barrier), crowd_targets=tgt_j))
+    gradn = float(jnp.mean(jax.vmap(
+        lambda z: jnp.linalg.norm(jax.grad(lambda q: V(q))(z)))(tgt_j)))
+    return store, {"write_mode": "placing",
+                   "endpoint_write_loss": endpoint,
+                   "grad_norm_at_targets": gradn,
+                   "placed_atom_width": s,
+                   "placed_depth_base": float(cfg.place_depth),
+                   "stationarity_shift_median": float(
+                       np.median(np.linalg.norm(np.asarray(delta), axis=-1))),
+                   "jitter_radius": r_jit,
+                   "write_losses": [], "per_well_last_loss_mean": float("nan"),
+                   "per_well_last_loss_max": float("nan")}
+
+
+def write_store(store: FactoredStore, cfg: CatTestConfig, anchors: np.ndarray,
+                payloads: np.ndarray, key, *, order: Optional[np.ndarray] = None,
+                depth_scale: Optional[np.ndarray] = None,
+                atom_width: Optional[float] = None
+                ) -> Tuple[FactoredStore, Dict[str, Any]]:
+    """Dispatch on ``cfg.write_mode``. ``"gradient"`` is C2W5, bit-identical."""
+    if cfg.write_mode == "placing":
+        return place_write(store, cfg, anchors, payloads, key,
+                           atom_width=atom_width, depth_scale=depth_scale)
+    if cfg.write_mode != "gradient":
+        raise ValueError(f"write_mode must be 'gradient' or 'placing', "
+                         f"got {cfg.write_mode!r}")
+    return write_wells(store, cfg, anchors, payloads, key, order=order,
+                       depth_scale=depth_scale)
 
 
 # ==========================================================================
