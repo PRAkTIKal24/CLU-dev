@@ -357,6 +357,33 @@ class Controller:
         self.log.append(row)
         return row
 
+    def set_permanence(self, item_id: int, permanent: bool,
+                       leak: Optional[float] = None) -> bool:
+        """⭐ **C2W10 (L1/L2): the promotion/demotion hook.** Returns whether the
+        item was found.
+
+        The three-state lifecycle's only reach into the allocator: PROTECTED is
+        the existing permanent flag (``leak == 0``, the flat coset of
+        ``clu-controller-spec`` Prop C-N) and demotion re-exposes the item to the
+        designed decay by clearing it. Permanence and ``leak == 0`` are kept in
+        lockstep here exactly as :meth:`offer` establishes them, so a promoted
+        item is skipped by :meth:`tick` and by :meth:`_pick_victim` for the same
+        reason a born-permanent one is.
+
+        ⛔ This is a **setter, not a policy**: which item to promote or demote is
+        decided in :mod:`chlu.core.store_lifecycle`, from item-id-keyed read
+        hits, and never from depth (§A28.3(ii)). The LRU/staleness semantics are
+        untouched — ``last_used`` is not written here — so the pytest-pinned
+        eviction behaviour is unchanged for any item the lifecycle never touches.
+        """
+        for r in self.records.values():
+            if r.item_id == int(item_id):
+                r.permanent = bool(permanent)
+                r.leak = 0.0 if permanent else (
+                    self.leak if leak is None else float(leak))
+                return True
+        return False
+
     def touch(self, item_id: int) -> None:
         """Mark an item as used *now* (staleness clock for LRU eviction).
 

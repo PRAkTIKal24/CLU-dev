@@ -111,6 +111,14 @@ SEVERITY = {
     "guard_liveness": "I",
     # C2W7 (charter §A21): the learned launch head's codebook-collapse row.
     "launch_collapse": "I",
+    # --- BEGIN c2w10-lifecycle (additive: one row, class II) ---
+    # C2W10 L4: the protected fraction hit its bound and promotions are being
+    # REFUSED. Structural (it changes what the store will admit into protection),
+    # and it fails loudly at runtime — it is never a loss term. The monitor
+    # itself lives in `chlu.core.store_lifecycle.ProtectedSaturationMonitor` and
+    # is attached through `MonitorRegistry.register`.
+    "protected_saturation": "II",
+    # --- END c2w10-lifecycle ---
 }
 
 

@@ -419,6 +419,21 @@ def setup_experiment_parsers(subparsers):
     exp_wl_parser.add_argument('--quick', action='store_true',
                                help='Quick mode (d=4, 1 seed, tiny stream)')
     exp_wl_parser.set_defaults(func=cmd_exp_well_lifecycle)
+    # --- BEGIN c2w10-lifecycle (additive) ---
+    # exp-persistent-store (C2W10: the THREE-STATE lifecycle across stream
+    # boundaries — MECHANICS only, no VALUE cell and no verdict)
+    exp_ps_parser = subparsers.add_parser(
+        'exp-persistent-store',
+        help='C2W10 MECHANICS: the PROTECTED<->ACTIVE->TRASH store lifecycle on a '
+             'scripted regime-switcher (promotion/demotion/trash/protected-fraction/'
+             'refresh-monotonicity/netting/OFF bit-identity). No claim cell.'
+    )
+    exp_ps_parser.add_argument('--project', help='Project name to use')
+    exp_ps_parser.add_argument('--seeds', help='Comma-separated seeds, e.g. 0,1,2')
+    exp_ps_parser.add_argument('--quick', action='store_true',
+                               help='Quick mode (tiny stream, 1 seed; never a claim)')
+    exp_ps_parser.set_defaults(func=cmd_exp_persistent_store)
+    # --- END c2w10-lifecycle ---
     # --- BEGIN c2w8p3-phi-geometry (additive) ---
     # exp-phi-geometry (C2W8 pass 3: the φ→addr map + the geometry it buys)
     exp_pg_parser = subparsers.add_parser(
@@ -1911,6 +1926,45 @@ def cmd_exp_sharded_store(args):
         return 1
 
     return 0
+
+
+# --- BEGIN c2w10-lifecycle (additive) ---
+def cmd_exp_persistent_store(args):
+    """Run the C2W10 persistent-store lifecycle MECHANICS build."""
+    console.print(
+        "[bold cyan]Running Experiment PERSISTENT-STORE (C2W10): the three-state "
+        "lifecycle — MECHANICS, no VALUE cell and no verdict[/bold cyan]"
+    )
+
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    config.project.save_dir = str(paths['plots'])
+    seeds = ([int(s) for s in str(args.seeds).split(',')]
+             if getattr(args, 'seeds', None) else None)
+
+    try:
+        from chlu.experiments.exp_persistent_store import (
+            run_experiment_persistent_store,
+        )
+
+        res = run_experiment_persistent_store(
+            config=config,
+            save_dir=str(paths['plots']),
+            seeds=seeds,
+            quick=getattr(args, 'quick', False),
+        )
+        console.print(
+            f"✓ Experiment PERSISTENT-STORE completed: n_live_max="
+            f"{res['n_live_max']} -> {res['json']}",
+            style="bold green",
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+    return 0
+# --- END c2w10-lifecycle ---
 
 
 def cmd_exp_well_lifecycle(args):

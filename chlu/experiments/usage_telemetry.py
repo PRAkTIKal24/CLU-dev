@@ -65,14 +65,33 @@ class UsageTelemetry:
     n_read_events: int = 0
     n_unassigned: int = 0
     proxy: str = PRIMARY_PROXY
+    #: ⭐ **C2W10 (additive)**: the same proxy, aggregated per STREAM — the unit
+    #: §A20.6's trash criterion counts. ``hits_by_stream[item_id][stream]``.
+    #: ``current_stream`` is set by :meth:`set_stream` and defaults to 0, so every
+    #: pre-C2W10 call site records exactly what it recorded before.
+    hits_by_stream: Dict[int, Dict[int, int]] = field(default_factory=dict)
+    first_seen_stream: Dict[int, int] = field(default_factory=dict)
+    current_stream: int = 0
 
     # -- accumulation ------------------------------------------------------
+    def set_stream(self, stream: int) -> None:
+        """Enter stream ``stream``. Every later hit is credited to it.
+
+        ⚠ The stream is a property of the *reader's* clock, not of the item: an
+        item admitted in stream 1 and read in stream 4 has ``first_seen_stream =
+        1`` and a hit in stream 4, which is exactly the pair L3 needs to tell
+        "never useful" from "never useful YET".
+        """
+        self.current_stream = int(stream)
+
     def note_admitted(self, item_id: int, t: int) -> None:
         """Record an admission (``first_seen``); leaves ``read_hits`` at 0."""
         iid = int(item_id)
         self.first_seen.setdefault(iid, int(t))
         self.read_hits.setdefault(iid, 0)
         self.last_read.setdefault(iid, -1)
+        self.first_seen_stream.setdefault(iid, int(self.current_stream))
+        self.hits_by_stream.setdefault(iid, {})
 
     def note_read(self, item_id: int, t: int, controller=None) -> None:
         """Record one read hit on ``item_id``.
@@ -88,6 +107,9 @@ class UsageTelemetry:
         self.read_hits[iid] = self.read_hits.get(iid, 0) + 1
         self.last_read[iid] = int(t)
         self.first_seen.setdefault(iid, int(t))
+        self.first_seen_stream.setdefault(iid, int(self.current_stream))
+        by = self.hits_by_stream.setdefault(iid, {})
+        by[int(self.current_stream)] = by.get(int(self.current_stream), 0) + 1
 
     def observe_basins(self, item_ids: Sequence[int], basins: Sequence[int],
                        t: int, controller=None,
@@ -149,6 +171,28 @@ class UsageTelemetry:
             "hits_median": float(np.median(h)) if h.size else float("nan"),
             "hits_max": float(np.max(h)) if h.size else float("nan"),
             "hits_by_item": {int(i): self.hits(i) for i in ids},
+        }
+
+    def cross_stream_summary(self, live_ids: Optional[Sequence[int]] = None
+                             ) -> Dict[str, Any]:
+        """⭐ **C2W10**: the per-stream record L3's criterion is computed from.
+
+        ⛔ No decision is taken here — this is the *record*; the criterion lives
+        in :func:`chlu.core.store_lifecycle.should_trash`, and depth never enters
+        either of them (§A28.3(ii)).
+        """
+        ids = (sorted(self.read_hits) if live_ids is None
+               else [int(i) for i in live_ids])
+        return {
+            "proxy": self.proxy, "key": "item_id",
+            "hits_by_stream": {int(i): {int(s): int(n) for s, n in
+                                        self.hits_by_stream.get(int(i), {}).items()}
+                               for i in ids},
+            "first_seen_stream": {int(i): int(self.first_seen_stream.get(int(i), 0))
+                                  for i in ids},
+            "n_streams_seen": int(1 + max(
+                [int(s) for i in ids for s in self.hits_by_stream.get(int(i), {})]
+                or [self.current_stream])),
         }
 
 

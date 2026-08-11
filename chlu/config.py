@@ -2778,6 +2778,95 @@ class ExperimentClEntryConfig:
     seed: int = 0
 
 
+# --- BEGIN c2w10-lifecycle (additive; owner: experiment-engineer) ------------
+@dataclass
+class ExperimentPersistentStoreConfig:
+    """⭐ **C2W10 — the persistent store and its THREE-STATE lifecycle**
+    (:mod:`chlu.experiments.exp_persistent_store`), charter Add.12 §A34.3.
+
+    The states are **PROTECTED <-> ACTIVE -> TRASH**. Every lifecycle verb ships
+    **OFF**: with ``persistent_store = False`` and ``lifecycle = False`` the rig
+    is bit-identical and parameter-count-identical to current ``main`` (L7), and
+    the existing ``gamma_phi`` OFF regressions are untouched.
+
+    ⚠ ``d_dwell > window`` is **derived, not chosen** (a burst holds the
+    trailing-window test for exactly ``window`` chunks, so the hysteresis binds
+    only above it) and is asserted at construction of
+    :class:`~chlu.core.store_lifecycle.StoreLifecycle`.
+    ⛔ Depth never enters the usefulness criterion (§A28.3(ii)); ``read_hits`` is
+    the registered proxy. ⛔ The synthetic stream is a **mechanics instrument and
+    never a claim venue** (§A14.8).
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # ---- the single toggle (PREREG-C2W10 §1) ----
+    persistent_store: bool = False   # True => the store survives stream boundaries
+
+    # ---- the three-state lifecycle (all verbs OFF by default: L7) ----
+    lifecycle: bool = False
+    promote: bool = True
+    demote: bool = True
+    trash: bool = True
+    h_hi: int = 2            # trailing-window read hits qualifying for promotion
+    h_lo: int = 1            # below this the well counts as unused
+    window: int = 2          # trailing window, in chunks
+    d_dwell: int = 3         # chunks the >= h_hi condition must be SUSTAINED
+    d_demote: int = 2        # chunks below h_lo before PROTECTED -> ACTIVE
+    k_streams: int = 3       # stream boundaries L3's criterion looks back over
+    trash_criterion: str = "last_k_streams"  # or "since_first_seen"
+    censoring_guard: bool = True   # never-useful-YET is not never-useful
+    f_max: float = 0.25      # the protected-fraction bound (Hub default)
+    refresh_monotonic: bool = False   # the store-level I1 guard (L5)
+    refresh_max_gain: float = 4.0     # amplitude-gain cap (depth gain is its square)
+
+    # ---- the synthetic regime-switcher (MECHANICS INSTRUMENT ONLY) ----
+    n_regimes: int = 3
+    n_classes: int = 4
+    n_features: int = 8
+    n_per_stream: int = 64
+    schedule: List[int] = field(default_factory=lambda: [0, 1, 2, 0, 1, 2])
+    drift_free: bool = False   # the control condition
+    #: distinct ADDRESSABLE items, shared by every stream, so a revisit returns
+    #: to the same addresses. ⚠ `n_anchors > well_budget` IS this rig's capacity
+    #: pressure, and `well_budget / n_anchors` is the ceiling on the read's
+    #: launch-point coverage — hence on the usage proxy's resolution.
+    n_anchors: int = 96
+    jitter: float = 0.02       # per-instance noise around the anchor
+
+    # ---- the real stream (one frozen file, one sha256, all arms) ----
+    benchmark_gate_path: str = ".claude/outputs/c2w10-benchmark-gate/BENCHMARK-GATE.json"
+    decimation_m: int = 1      # filed by the Hub into PREREG-C2W10 §9 before any claim
+    wall_target_s: float = 7200.0   # the <= 2 h/seed pricing target
+
+    # ---- the store (carried rig facts, §A34.10, all pytest-pinned) ----
+    addr_dim: int = 12         # d = 12 operational; d = 16 is a declared NOT-RUN
+    payload_dim: int = 1
+    well_budget: int = 64      # the I2 spoke gates on n_live_max >= 64
+    capacity: int = 72
+    leak: float = 0.02
+    payload_scale: float = 8.0
+    d_safe_frac: float = 0.88          # d_safe = frac x median-NN(stream-0 keys)
+    atom_width_frac_spacing: float = 1.5   # the BANKED census value
+    atom_kernel: str = "wendland"      # compact; only a compact gate is exactly 0
+    atom_kernel_cutoff: float = 2.5
+    atom_site_local_init: bool = True  # the placing write
+
+    # ---- the read/write budget (chunk granularity, charter §2.2) ----
+    chunk_size: int = 8        # instances per chunk
+    offers_per_chunk: int = 3
+    #: queries per read event. A declared BUDGET (reads are batched, so this is
+    #: nearly free); it sets the RESOLUTION of the usage proxy — see the note in
+    #: `exp_persistent_store.run_cell`.
+    read_batch: int = 128
+    write_steps: int = 40      # ⚠ N94: >= 40 for any promotable reading
+    read_steps: int = 200
+    address_steps: int = 100
+    depth_every: int = 2       # chunks between depth measurement points
+    quick: bool = False
+# --- END c2w10-lifecycle ----------------------------------------------------
+
+
 @dataclass
 class ExperimentWellLifecycleConfig:
     """⭐ C2W8 — the WELL LIFECYCLE census (``exp_well_lifecycle``), stage 1.
@@ -3254,6 +3343,11 @@ class CHLUConfig:
     experiment_well_lifecycle: ExperimentWellLifecycleConfig = field(
         default_factory=ExperimentWellLifecycleConfig
     )
+    # --- BEGIN c2w10-lifecycle (additive) ---
+    experiment_persistent_store: ExperimentPersistentStoreConfig = field(
+        default_factory=ExperimentPersistentStoreConfig
+    )
+    # --- END c2w10-lifecycle ---
     # --- BEGIN c2w8p3-phi-geometry (additive) ---
     experiment_phi_geometry: ExperimentPhiGeometryConfig = field(
         default_factory=ExperimentPhiGeometryConfig
@@ -3459,6 +3553,14 @@ def load_config(path: Path) -> CHLUConfig:
                 data.get("experiment_well_lifecycle", {}),
             )
         ),
+        # --- BEGIN c2w10-lifecycle (additive) ---
+        experiment_persistent_store=ExperimentPersistentStoreConfig(
+            **filter_valid_fields(
+                ExperimentPersistentStoreConfig,
+                data.get("experiment_persistent_store", {}),
+            )
+        ),
+        # --- END c2w10-lifecycle ---
         # --- BEGIN c2w8p3-phi-geometry (additive) ---
         experiment_phi_geometry=ExperimentPhiGeometryConfig(
             **filter_valid_fields(
@@ -3534,6 +3636,9 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_cl_entry": asdict(config.experiment_cl_entry),
         "experiment_sharded_store": asdict(config.experiment_sharded_store),
         "experiment_well_lifecycle": asdict(config.experiment_well_lifecycle),
+        # --- BEGIN c2w10-lifecycle (additive) ---
+        "experiment_persistent_store": asdict(config.experiment_persistent_store),
+        # --- END c2w10-lifecycle ---
         # --- BEGIN c2w8p3-phi-geometry (additive) ---
         "experiment_phi_geometry": asdict(config.experiment_phi_geometry),
         # --- END c2w8p3-phi-geometry ---
