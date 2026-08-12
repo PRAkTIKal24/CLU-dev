@@ -61,7 +61,10 @@ from chlu.core.factored_store import (
     FactoredStore,
     FrozenPhi,
     exact_set_accuracy,
+    multi_particle_read,
     occupancy,
+    store_population_spacing,
+    write_store,
 )
 
 __all__ = [
@@ -90,6 +93,19 @@ __all__ = [
     "apply_reader_plus_identity",
     "score_readers_plus_identity",
     "shrinkage_report",
+    # -- ⭐ C2W11 (spoke C): the organizer swap's null side -------------------
+    "feature_launch_states",
+    "feature_keys",
+    "n1_confidence",
+    "n2_confidence",
+    "n3_confidence",
+    "n4_confidence",
+    "n5_confidence",
+    "novelty_auroc",
+    "expected_calibration_error",
+    "instantiate_landscape",
+    "anytime_read",
+    "feature_decodability_ceiling",
 ]
 
 
@@ -659,6 +675,10 @@ def n3_static_geometric(cfg: CatTestConfig, family: CatFamily, anchors: np.ndarr
     c_np = np.asarray(p["c"])
     sig = np.asarray(jnp.exp(p["log_sigma"]))
     b_np = np.asarray(p["b"])
+    # ⭐ C2W11 (spoke C): the fitted rule is returned explicitly so the arm's
+    # DECISION MARGIN is available as its confidence channel (VALUE leg ii's
+    # null side). Additive: an extra key, no existing key changes.
+    rule = {"c": c_np, "sigma": sig, "b": b_np}
     pay_np = (np.asarray(family.payloads) if pay_tbl is not None
               else np.asarray(p["pay"]))
 
@@ -679,6 +699,7 @@ def n3_static_geometric(cfg: CatTestConfig, family: CatFamily, anchors: np.ndarr
     if payload_source == "written":
         n_params += int(np.asarray(family.payloads).size)  # store content, ledgered
     return {"apply": apply, "assign": assign, "cfg": cfg, "level": level,
+            "rule": rule,
             "codebook": (c_np, pay_np), "loss_first": float(hist[0]),
             "loss_last": float(hist[-1]), "oracle_imitation": tgt is not None,
             "ledger": arm_ledger("N3", cfg, n_params=n_params, level=level,
@@ -1072,4 +1093,426 @@ def shrinkage_report(w, pred_fitted, pred_identity, y, tol, *,
             out["c2w7_crossing_fires"] = False
             out["note"] = ("no query has an exactly-right asserted set ⇒ the "
                            "shrinkage has nothing to destroy at this cell")
+    return out
+
+
+# ==========================================================================
+# ⭐⭐ C2W11 (spoke C) — THE ORGANIZER SWAP'S NULL SIDE, on the REPAIRED
+# substrate: feature-factored launches, a matched confidence channel on every
+# arm, and a LANDSCAPE INSTANTIATION so the static arms have an anytime curve.
+# ==========================================================================
+#
+# ⛔ Everything below is **additive**. No function above it changes behaviour,
+# so every C2W5 number this module produced is reproducible bit-for-bit.
+#
+# ⚠ The three things that MOVED between C2W5 and C2W11, and why each needs new
+# code rather than a new flag:
+#   (i)   the launch is `R*e_{j_c} + sigma_q xi` from
+#         :class:`~chlu.core.feature_launch.FeatureLaunchHead`, not
+#         `set_code + o_p`, so ``phi.offsets`` no longer exists on the object an
+#         arm launches from and every "de-offset the launch" line is invalid;
+#   (ii)  VALUE leg ii scores a graded-novelty read, so every arm must emit a
+#         **principled** confidence — an arm without one is a declared NOT-RUN,
+#         never a scored "uncalibrated" arm;
+#   (iii) VALUE leg iii is the SWAP-DIFFERENCED anytime curve, and the organizer
+#         swap hands the null arm the SAME reader class and the SAME k-particle
+#         read. ⇒ the null's organization must be **instantiated as a
+#         landscape** and read with the identical read. It therefore HAS a
+#         curve; it is not a flat line by fiat.
+#
+# ⛔ Wells, codes, channels and atoms carry integer indices and nothing else
+# (``PREREG-TierII.md`` §2.6).
+
+
+def feature_launch_states(head, cfg: CatTestConfig, indicators: np.ndarray, key,
+                          batch: int = 256) -> np.ndarray:
+    """``(B, N_a) -> (B, k, dim)`` the C2W11 launch states, **bit-identically**.
+
+    ⛔ This reproduces :func:`~chlu.core.factored_store.multi_particle_read`'s
+    launch stage line-for-line — *including its ``fold_in(key, lo)`` chunking*,
+    which :func:`chlu.core.feature_launch.launch_points` does **not** use (it
+    splits over the whole batch at once, so the two disagree for ``B > batch``).
+    The physics arm scores through ``multi_particle_read``; therefore so must
+    the launch points every null arm sees, or the arms are not on the same
+    queries. Asserted against a zero-step ``multi_particle_read`` in
+    ``tests/test_c2w11_nulls.py``.
+    """
+    ind = jnp.asarray(indicators, dtype=jnp.float32)
+    B = int(ind.shape[0])
+    out = []
+
+    @eqx.filter_jit
+    def launch_all(ind_b, keys_b):
+        return jax.vmap(lambda i, k: head.launch(i, k, float(cfg.query_sigma)))(
+            ind_b, keys_b)
+
+    for lo in range(0, B, int(batch)):
+        hi = min(lo + int(batch), B)
+        keys_b = jax.random.split(jax.random.fold_in(key, lo), hi - lo)
+        out.append(np.asarray(launch_all(ind[lo:hi], keys_b)))
+    return np.concatenate(out, axis=0)
+
+
+def feature_keys(kind: str, head, cfg: CatTestConfig, indicators: np.ndarray,
+                 q0: np.ndarray) -> np.ndarray:
+    """N4/N5's key space under feature-factored launches.
+
+    ⚠ ``n4_keys``'s ``"launch_mean"`` subtracts ``phi.offsets`` — a designed
+    offset that **does not exist** here. The three registered key spaces are:
+
+    * ``"set_code"``   — the exact ``phi`` set-code (the *noiseless-key* variant,
+      flagged as such wherever it wins, exactly as C2W5 flagged it);
+    * ``"launch_mean"`` — the mean of the ``k`` launch points (the arm-visible,
+      permutation-invariant statistic);
+    * ⭐ ``"launch_flat"`` — the ``k`` launch points concatenated. **Strictly
+      richer than the mean** and registered *for* the nulls: a mean over
+      channels destroys precisely the per-channel structure the C2W11 launch was
+      built to create, and scoring the nulls on the destroyed statistic would be
+      hobbling them. It is the F3-grade form.
+    """
+    d = int(cfg.addr_dim)
+    if kind == "set_code":
+        return np.asarray(head.set_code(jnp.asarray(indicators, jnp.float32)))
+    z = np.asarray(q0)[..., :d]
+    if kind == "launch_mean":
+        return z.mean(1)
+    if kind == "launch_flat":
+        return z.reshape(len(z), -1)
+    raise ValueError(f"unknown C2W11 key space {kind!r}")
+
+
+# --------------------------------------------------------------------------
+# ⭐ THE MATCHED CONFIDENCE CHANNEL — one per arm, per PARTICLE (VALUE leg ii)
+# --------------------------------------------------------------------------
+# ⛔ Every channel below is the arm's OWN native quantity, not a bolted-on
+# detector: N1's is the read objective's own weight on the winning atom, N2's is
+# the quantisation error it minimises, N3's is the margin of the decision rule
+# it fits, N4's is the neighbour distance its prediction is a function of, and
+# N5's is the surprise its gate is a function of. An arm with no such quantity
+# is a **declared NOT-RUN for V2**, never a scored "uncalibrated" arm.
+#
+# Sign convention, fixed once: **higher = more confident / more familiar**, so a
+# novelty score is ``-confidence`` and the AUROC below is computed against the
+# novel label with that sign already applied.
+
+
+def n1_confidence(fit: Dict[str, Any], q0: np.ndarray) -> np.ndarray:
+    """``(B, k)`` N1's confidence: the winning atom's read-objective weight.
+
+    ``max_i [2 log|A_i| - ||q-c_i||^2 / 2 s_i^2]`` — the log of the very term
+    the softmax read normalises, i.e. the read objective's own evidence that
+    *some* stored unit explains this launch point. (The set-level residual is
+    reported beside it by the harness; per-feature scoring needs a per-particle
+    quantity and this is the arm's.)
+    """
+    c = fit["cfg"]
+    B, P = np.asarray(q0).shape[0], int(c.n_particles)
+    Q = jnp.asarray(np.asarray(q0).reshape(-1, c.dim), jnp.float32)
+    lg = _n1_logits(fit["V"], Q, int(c.addr_dim))
+    return np.asarray(jnp.max(lg, axis=-1)).reshape(B, P)
+
+
+def n2_confidence(fit: Dict[str, Any], q0: np.ndarray) -> np.ndarray:
+    """``(B, k)`` N2's confidence: **negative distance-to-codebook** (registered)."""
+    C = np.asarray(fit["codebook"][0], dtype=np.float64)
+    d = int(fit["cfg"].addr_dim)
+    Z = np.asarray(q0)[..., :C.shape[1] if C.shape[1] < d else d]
+    d2 = ((Z[:, :, None, :] - C[None, None, :, :Z.shape[-1]]) ** 2).sum(-1)
+    return -np.sqrt(d2.min(-1))
+
+
+def n3_confidence(fit: Dict[str, Any], q0: np.ndarray, kind: str = "evidence"
+                  ) -> np.ndarray:
+    """``(B, k)`` N3's confidence from its own fitted rule.
+
+    ``score_j = -||z-c_j||^2 / 2 sigma_j^2 + b_j``. Two readings, both emitted:
+
+    * ⭐ ``"evidence"`` (**default, and the arm's F3-grade form**) —
+      ``max_j score_j``, the fitted rule's own evidence that *some* cell explains
+      this point. It is the exact analogue of N1's max-logit and N2's negative
+      distance-to-codebook, so the five arms carry one consistent channel family.
+    * ``"margin"`` — ``score_(1) - score_(2)``, the form named in the task.
+
+    ⚠⚠ **Why the default is not the margin, decided by a TEST and not by a
+    score.** The margin is a legitimate *assignment*-uncertainty statistic and a
+    **broken novelty statistic**: as ``z`` leaves the codebook the two leading
+    ``-d^2/2 sigma^2`` terms separate without bound, so the margin *grows* with
+    distance and reports maximal confidence exactly where the arm knows least
+    (measured on the fixture: margin 6.98 at the fitted points vs **280.99** at
+    ``z + 50``; ``tests/test_c2w11_nulls.py::test_confidence_is_higher_where_the_
+    arm_was_fitted``). Hobbling the null with a channel that is inverted by
+    construction is the same referee attack as hobbling it anywhere else, so the
+    arm gets the sound channel and the registered one is reported beside it.
+    """
+    r = fit["rule"]
+    d = int(fit["cfg"].addr_dim)
+    Z = np.asarray(q0)[..., :d]
+    d2 = ((Z[:, :, None, :] - np.asarray(r["c"])[None, None]) ** 2).sum(-1)
+    sc = -d2 / (2.0 * np.asarray(r["sigma"])[None, None, :] ** 2 + 1e-9) \
+        + np.asarray(r["b"])[None, None, :]
+    if kind == "margin":
+        top2 = np.sort(sc, axis=-1)[..., -2:]
+        return top2[..., 1] - top2[..., 0]
+    if kind != "evidence":
+        raise ValueError(f"unknown N3 confidence kind {kind!r}")
+    return sc.max(-1)
+
+
+def n4_confidence(key_tr: np.ndarray, key_q: np.ndarray) -> np.ndarray:
+    """N4's confidence: **negative nearest-neighbour distance** in its key space."""
+    D = np.linalg.norm(np.asarray(key_q)[:, None, :] - np.asarray(key_tr)[None],
+                       axis=-1)
+    return -D.min(1)
+
+
+def n5_confidence(fit: Dict[str, Any], keys: np.ndarray) -> np.ndarray:
+    """N5's confidence: ``-||M(k) - M_0(k)||^2`` — the **surprise gate**, at read time.
+
+    ⚠ **Stated explicitly because it is the one place the published rule does not
+    hand you a read-time quantity.** Titans' gate is
+    ``theta_t = theta * sigmoid(l_t - l_bar)`` with ``l_t = ||M(k_t) - v_t||^2``,
+    which needs the **target** ``v_t`` and therefore does not exist at read time.
+    The target-free form of the same signal is the deviation the online pass
+    actually accumulated at this key: how far the fast weights ``M`` have been
+    driven from their meta-learned initialisation ``M_0`` where this query lands.
+    It is the integral of the gate along the write stream, evaluated at ``k``.
+    ⛔ Declared as a *derived* channel, not as the published gate itself.
+    """
+    K = jnp.asarray(keys, jnp.float32)
+    a = np.asarray(_mlp(fit["M"], K))
+    b = np.asarray(_mlp(fit["M0"], K))
+    return -((a - b) ** 2).sum(-1)
+
+
+def novelty_auroc(scores: np.ndarray, novel: np.ndarray) -> float:
+    """AUROC of ``-confidence`` (i.e. the novelty score) against the novel label.
+
+    Rank-based (ties averaged), so it is exact rather than trapezoid-approximate.
+    Returns ``nan`` when either class is empty — ⛔ a missing class is a NOT-RUN,
+    never a 0.5.
+    """
+    s = -np.asarray(scores, dtype=np.float64).ravel()
+    y = np.asarray(novel).ravel().astype(bool)
+    n1, n0 = int(y.sum()), int((~y).sum())
+    if n1 == 0 or n0 == 0:
+        return float("nan")
+    order = np.argsort(s, kind="mergesort")
+    ranks = np.empty(len(s), dtype=np.float64)
+    ranks[order] = np.arange(1, len(s) + 1, dtype=np.float64)
+    # average ranks over ties
+    ss = s[order]
+    i = 0
+    while i < len(ss):
+        j = i
+        while j + 1 < len(ss) and ss[j + 1] == ss[i]:
+            j += 1
+        if j > i:
+            ranks[order[i:j + 1]] = ranks[order[i:j + 1]].mean()
+        i = j + 1
+    return float((ranks[y].sum() - n1 * (n1 + 1) / 2.0) / (n1 * n0))
+
+
+def expected_calibration_error(conf: np.ndarray, correct: np.ndarray,
+                               n_bins: int = 10) -> Dict[str, Any]:
+    """Equal-width-bin ECE, with the pieces that make a degenerate ECE legible.
+
+    ⚠ **The degeneracy is registered, not discovered:** when accuracy is ~0
+    everywhere, ECE collapses to *mean confidence* and the most under-confident
+    arm "wins". ``acc``, ``mean_conf`` and ``degenerate`` are therefore returned
+    beside ``ece`` and are reported together, always.
+    """
+    c = np.clip(np.asarray(conf, dtype=np.float64).ravel(), 0.0, 1.0)
+    a = np.asarray(correct).ravel().astype(np.float64)
+    edges = np.linspace(0.0, 1.0, int(n_bins) + 1)
+    ece, bins = 0.0, []
+    for lo, hi in zip(edges[:-1], edges[1:], strict=True):
+        m = (c > lo) & (c <= hi) if lo > 0 else (c >= lo) & (c <= hi)
+        if not m.any():
+            continue
+        w = float(m.mean())
+        gap = abs(float(a[m].mean()) - float(c[m].mean()))
+        ece += w * gap
+        bins.append({"lo": float(lo), "hi": float(hi), "n": int(m.sum()),
+                     "acc": float(a[m].mean()), "conf": float(c[m].mean())})
+    return {"ece": float(ece), "acc": float(a.mean()),
+            "mean_conf": float(c.mean()), "n_bins": int(n_bins), "bins": bins,
+            "degenerate": bool(a.mean() <= 0.01),
+            "degenerate_note": ("accuracy <= 0.01: ECE is mean confidence and "
+                                "the most under-confident arm wins by "
+                                "construction. Reported WITH the accuracy.")}
+
+
+# --------------------------------------------------------------------------
+# ⭐⭐ V3's null side — INSTANTIATING A CODEBOOK AS A LANDSCAPE
+# --------------------------------------------------------------------------
+def instantiate_landscape(cfg: CatTestConfig, centers: np.ndarray,
+                          payloads: np.ndarray, *, seed: int = 0,
+                          total_atoms: Optional[int] = None,
+                          width_frac: Optional[float] = None,
+                          place_depth: Optional[float] = None,
+                          depth_scale: Optional[np.ndarray] = None
+                          ) -> Tuple[FactoredStore, Dict[str, Any]]:
+    """Turn a null arm's ``(centers, payloads)`` codebook into a **real store**.
+
+    ⭐ **Why this exists.** The organizer swap changes *who decides where the
+    wells go*, not *how they are read* (``PREREG-TierII.md`` §1). So the null's
+    answer to "where do the wells go" is instantiated with the **same placing
+    write, the same atom budget and the same width law** the physics arm uses,
+    and is then read with the identical k-particle anytime read. It is
+    :func:`~chlu.core.factored_store.write_store` that does the writing — this
+    function chooses nothing the physics arm does not also choose.
+
+    ⚠⚠ **The mirror-image referee attack is closed here, by measurement.**
+    *"You gave the null a badly-instantiated landscape"* is the same attack as
+    *"you hobbled the competition"*. The three knobs that could hobble it —
+    ``total_atoms`` (the atom budget), ``width_frac`` (the co-scaled width) and
+    ``place_depth`` (the amplitude) — are therefore **swept and selected on a
+    held-out-from-seen split**, exactly like every other null hyperparameter.
+    The defaults are the physics arm's own values.
+
+    ``total_atoms`` is the budget in atoms, split evenly over the codebook, so a
+    64-code arm gets 6 atoms/code where a 32-code arm gets 12 — **matched total
+    capacity**, not matched per-unit capacity.
+    """
+    C = np.asarray(centers, dtype=np.float64)[:, : int(cfg.addr_dim)]
+    Pay = np.asarray(payloads, dtype=np.float64)
+    n_codes = int(C.shape[0])
+    tot = int(cfg.n_atoms if total_atoms is None else total_atoms)
+    a = max(1, int(tot // n_codes))
+    c2 = _with(cfg, n_wells=n_codes, atoms_per_well=a,
+               # ⛔ the guard is for the CLAIM cell's width; this is a declared
+               # instantiation sweep and passes its width explicitly below.
+               atom_width_frac_spacing=None, atom_width_selected_frac=None,
+               width_guard=False,
+               place_depth=float(cfg.place_depth if place_depth is None
+                                 else place_depth))
+    sp = store_population_spacing(C)
+    wf = float(cfg.atom_width_frac_spacing if width_frac is None
+               else width_frac) if (cfg.atom_width_frac_spacing is not None
+                                    or width_frac is not None) else None
+    width = float(cfg.atom_width) if wf is None else float(wf * sp["median_nn"])
+    anchors = np.zeros((n_codes, cfg.dim), dtype=np.float64)
+    anchors[:, : int(cfg.addr_dim)] = C
+    key = jax.random.PRNGKey(int(seed) + 31337)
+    k_i, k_w = jax.random.split(key, 2)
+    store = FactoredStore(c2, anchors, k_i, atom_width=width)
+    if depth_scale is None:
+        r = float(cfg.depth_ratio)
+        depth_scale = np.where(np.arange(n_codes) % 2 == 0, 1.0, r)
+    store, wrep = write_store(store, c2, anchors, Pay, k_w,
+                              depth_scale=np.asarray(depth_scale),
+                              atom_width=width)
+    info = {"n_codes": n_codes, "atoms_per_well": a, "total_atoms": n_codes * a,
+            "atom_width": width, "width_frac": wf,
+            "codebook_spacing": sp, "place_depth": float(c2.place_depth),
+            "store_bytes": int(store.n_bytes()), "write": wrep,
+            "cfg": c2}
+    return store, info
+
+
+def anytime_read(store: FactoredStore, head, cfg: CatTestConfig,
+                 indicators: np.ndarray, key, *, budget: int,
+                 batch: int = 256) -> np.ndarray:
+    """The **identical** k-particle anytime read, at a total Verlet budget.
+
+    ⛔ The split rule is quoted from ``FROZEN-INTERFACES-C2W11.json``'s
+    ``v3_budget_grid`` and is not re-derived: ``address = round(b/3)``,
+    ``read = b - round(b/3)``, ``gamma_address`` then ``gamma_read``, ``dt``
+    from the config. The read itself is
+    :func:`~chlu.core.factored_store.multi_particle_read` — the physics arm's
+    own function, called with the null's store. **A mismatched axis voids VALUE
+    leg iii**, so there is exactly one implementation and both arms use it.
+    """
+    b = int(budget)
+    a = int(round(b / 3.0))
+    c = _with(cfg, address_steps=a, read_steps=b - a)
+    return multi_particle_read(store, head, c, indicators, key, batch=batch)
+
+
+# --------------------------------------------------------------------------
+# ⛔ THE DECODABILITY CEILING, RECOMPUTED ON THE FEATURE-FACTORED LAUNCHES
+# --------------------------------------------------------------------------
+def feature_decodability_ceiling(head, cfg: CatTestConfig, family: CatFamily,
+                                 q0_unseen: Optional[np.ndarray] = None,
+                                 chunk: int = 32) -> Dict[str, Any]:
+    """How much of ``A(x)`` survives to the launch points **every arm sees**?
+
+    ⛔ **DECLARED OUT-OF-CLASS. Never an arm, never a score.** It enumerates all
+    ``C(N_a, F)`` combinations and consults the written payload table, so it is
+    matched to nothing. Its job is the one no arm's score can do: separate *"the
+    arms are weak"* from *"the launch destroyed the set"*.
+
+    ⚠ :func:`phi_decodability_ceiling`'s as-launched branch **cannot be reused**:
+    it de-offsets by ``phi.offsets``, and the C2W11 launch has no offsets. The
+    matched filter here compares the observed ``(k, d)`` launch block against
+    each candidate combination's own **noiseless launch block** ``R e_{j_c}``,
+    in the deflation's deterministic channel order.
+
+    Two conditions, both reported:
+
+    * **noiseless** — nearest set-code over all combinations (unchanged by the
+      launch swap; it measures ``phi`` at ``d``, not the launch);
+    * **as-launched** — nearest *launch block*, i.e. what a decoder that is
+      allowed to know the launch head can still recover from the very points the
+      arms consume.
+
+    Plus ``asserted_set_exact``: the fraction of queries whose per-channel
+    nearest-code decode is already exactly ``A(x)`` — the K6 statistic, recomputed
+    here so the ceiling and the *arms'* ceiling can be read in one table.
+    """
+    N_a, F, R = int(cfg.n_wells), int(cfg.f_subset), float(cfg.ball_radius)
+    d = int(cfg.addr_dim)
+    combos = np.array(list(itertools.combinations(range(N_a), F)), dtype=np.int32)
+    ind = np.zeros((len(combos), N_a), dtype=np.float32)
+    np.put_along_axis(ind, combos, 1.0, axis=1)
+    codes_all = np.asarray(head.set_code(jnp.asarray(ind)), dtype=np.float64)
+    pay = np.asarray(family.payloads)
+    y_tab = ind.astype(np.float64) @ pay
+
+    ind_u = family.indicator(family.unseen, N_a)
+    c_exact = np.asarray(head.set_code(jnp.asarray(ind_u)), dtype=np.float64)
+    out: Dict[str, Any] = {"n_combos": int(len(combos))}
+
+    # -- noiseless: nearest set-code ---------------------------------------
+    hit, dec = [], []
+    for lo in range(0, len(c_exact), 64):
+        D = ((c_exact[lo:lo + 64, None, :] - codes_all[None]) ** 2).sum(-1)
+        j = D.argmin(1)
+        dec.append(j)
+        hit.append((combos[j] == family.unseen[lo:lo + 64]).all(1))
+    j = np.concatenate(dec)
+    out["noiseless_combo_exact"] = float(np.concatenate(hit).mean())
+    out["noiseless_accuracy"] = exact_set_accuracy(y_tab[j], family.y_unseen,
+                                                   family.tol)
+
+    if q0_unseen is None:
+        return out
+
+    # -- as-launched: nearest NOISELESS LAUNCH BLOCK -----------------------
+    chan = jax.jit(jax.vmap(head.channels))
+    picks = np.asarray(chan(jnp.asarray(codes_all, jnp.float32)))  # (n_combos, k)
+    ref = R * np.asarray(head.codes, dtype=np.float64)[picks]      # (n_combos,k,d)
+    ref_f = ref.reshape(len(combos), -1)
+    obs = np.asarray(q0_unseen, dtype=np.float64)[..., :d].reshape(
+        len(family.unseen), -1)
+    hit, dec = [], []
+    for lo in range(0, len(obs), int(chunk)):
+        D = ((obs[lo:lo + chunk, None, :] - ref_f[None]) ** 2).sum(-1)
+        jj = D.argmin(1)
+        dec.append(jj)
+        hit.append((combos[jj] == family.unseen[lo:lo + chunk]).all(1))
+    jj = np.concatenate(dec)
+    out["as_launched_combo_exact"] = float(np.concatenate(hit).mean())
+    out["as_launched_accuracy"] = exact_set_accuracy(y_tab[jj], family.y_unseen,
+                                                     family.tol)
+
+    # -- the per-channel decode (K6's statistic), for the same table --------
+    zc = np.asarray(q0_unseen, dtype=np.float64)[..., :d]
+    cd = np.asarray(head.codes, dtype=np.float64) * R
+    a_hat = ((zc[:, :, None, :] - cd[None, None]) ** 2).sum(-1).argmin(-1)
+    exact = np.array([set(a_hat[i].tolist()) == set(family.unseen[i].tolist())
+                      for i in range(len(a_hat))])
+    out["asserted_set_exact"] = float(exact.mean())
+    out["asserted_set_precision"] = float(np.mean(
+        [np.isin(a_hat[i], family.unseen[i]).mean() for i in range(len(a_hat))]))
     return out
