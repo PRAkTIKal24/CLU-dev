@@ -940,6 +940,33 @@ class MatchedTTTCell(eqx.Module):
     per the learned-initial-state rule) plus four thin projections, so
     ``params/state -> 1`` exactly as the CLU store's does. ``k`` and ``n`` are
     solved for by :func:`solve_matched_ttt`.
+
+    ⛔⭐ **``normalized_write`` — the inner loop's stability region**
+    (`pilot-ttt-nan-and-d5-wiring`, DEFECT 1). The shipped update is a raw
+    gradient step with a **global** ``eta``::
+
+        W <- W (I - eta k k^T) + eta v k^T
+
+    whose factor along ``k`` is ``1 - eta ||k||^2``, so the recursion is
+    non-expansive **only while** ``eta ||k||^2 < 2``. But ``||k||^2 = ||theta_K
+    z||^2 ~ n ||z||^2 / d`` grows with the solved ``n``, and ``n`` is set by
+    :func:`solve_matched_ttt` from the CLU cell's byte ledger — i.e. **the
+    two-sided byte match chooses the inner loop's stability, and nothing checks
+    it.** At the tier-iii pilot geometry (``d=12, k=2197, n=52``) the measured
+    ``eta ||theta_K z||^2`` at init is ``3.47`` on **100 %** of chunks and
+    ``||W||`` grows ``x8e4`` across the 16 chunks of ONE forward pass; at toy
+    (``d=3, k=571, n=9``) it is ``2.31`` on 44 % of chunks and ``||W||`` stays
+    bounded. That is why the toy scale never showed it.
+
+    ``normalized_write=True`` divides by ``||k||^2``, giving the **normalized
+    delta rule / Kaczmarz step** ``W <- W - eta (W k - v) k^T / ||k||^2`` — which
+    is what this cell's own docstring already claims ("one **closed-form** step":
+    the exact least-squares solve along ``k`` is ``eta = 1``) and what the
+    ``1/d`` factor in TTT-Linear's token-wise learning rate does. It is
+    non-expansive for every ``eta in (0, 2)`` and **scale-free in ``n``, ``d``
+    and ``||z||``**, so a future ledger solve cannot re-break it. ⛔ Default
+    ``False`` = the shipped arithmetic, bit-for-bit: this moves a PUBLISHED
+    rival column and the flip is a Hub ruling, not an engineer's.
     """
 
     W0: jnp.ndarray
@@ -951,11 +978,14 @@ class MatchedTTTCell(eqx.Module):
     k: int = eqx.field(static=True)
     n: int = eqx.field(static=True)
     latent_dim: int = eqx.field(static=True)
+    normalized_write: bool = eqx.field(static=True, default=False)
 
-    def __init__(self, latent_dim: int, k: int, n: int, *, key):
+    def __init__(self, latent_dim: int, k: int, n: int, *, key,
+                 normalized_write: bool = False):
         ks = jax.random.split(key, 5)
         d = int(latent_dim)
         self.latent_dim, self.k, self.n = d, int(k), int(n)
+        self.normalized_write = bool(normalized_write)
         self.W0 = jnp.zeros((int(k), int(n)))
         s = 1.0 / max(d, 1) ** 0.5
         self.theta_K = jax.random.normal(ks[0], (int(n), d)) * s
@@ -975,6 +1005,8 @@ class MatchedTTTCell(eqx.Module):
         vv = self.theta_V @ z            # (k,)
         err = state @ kk - vv            # (k,)
         eta = jax.nn.softplus(self.log_eta)
+        if self.normalized_write:        # static bool, never a traced value
+            eta = eta / (jnp.sum(kk * kk) + 1e-6)
         return state - eta * jnp.outer(err, kk)
 
     def cell_ledger(self) -> Dict[str, int]:
@@ -1954,8 +1986,13 @@ def store_byte_law(atoms_per_item: int, dim: int, addr_dim: int, payload_dim: in
 def make_memory_cell(name: str, *, latent_dim: int, clu_cfg=None,
                      mcfg: Optional[StreamMemoryConfig] = None,
                      hidden: Optional[int] = None,
-                     ttt_shape: Optional[Tuple[int, int]] = None, key):
-    """Construct one memory cell by name (``MEMORY_CELLS``)."""
+                     ttt_shape: Optional[Tuple[int, int]] = None,
+                     ttt_normalized_write: bool = False, key):
+    """Construct one memory cell by name (``MEMORY_CELLS``).
+
+    ``ttt_normalized_write`` (default ``False`` = the shipped arithmetic) is
+    :class:`MatchedTTTCell`'s inner-loop stability lever — see its docstring.
+    """
     mcfg = mcfg or StreamMemoryConfig()
     if name == "clu_store":
         return CluStoreCell(clu_cfg, mcfg, key=key)
@@ -1963,7 +2000,8 @@ def make_memory_cell(name: str, *, latent_dim: int, clu_cfg=None,
         return MatchedGRUCell(latent_dim, int(hidden), key=key)
     if name == "ttt_matched":
         k, n = ttt_shape
-        return MatchedTTTCell(latent_dim, int(k), int(n), key=key)
+        return MatchedTTTCell(latent_dim, int(k), int(n), key=key,
+                              normalized_write=bool(ttt_normalized_write))
     if name == "none":
         return NullMemoryCell(latent_dim=int(latent_dim))
     if name == "echo":

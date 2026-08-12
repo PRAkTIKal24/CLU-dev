@@ -14,8 +14,10 @@
 #   sbatch --job-name=clu-stage -t 0:30:00 scripts/csf3/job_gpu_cluformer.sh   # STAGE_ONLY=1 default OFF -> see below
 #   sbatch --export=ALL,STAGE_ONLY=1 -p serial -t 0:30:00 scripts/csf3/job_gpu_cluformer.sh
 #   # 1. then the three seeds, <=4 concurrent (free-tier policy)
-#   sbatch --export=ALL,SEEDS="0 1 2",STAGE=pilot,STG=s4 --mail-user=$CLU_MAIL \
+#   sbatch --export=ALL,SEEDS="0 1 2",STAGE=pilot,STG=s4,D5=1 --mail-user=$CLU_MAIL \
 #          -t 12:00:00 scripts/csf3/job_gpu_cluformer.sh
+#   # ⛔ LAUNCH CHECKLIST: every PRE-REGISTERED phase must appear in the
+#   #    artifact's phase list. D5 is `D5=1` and NOTHING else sets it.
 #   # 2. pull the artifacts
 #   rsync -av csf3:~/scratch/CHLU/.claude/outputs/cluformer-pilot/ ./.claude/outputs/cluformer-pilot/
 #
@@ -86,6 +88,19 @@ SET="${SET:-}"
 #    so a resubmission must carry byte-identical MEM/STORE/SET.
 #    ⚠ Safe to leave at 1 on a first submission: no journal => a normal run.
 RESUME="${RESUME:-0}"
+# ⛔ `pilot-ttt-nan-and-d5-wiring` DEFECT 2: D5 (the anytime curve) is a
+#    PRE-REGISTERED deliverable gated behind `--d5`, and until this line existed
+#    NO launch path set it -- so `with_d5=False` on every attempt and no
+#    `anytime_curve` key exists in any landed artifact. That looked identical, in
+#    the artifact, to the withdrawn cut order having fired; it was plumbing.
+#    ⭐ `--d5` is a CLI argument, NOT a PilotConfig field, so it does not enter
+#    `rec['flags']` and CANNOT change the resume fingerprint: a FINISHED leg can
+#    be re-resumed with `RESUME=1 D5=1` and it will lift every banked phase
+#    (including the 219 GB `dyneval`) and compute ONLY the missing
+#    `anytime_curve`. ⛔ Do NOT also pass `ARMS` on such a re-resume -- `arms` IS
+#    a config field and a narrowed arm list is a DIFFERENT config, which the
+#    journal check refuses.
+D5="${D5:-0}"
 
 export CLU_REPO="${CLU_REPO:-$HOME/scratch/CHLU}"
 # shellcheck disable=SC1091
@@ -127,7 +142,8 @@ EXTRA=""
 [ -n "$STORE" ] && EXTRA="$EXTRA --store $STORE"
 [ -n "$SET" ] && EXTRA="$EXTRA --set $SET"
 [ "$RESUME" = "1" ] && EXTRA="$EXTRA --resume"
-echo "=== config overrides === MEM='$MEM' STORE='$STORE' SET='$SET' RESUME='$RESUME'"
+[ "$D5" = "1" ] && EXTRA="$EXTRA --d5"
+echo "=== config overrides === MEM='$MEM' STORE='$STORE' SET='$SET' RESUME='$RESUME' D5='$D5'"
 
 echo "=== tier-iii pilot: scale=$STAGE stage=$STG seeds=$SEEDS ==="
 # shellcheck disable=SC2086

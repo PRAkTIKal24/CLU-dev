@@ -114,6 +114,23 @@ class PilotConfig:
 
     # -- arms ----------------------------------------------------------------
     arms: Tuple[str, ...] = ("clu_store", "gru_matched", "ttt_matched", "none", "echo")
+    #: ⛔⭐ `pilot-ttt-nan-and-d5-wiring` DEFECT 1 — the ``ttt_matched`` arm's
+    #: inner loop is **divergent by construction at the pilot geometry**: its
+    #: update is non-expansive only while ``eta ||theta_K z||^2 < 2``, and that
+    #: product is fixed by ``n``, which :func:`solve_matched_ttt` reads off the
+    #: CLU cell's byte ledger. Measured at init: **3.47 on 100 % of chunks at
+    #: pilot** (vs 2.31 on 44 % at toy) => ``||W||`` grows x8e4 inside one
+    #: forward pass and the arm went NaN at step 135/4000 on CSF3, losing the
+    #: rival column. ``True`` switches :class:`MatchedTTTCell` to the normalized
+    #: delta rule (its own docstring's "closed-form step"), which is
+    #: non-expansive for any ``eta in (0,2)`` and scale-free.
+    #:
+    #: ⛔ **Default ``False`` = the shipped arithmetic, bit-for-bit.** This moves
+    #: a PUBLISHED rival column, so the flip is a Hub ruling. ⭐ It is a
+    #: ``PilotConfig`` field precisely so it stays OUT of the resume fingerprint
+    #: while unset: ``as_flag_table`` emits non-default fields only, so the five
+    #: in-flight CSF3 legs resume against their banked journals unchanged.
+    ttt_normalized_write: bool = False
 
     # -- the memory slot ------------------------------------------------------
     memory: Dict[str, Any] = field(default_factory=dict)   # -> StreamMemoryConfig
@@ -272,7 +289,9 @@ def solve_arms(pcfg: PilotConfig, key) -> Tuple[Dict[str, ArmSpec], Dict[str, An
         "echo": ArmSpec("echo"),
     }
     cells = {n: make_memory_cell(n, latent_dim=dim, clu_cfg=scfg, mcfg=mcfg,
-                                 hidden=h_params, ttt_shape=kn, key=key)
+                                 hidden=h_params, ttt_shape=kn,
+                                 ttt_normalized_write=bool(pcfg.ttt_normalized_write),
+                                 key=key)
              for n in MEMORY_CELLS}
     ledger = swap_ledger(cells)
     # ⛔ the OTHER GRU column: matched state-bytes, which is what makes the swap
@@ -371,7 +390,9 @@ def build_arm(name: str, pcfg: PilotConfig, specs: Dict[str, ArmSpec], *, key
     ks = jax.random.split(key, pcfg.n_layers + 4)
     cells = [make_memory_cell(name, latent_dim=int(scfg.dim), clu_cfg=scfg,
                               mcfg=mcfg, hidden=spec.hidden,
-                              ttt_shape=spec.ttt_shape, key=ks[i])
+                              ttt_shape=spec.ttt_shape,
+                              ttt_normalized_write=bool(pcfg.ttt_normalized_write),
+                              key=ks[i])
              for i in range(pcfg.n_layers)]
     return StreamModel(vocab_size=pcfg.vocab_size, d_model=pcfg.d_model,
                        n_layers=pcfg.n_layers, max_len=pcfg.seq_len, cells=cells,
