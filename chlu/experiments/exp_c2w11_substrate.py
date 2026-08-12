@@ -1,5 +1,30 @@
 """C2W11 spoke A — **the repaired substrate, and every kill-condition FIRST**.
 
+⛔⛔ **DEMOTED 2026-08-12 — SMOKE/REGRESSION INSTRUMENT ONLY, NEVER A CLAIM VENUE**
+(charter ADDENDUM 16 §A44.1, Head-ratified at the Campaign-2 close; the same
+demotion the memory gyms took in §A14.8).
+
+    The toy compositional family RETIRES as a claim venue. Tier ii re-homes as
+    IN-BLOCK ablations on real data (physics write vs matched non-physics write
+    at identical bytes, inside tier iii). ⛔ No VALUE number, no organizer-swap
+    verdict and no paper number may be produced from this module or its family.
+
+⭐ **Why it was demoted — it finished its job rather than failed at it.** C2W11
+measured, on this substrate, that the store is EXONERATED (0.8621 exact-set
+under oracle addressing, zero-parameter read) and localized the blocker to φ's
+decomposition / the launch head. ⛔ **A designed family that hands φ its features
+cannot test that blocker** (the decoration bound) — which is precisely why the
+question moves to real data, where φ must earn its decomposition.
+⛔ **And the dial does not rescue it:** the ``d_addr`` ceiling probe measured the
+placement headroom collapsing ``0.0851 -> 0.0375 -> 0.0109 -> 0.0000`` across
+``d_addr`` 4/6/8/12 — at ``d_addr = 12`` the launch head's own identity
+assignment is already the optimal bijection (registry **N302**, **N312**;
+``.claude/outputs/c2w11/DADDR-CEILING-PROBE.json``).
+
+✅ **What this module is still FOR:** a fast, deterministic regression rig for the
+substrate's mechanics — the placing write, co-scaled widths, feature-factored
+launches, and the K0–K8 kill-condition suite with their designed negatives.
+
 Built to ``.claude/outputs/c2w11/PREREG-C2W11.md`` §4 (K0–K8), §6 (M1, M2, M4,
 M5, M6) and §7 (the coverage half of the C2W9 trigger), and to this spoke's own
 ``PREREG.md``, which was filed before this file existed.
