@@ -41,10 +41,13 @@ in the report.
 from __future__ import annotations
 
 import argparse
+import copy
+import hashlib
 import json
 import os
+import re
 import time
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -55,7 +58,12 @@ import numpy as np
 from chlu.core.blocks import _count
 from chlu.data.corpora import get_corpus, load_corpus
 from chlu.data.enwik8 import contiguous_batches, random_batches
-from chlu.eval.byte_ledger import build_byte_ledger
+from chlu.eval.byte_ledger import (
+    ContinuationExemption,
+    ContinuationExemptionError,
+    assert_ladder_arms_admissible,
+    build_byte_ledger,
+)
 from chlu.training.train_cluformer import (
     PilotConfig,
     anytime_curve,
@@ -292,6 +300,245 @@ def load_journal(out: Path, scale: str, seed: int, flags: Dict[str, Any],
     return prior
 
 
+# ==========================================================================
+# ⭐⭐ THE PRE-REGISTERED-CONTINUATION EXEMPTION (`c3-run3-budget-exemption`)
+# ==========================================================================
+#: The journal file name the resume machinery owns. Anything else is refused:
+#: :func:`load_journal` derives its path from ``(out, scale, seed)``, so the
+#: exemption can only be verified against a file of this shape.
+_JOURNAL_NAME_RE = re.compile(r"^pilot_(?P<scale>[A-Za-z0-9]+)_seed(?P<seed>\d+)"
+                              r"_PARTIAL\.json$")
+#: ⛔ EXACTLY these keys. ``sha256`` is the only optional one, and adding a key
+#: here is a code change — which is precisely the friction that is wanted.
+_CONTINUATION_REQUIRED = ("journal", "flag", "prereg")
+_CONTINUATION_OPTIONAL = ("sha256",)
+#: The fingerprint groups a registered flag may name. ``store_dim``/``store_n_atoms``
+#: are DERIVED (they are functions of the store config), so they are not nameable:
+#: a "flag" that is an output cannot be the one registered difference.
+_CONTINUATION_GROUPS = ("pilot", "memory", "store")
+#: ⛔ ...and these ``pilot.*`` names are the two override DICTS, not knobs. Naming
+#: one would "register" every memory/store key at once — the wildcard by the back
+#: door. Refused by name.
+_CONTINUATION_NOT_KNOBS = ("pilot.memory", "pilot.store")
+_ABSENT = "<absent from the journal>"
+
+
+def flag_block(pcfg) -> Dict[str, Any]:
+    """The config-identity block a journal is fingerprinted from.
+
+    ⛔ Extracted verbatim from :func:`run_pilot` (it built this dict inline) so
+    that the continuation check and the run agree **by construction** on what the
+    flag block *is*. ``jax_version``/``jax_backend`` are added by ``run_pilot``
+    and are not part of it — :func:`_flag_dict` never reads them.
+    """
+    return {
+        "pilot": pcfg.as_flag_table(),
+        "memory": asdict(pcfg.memory_cfg()),
+        "store": pcfg.store_cfg().as_flag_table(),
+        "store_dim": int(pcfg.store_cfg().dim),
+        "store_n_atoms": int(pcfg.store_cfg().n_atoms),
+    }
+
+
+def _revert_knob(pcfg, group: str, key: str, jflags: Dict[str, Any]):
+    """A copy of ``pcfg`` with ONE knob put back to the journal's setting.
+
+    ⭐⭐ **Why the revert is at the KNOB and not at the fingerprint key.** One knob
+    can move several fingerprint keys: ``memory.erosion_partition`` moves BOTH
+    ``memory.erosion_partition`` (the resolved :class:`StreamMemoryConfig`) **and**
+    ``pilot.memory`` (the override dict that produced it) — measured on the real
+    run-2 journal. Reverting a single *fingerprint key* would therefore leave the
+    other one differing and refuse the very leg this exists for, while reverting
+    the *knob* regenerates both consistently. ⛔ The unit stays **one registered
+    flag**; its derived consequences travel with it, and they are stamped into the
+    ledger (``fingerprint_keys_moved``) so an auditor sees exactly what moved.
+
+    ⛔ The journal's ``pilot`` group is an ``as_flag_table()`` output — the
+    OVERRIDE table — so "revert" means *restore the override*, i.e. delete it when
+    the journal did not carry it. If this revert is wrong in any way, the
+    consequence is a **refusal** (``load_journal`` sees a difference), never a
+    false acceptance: the failure direction is safe by construction.
+    """
+    cf = copy.deepcopy(pcfg)
+    jpilot = dict(jflags.get("pilot") or {})
+    if group in ("memory", "store"):
+        d = dict(getattr(cf, group) or {})
+        jd = dict(jpilot.get(group) or {})
+        if key in jd:
+            d[key] = jd[key]
+        else:
+            d.pop(key, None)
+        setattr(cf, group, d)
+    else:                       # a top-level PilotConfig field
+        v = jpilot[key] if key in jpilot else getattr(PilotConfig(), key)
+        if isinstance(getattr(cf, key, None), tuple) and isinstance(v, list):
+            v = tuple(v)        # JSON has no tuples; `arms` is one
+        setattr(cf, key, v)
+    return cf
+
+
+def _refuse_continuation(msg: str) -> "ContinuationExemptionError":
+    return ContinuationExemptionError(
+        "⛔ PRE-REGISTERED-CONTINUATION EXEMPTION REFUSED.\n" + msg
+        + "\n  ⛔ This exemption is deliberately narrow: it accepts a config that "
+          "is bit-identical to the named journal EXCEPT ONE registered flag, and "
+          "nothing else. If a second flag must move, that is a NEW "
+          "pre-registration and a code change — not a wider exemption.")
+
+
+def verify_preregistered_continuation(
+        spec: Any, pcfg, flags: Optional[Dict[str, Any]] = None, *,
+        journal_loader: Optional[Callable[..., Dict[str, Any]]] = None,
+) -> ContinuationExemption:
+    """⭐ Verify that this config is **the registered continuation** it claims to be.
+
+    ⛔ **The one and only constructor of a**
+    :class:`~chlu.eval.byte_ledger.ContinuationExemption`. The identity check is
+    **not reimplemented here**: it is delegated to :func:`load_journal`, the
+    existing resume-fingerprint machinery, by asking it a counterfactual
+    question —
+
+        *"put the ONE registered knob back to the journal's setting; is this
+        still the SAME LEG?"*
+
+    If ``load_journal`` accepts the counterfactual, the two configs are identical
+    except that knob; if it refuses, it refuses **by name**, printing every
+    differing key, and that refusal is propagated verbatim. ⭐ Delegating matters
+    more than it looks: the pilot merge repaired that machinery precisely so there
+    is **one** source of truth about "is this the same leg", and a second parallel
+    comparison is how the two silently drift apart — including the ``§A20.4``
+    loosening (a key the journal *predates*, at its default, is the same leg),
+    which run 3 needs, because the real run-2 journals predate
+    ``erosion_partition`` entirely.
+
+    Refuses, loudly and by name: a malformed/extra-keyed spec · a flag that is not
+    exactly one fully-qualified ``group.key`` knob · a missing, unreadable or
+    fingerprint-invalid journal · a sha256 that does not match · a registered flag
+    that does not actually differ · **any second differing knob** · a differing
+    knob that is not the registered one.
+    """
+    load = journal_loader or load_journal
+    flags = flag_block(pcfg) if flags is None else flags
+    # -- 1. the spec's shape ------------------------------------------------
+    if not isinstance(spec, dict) or not spec:
+        raise _refuse_continuation(
+            f"    the config value is {type(spec).__name__} {spec!r}, not a "
+            "mapping. Expected keys: journal=<PARTIAL.json> flag=<group.key> "
+            "prereg=<doc> [sha256=<hex>]  (CLI: --prereg-continuation "
+            "journal=... flag=... prereg=...)")
+    unknown = sorted(set(spec) - set(_CONTINUATION_REQUIRED)
+                     - set(_CONTINUATION_OPTIONAL))
+    missing = [k for k in _CONTINUATION_REQUIRED if not str(spec.get(k, "")).strip()]
+    if unknown or missing:
+        raise _refuse_continuation(
+            f"    unknown key(s): {unknown or '[]'}; missing/empty required "
+            f"key(s): {missing or '[]'}. Required {list(_CONTINUATION_REQUIRED)}, "
+            f"optional {list(_CONTINUATION_OPTIONAL)}.")
+    flag = str(spec["flag"]).strip()
+    prereg = str(spec["prereg"]).strip()
+    # -- 2. EXACTLY ONE flag: no list, no wildcard, no glob -----------------
+    if (not re.fullmatch(r"(?:%s)\.[A-Za-z_][A-Za-z0-9_]*"
+                         % "|".join(_CONTINUATION_GROUPS), flag)
+            or flag in _CONTINUATION_NOT_KNOBS):
+        raise _refuse_continuation(
+            f"    flag={flag!r} is not ONE fully-qualified knob. It must match "
+            f"'<group>.<key>' with group in {list(_CONTINUATION_GROUPS)} — ⛔ a "
+            "comma-separated list, a glob, a bare key, a derived quantity "
+            f"(store_dim/store_n_atoms) and the override dicts "
+            f"{list(_CONTINUATION_NOT_KNOBS)} (which would register EVERY key "
+            "under them at once) are all refused. Exactly one knob, by name.")
+    group, key = flag.split(".", 1)
+    if group == "pilot" and key not in {f.name for f in fields(PilotConfig)}:
+        raise _refuse_continuation(
+            f"    flag={flag!r} names no PilotConfig field, so it is not a knob "
+            "of this run.")
+    # -- 3. the journal: present, readable, and its own fingerprint valid ---
+    jpath = Path(str(spec["journal"]).strip())
+    if not jpath.is_file():
+        raise _refuse_continuation(
+            f"    journal {jpath} does not exist (or is not a file). The prior "
+            "leg's journal is the evidence that this IS a continuation; without "
+            "it there is nothing to be identical to.")
+    raw = jpath.read_bytes()
+    sha = hashlib.sha256(raw).hexdigest()
+    pinned = str(spec.get("sha256", "")).strip().lower()
+    if pinned and pinned != sha:
+        raise _refuse_continuation(
+            f"    journal sha256 mismatch: pinned {pinned}, on disk {sha} "
+            f"({jpath}).")
+    m = _JOURNAL_NAME_RE.match(jpath.name)
+    if m is None:
+        raise _refuse_continuation(
+            f"    journal {jpath.name!r} is not a resume journal: the name must "
+            "be 'pilot_<scale>_seed<N>_PARTIAL.json' (that is the file the "
+            "fingerprint machinery owns — a final S*.json artifact is not it).")
+    try:
+        prior = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+        raise _refuse_continuation(
+            f"    journal {jpath} is unreadable/corrupt ({type(e).__name__}: "
+            f"{e}).") from None
+    jflags = prior.get("flags") if isinstance(prior, dict) else None
+    ok_shape = (isinstance(jflags, dict)
+                and all(isinstance(jflags.get(g), dict) for g in _CONTINUATION_GROUPS)
+                and bool(jflags.get("memory"))
+                and isinstance(jflags.get("store_dim"), int)
+                and isinstance(jflags.get("store_n_atoms"), int))
+    if not ok_shape:
+        raise _refuse_continuation(
+            f"    journal {jpath} carries no VALID flag fingerprint: it needs a "
+            f"'flags' block with {list(_CONTINUATION_GROUPS)} groups, a non-empty "
+            "'memory' group and integer store_dim/store_n_atoms. A journal whose "
+            "own fingerprint does not validate cannot certify anything.")
+    # -- 4. the registered knob must ACTUALLY differ -------------------------
+    #     ⛔ read through _flag_dict — the SAME function load_journal uses — so
+    #     "differs" means differs in the fingerprint, not to the eye.
+    d_old, d_new = _flag_dict(jflags), _flag_dict(flags)
+    #     ⭐ ...and forgiven exactly as load_journal forgives: a key the journal
+    #     PREDATES, sitting at its own field default, is not a difference (§A20.4).
+    #     ⛔ Same helper (`_flag_defaults`), so the two can never disagree.
+    _defaults = _flag_defaults()
+    predated = sorted(k for k in set(d_new) - set(d_old)
+                      if k in _defaults and d_new[k] == _defaults[k])
+    moved = sorted(k for k in set(d_old) | set(d_new)
+                   if d_old.get(k) != d_new.get(k) and k not in predated)
+    old_raw = jflags.get(group, {}).get(key, _ABSENT)
+    new_raw = (flags.get(group) or {}).get(key, _ABSENT)
+    if old_raw is _ABSENT and new_raw is _ABSENT:
+        raise _refuse_continuation(
+            f"    the registered flag {flag!r} is present in NEITHER the journal "
+            "nor this config — it is not a flag of this run.")
+    if flag not in moved:
+        raise _refuse_continuation(
+            f"    the registered flag {flag!r} does NOT differ from the journal "
+            f"(journal={old_raw!r}, now={new_raw!r}). An exemption is for a "
+            "REGISTERED CHANGE; a leg identical to the journal is the prior run "
+            "itself and gets no exemption.\n"
+            f"    Fingerprint keys that DO differ: {moved or '[]'}.")
+    # -- 5. THE DELEGATED IDENTITY CHECK ------------------------------------
+    #     Counterfactual: put the registered KNOB back to the journal's setting
+    #     and ask the resume machinery whether this is still the same leg. ⛔ Any
+    #     OTHER difference is refused there, by name, in its own words.
+    cf_flags = flag_block(_revert_knob(pcfg, group, key, jflags))
+    try:
+        load(jpath.parent, m.group("scale"), int(m.group("seed")), cf_flags)
+    except SystemExit as e:
+        raise _refuse_continuation(
+            f"    with the knob {flag!r} put back to the journal's setting "
+            f"({old_raw!r}), the configs STILL differ — so this is not "
+            "run-N-plus-ONE-registered-flag.\n"
+            "    The resume fingerprint machinery names the offending key(s):\n"
+            f"{e}") from None
+    return ContinuationExemption(
+        journal=str(jpath), journal_sha256=sha, prereg=prereg, flag=flag,
+        old_value=old_raw, new_value=new_raw,
+        fingerprint_keys_moved=tuple(moved),
+        journal_predates_at_default=tuple(predated),
+        verified_by=("load_journal(_flag_dict) counterfactual: with "
+                     f"{flag} reverted, identical to {jpath.name}"),
+    )
+
+
 class _Phases:
     """Phase bookkeeping: RSS marks, cache hygiene, and journal banking.
 
@@ -364,8 +611,19 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
               out_dir: str = ".claude/outputs/cluformer-pilot",
               overrides: Optional[dict] = None,
               with_d5: bool = False, resume: bool = False,
-              with_slices: bool = False) -> Dict[str, Any]:
+              with_slices: bool = False,
+              prereg_continuation: Optional[Dict[str, str]] = None,
+              ) -> Dict[str, Any]:
     """Run the pilot to ``stage``; write one JSON artifact; return the record.
+
+    ⭐ ``prereg_continuation`` declares this leg a **pre-registered continuation**
+    of a prior one — ``{journal, flag, prereg[, sha256]}``, verified by
+    :func:`verify_preregistered_continuation` before anything is loaded or
+    trained. ⛔ It is a **run-scoped argument and NOT a** ``PilotConfig`` **field**,
+    exactly like ``with_d5``/``with_slices``: a config field would enter
+    ``as_flag_table()`` and *be* a second key differing from the journal, breaking
+    the identity check it is verified by (and the prereg's own "run 3 changes
+    exactly one token"). It exempts the state-byte **budget check only**.
 
     ⭐ **Crash-resumable** (``resume=True``). Every phase is banked to
     ``pilot_{scale}_seed{N}_PARTIAL.json`` as it completes and every arm's
@@ -397,18 +655,28 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
     out = Path(out_dir)
     rec: Dict[str, Any] = {
         "scale": scale, "seed": seed, "stage_requested": stage,
-        "flags": {
-            "pilot": pcfg.as_flag_table(),
-            "memory": asdict(pcfg.memory_cfg()),
-            "store": pcfg.store_cfg().as_flag_table(),
-            "store_dim": int(pcfg.store_cfg().dim),
-            "store_n_atoms": int(pcfg.store_cfg().n_atoms),
-            "jax_version": jax.__version__,
-            "jax_backend": jax.default_backend(),
-        },
+        # ⛔ `flag_block` IS this dict — extracted so the continuation check and
+        # the run cannot drift on what the config identity is. Key order (and so
+        # the artifact's bytes) is unchanged.
+        "flags": {**flag_block(pcfg),
+                  "jax_version": jax.__version__,
+                  "jax_backend": jax.default_backend()},
         "stages_reached": [],
         "not_run": [],
     }
+    # ⛔⛔ BOTH BUDGET GUARDS FIRE HERE, BEFORE THE DATA IS EVEN LOADED.
+    # (i) the interim-ceiling guard: no rival-ladder rung may train while the
+    #     matched-state-byte ceiling is a placeholder (it is set in the
+    #     rival-ladder prereg). ⭐ Inert for run 3, whose arms are ours.
+    _ladder_guard = assert_ladder_arms_admissible(pcfg.arms)
+    # (ii) the pre-registered continuation, if declared. ⚠ Verified HERE and not
+    #     at the ledger, because `phi_gain` is written back into `pcfg.memory`
+    #     below — after which `flag_block(pcfg)` would carry a calibrated OUTPUT
+    #     inside `pilot.memory` and the counterfactual would no longer match the
+    #     journal. Verifying on the pristine config also means a bad exemption
+    #     costs seconds, not a staged corpus.
+    exemption = (verify_preregistered_continuation(
+        prereg_continuation, pcfg, rec["flags"]) if prereg_continuation else None)
     prior = load_journal(out, scale, seed, rec["flags"]) if resume else {}
     ph = _Phases(rec, prior, pcfg, out, scale, seed, t_all)
     ph.mark("run_pilot/enter")
@@ -449,7 +717,9 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
     rec["byte_ledger"] = build_byte_ledger(
         pcfg, ledger, sorted(set(_ledger_arms) | set(arms)),
         budget=int(pcfg.state_byte_budget),
-        enforce=bool(pcfg.enforce_state_byte_budget))
+        enforce=bool(pcfg.enforce_state_byte_budget),
+        exemption=exemption)
+    rec["byte_ledger"]["ladder_guard"] = _ladder_guard
     ph.bank()
     if with_slices:
         # ⚠ The slice's VALIDITY CONTROLS run once per run, before any arm is
@@ -966,6 +1236,18 @@ def main(argv: Optional[List[str]] = None) -> int:
                          "edited)")
     ap.add_argument("--store", nargs="*", default=None, metavar="KEY=VALUE",
                     help="CluSystemConfig overrides")
+    ap.add_argument("--prereg-continuation", nargs="*", default=None,
+                    metavar="KEY=VALUE",
+                    help="⭐ declare this leg a PRE-REGISTERED CONTINUATION of a "
+                         "prior one: journal=<pilot_<scale>_seed<N>_PARTIAL.json> "
+                         "flag=<group.key> prereg=<doc> [sha256=<hex>]. ⛔ Exempts "
+                         "the state-byte BUDGET check ONLY, and only after the "
+                         "resume-fingerprint machinery has confirmed this config "
+                         "is identical to that journal EXCEPT the ONE registered "
+                         "flag (run 3 = run 2 + memory.erosion_partition). The "
+                         "ledger is still computed and printed in full, stamped "
+                         "with the journal, its sha256 and the flag's old->new "
+                         "value. A second differing key is refused BY NAME.")
     a = ap.parse_args(argv)
     ov: Dict[str, Any] = {}
     for flag, key in (("set", None), ("mem", "memory"), ("store", "store")):
@@ -978,6 +1260,20 @@ def main(argv: Optional[List[str]] = None) -> int:
         else:
             ov[key] = dict((TOY if a.scale == "toy" else PILOT).get(key, {}),
                            **parsed)
+    # ⛔ str values only — every field of the exemption is a name (a path, a flag,
+    # a doc, a hex digest), never a number `_parse_kv` would cast. ⭐ It goes to
+    # `run_pilot` as an ARGUMENT and never into `ov`: it must not reach
+    # `PilotConfig`, or it would itself become a second key differing from the
+    # journal it is being verified against.
+    pc: Optional[Dict[str, str]] = None
+    if a.prereg_continuation:
+        pc = {}
+        for p in a.prereg_continuation:
+            if "=" not in p:
+                raise SystemExit(f"--prereg-continuation expects KEY=VALUE, "
+                                 f"got {p!r}")
+            k, v = p.split("=", 1)
+            pc[k.strip()] = v.strip()
     if a.steps is not None:
         ov["steps"] = a.steps
         ov["warmup"] = max(1, a.steps // 10)
@@ -997,7 +1293,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(json.dumps(agg, indent=2, default=float), flush=True)
         return 0
     seeds = a.seeds if a.seeds else [a.seed]
-    recs = [run_pilot(a.scale, s, a.stage, a.out, ov, a.d5, a.resume, a.slices)
+    recs = [run_pilot(a.scale, s, a.stage, a.out, ov, a.d5, a.resume, a.slices,
+                      prereg_continuation=pc)
             for s in seeds]
     if len(recs) > 1:
         agg = aggregate(recs)

@@ -69,7 +69,7 @@ from chlu.core.blocks import (
 from chlu.core.clu_system import CluSystemConfig, make_controller
 from chlu.core.monitors import MonitorContext, default_registry
 from chlu.data.enwik8 import bits_per_character
-from chlu.eval.byte_ledger import MATCHED_STATE_BYTE_BUDGET
+from chlu.eval.byte_ledger import INTERIM_MATCHED_STATE_BYTE_BUDGET
 
 
 # ==========================================================================
@@ -130,15 +130,29 @@ class PilotConfig:
     # -- ⭐ C3: the matched-state-byte budget (RULED, not chosen here) ---------
     #: The pre-registered inference-state ceiling every arm is ledgered against.
     #: ⛔ Imported from ONE named constant
-    #: (:data:`chlu.eval.byte_ledger.MATCHED_STATE_BYTE_BUDGET`) rather than
-    #: written as a literal, because the last digit of the ruling was still being
-    #: confirmed and must be changeable in one edit.
-    state_byte_budget: int = MATCHED_STATE_BYTE_BUDGET
+    #: (:data:`chlu.eval.byte_ledger.INTERIM_MATCHED_STATE_BYTE_BUDGET`) rather
+    #: than written as a literal, because the last digit of the ruling was still
+    #: being confirmed and must be changeable in one edit.
+    #: ⚠⚠ **INTERIM AND BINDS NOTHING YET** (Head+Advisor 2026-08-13) — the name
+    #: says so at the point of use. The digit is set in the **rival-ladder
+    #: prereg**, when the C3 CLU arm's store geometry is frozen; ⛔ the pilot
+    #: geometry is NOT presumed to be the C3 geometry, and until that prereg is
+    #: filed no rival-ladder arm may train
+    #: (:func:`chlu.eval.byte_ledger.assert_ladder_arms_admissible`).
+    state_byte_budget: int = INTERIM_MATCHED_STATE_BYTE_BUDGET
     #: ⛔ An over-budget arm **fails the run loudly**, the same posture as an
     #: unledgered arm — a harness that lets one through has quietly decided the
     #: tier-iii control. Set ``False`` only to record a DECLARED non-compliant
     #: run; the artifact then carries ``byte_ledger.enforced=false``.
     enforce_state_byte_budget: bool = True
+    #: ⭐⭐ **The PRE-REGISTERED-CONTINUATION exemption is deliberately NOT a field
+    #: here** (`c3-run3-budget-exemption`). It is a **run-scoped CLI argument**,
+    #: ``--prereg-continuation`` (like ``--d5``/``--slices``), because a
+    #: ``PilotConfig`` field would enter ``as_flag_table()`` and become a **SECOND**
+    #: key differing from the run-2 journal — breaking the very identity check the
+    #: exemption is verified by, and violating the prereg's own "run 3 changes
+    #: exactly one token" confound declaration. See
+    #: :func:`chlu.experiments.exp_cluformer_pilot.verify_preregistered_continuation`.
     #: Minimum per-bin sample count before a retention-slice bin reports a bpc
     #: (it always reports its ``n``).
     slice_min_n: int = 30
