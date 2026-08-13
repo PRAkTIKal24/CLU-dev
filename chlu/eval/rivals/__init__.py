@@ -40,6 +40,11 @@ from chlu.eval.rivals.fit import (
     select_best,
     table_budget,
 )
+# ⭐ C3 phase 2 (`c3-rival-arms` §B): the Gated DeltaNet-2 *language-model* arm.
+# ⛔ Distinct from the B′ gym memory `DeltaMemory(variant="gdn2")` above — that
+# one is a one-head toy-harness read/write pair; this one is the trainable rival
+# LM that produces a C3 byte-ledger row.
+from chlu.eval.rivals.gdn2_lm import GDN2_ARM, GDN2Config, GDN2LM, build_gdn2_arm
 from chlu.eval.rivals.ledger import (
     TTT_MINI_BATCH,
     LedgerError,
@@ -63,4 +68,5 @@ __all__ = [
     "RIVALS", "FitExample", "make_rival", "fit_rival", "fit_grid", "select_best",
     "fit_best_of_grid", "rival_arms", "table_budget", "DEFAULT_BUDGET_FLOATS",
     "LR_GRID", "LR_GRID_F3", "WD_GRID_F3",
+    "GDN2_ARM", "GDN2Config", "GDN2LM", "build_gdn2_arm",
 ]
