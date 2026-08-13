@@ -286,9 +286,14 @@ def test_resolve_store_layers_defaults_to_EVERY_layer_and_never_to_a_placement()
     assert resolve_store_layers(12, "2,6,10") == (2, 6, 10)     # the `--set` form
     assert resolve_store_layers(12, "2 6 10") == (2, 6, 10)
     assert parse_store_layers([10, 2, 6]) == (10, 2, 6)         # syntax only
+    # ⚠ a bare int is ONE INDEX, not a COUNT — `--set store_layers=6` is layer 6,
+    # not six layers. (`_parse_kv` casts it, so this path is reached in practice.)
+    assert resolve_store_layers(12, 6) == (6,)
+    assert parse_store_layers(6) == (6,)
 
 
-@pytest.mark.parametrize("bad", [(), [12], [-1], [0, 0], [3, 3, 7], "", [1.5, "x"]])
+@pytest.mark.parametrize("bad", [(), [12], [-1], [0, 0], [3, 3, 7], "", [1.5, "x"],
+                                 True, 12, -1])
 def test_a_BAD_store_layer_selection_RAISES_rather_than_moving_the_ledger(bad):
     from chlu.core.blocks import resolve_store_layers
 
