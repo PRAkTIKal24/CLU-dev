@@ -235,6 +235,45 @@ def test_the_plan_fits_the_envelope_at_the_frozen_geometry_and_not_at_pilot(plan
     assert frozen["schedule"]["makespan_days"] < 4.0
 
 
+def test_G_B_is_byte_compute_and_envelope_EQUIVALENT_to_the_descent(plan):
+    """⭐ The whole reason G-B is recommended over G-A: the store's bytes AND its
+    compute are both per store-bearing layer, so 8192 atoms in 3 of 12 layers buys
+    exactly what 2048 atoms in 12 layers buys — without descending below the w23
+    floor. If this equivalence ever breaks, the recommendation must be re-argued."""
+    ga = plan.build_plan(n_atoms=2048, n_store_layers=12, steps=20_000, seeds=3,
+                         eval_batches=40, slice_batches=10)
+    gb = plan.build_plan(n_atoms=8192, n_store_layers=3, steps=20_000, seeds=3,
+                         eval_batches=40, slice_batches=10)
+    assert gb["geometry"]["clu_total_state_bytes"] == 1_380_864
+    assert ga["geometry"]["clu_total_state_bytes"] == FROZEN_TOTAL_STATE_BYTES
+    # within 1 % on bytes, and IDENTICAL on compute
+    assert abs(gb["geometry"]["occupancy_of_2MiB"]
+               - ga["geometry"]["occupancy_of_2MiB"]) < 0.01
+    assert gb["throughput"]["clu_store_s_per_step"] == pytest.approx(
+        ga["throughput"]["clu_store_s_per_step"], rel=1e-9)
+    assert gb["envelope"]["worst_job_h"] == pytest.approx(
+        ga["envelope"]["worst_job_h"], rel=1e-9)
+    # ...and only ONE of them descends below the floor. That is the whole point.
+    assert ga["geometry"]["descends_below_w23_floor"] is True
+    assert gb["geometry"]["descends_below_w23_floor"] is False
+
+
+def test_G_B_reproduces_the_pilots_DIVERGENT_ttt_cell():
+    """⛔ G-B's price, pinned: it shrinks the number of cells, not the cell, so
+    `solve_matched_ttt` sees the pilot ledger and the NaN geometry returns. A
+    choice of G-B therefore FORCES `ttt_normalized_write=True`."""
+    import jax
+    import jax.nn
+
+    from chlu.core.blocks import MatchedTTTCell, solve_matched_ttt
+
+    k, n = solve_matched_ttt(*PILOT_LEDGER)          # unchanged per-layer cell
+    assert (k, n) == (2197, 52)
+    eta = float(jax.nn.softplus(
+        MatchedTTTCell(12, k, n, key=jax.random.PRNGKey(0)).log_eta))
+    assert eta * n / 12 > 2.0
+
+
 def test_the_plan_reproduces_the_measured_pilot_mfu(plan):
     """⛔ The MFU is MEASURED (2xA100 legs), not assumed at 3 % like the scout's."""
     p = plan.build_plan(n_atoms=8192, steps=4000, seeds=3, eval_batches=40,

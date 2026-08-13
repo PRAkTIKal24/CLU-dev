@@ -85,14 +85,22 @@ STORE_COST_MODEL = {
 
 
 def scale_store_phase(seconds: float, *, n_atoms: int, steps: int,
-                      eval_batches: Optional[int] = None) -> float:
+                      eval_batches: Optional[int] = None,
+                      n_store_layers: int = 12) -> float:
     """Rescale one measured store-bearing phase to a candidate geometry/length.
 
     Train phases scale with ``steps``; eval phases with ``eval_batches``. Both
     scale with the atom-linear store term while the shell term does not.
+
+    ⭐ ``n_store_layers`` prices the **layer-subset** option (a CLU cell in only
+    *some* of the 12 layers): the store's bytes AND its compute are both per
+    store-bearing layer, so it is the one lever that shrinks the state without
+    descending below the w23 atom floor. ⛔ It is **arithmetic only here** — no
+    such model exists; building it is a ``chlu/core/blocks.py`` task.
     """
     frac = float(STORE_COST_MODEL["store_fraction_at_pilot"])
-    atom_factor = frac * (n_atoms / PILOT_N_ATOMS) + (1.0 - frac)
+    scale = (n_atoms / PILOT_N_ATOMS) * (int(n_store_layers) / 12.0)
+    atom_factor = frac * scale + (1.0 - frac)
     length = ((steps / PILOT_STEPS) if eval_batches is None
               else (eval_batches / PILOT_EVAL_BATCHES))
     return float(seconds * atom_factor * length)
@@ -100,7 +108,7 @@ def scale_store_phase(seconds: float, *, n_atoms: int, steps: int,
 
 def job_cost(arm: str, *, n_atoms: int, steps: int, eval_batches: int,
              slice_batches: int, with_slices: bool = True,
-             with_d5: bool = False) -> Dict[str, Any]:
+             with_d5: bool = False, n_store_layers: int = 12) -> Dict[str, Any]:
     """Seconds for one (arm, seed) job at a candidate geometry.
 
     ⚠ **The slice phase is NOT measured** — it did not exist when the pilot legs
@@ -118,7 +126,8 @@ def job_cost(arm: str, *, n_atoms: int, steps: int, eval_batches: int,
     def sc(sec, *, eb=None):
         if store_bearing:
             return scale_store_phase(sec, n_atoms=n_atoms, steps=steps,
-                                     eval_batches=eb)
+                                     eval_batches=eb,
+                                     n_store_layers=n_store_layers)
         return float(sec * ((steps / PILOT_STEPS) if eb is None
                             else (eb / PILOT_EVAL_BATCHES)))
 
@@ -147,14 +156,21 @@ def mfu(seconds_per_step: float, params: int = PILOT_PARAMS) -> float:
     return (6.0 * params * TOKENS_PER_STEP / seconds_per_step) / PEAK_FLOPS
 
 
+def store_total_state_bytes(n_atoms: int, *, dim: int = 12, capacity: int = 32,
+                            n_store_layers: int = 12) -> int:
+    """fp32 TOTAL inference state of the CLU arm — the ledger's own arithmetic."""
+    return int(4 * n_store_layers * (n_atoms * (dim + 2) + capacity * dim))
+
+
 def build_plan(*, n_atoms: int, steps: int, seeds: int, eval_batches: int,
                slice_batches: int, concurrency: int = 4,
-               with_slices: bool = True, with_d5: bool = False) -> Dict[str, Any]:
+               with_slices: bool = True, with_d5: bool = False,
+               n_store_layers: int = 12) -> Dict[str, Any]:
     jobs: List[Dict[str, Any]] = []
     for arm in LADDER_ARMS:
         c = job_cost(arm, n_atoms=n_atoms, steps=steps, eval_batches=eval_batches,
                      slice_batches=slice_batches, with_slices=with_slices,
-                     with_d5=with_d5)
+                     with_d5=with_d5, n_store_layers=n_store_layers)
         for seed in range(seeds):
             jobs.append({**c, "seed": seed,
                          "task_id": len(jobs),
@@ -167,12 +183,19 @@ def build_plan(*, n_atoms: int, steps: int, seeds: int, eval_batches: int,
     makespan = max(lanes)
 
     clu_step_s = scale_store_phase(PILOT_PHASE_WALL_S["clu_store"]["train"],
-                                   n_atoms=n_atoms, steps=steps) / steps
+                                   n_atoms=n_atoms, steps=steps,
+                                   n_store_layers=n_store_layers) / steps
     tokens = steps * TOKENS_PER_STEP
+    total_state = store_total_state_bytes(n_atoms, n_store_layers=n_store_layers)
     return {
         "banner": "⛔ a PLAN, not a run — this script trains nothing.",
         "geometry": {"n_atoms": n_atoms, "addr_dim": 8, "payload_dim": 4,
-                     "capacity": 32, "n_layers": 12, "d_model": 512},
+                     "capacity": 32, "n_layers": 12, "d_model": 512,
+                     "n_store_layers": n_store_layers,
+                     "clu_total_state_bytes": total_state,
+                     "occupancy_of_2MiB": total_state / 2_097_152.0,
+                     "w23_atom_floor_at_addr_dim_8": 8192,
+                     "descends_below_w23_floor": n_atoms < 8192},
         "schedule": {"arms": list(LADDER_ARMS), "seeds": seeds,
                      "n_jobs": len(jobs), "concurrency": concurrency,
                      "makespan_s": makespan, "makespan_h": makespan / 3600.0,
@@ -230,15 +253,24 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--eval-batches", type=int, default=40)
     ap.add_argument("--slice-batches", type=int, default=10)
     ap.add_argument("--concurrency", type=int, default=4)
+    ap.add_argument("--n-store-layers", type=int, default=12,
+                    help="CLU cells in only this many of the 12 layers "
+                         "(ARITHMETIC ONLY — no such model is built)")
     ap.add_argument("--d5", action="store_true")
     a = ap.parse_args(argv)
     plan = build_plan(n_atoms=a.n_atoms, steps=a.steps, seeds=a.seeds,
                       eval_batches=a.eval_batches, slice_batches=a.slice_batches,
-                      concurrency=a.concurrency, with_d5=a.d5)
+                      concurrency=a.concurrency, with_d5=a.d5,
+                      n_store_layers=a.n_store_layers)
     with open(a.out, "w") as fh:
         json.dump(plan, fh, indent=2)
-    e, s, t = plan["envelope"], plan["schedule"], plan["throughput"]
-    print(f"n_atoms {a.n_atoms} | steps {a.steps} | {s['n_jobs']} jobs "
+    e, s, t, g = (plan["envelope"], plan["schedule"], plan["throughput"],
+                  plan["geometry"])
+    print(f"n_atoms {a.n_atoms} in {a.n_store_layers}/12 layers | "
+          f"state {g['clu_total_state_bytes']:,} B "
+          f"({g['occupancy_of_2MiB']:.3f}x of 2 MiB"
+          f"{', ⛔ BELOW the w23 atom floor' if g['descends_below_w23_floor'] else ''})")
+    print(f"steps {a.steps} | {s['n_jobs']} jobs "
           f"({len(LADDER_ARMS)} arms x {a.seeds} seeds)")
     print(f"  worst job: {e['worst_job_arm']} {e['worst_job_h']:.1f} h "
           f"(limit {JOB_LIMIT_S / 3600:.0f} h, headroom {e['min_headroom_x']:.2f}x, "
