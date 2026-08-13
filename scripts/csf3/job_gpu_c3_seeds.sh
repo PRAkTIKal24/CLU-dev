@@ -81,6 +81,7 @@ SLICES="${SLICES:-1}"             # the within-document retention slices
 MEM="${MEM:-}"
 STORE="${STORE:-}"
 SET="${SET:-}"
+PREREG_CONT="${PREREG_CONT:-}"    # run 3's pre-registered continuation (see below)
 
 export CLU_REPO="${CLU_REPO:-$HOME/scratch/CHLU}"
 # shellcheck disable=SC1091
@@ -156,7 +157,17 @@ EXTRA=""
 [ "$RESUME" = "1" ] && EXTRA="$EXTRA --resume"
 [ "$D5" = "1" ] && EXTRA="$EXTRA --d5"
 [ "$SLICES" = "1" ] && EXTRA="$EXTRA --slices"
-echo "=== overrides === CORPUS='$CORPUS' MEM='$MEM' STORE='$STORE' SET='$SET' RESUME='$RESUME' D5='$D5' SLICES='$SLICES'"
+# ⭐ run 3's PRE-REGISTERED CONTINUATION. ⛔ §7.33: a pre-registered leg behind a
+# flag NO LAUNCH PATH SETS is indistinguishable from a deliberate cut — and run 3
+# must carry it on EVERY (re-)submission, including every re-resume, or the
+# budget check refuses the leg. Set e.g.
+#   PREREG_CONT="journal=$RUN2_OUT/pilot_pilot_seed${SEED}_PARTIAL.json \
+#                flag=memory.erosion_partition \
+#                prereg=.claude/outputs/c2w6-anti-erosion/PREREG-LeakAblation.md"
+# ⛔ It exempts the state-byte BUDGET check ONLY, and only if this config is
+# identical to that journal except memory.erosion_partition.
+[ -n "$PREREG_CONT" ] && EXTRA="$EXTRA --prereg-continuation $PREREG_CONT"
+echo "=== overrides === CORPUS='$CORPUS' MEM='$MEM' STORE='$STORE' SET='$SET' RESUME='$RESUME' D5='$D5' SLICES='$SLICES' PREREG_CONT='$PREREG_CONT'"
 
 # ONE literal command line. ⛔ Do not refactor into a variable (see the zsh note).
 # shellcheck disable=SC2086

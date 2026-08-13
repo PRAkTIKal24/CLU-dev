@@ -469,6 +469,31 @@ def test_run3s_journal_differs_from_run2s_by_EXACTLY_the_one_token(run2_journal)
             ^ json.loads(d_old["pilot.memory"]).keys()) == {"erosion_partition"}
 
 
+def test_the_LADDER_SCRIPT_can_actually_set_it(monkeypatch):
+    """⛔ §7.33: a pre-registered leg behind a flag NO LAUNCH PATH SETS is
+    indistinguishable, in the artifact, from a deliberate cut — and run 3 must
+    carry the exemption on every (re-)submission, including every re-resume."""
+    import subprocess
+
+    job = REPO / "scripts" / "csf3" / "job_gpu_c3_seeds.sh"
+    t = job.read_text()
+    assert 'PREREG_CONT="${PREREG_CONT:-}"' in t
+    assert '[ -n "$PREREG_CONT" ] && EXTRA="$EXTRA --prereg-continuation ' \
+           '$PREREG_CONT"' in t
+    assert subprocess.run(["bash", "-n", str(job)]).returncode == 0
+    # ⚠ and it must word-split into the three KEY=VALUE argv entries argparse
+    # wants — the zsh trap, checked rather than assumed
+    out = subprocess.run(
+        ["bash", "-c", 'EXTRA=""; [ -n "$PREREG_CONT" ] && '
+                       'EXTRA="$EXTRA --prereg-continuation $PREREG_CONT"; '
+                       'for w in $EXTRA; do echo "$w"; done'],
+        capture_output=True, text=True,
+        env={"PREREG_CONT": "journal=/tmp/j.json flag=memory.erosion_partition "
+                            "prereg=P.md", "PATH": "/usr/bin:/bin"})
+    assert out.stdout.split() == ["--prereg-continuation", "journal=/tmp/j.json",
+                                  "flag=memory.erosion_partition", "prereg=P.md"]
+
+
 # ==========================================================================
 # 6. the two rulings, recorded in code
 # ==========================================================================
