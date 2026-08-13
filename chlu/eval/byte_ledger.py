@@ -19,14 +19,38 @@ inference state spans **1.60 MB (TTT-Linear) → 100.7 MB (sliding-window @4 k)*
 a **63× range** — and whichever number is picked advantages some rivals and
 cripples others. It is a **decision**, taken by the Head and Advisor
 (2026-08-13), and it lives here as **one named constant**
-(:data:`MATCHED_STATE_BYTE_BUDGET`) so that confirming its last digit is a
+(:data:`INTERIM_MATCHED_STATE_BYTE_BUDGET`) so that confirming its last digit is a
 one-line edit rather than a hunt through call sites.
+
+⭐⭐ **TWO RULINGS ARE RECORDED IN CODE HERE (Head + Advisor, 2026-08-13).**
+
+1. ⛔ **NO dtype normalisation.** The counting convention is **total state bytes
+   AS DEPLOYED**: an fp32 store pays its real 2× cost against a bf16 rival, and
+   that is **not a bug to be fixed later** (:data:`DTYPE_NORMALISATION_RULING`).
+   Normalising to a common element width would flatter *us* — our arms are fp32
+   and the published-rival table is bf16 — and **harder for us is the defensible
+   direction** of a matched-bytes control. ``dtype_bytes`` is therefore a
+   declared field of every row, never a conversion factor.
+2. ⚠ **The ceiling digit is INTERIM and binds nothing yet**
+   (:data:`BUDGET_IS_INTERIM`). It is set for real in the **rival-ladder
+   prereg**, when the C3 CLU arm's store geometry is frozen; ⛔ **the pilot
+   geometry is not presumed to be the C3 geometry.** Until that prereg is filed,
+   :func:`assert_ladder_arms_admissible` **refuses to train any rival-ladder
+   arm** — an interim number may not become a published control by inertia.
+
+⭐ **The pre-registered-continuation exemption** (:class:`ContinuationExemption`,
+`c3-run3-budget-exemption`) is the ONE narrow way an over-budget run may proceed:
+a run that is **bit-identical to a named prior journal except one registered
+flag**. It **annotates, never suppresses** — the ledger is computed in full,
+printed in full, and stamped with the journal, its sha256, the registered flag's
+old→new value and the arms' true bytes and occupancy — and it exempts the
+**budget check only**. See :func:`build_byte_ledger`.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 # ==========================================================================
 # ⭐ THE RULED BUDGET — one constant, one edit
@@ -50,26 +74,62 @@ from typing import Any, Dict, Optional, Tuple
 #: outstanding when this module was written. Per the task, the harness is built
 #: against the constant and defaults to 2,097,152 B. ⛔ Do not introduce a third
 #: value; change THIS line if the confirmation differs.
-MATCHED_STATE_BYTE_BUDGET: int = 2_097_152
+#:
+#: ⭐⭐ **RENAMED 2026-08-13 (`c3-run3-budget-exemption`) so its status is
+#: unmissable at the point of use: this number is INTERIM and BINDS NOTHING.**
+#: The ceiling digit is set in the **rival-ladder prereg**, when the C3 CLU arm's
+#: store geometry is frozen; ⛔ the *pilot* geometry is not presumed to be the C3
+#: geometry, so "the pilot busts the budget by 2.63×" is a statement about a
+#: placeholder, not a verdict on the CLU.
+INTERIM_MATCHED_STATE_BYTE_BUDGET: int = 2_097_152
+
+#: ⚠ Back-compatible alias — every call site (``PilotConfig.state_byte_budget``,
+#: the tests, the artifacts) reads the same integer. ⛔ **Kept deliberately as an
+#: ALIAS and not as a second literal**: one edit still moves the whole repo.
+MATCHED_STATE_BYTE_BUDGET: int = INTERIM_MATCHED_STATE_BYTE_BUDGET
+
+#: ⛔ **True until the rival-ladder prereg is filed.** While this is ``True`` no
+#: rival-ladder arm may train (:func:`assert_ladder_arms_admissible`). Flipping it
+#: is the *same edit* as filing the prereg and naming it in
+#: :data:`BUDGET_CEILING_PREREG`.
+BUDGET_IS_INTERIM: bool = True
+
+#: The document that sets the ceiling digit for real. ⛔ ``None`` = NOT FILED.
+BUDGET_CEILING_PREREG: Optional[str] = None
+
+#: ⭐ **RULED (Head + Advisor, 2026-08-13): NO dtype normalisation, ever.**
+DTYPE_NORMALISATION_RULING = (
+    "NONE. RULED Head+Advisor 2026-08-13: the convention is TOTAL STATE BYTES AS "
+    "DEPLOYED — an fp32 store pays its real 2x cost against a bf16 rival, and our "
+    "arms ARE fp32 while the published-rival table is bf16. ⛔ This is NOT a bug: "
+    "harder-for-us is the defensible direction of a matched-bytes control, so "
+    "dtype_bytes is a DECLARED field of every row and never a conversion factor. "
+    "Do not 'fix' this by normalising widths."
+)
 
 #: Provenance string carried into every artifact beside the number, so a reader
 #: of the JSON never has to come back to this file to learn where it came from.
 BUDGET_PROVENANCE = (
     "RULED Advisor+Head 2026-08-13 as '≈2 MB'; implemented as the 2 MiB ceiling "
     "2,097,152 B on the Hub's recommendation (CLU d=12 1,966,080 B = 0.94x; "
-    "TTT-Linear 1,597,440 B = 0.76x). Last-digit confirmation was OUTSTANDING at "
-    "build time — see chlu/eval/byte_ledger.py MATCHED_STATE_BYTE_BUDGET."
+    "TTT-Linear 1,597,440 B = 0.76x). ⚠⚠ INTERIM AND BINDS NOTHING YET (Head+"
+    "Advisor 2026-08-13): the ceiling digit is set in the RIVAL-LADDER PREREG, "
+    "when the C3 CLU arm's store geometry is frozen — the pilot geometry is NOT "
+    "presumed to be the C3 geometry. Until that prereg is filed no rival-ladder "
+    "arm may train. ⛔ NO DTYPE NORMALISATION: " + DTYPE_NORMALISATION_RULING
+    + " See chlu/eval/byte_ledger.py INTERIM_MATCHED_STATE_BYTE_BUDGET."
 )
 
 #: Our arms run in **float32**; the scout's published-rival table is quoted in
 #: **bf16**. A ledger that mixes them silently is a 2× lie, so the element width
-#: is a declared field of every row, never an assumption.
+#: is a declared field of every row, never an assumption — and ⛔ never a
+#: normalisation (:data:`DTYPE_NORMALISATION_RULING`).
 FP32_BYTES = 4
 BF16_BYTES = 2
 
 
 class LedgerError(RuntimeError):
-    """Base class for the two loud failures."""
+    """Base class for the loud failures."""
 
 
 class UnledgeredArmError(LedgerError):
@@ -78,6 +138,14 @@ class UnledgeredArmError(LedgerError):
 
 class StateByteBudgetError(LedgerError):
     """An arm's ledgered state does not fit the pre-registered budget."""
+
+
+class InterimBudgetError(LedgerError):
+    """A rival-ladder arm tried to train while the ceiling digit is INTERIM."""
+
+
+class ContinuationExemptionError(LedgerError):
+    """A pre-registered-continuation exemption was claimed but not earned."""
 
 
 # ==========================================================================
@@ -240,6 +308,51 @@ RIVAL_SPECS: Dict[str, RivalStateSpec] = {
 }
 
 
+#: ⭐ The **rival-ladder arm names**: an arm named here is a published rival being
+#: trained *as a ladder rung*, i.e. a claim about matched bytes. It is exactly
+#: this set that may not train against an interim ceiling.
+LADDER_ARM_NAMES = frozenset(RIVAL_SPECS)
+
+
+def assert_ladder_arms_admissible(
+        arms: Iterable[str], *, budget_is_interim: bool = None,
+        prereg: Optional[str] = None) -> Dict[str, Any]:
+    """⛔ **THE INTERIM-BUDGET GUARD — no ladder arm trains against a placeholder.**
+
+    RULED (Head + Advisor, 2026-08-13): :data:`INTERIM_MATCHED_STATE_BYTE_BUDGET`
+    is a placeholder whose digit is set in the **rival-ladder prereg**. A ladder
+    rung trained against a placeholder produces a matched-bytes claim that was
+    never pre-registered against anything — the number would then have to be
+    *defended* rather than *cited*, and re-running it is A100-weeks.
+
+    ⭐ Run 3 is **not** a ladder arm (its arms are ``clu_store`` / ``ttt_matched``
+    / ``gru_matched`` / ``none`` / ``echo``), so this guard is inert for it —
+    which is the point: the guard blocks what the ruling blocks, and nothing else.
+
+    Returns the (empty, for our arms) list of ladder rungs it found, so a caller
+    can record that the check ran. Raises :class:`InterimBudgetError` otherwise.
+    """
+    interim = BUDGET_IS_INTERIM if budget_is_interim is None else bool(
+        budget_is_interim)
+    doc = BUDGET_CEILING_PREREG if prereg is None else prereg
+    named: List[str] = sorted({a for a in arms if a in LADDER_ARM_NAMES})
+    if named and interim:
+        raise InterimBudgetError(
+            "⛔ rival-ladder arm(s) may not train while the matched-state-byte "
+            "ceiling is INTERIM:\n"
+            f"    ladder arms requested: {named}\n"
+            f"    interim ceiling: {INTERIM_MATCHED_STATE_BYTE_BUDGET:,} B\n"
+            "    MISSING PREREG: the rival-ladder pre-registration, which sets "
+            "the ceiling digit when the C3 CLU arm's store geometry is frozen "
+            "(⛔ the pilot geometry is NOT presumed to be the C3 geometry).\n"
+            "  File it, then set chlu.eval.byte_ledger.BUDGET_CEILING_PREREG to "
+            "its path and BUDGET_IS_INTERIM=False in the SAME edit that fixes "
+            "INTERIM_MATCHED_STATE_BYTE_BUDGET.\n"
+            f"  Budget provenance: {BUDGET_PROVENANCE}")
+    return {"ladder_arms_requested": named, "budget_is_interim": interim,
+            "budget_ceiling_prereg": doc}
+
+
 def shrink_to_budget(name: str, budget: int = MATCHED_STATE_BYTE_BUDGET
                      ) -> Dict[str, Any]:
     """⭐ Solve a rival's declared knob **down** so it fits ``budget``.
@@ -319,6 +432,16 @@ class ArmLedger:
     dtype_bytes: int = FP32_BYTES
     arithmetic: str = ""
     extra: Dict[str, Any] = field(default_factory=dict)
+    #: ⭐ **How many layers actually carry a cell** (geometry **G-B**, RATIFIED
+    #: Head+Advisor 2026-08-13). ``None`` => all ``n_layers``, the shipped
+    #: behaviour bit-for-bit. φ lives in **every** block either way, so the two
+    #: counts are tracked separately and never conflated.
+    n_store_layers: Optional[int] = None
+
+    @property
+    def store_layers(self) -> int:
+        return int(self.n_layers if self.n_store_layers is None
+                   else self.n_store_layers)
 
     @property
     def total_state_bytes(self) -> int:
@@ -327,9 +450,16 @@ class ArmLedger:
         ⚠ Per-layer is the seductive number and it is the wrong one — a 12-layer
         model holds 12 cell states at once. The scout's rival table is likewise
         summed over ``n_L``, so this is the like-for-like column.
+
+        ⭐ Under a ``store_layers`` selection the cell term is summed over the
+        **store-bearing** layers only (that is what G-B buys: 3 × 460,288 =
+        1,380,864 B instead of 12 ×), while φ's term stays over all ``n_layers``
+        because φ is in every block. φ's inference state is 0 B, so the second
+        term is 0 today — it is written out rather than dropped so that the
+        arithmetic string stays honest if φ ever gains state.
         """
-        return int(self.n_layers * (self.cell_state_bytes_per_layer
-                                    + self.phi_state_bytes_per_layer))
+        return int(self.store_layers * self.cell_state_bytes_per_layer
+                   + self.n_layers * self.phi_state_bytes_per_layer)
 
     @property
     def total_phi_params_bytes(self) -> int:
@@ -340,6 +470,10 @@ class ArmLedger:
         return {
             "arm": self.arm,
             "n_layers": self.n_layers,
+            # ⭐ the G-B denominator, ALWAYS printed: a reader of the artifact must
+            # never have to infer how many layers the total was summed over.
+            "n_store_layers": self.store_layers,
+            "store_layer_fraction": self.store_layers / float(max(self.n_layers, 1)),
             "dtype_bytes": self.dtype_bytes,
             "cell_params": self.cell_params,
             "cell_state_bytes_per_layer": self.cell_state_bytes_per_layer,
@@ -409,26 +543,142 @@ def arm_ledger(arm: str, pcfg, swap_ledger: Dict[str, Any],
         )
     ph_p, ph_s = phi_bytes(pcfg)
     n_L = int(pcfg.n_layers)
+    # ⭐ G-B: the cell term is summed over the STORE-BEARING layers. ⛔ Resolved by
+    # `chlu.core.blocks.resolve_store_layers` — the same function the model itself
+    # uses — so the ledger cannot drift from the geometry it is ledgering. The
+    # import is local because this module is otherwise JAX-free.
+    from chlu.core.blocks import resolve_store_layers
+
+    store_idx = resolve_store_layers(n_L, getattr(pcfg, "store_layers", None))
+    n_S = len(store_idx)
     cell_b = int(row["state_bytes"])
     led = ArmLedger(
-        arm=arm, n_layers=n_L,
+        arm=arm, n_layers=n_L, n_store_layers=n_S,
         cell_state_bytes_per_layer=cell_b,
         phi_params_bytes_per_layer=ph_p, phi_state_bytes_per_layer=ph_s,
         cell_params=int(row.get("params", 0)),
         arithmetic=(
-            f"total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) "
-            f"= {n_L} * ({cell_b} + {ph_s}) = {n_L * (cell_b + ph_s)} B; "
+            f"total_state_bytes = n_store_layers * cell_state_bytes + n_layers * "
+            f"phi_state_bytes = {n_S} * {cell_b} + {n_L} * {ph_s} = "
+            f"{n_S * cell_b + n_L * ph_s} B "
+            f"(store-bearing layers {list(store_idx)} of {n_L}); "
             f"phi_params_bytes = {n_L} * {ph_p} = {n_L * ph_p} B (SHARED, "
             f"bit-identical across arms); dtype = float32 ({FP32_BYTES} B/elt)."
         ),
-        extra={"state_floats_per_layer": int(row.get("state_floats", 0))},
+        extra={"state_floats_per_layer": int(row.get("state_floats", 0)),
+               "store_layer_indices": list(store_idx)},
     )
     return led.as_row(budget)
 
 
+@dataclass(frozen=True)
+class ContinuationExemption:
+    """⭐ A **VERIFIED** pre-registered continuation of a prior leg.
+
+    ⛔⛔ **THIS IS A NARROW EXEMPTION, NOT A LOOPHOLE, AND THE NARROWNESS IS THE
+    FEATURE.** It exists because a **pre-registered one-flag ablation of an
+    earlier run** must not have its *geometry* changed to satisfy a budget: doing
+    so would destroy the very quantity the ablation measures (run 2 vs run 3 =
+    ``erosion_partition`` and nothing else; `PREREG-LeakAblation`). The budget was
+    never meant to govern such a leg.
+
+    ⛔ **Every field is mandatory** — there is no default-constructed instance, so
+    a forged/empty exemption cannot exist. The only constructor in this repo is
+    :func:`chlu.experiments.exp_cluformer_pilot.verify_preregistered_continuation`,
+    which builds one **only after** the existing ``load_journal`` fingerprint
+    machinery has confirmed the current config is identical to the named journal
+    **except the single registered flag**.
+
+    ⛔ It exempts the **BUDGET CHECK ONLY**. The unledgered-arm check
+    (:class:`UnledgeredArmError`), φ-accounting and the shared-shell identity
+    assertion are computed *before* this object is ever consulted and are not
+    reachable through it. ⛔ There is **no list of flags**: exactly one. A second
+    registered flag is a new pre-registration and a code change — which is the
+    point.
+    """
+
+    #: Path of the prior leg's journal, as given.
+    journal: str
+    #: sha256 of that journal's bytes, so the artifact pins WHICH file was read.
+    journal_sha256: str
+    #: The pre-registration document that licenses this continuation.
+    prereg: str
+    #: The ONE registered flag, fully qualified (``group.key``).
+    flag: str
+    #: Its value in the journal, and now. ⛔ Both recorded; neither inferred.
+    old_value: Any
+    new_value: Any
+    #: ⭐ Every fingerprint key that this ONE knob moved. A knob can move more than
+    #: one key (``memory.erosion_partition`` moves ``pilot.memory`` too), so the
+    #: consequences are **listed**, not summarised — an auditor sees exactly what
+    #: differs, and that nothing else does.
+    fingerprint_keys_moved: Tuple[str, ...]
+    #: ⚠ Keys the journal **predates**, sitting at their own field default — not
+    #: differences (§A20.4), but recorded so the artifact is complete: the real
+    #: run-2 journals predate the four C2W6 memory fields, ``erosion_partition``
+    #: among them.
+    journal_predates_at_default: Tuple[str, ...]
+    #: How the identity was established — the name of the code path that ruled it.
+    verified_by: str
+
+    def as_stamp(self) -> Dict[str, Any]:
+        return {
+            "journal": self.journal,
+            "journal_sha256": self.journal_sha256,
+            "prereg": self.prereg,
+            "registered_flag": self.flag,
+            "old_value": self.old_value,
+            "new_value": self.new_value,
+            "fingerprint_keys_moved": list(self.fingerprint_keys_moved),
+            "journal_predates_at_default": list(self.journal_predates_at_default),
+            "verified_by": self.verified_by,
+            "exempts": "the state-byte BUDGET check only",
+            "does_not_exempt": ["UnledgeredArmError", "phi accounting",
+                                "shared-shell identity",
+                                "the interim-budget ladder guard"],
+        }
+
+
+def format_ledger_summary(art: Dict[str, Any]) -> str:
+    """The ledger as an operator reads it — ⛔ printed whether or not it passes.
+
+    An exemption that *silenced* the ledger would be indistinguishable from a
+    budget that was never checked, so the exempt path prints MORE, not less: the
+    true bytes, the true occupancy, and the stamp saying an exemption was taken.
+    """
+    budget = int(art["budget_bytes"])
+    head = (f"[byte-ledger] budget {budget:,} B "
+            f"(⚠ INTERIM — set in the rival-ladder prereg) | "
+            f"enforced={art['enforced']} | dtype normalisation: NONE (as deployed)")
+    lines = [head]
+    for a, r in sorted(art["arms"].items()):
+        lines.append(f"   {a:<14s} {r['total_state_bytes']:>12,} B  "
+                     f"occupancy {r['occupancy']:.5f}  "
+                     f"within={r['within_budget']}  phi={r['phi_accounted']}")
+    stamp = art.get("preregistered_continuation")
+    if stamp:
+        lines += [
+            "   ⭐ PRE-REGISTERED CONTINUATION — the BUDGET check (and only it) is "
+            "exempt for this leg:",
+            f"      prereg          : {stamp['prereg']}",
+            f"      journal         : {stamp['journal']}",
+            f"      journal sha256  : {stamp['journal_sha256']}",
+            f"      registered flag : {stamp['registered_flag']}  "
+            f"{stamp['old_value']!r} -> {stamp['new_value']!r}",
+            f"      keys it moved   : {stamp['fingerprint_keys_moved']}  "
+            "⛔ and NOTHING else differs from the journal",
+            f"      verified by     : {stamp['verified_by']}",
+            f"      over budget anyway: {art['over_budget'] or '[]'}  "
+            "⛔ the bytes above are the TRUE bytes, unmodified.",
+        ]
+    return "\n".join(lines)
+
+
 def build_byte_ledger(pcfg, swap_ledger: Dict[str, Any], arms,
                       *, budget: int = MATCHED_STATE_BYTE_BUDGET,
-                      enforce: bool = True) -> Dict[str, Any]:
+                      enforce: bool = True,
+                      exemption: Optional[ContinuationExemption] = None,
+                      verbose: bool = True) -> Dict[str, Any]:
     """⭐ The per-run ledger artifact. Fails loudly; never warns.
 
     Args:
@@ -438,18 +688,64 @@ def build_byte_ledger(pcfg, swap_ledger: Dict[str, Any], arms,
             recorded act — the artifact carries ``enforced: false`` — because a
             silently unenforced budget is exactly the failure mode the ruling was
             written to prevent.
+        exemption: a **verified** :class:`ContinuationExemption`. ⭐ It
+            **annotates, never suppresses**: the ledger is still computed in full
+            (⛔ including :class:`UnledgeredArmError`, which fires *before* this is
+            consulted), still printed in full, still lists ``over_budget`` with
+            the arms' TRUE bytes and occupancy — only the *raise* is withheld, and
+            the artifact says so, with the journal, its sha256 and the registered
+            flag's old→new value. ⛔ A plain ``dict`` is refused: the type IS the
+            proof that the fingerprint check ran.
     """
+    if exemption is not None and not isinstance(exemption, ContinuationExemption):
+        raise ContinuationExemptionError(
+            "⛔ build_byte_ledger(exemption=...) takes a VERIFIED "
+            "ContinuationExemption, not "
+            f"{type(exemption).__name__} — the type is the proof that the "
+            "load_journal fingerprint check actually ran. Build it with "
+            "chlu.experiments.exp_cluformer_pilot."
+            "verify_preregistered_continuation().")
+    # ⛔ ORDER IS LOAD-BEARING: the per-arm ledger (and with it UnledgeredArmError
+    # and φ accounting) is computed BEFORE the exemption is looked at, so no
+    # exemption can reach those guards.
     rows = {a: arm_ledger(a, pcfg, swap_ledger, budget=budget) for a in arms}
     over = {a: r for a, r in rows.items() if not r["within_budget"]}
     art: Dict[str, Any] = {
         "budget_bytes": int(budget),
         "budget_provenance": BUDGET_PROVENANCE,
+        "budget_is_interim": bool(BUDGET_IS_INTERIM),
+        "budget_ceiling_prereg": BUDGET_CEILING_PREREG,
+        "dtype_normalisation": DTYPE_NORMALISATION_RULING,
         "enforced": bool(enforce),
         "arms": rows,
         "over_budget": sorted(over),
         "phi_accounted_on_every_arm": all(r["phi_accounted"] for r in rows.values()),
         "rival_reference": rival_reference_table(budget),
+        "budget_exempted": exemption is not None,
+        "preregistered_continuation": (exemption.as_stamp() if exemption
+                                       is not None else None),
     }
+    if verbose:
+        print(format_ledger_summary(art), flush=True)
+    if enforce and over and exemption is not None:
+        # ⭐ ANNOTATE, NEVER SUPPRESS. Loud on stdout as well as in the artifact:
+        # an auditor reading either one alone must see that an exemption was
+        # taken, why, and what the bytes were anyway.
+        print(
+            "⚠⚠ [byte-ledger] the state-byte budget is EXCEEDED and the run "
+            "continues under a PRE-REGISTERED CONTINUATION exemption:\n"
+            + "".join(
+                f"    {a}: {r['total_state_bytes']:,} B = {r['occupancy']:.2f}x "
+                f"the {budget:,} B budget (TRUE bytes, unmodified)\n"
+                for a, r in sorted(over.items()))
+            + f"    prereg : {exemption.prereg}\n"
+              f"    journal: {exemption.journal} "
+              f"(sha256 {exemption.journal_sha256})\n"
+              f"    flag   : {exemption.flag} {exemption.old_value!r} -> "
+              f"{exemption.new_value!r}\n"
+              "  ⛔ The BUDGET check alone is exempt; every other ledger guard "
+              "stayed live.", flush=True)
+        return art
     if enforce and over:
         raise StateByteBudgetError(
             "⛔ matched-state-byte budget violated — the tier-iii control is not "
@@ -458,9 +754,33 @@ def build_byte_ledger(pcfg, swap_ledger: Dict[str, Any], arms,
                 f"    {a}: {r['total_state_bytes']:,} B = {r['occupancy']:.2f}x the "
                 f"{budget:,} B budget  ({r['arithmetic']})\n"
                 for a, r in sorted(over.items()))
-            + "  Shrink the store (capacity / atoms_per_item / addr_dim+payload_dim "
-              "/ n_layers) until it fits, or set enforce_state_byte_budget=false "
-              "to record a DECLARED, non-compliant run.\n"
+            + "  Shrink the store — ⚠⚠ but NOT with `capacity` or `atoms_per_item`: "
+              "at addr_dim=8 the w23 dimension-aware ATOM FLOOR "
+              "(round(min_atoms_base * min_atoms_c**addr_dim) = 512*sqrt(2)^8 = "
+              "8192) DOMINATES the max() in CluSystemConfig.n_atoms, which the "
+              "pilot's 32x256 ties exactly, so both of those knobs move ZERO "
+              "BYTES (measured: `c3-rival-ladder-prereg` §F1.1, handover 7.38). "
+              "The levers that DO move bytes:\n"
+              "    * store_layers  — carry the full-size cell in FEWER LAYERS "
+              "(geometry G-B, RATIFIED 2026-08-13: 3 of 12 => 1,380,864 B = "
+              "0.658x of 2 MiB). Breaks no design rule; the cell is untouched.\n"
+              "    * dim (= addr_dim + payload_dim) — bounded below by the d<=12 "
+              "reach ceiling, and arithmetically CANNOT fit 8192 atoms under "
+              "2 MiB on its own.\n"
+              "    * min_atoms_base — the FLOOR'S OWN HEIGHT. ⛔ Lowering it is a "
+              "descent below a design-ruled, empirically-anchored floor and is "
+              "claims-relevant: PRE-REGISTER it (geometry G-A + its gate job).\n"
+              "    * n_layers — moves the 26-47 M weight class the venue is "
+              "defined at. Not a byte knob.\n"
+              "  Or set enforce_state_byte_budget=false to record a DECLARED, "
+              "non-compliant run.\n"
+              "  ⛔ The ONLY other path is a PRE-REGISTERED CONTINUATION "
+              "(preregistered_continuation=journal=...,flag=...,prereg=...), and "
+              "it is not a way round this check: it requires a prior journal on "
+              "disk that this config is bit-identical to EXCEPT ONE registered "
+              "flag, verified by the resume fingerprint machinery. If your config "
+              "differs from that journal in any other way it will be refused "
+              "again, by name.\n"
               f"  Budget provenance: {BUDGET_PROVENANCE}"
         )
     return art
