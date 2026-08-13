@@ -713,6 +713,11 @@ class GDN2Layer(eqx.Module):
                         v.reshape(T, H, dv), g.reshape(T, H, dk),
                         b.reshape(T, H, dk), w.reshape(T, H, dv))
         # App. D.5: RMSNorm on the recurrent output, times a SiLU output gate.
+        # ⚠ EQUIVALENCE SHIM, verified rather than assumed: the official layer
+        # calls `FusedRMSNormSwishGate(o, g_proj(x))`, whose Triton body is
+        # `b_y = (x_hat * w [+ b]) * b_g * sigmoid(b_g)` (fla/modules/
+        # fused_norm_gate.py) — i.e. rms_norm(o)*weight * silu(gate), which is
+        # exactly the line below. The gate is NOT applied inside the norm.
         gate = ((x @ self.g_proj1.T) @ self.g_proj2.T + self.g_bias
                 ).reshape(T, H, dv)
         o = _rms_norm(o, self.o_norm_w, cfg.norm_eps) * jax.nn.silu(gate)
