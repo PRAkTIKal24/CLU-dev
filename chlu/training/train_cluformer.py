@@ -69,6 +69,7 @@ from chlu.core.blocks import (
 from chlu.core.clu_system import CluSystemConfig, make_controller
 from chlu.core.monitors import MonitorContext, default_registry
 from chlu.data.enwik8 import bits_per_character
+from chlu.eval.byte_ledger import MATCHED_STATE_BYTE_BUDGET
 
 
 # ==========================================================================
@@ -111,6 +112,46 @@ class PilotConfig:
     # -- data ---------------------------------------------------------------
     data_bytes: Optional[int] = None      # None => the full 100 MB stream
     data_root: Optional[str] = None
+    #: ⭐ **C3: the real stream is a CONFIG VALUE, not a code path.** Any name in
+    #: :func:`chlu.data.corpora.available_corpora` (``enwik8`` | ``wikitext103``);
+    #: a third stream is one loader module plus one ``register_corpus`` call, with
+    #: no change here. ⛔ Default ``enwik8`` = the shipped behaviour exactly.
+    corpus: str = "enwik8"
+    #: Corpus-specific level where the loader offers one (WT-103: ``byte`` |
+    #: ``word``). Ignored by corpora that have a single level.
+    corpus_level: str = "byte"
+    #: ⚠ Allow the loader to DOWNLOAD. Default ``True`` = the shipped behaviour.
+    #: ⛔ Overridden unconditionally to ``False`` inside a Slurm **array task**
+    #: (:func:`chlu.data.corpora.in_array_task`), where N tasks would race one
+    #: fetch: staging is serial, once, before the sweep, and that is enforced in
+    #: the registry rather than asked for in a runbook.
+    data_download: bool = True
+
+    # -- ⭐ C3: the matched-state-byte budget (RULED, not chosen here) ---------
+    #: The pre-registered inference-state ceiling every arm is ledgered against.
+    #: ⛔ Imported from ONE named constant
+    #: (:data:`chlu.eval.byte_ledger.MATCHED_STATE_BYTE_BUDGET`) rather than
+    #: written as a literal, because the last digit of the ruling was still being
+    #: confirmed and must be changeable in one edit.
+    state_byte_budget: int = MATCHED_STATE_BYTE_BUDGET
+    #: ⛔ An over-budget arm **fails the run loudly**, the same posture as an
+    #: unledgered arm — a harness that lets one through has quietly decided the
+    #: tier-iii control. Set ``False`` only to record a DECLARED non-compliant
+    #: run; the artifact then carries ``byte_ledger.enforced=false``.
+    enforce_state_byte_budget: bool = True
+    #: Minimum per-bin sample count before a retention-slice bin reports a bpc
+    #: (it always reports its ``n``).
+    slice_min_n: int = 30
+    #: Batches used for the retention slice; ``0`` => reuse ``eval_batches``.
+    slice_batches: int = 0
+
+    #: ⭐ Ruling (2) of `pilot-ttt-nan-and-d5-wiring`'s reconciliation list: on a
+    #: resume, an arm banked as TRAINED whose ``.eqx`` has gone missing is
+    #: currently **silently retrained** (~16 h at pilot scale). ``True`` makes
+    #: that a loud failure instead. Default ``True``: the silent path has no
+    #: legitimate use, and the check cannot fire unless a journal and its
+    #: checkpoint disagree.
+    resume_require_ckpt: bool = True
 
     # -- arms ----------------------------------------------------------------
     arms: Tuple[str, ...] = ("clu_store", "gru_matched", "ttt_matched", "none", "echo")
@@ -938,6 +979,29 @@ def _eval_loss(model, tokens, targets, plans, read_mode, verlet):
     EAGERLY (`pilot-placement-probe` §plan-pass); this is the same function on
     the same inputs."""
     return loss_fn(model, tokens, targets, plans, read_mode, verlet)
+
+
+def token_nll(model: StreamModel, tokens: jnp.ndarray, targets: jnp.ndarray,
+              plans, read_mode: Optional[str] = None,
+              verlet: Optional[Tuple[int, int]] = None) -> jnp.ndarray:
+    """⭐ PER-TOKEN next-byte NLL in nats, ``(batch, seq_len)``.
+
+    :func:`loss_fn` returns the *mean*, which is all training needs. The
+    within-document retention slices (:mod:`chlu.eval.text_slices`) need the loss
+    **conditioned on stream position**, so they need it un-reduced. Identical
+    arithmetic to :func:`_nll` up to the final ``jnp.mean``, so the slice's
+    ``bpc_all_binned`` and :func:`evaluate`'s ``bpc`` agree on the same batches.
+    """
+    logits = jax.vmap(lambda t, *p: model(t, list(p), read_mode, verlet))(tokens, *plans)
+    lp = jax.nn.log_softmax(logits, axis=-1)
+    return -jnp.take_along_axis(lp, targets[..., None].astype(jnp.int32),
+                                axis=-1)[..., 0]
+
+
+@eqx.filter_jit
+def eval_token_nll(model, tokens, targets, plans, read_mode, verlet):
+    """:func:`token_nll` under ``filter_jit`` (same staticness as ``_eval_loss``)."""
+    return token_nll(model, tokens, targets, plans, read_mode, verlet)
 
 
 @eqx.filter_jit
