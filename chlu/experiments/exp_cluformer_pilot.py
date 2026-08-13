@@ -53,7 +53,9 @@ import jax
 import numpy as np
 
 from chlu.core.blocks import _count
-from chlu.data.enwik8 import contiguous_batches, load_enwik8, random_batches
+from chlu.data.corpora import get_corpus, load_corpus
+from chlu.data.enwik8 import contiguous_batches, random_batches
+from chlu.eval.byte_ledger import build_byte_ledger
 from chlu.training.train_cluformer import (
     PilotConfig,
     anytime_curve,
@@ -101,8 +103,19 @@ def make_config(scale: str, seed: int, overrides: Optional[dict] = None) -> Pilo
 
 
 def _data(pcfg: PilotConfig):
-    tr, va, te = load_enwik8(pcfg.data_root, n_bytes=pcfg.data_bytes)
-    return tr, va, te
+    """⭐ The stream is selected by CONFIG (``pcfg.corpus``), not by import.
+
+    Routed through :func:`chlu.data.corpora.load_corpus`, which (a) presents every
+    corpus behind one surface so the trainer is corpus-agnostic and (b) refuses to
+    download from inside a Slurm array task — staging is serial, once, before a
+    sweep. ⛔ Default ``corpus="enwik8"`` reproduces the previous call exactly.
+    """
+    kw = {}
+    spec = get_corpus(pcfg.corpus)
+    if spec.name == "wikitext103":
+        kw["level"] = pcfg.corpus_level
+    return load_corpus(pcfg.corpus, pcfg.data_root, n_bytes=pcfg.data_bytes,
+                       download=bool(getattr(pcfg, "data_download", True)), **kw)
 
 
 def _train_batches(split, pcfg: PilotConfig) -> List:
@@ -313,7 +326,8 @@ class _Phases:
 def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
               out_dir: str = ".claude/outputs/cluformer-pilot",
               overrides: Optional[dict] = None,
-              with_d5: bool = False, resume: bool = False) -> Dict[str, Any]:
+              with_d5: bool = False, resume: bool = False,
+              with_slices: bool = False) -> Dict[str, Any]:
     """Run the pilot to ``stage``; write one JSON artifact; return the record.
 
     ⭐ **Crash-resumable** (``resume=True``). Every phase is banked to
@@ -382,6 +396,35 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
     rec["swap_ledger"] = ledger
 
     arms = [a for a in pcfg.arms]
+    # ⭐⭐ THE BYTE LEDGER IS STRUCTURAL, NOT OPTIONAL, AND IT IS TAKEN BEFORE ANY
+    # TRAINING. The primary claim is at matched params AND matched state-bytes
+    # (charter §2), so an arm that cannot state its inference-time state in bytes
+    # — including φ — must not be reportable at all. An unledgered arm raises
+    # UnledgeredArmError and an over-budget arm raises StateByteBudgetError; both
+    # fail the run LOUDLY rather than warning, and both fire here, before a single
+    # A100-hour is spent on a config whose control is not byte-honest.
+    # ⭐ Ledger EVERY solved cell, not just the arms this job happens to run: the
+    # seeds-as-jobs ladder submits one arm per job, and a per-job artifact that
+    # carried only its own arm's bytes could not be assembled into the
+    # matched-state-byte table the claim is read off.
+    _ledger_arms = [k for k in ledger
+                    if not k.startswith("_") and not k.endswith("_ARITHMETIC_ONLY")]
+    rec["byte_ledger"] = build_byte_ledger(
+        pcfg, ledger, sorted(set(_ledger_arms) | set(arms)),
+        budget=int(pcfg.state_byte_budget),
+        enforce=bool(pcfg.enforce_state_byte_budget))
+    ph.bank()
+    if with_slices:
+        # ⚠ The slice's VALIDITY CONTROLS run once per run, before any arm is
+        # scored: the non-degeneracy tripwire (TRAP 1) RAISES rather than
+        # shipping a character-frequency count, and the shuffled-position control
+        # must show the slice actually moves. Cheap (numpy on the test split) and
+        # a hard precondition on every per-arm number that follows.
+        from chlu.eval.text_slices import run_controls
+        ph.step("slice_controls",
+                lambda: run_controls(te.data,
+                                     doc_boundary=get_corpus(pcfg.corpus).doc_boundary,
+                                     seed=seed))
     models = {a: build_arm(a, pcfg, specs, key=k_model) for a in arms}
     rec["shell"] = assert_shared_shell_identical(models)
     rec["total_params"] = {a: _count(m) for a, m in models.items()}
@@ -431,6 +474,20 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
         t = time.time()
         banked = trained_bank.get(a)
         ck = ckpt_path(out, a, seed)
+        # ⛔ RULING (2) of `pilot-ttt-nan-and-d5-wiring`'s reconciliation list —
+        # THE .eqx PRECONDITION CHECK, BEFORE ANY RE-RESUME. A journal that banks
+        # an arm as trained, whose checkpoint has since gone missing, silently
+        # RETRAINS that arm (~16 h at pilot scale on CSF3) and the operator learns
+        # only from the wall clock. Make it loud.
+        if banked is not None and not ck.exists() and bool(
+                getattr(pcfg, "resume_require_ckpt", True)):
+            raise SystemExit(
+                f"⛔ resume precondition failed for arm '{a}': the journal banks "
+                f"it as TRAINED but {ck} is MISSING, so resuming would silently "
+                f"RETRAIN it (~16 h at pilot scale).\n"
+                f"    Check before submitting:  ls {out}/ckpt_*_seed{seed}.eqx | wc -l\n"
+                f"    (expected one per arm in {list(arms)})\n"
+                f"    To retrain deliberately, pass --set resume_require_ckpt=false.")
         # ⛔ Banked EVAL phases are only valid against banked WEIGHTS. If the
         # checkpoint is gone the arm is retrained, and its stale eval rows go
         # with it — a resumed static bpc must never describe a different model.
@@ -492,6 +549,14 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
         ph.step("dyneval", lambda m=m: dynamic_eval(m, pcfg, iter(dv)),
                 into=parts, prior_into=parts, label=f"{a}/dyneval")
         _bank_arm()
+        # ⭐ THE RETENTION SLICE — computed for EVERY arm, and for each arm's
+        # dyn-eval substitute column, from the same index on the same split.
+        # ⛔ Never only for clu_store: a slice one arm gets is not a comparison.
+        if with_slices:
+            ph.step("slices",
+                    lambda m=m, _p=parts: _arm_slices(m, pcfg, te, _p),
+                    into=parts, prior_into=parts, label=f"{a}/slices")
+            _bank_arm()
         if a == "clu_store":
             ph.step("blank_store",
                     lambda m=m: evaluate(m, pcfg, iter(ev), blank=True),
@@ -534,6 +599,34 @@ def run_pilot(scale: str = "toy", seed: int = 0, stage: str = "s3",
     return _finish(rec, out, t_all, pcfg, ph)
 
 
+def _slice_index(pcfg: PilotConfig, split):
+    """Build (once per run) the revisit index for the scored split."""
+    from chlu.eval.text_slices import build_revisit_index
+
+    spec = get_corpus(pcfg.corpus)
+    return build_revisit_index(split.data, doc_boundary=spec.doc_boundary,
+                               unit="token")
+
+
+def _arm_slices(model, pcfg: PilotConfig, split, parts: Dict[str, Any]
+                ) -> Dict[str, Any]:
+    """One arm's retention slices: the static column AND the dyn-eval column."""
+    from chlu.eval.text_slices import (evaluate_slices, evaluate_slices_dyneval,
+                                       slice_gap)
+
+    spec = get_corpus(pcfg.corpus)
+    idx = _slice_index(pcfg, split)
+    nb = int(pcfg.slice_batches) or int(pcfg.eval_batches)
+    kw = dict(corpus=pcfg.corpus, doc_boundary=spec.doc_boundary,
+              n_batches=nb, min_n=int(pcfg.slice_min_n), index=idx)
+    static = evaluate_slices(model, pcfg, split, **kw)
+    # the substitute column gets the IDENTICAL slice, at its own best LR
+    lr = float((parts.get("dyneval") or {}).get("best_lr", pcfg.dyneval_lr))
+    dyn = evaluate_slices_dyneval(model, pcfg, split, lr=lr, **kw)
+    return {"static": static, "dyneval": dyn,
+            "dyneval_minus_static": slice_gap(static, dyn)}
+
+
 def _arm_row(parts: Dict[str, Any], arm: str, with_d5: bool) -> Dict[str, Any]:
     """Re-key one arm's banked pieces into the artifact's CANONICAL order.
 
@@ -542,7 +635,7 @@ def _arm_row(parts: Dict[str, Any], arm: str, with_d5: bool) -> Dict[str, Any]:
     and is fixed here, so an interrupted+resumed run and an uninterrupted one
     emit the same object.
     """
-    order = ["train", "static", "dyneval"]
+    order = ["train", "static", "dyneval", "slices"]
     if arm == "clu_store":
         order += ["blank_store"]
         if with_d5:
@@ -594,6 +687,21 @@ def _finish(rec, out: Path, t0: float, pcfg: PilotConfig,
         ph.mark("run_pilot/finish")
         ph.bank()
     body = {k: v for k, v in rec.items() if k not in _JOURNAL_ONLY_KEYS}
+    # ⭐ The retention slices also land as their OWN artifact, with the citation
+    # block and the validity controls attached, so the instrument's output can be
+    # consumed (and audited) without parsing the whole pilot record.
+    if rec.get("slice_controls") or any(
+            "slices" in v for v in (rec.get("arms") or {}).values()):
+        from chlu.eval.text_slices import SliceReport
+        SliceReport(
+            corpus=str(pcfg.corpus), split="test",
+            arms={a: v["slices"] for a, v in (rec.get("arms") or {}).items()
+                  if "slices" in v},
+            controls=dict(rec.get("slice_controls") or {}),
+            meta={"scale": rec["scale"], "seed": rec["seed"],
+                  "eval_batches": int(pcfg.slice_batches or pcfg.eval_batches),
+                  "min_n": int(pcfg.slice_min_n)},
+        ).save(out / f"slices_{rec['scale']}_seed{rec['seed']}.json")
     p = save_json(out / f"pilot_{rec['scale']}_seed{rec['seed']}_"
                         f"{rec['stages_reached'][-1]}.json", body)
     rec["artifact"] = str(p)
@@ -782,6 +890,19 @@ def main(argv: Optional[List[str]] = None) -> int:
                     help="re-aggregate + re-plot from artifacts already on disk")
     ap.add_argument("--d5", action="store_true",
                     help="also run the anytime shape curve (secondary; §A3 shape only)")
+    ap.add_argument("--corpus", default=None,
+                    help="the real stream, by config value (enwik8 | wikitext103). "
+                         "⭐ A third stream is one loader module + one "
+                         "register_corpus() call — see chlu/data/corpora.py.")
+    ap.add_argument("--slices", action="store_true",
+                    help="⭐ also compute the WITHIN-DOCUMENT RETENTION/REVISIT "
+                         "slices (Sun et al., EMNLP 2021, arXiv:2109.09115) for "
+                         "EVERY arm and for every arm's dyn-eval substitute "
+                         "column, plus the validity controls. Like --d5 this is a "
+                         "CLI argument and NOT a PilotConfig field, so it cannot "
+                         "move the resume fingerprint: a finished leg can be "
+                         "re-resumed with --resume --slices to add the slice "
+                         "phases and nothing else.")
     ap.add_argument("--resume", action="store_true",
                     help="⭐ resume from `pilot_<scale>_seed<N>_PARTIAL.json` + the "
                          "per-arm `ckpt_<arm>_seed<N>.eqx` in --out: banked phases "
@@ -825,6 +946,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         ov["warmup"] = max(1, a.steps // 10)
     if a.arms:
         ov["arms"] = tuple(a.arms)
+    if a.corpus:
+        ov["corpus"] = a.corpus
     if a.quick:
         ov.update(steps=6, warmup=2, eval_batches=2, dyneval_batches=2,
                   data_bytes=1_000_000)
@@ -837,7 +960,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(json.dumps(agg, indent=2, default=float), flush=True)
         return 0
     seeds = a.seeds if a.seeds else [a.seed]
-    recs = [run_pilot(a.scale, s, a.stage, a.out, ov, a.d5, a.resume) for s in seeds]
+    recs = [run_pilot(a.scale, s, a.stage, a.out, ov, a.d5, a.resume, a.slices)
+            for s in seeds]
     if len(recs) > 1:
         agg = aggregate(recs)
         save_json(Path(a.out) / f"pilot_{a.scale}_aggregate.json", agg)
