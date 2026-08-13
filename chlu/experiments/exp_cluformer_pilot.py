@@ -954,12 +954,21 @@ def _arm_row(parts: Dict[str, Any], arm: str, with_d5: bool) -> Dict[str, Any]:
 
 
 def _selectors(model) -> Dict[str, Any]:
-    """The trainable friction/mass selectors after training (§A13 rule 3, P8)."""
+    """The trainable friction/mass selectors after training (§A13 rule 3, P8).
+
+    ⭐ Read off the **store-bearing** blocks only (all of them under the default
+    selection); ``layers`` names which, so a 3-entry list under geometry G-B is
+    never mistaken for 9 missing readings.
+    """
     import jax.numpy as jnp
-    ga = [float(jnp.exp(b.cell.log_gamma_addr)) for b in model.blocks]
-    gr = [float(jnp.exp(b.cell.log_gamma_read)) for b in model.blocks]
-    mm = [float(jnp.mean(jax.nn.softplus(b.cell.clu.log_mass))) for b in model.blocks]
-    return {"gamma_address": ga, "gamma_read": gr, "mean_mass": mm}
+    blocks = [model.blocks[i] for i in getattr(model, "store_layers",
+                                               range(len(model.blocks)))]
+    ga = [float(jnp.exp(b.cell.log_gamma_addr)) for b in blocks]
+    gr = [float(jnp.exp(b.cell.log_gamma_read)) for b in blocks]
+    mm = [float(jnp.mean(jax.nn.softplus(b.cell.clu.log_mass))) for b in blocks]
+    return {"gamma_address": ga, "gamma_read": gr, "mean_mass": mm,
+            "layers": list(getattr(model, "store_layers",
+                                   range(len(model.blocks))))}
 
 
 def _swap_table(rec: Dict[str, Any]) -> Dict[str, Any]:

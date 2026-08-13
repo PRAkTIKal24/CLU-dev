@@ -59,7 +59,9 @@ from chlu.core.blocks import (
     StreamModel,
     WritePlan,
     blank_plan,
+    first_store_layer,
     make_memory_cell,
+    parse_store_layers,
     round_robin_plan,
     solve_matched_gru,
     solve_matched_ttt,
@@ -95,6 +97,25 @@ class PilotConfig:
     payload_dim: int = 4
     capacity: int = 32
     atoms_per_item: int = 256
+    #: ⭐⭐ **WHICH LAYERS CARRY THE MEMORY CELL — geometry G-B** (RATIFIED
+    #: Head+Advisor 2026-08-13; `c3-rival-ladder-prereg` §2.2,
+    #: `PREREG-C3-LADDER.md` §2.5). ``None`` (the default) = **every layer** =
+    #: the shipped pilot behaviour, bit-for-bit; a tuple selects the
+    #: store-bearing layers and every other layer keeps the identical shell with
+    #: a null cell in the slot (:func:`chlu.core.blocks.resolve_store_layers`).
+    #:
+    #: ⛔ **The default is deliberately NOT a placement.** Which 3 of 12 is a
+    #: DESIGN DECISION that must be stated in the config and argued in the
+    #: prereg — never discovered as a side-effect of a byte ceiling. The C3
+    #: ladder sets ``store_layers=(2, 6, 10)`` explicitly on its launch line.
+    #:
+    #: ⚠ Default ``None`` is what keeps run 3 submittable: ``as_flag_table``
+    #: emits non-default fields only, so an unset ``store_layers`` never enters
+    #: the resume fingerprint and cannot become a SECOND key differing from the
+    #: run-2 journal (which would break the pre-registered-continuation
+    #: exemption). Asserted by ``tests/test_c3_gb_geometry.py``.
+    #: CLI: ``--set store_layers=2,6,10`` (``_parse_kv`` hands over the string).
+    store_layers: Optional[Tuple[int, ...]] = None
 
     # -- optimisation ------------------------------------------------------
     steps: int = 2000
@@ -273,6 +294,11 @@ class PilotConfig:
         kw = {k: v for k, v in dict(overrides or {}).items() if k in known}
         if "arms" in kw:
             kw["arms"] = tuple(kw["arms"])
+        if "store_layers" in kw:
+            # ⭐ "2,6,10" (the `--set` string form) | [2,6,10] | None -> a TUPLE, so
+            # the value is hashable (it is an Equinox static field) and compares
+            # equal to the default under `as_flag_table`.
+            kw["store_layers"] = parse_store_layers(kw["store_layers"])
         return cls(**kw)
 
     def as_flag_table(self) -> Dict[str, Any]:
@@ -453,7 +479,10 @@ def build_arm(name: str, pcfg: PilotConfig, specs: Dict[str, ArmSpec], *, key
                        n_layers=pcfg.n_layers, max_len=pcfg.seq_len, cells=cells,
                        mcfg=mcfg, latent_dim=int(scfg.dim),
                        addr_dim=int(scfg.addr_dim), payload_dim=int(scfg.payload_dim),
-                       key=ks[-1])
+                       key=ks[-1],
+                       # ⭐ G-B: which layers carry the cell. ``None`` (default) =>
+                       # every layer, i.e. the pilot geometry unchanged.
+                       store_layers=pcfg.store_layers)
 
 
 def shell_of(model: StreamModel):
@@ -928,9 +957,24 @@ def plan_pass(model: StreamModel, tokens: jnp.ndarray, pcfg: PilotConfig,
     gen = _chunk_latents(model, tokens)
     plans: List[WritePlan] = []
     diag: Dict[str, Any] = {"layers": []}
+    # ⭐ G-B: layers outside the store-layer selection hold a NullMemoryCell, whose
+    # `read`/`write` IGNORE the plan — so running the host-side controller for them
+    # is provably decision-inert work. Skipping it is what makes "the store's
+    # compute is per store-bearing layer" true of the plan pass as well as of the
+    # forward. ⛔ With the default selection (every layer) this branch never fires
+    # and the pass is bit-identical to the shipped one.
+    store_idx = set(getattr(model, "store_layers", range(int(model.n_layers))))
+    layer = 0
     z = gen.send(None)
     while True:
-        if blank:
+        if layer not in store_idx:
+            plan = jax.tree_util.tree_map(
+                lambda a: jnp.broadcast_to(a, (B,) + a.shape),
+                blank_plan(n_chunks, K, dim))
+            lstats = {"offers": 0, "refused": 0, "evicted": 0, "n_live_end": 0,
+                      "store_layer": False,
+                      "controller": "not run (layer carries no store — G-B)"}
+        elif blank:
             plan = jax.tree_util.tree_map(
                 lambda a: jnp.broadcast_to(a, (B,) + a.shape),
                 blank_plan(n_chunks, K, dim))
@@ -961,6 +1005,7 @@ def plan_pass(model: StreamModel, tokens: jnp.ndarray, pcfg: PilotConfig,
         # settle residual is worst. Concrete by necessity (a discrete verb).
         plans.append(plan)
         diag["layers"].append(lstats)
+        layer += 1
         try:
             z = gen.send(plan)
         except StopIteration:
@@ -1339,10 +1384,13 @@ def gradient_probe(model: StreamModel, pcfg: PilotConfig, tokens, targets,
     # ⚠ "exactly zero" presumes atom_place_radius == 0: H1b's placement is a
     # THIRD channel that neither (i) nor (ii) closes, so at the shipped 0.3 both
     # settled-point numbers are non-zero unless erosion_partition is on.
-    if model.blocks[0].cell.mcfg.write_sign:
+    # ⭐ the FIRST STORE-BEARING layer, not layer 0 — under a `store_layers`
+    # selection (geometry G-B) layer 0 may hold a null cell.
+    probe_cell = model.blocks[first_store_layer(model)].cell
+    if getattr(getattr(probe_cell, "mcfg", None), "write_sign", False):
         import dataclasses as _dc
 
-        alt = _dc.replace(model.blocks[0].cell.mcfg, write_sign=False)
+        alt = _dc.replace(probe_cell.mcfg, write_sign=False)
         m_alt = _swap_mcfg(model, alt)
         pl_alt, _ = plan_pass(m_alt, tk, pcfg)
         for mode in ("trajectory", "settled_point"):
@@ -1553,7 +1601,7 @@ def _cell_write(cell, state, z, plan_c):
 
 
 def store_health_probe(model: StreamModel, pcfg: PilotConfig, tokens, *,
-                       layer: int = 0) -> Dict[str, Any]:
+                       layer: Optional[int] = None) -> Dict[str, Any]:
     """⚠ **§7.27's in-flight watch: is the outer loop destroying the store?**
 
     The probe measured 200 outer steps driving the in-block store's well depth
@@ -1579,6 +1627,10 @@ def store_health_probe(model: StreamModel, pcfg: PilotConfig, tokens, *,
     """
     from chlu.core.blocks import CluStoreCell
 
+    # ⭐ default = the FIRST STORE-BEARING layer (0 under the default selection).
+    # ⛔ Hard-coding 0 would make this watch go SILENTLY inapplicable under a
+    # `store_layers` selection, which is exactly the failure §7.27 exists to catch.
+    layer = first_store_layer(model) if layer is None else int(layer)
     blk = model.blocks[layer]
     cell = blk.cell
     if not isinstance(cell, CluStoreCell):
@@ -1636,7 +1688,8 @@ def store_health_probe(model: StreamModel, pcfg: PilotConfig, tokens, *,
     }
 
 
-def monitor_pass(model: StreamModel, pcfg: PilotConfig, tokens, *, layer: int = 0,
+def monitor_pass(model: StreamModel, pcfg: PilotConfig, tokens, *,
+                 layer: Optional[int] = None,
                  registry=None, write_loss_now: Optional[float] = None
                  ) -> Dict[str, Any]:
     """Run the **13-monitor registry** against the running stream.
@@ -1660,6 +1713,7 @@ def monitor_pass(model: StreamModel, pcfg: PilotConfig, tokens, *, layer: int = 
     from chlu.core.blocks import CluStoreCell
     from chlu.core.monitors import saddle_reach_threshold
 
+    layer = first_store_layer(model) if layer is None else int(layer)
     blk = model.blocks[layer]
     cell = blk.cell
     if not isinstance(cell, CluStoreCell):

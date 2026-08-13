@@ -1826,11 +1826,110 @@ class StreamBlock(eqx.Module):
         return x + jax.vmap(lambda t: self.mlp_out(jax.nn.gelu(self.mlp_in(t))))(hh)
 
 
+def parse_store_layers(value: Any) -> Optional[Tuple[int, ...]]:
+    """``None`` | ``"2,6,10"`` | ``[2, 6, 10]`` | ``6`` -> ``None`` | ``(2, 6, 10)``.
+
+    The **syntax** half of the G-B store-layer selection, split out from
+    :func:`resolve_store_layers` (the *semantics* half) because a config loader
+    parses the value before it knows ``n_layers``. ⛔ ``None`` means *every
+    layer* and is the shipped behaviour; it is NOT a placement decision.
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):                    # ⛔ True is not layer 1
+        raise ValueError(f"store_layers must be indices, got {value!r}")
+    if isinstance(value, int):
+        # ⚠ A bare integer is ONE INDEX, not a COUNT: `store_layers=10` selects
+        # layer 10, it does not select ten layers. (`--set store_layers=2` is
+        # `_parse_kv`'s int, and a single store layer is a legitimate config.)
+        return (int(value),)
+    if isinstance(value, str):
+        parts = [t for t in value.replace(",", " ").split() if t]
+        if not parts:
+            raise ValueError(
+                "store_layers is an empty string. Use None for 'every layer' "
+                "(the shipped behaviour) or e.g. '2,6,10'.")
+        value = parts
+    try:
+        idx = tuple(int(i) for i in value)
+    except TypeError as exc:                       # not iterable
+        raise ValueError(
+            f"store_layers must be None or a sequence of layer indices, got "
+            f"{value!r}") from exc
+    return idx
+
+
+def resolve_store_layers(n_layers: int, store_layers: Any = None
+                         ) -> Tuple[int, ...]:
+    """⭐ **Which layers carry the arm's memory cell** — the G-B geometry.
+
+    ``None`` (the default) => **every layer**, i.e. the shipped pilot behaviour,
+    bit-for-bit. A sequence selects the *store-bearing* layers; every other layer
+    keeps the identical shell (conv, φ, assimilation, MLP, norms, residual) with a
+    :class:`NullMemoryCell` in the slot.
+
+    ⭐ **Why this is a lever at all** (`c3-rival-ladder-prereg` §2.2, RATIFIED
+    Head+Advisor 2026-08-13 as geometry **G-B**): the store's bytes *and* its
+    compute are both **per store-bearing layer**, and at ``addr_dim = 8`` the w23
+    atom floor ``512·√2^8 = 8192`` cannot be lowered by any other config knob
+    (``capacity``/``atoms_per_item`` are byte-INERT — handover 7.38). Putting the
+    full-size cell in **3 of 12** layers gives ``3 × 460,288 = 1,380,864 B``
+    (0.658× of the 2 MiB ceiling) **while breaking no design rule**, where the
+    alternative (G-A) bought the same bytes by starving every cell 4× below that
+    floor.
+
+    ⛔ **WHICH layers is a DESIGN DECISION, argued in `PREREG-C3-LADDER.md` §2.5,
+    and it is deliberately NOT a default here.** A byte-fitting default would let
+    a reader discover the placement as a side-effect of the ceiling.
+
+    Raises ``ValueError`` on an empty selection, a duplicate index, or an index
+    outside ``[0, n_layers)`` — a silently-dropped store layer moves the byte
+    ledger, which is the one quantity the tier-iii control rests on.
+    """
+    n = int(n_layers)
+    idx = parse_store_layers(store_layers)
+    if idx is None:
+        return tuple(range(n))
+    if not idx:
+        raise ValueError(
+            "store_layers is empty: a model with no store-bearing layer is the "
+            "`none` arm, which is an ARM, not a geometry. Use None for every "
+            "layer.")
+    if len(set(idx)) != len(idx):
+        raise ValueError(f"store_layers has duplicate indices: {idx}")
+    bad = [i for i in idx if not 0 <= i < n]
+    if bad:
+        raise ValueError(
+            f"store_layers {bad} outside [0, {n}) — with n_layers={n}. ⛔ A "
+            "dropped store layer would move the total state bytes silently.")
+    return tuple(sorted(idx))
+
+
+def first_store_layer(model) -> int:
+    """The lowest **store-bearing** layer index — ``0`` under the default.
+
+    ⛔ Every store-side instrument (the gradient probe, the §7.27 store watch, the
+    monitor pass, the selector readout) used to hard-code layer ``0``. Under a
+    ``store_layers`` selection layer 0 may hold a null cell, and the failure modes
+    split: the gradient probe **raises**, while the watch would go **silently
+    inapplicable** — which is worse. This is the one place that answers "where is
+    the store?".
+    """
+    sel = getattr(model, "store_layers", None)
+    return int(sel[0]) if sel else 0
+
+
 class StreamModel(eqx.Module):
     """Embedding -> ``n_layers`` x :class:`StreamBlock` -> norm -> head.
 
     The tier-iii shell. Held FIXED across arms; only ``blocks[i].cell`` changes.
     Discrete tokens only (enwik8/WT-103 are byte/token streams).
+
+    ⭐ ``store_layers`` selects which layers carry the arm's memory cell
+    (:func:`resolve_store_layers`). ``None`` = every layer = the shipped
+    behaviour. It applies to **every arm identically**, so the swap stays a swap:
+    the trivial substitutes and the matched rivals occupy exactly the layers the
+    CLU store occupies, and the byte ledger counts the same denominator for all.
     """
 
     embed: eqx.nn.Embedding
@@ -1840,17 +1939,28 @@ class StreamModel(eqx.Module):
     head: eqx.nn.Linear
     n_layers: int = eqx.field(static=True)
     chunk: int = eqx.field(static=True)
+    #: ⭐ The resolved store-bearing layer indices (always a concrete tuple, never
+    #: ``None``, so the model can always state its own geometry).
+    store_layers: Tuple[int, ...] = eqx.field(static=True, default=())
 
     def __init__(self, *, vocab_size: int, d_model: int, n_layers: int,
                  max_len: int, cells: list, mcfg: StreamMemoryConfig,
-                 latent_dim: int, addr_dim: int, payload_dim: int, key):
+                 latent_dim: int, addr_dim: int, payload_dim: int, key,
+                 store_layers: Any = None):
         ks = jax.random.split(key, n_layers + 3)
         self.n_layers = int(n_layers)
         self.chunk = int(mcfg.chunk)
+        self.store_layers = resolve_store_layers(n_layers, store_layers)
         self.embed = eqx.nn.Embedding(vocab_size, d_model, key=ks[0])
         self.pos = jax.random.normal(ks[1], (max_len, d_model)) * 0.02
+        # ⛔ The shell's per-layer key is ks[2 + i] whether or not layer i carries
+        # a store, so `assert_shared_shell_identical` holds across arms AND across
+        # store-layer selections: only the cell in the slot changes.
         self.blocks = [
-            StreamBlock(d_model, cells[i], mcfg, latent_dim=latent_dim,
+            StreamBlock(d_model,
+                        cells[i] if i in self.store_layers
+                        else NullMemoryCell(latent_dim=int(latent_dim)),
+                        mcfg, latent_dim=latent_dim,
                         addr_dim=addr_dim, payload_dim=payload_dim, key=ks[2 + i])
             for i in range(n_layers)
         ]
