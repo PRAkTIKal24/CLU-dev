@@ -101,6 +101,21 @@ RESUME="${RESUME:-0}"
 #    a config field and a narrowed arm list is a DIFFERENT config, which the
 #    journal check refuses.
 D5="${D5:-0}"
+# ⭐⭐ RUN 3's PRE-REGISTERED CONTINUATION. ⛔ Runs 1-2 were submitted with THIS
+#    script, and run 3 is a continuation of run 2, so run 3 must use it too --
+#    it CANNOT be routed through `job_gpu_c3_seeds.sh`, which narrows `--arms`
+#    per array task, and `arms` IS a PilotConfig field => a SECOND differing key
+#    => the exemption refuses the leg. Without the passthrough below the
+#    state-byte budget refuses run 3 outright (exit 1, before training), and a
+#    pre-registered leg behind a flag no launch path sets is indistinguishable
+#    from a deliberate cut (§7.33). Set e.g.
+#      PREREG_CONT="journal=$RUN2_OUT/pilot_pilot_seed${SEED}_PARTIAL.json \
+#                   flag=memory.erosion_partition \
+#                   prereg=.claude/outputs/c2w6-anti-erosion/PREREG-LeakAblation.md"
+#    ⛔ It exempts the state-byte BUDGET check ONLY, and only if this config is
+#    identical to that journal except `memory.erosion_partition`.
+#    ⛔ It must be on EVERY submission AND every re-resume.
+PREREG_CONT="${PREREG_CONT:-}"    # run 3's pre-registered continuation
 
 export CLU_REPO="${CLU_REPO:-$HOME/scratch/CHLU}"
 # shellcheck disable=SC1091
@@ -143,7 +158,8 @@ EXTRA=""
 [ -n "$SET" ] && EXTRA="$EXTRA --set $SET"
 [ "$RESUME" = "1" ] && EXTRA="$EXTRA --resume"
 [ "$D5" = "1" ] && EXTRA="$EXTRA --d5"
-echo "=== config overrides === MEM='$MEM' STORE='$STORE' SET='$SET' RESUME='$RESUME' D5='$D5'"
+[ -n "$PREREG_CONT" ] && EXTRA="$EXTRA --prereg-continuation $PREREG_CONT"
+echo "=== config overrides === MEM='$MEM' STORE='$STORE' SET='$SET' RESUME='$RESUME' D5='$D5' PREREG_CONT='$PREREG_CONT'"
 
 echo "=== tier-iii pilot: scale=$STAGE stage=$STG seeds=$SEEDS ==="
 # shellcheck disable=SC2086
