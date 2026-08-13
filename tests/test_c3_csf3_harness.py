@@ -539,3 +539,22 @@ def test_the_smoke_config_says_it_is_never_a_claim_venue():
     assert "claim venue" in head.lower(), "the warning is not at the top"
     for stage in ("train", "checkpoint", "RESUME", "slices", "byte ledger"):
         assert stage in t, stage
+
+
+def test_the_d_addr_ceiling_probe_is_recorded_but_NOT_applied_as_a_default():
+    """⛔ STOP (§7.1): the probe's number is exposed, the default is not flipped.
+
+    Flipping ``addr_dim`` to 12 would make it a NON-default key in
+    ``as_flag_table()`` and refuse all five banked CSF3 journals, and it would
+    move both the TTT arm's ``eta*n/d`` stability product and every state-byte
+    number in the matched-bytes control. That is a Hub ruling, not an engineer's.
+    """
+    from chlu.experiments.exp_cluformer_pilot import (DADDR_CEILING_PROBE, PILOT,
+                                                      make_config)
+    from chlu.training.train_cluformer import PilotConfig
+
+    assert DADDR_CEILING_PROBE["d_addr_clearing_v1_bar"] == 12
+    assert DADDR_CEILING_PROBE["applied_as_default"] is False
+    assert PilotConfig().addr_dim == 8 and PILOT["addr_dim"] == 8
+    # ...and because it is unchanged, addr_dim stays OUT of the flag table
+    assert "addr_dim" not in make_config("pilot", 0).as_flag_table()

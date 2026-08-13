@@ -95,6 +95,43 @@ PILOT = dict(d_model=512, n_layers=12, seq_len=1024, batch=8,
                          retry_rounds=1, conv_kernel=4, mlp_mult=4))
 
 
+#: ⭐ **The C2W11 `d_addr` ceiling probe, as a CONFIG INPUT** (charter §6.3: C3W1
+#: only *consumes* this). Read from the artifact itself —
+#: ``.claude/outputs/c2w11/DADDR-CEILING-PROBE.json`` — never from a report or a
+#: charter paraphrase.
+#:
+#: **What it says:** the optimistic exact-set bound first clears V1's bar
+#: (``v1_bar = 0.0504``) at **``addr_dim = 12``** (``optimistic_exact_set_at_ceiling``
+#: 0.1375 at d=12 vs 0.0340 at d=8). Its regression anchor reproduced the banked
+#: ``assignment_ceiling`` at d=4 exactly (``abs_delta = 0.0``). The artifact's own
+#: ``reading.statement`` calls this **NECESSARY, not sufficient**, and
+#: ``placement_headroom_ceiling_minus_identity`` **falls to 0.0 at d=12** (0.085 at d=4).
+#:
+#: ⛔⛔ **DELIBERATELY NOT APPLIED AS `PilotConfig.addr_dim`'s DEFAULT — a Hub
+#: ruling, for three measured reasons** (`c3-csf3-harness` §7.1):
+#:   1. :data:`PILOT` sets ``addr_dim=8`` explicitly, so moving the *default* to 12
+#:      would make it a NON-default key in ``as_flag_table()``, change the resume
+#:      fingerprint, and **refuse all five banked CSF3 journals** — the exact
+#:      failure the pilot merge repaired;
+#:   2. ``dim = addr_dim + payload_dim`` feeds ``solve_matched_ttt``, and the TTT
+#:      arm's divergence criterion is ``eta*n/d`` — a pure function of the solved
+#:      geometry — so this silently re-rolls a published rival's stability;
+#:   3. it moves every state-byte number in the matched-bytes control.
+#: ⇒ ``addr_dim`` stays a plain config flag: ``--set addr_dim=12``.
+DADDR_CEILING_PROBE = {
+    "artifact": ".claude/outputs/c2w11/DADDR-CEILING-PROBE.json",
+    "d_addr_clearing_v1_bar": 12,
+    "v1_bar": 0.0504,
+    "optimistic_exact_set_at_ceiling": {4: 0.011714, 6: 0.019338,
+                                        8: 0.034001, 12: 0.137536},
+    "placement_headroom": {4: 0.08506, 6: 0.037461, 8: 0.010926, 12: 0.0},
+    "reading": "NECESSARY, not sufficient (the K6 leak squeeze still applies).",
+    "applied_as_default": False,
+    "why_not": "claims-relevant: refuses every banked journal, moves eta*n/d, "
+               "and moves the matched-state-byte control. Hub ruling owed.",
+}
+
+
 def make_config(scale: str, seed: int, overrides: Optional[dict] = None) -> PilotConfig:
     base = dict(TOY if scale == "toy" else PILOT)
     base["seed"] = int(seed)

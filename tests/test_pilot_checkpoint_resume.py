@@ -140,9 +140,15 @@ def test_the_final_artifact_carries_no_journal_key(reference):
     _d, rec = reference
     for k in EXP._JOURNAL_ONLY_KEYS:
         assert k not in rec, f"the final artifact gained '{k}'"
+    # ⭐ `c3-csf3-harness` adds exactly ONE top-level key: `byte_ledger`. It is a
+    # deliberate content-shape change, not instrumentation leaking out of the
+    # PARTIAL — the tier-iii claim is at matched params AND matched state-bytes,
+    # so an arm that cannot state its inference-time state in bytes (incl. φ)
+    # must not be reportable, and the ledger is therefore emitted by EVERY run.
     assert list(rec) == [
         "scale", "seed", "stage_requested", "flags", "stages_reached", "not_run",
-        "data", "phi_gain_calibrated", "swap_ledger", "shell", "total_params",
+        "data", "phi_gain_calibrated", "swap_ledger", "byte_ledger", "shell",
+        "total_params",
         "monitors_init", "allocation_liveness_init", "gradient_probe_init",
         "train_log", "arms", "swap_table", "wall_s_total"]
     assert list(rec["arms"]["clu_store"]) == [
