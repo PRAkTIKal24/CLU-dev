@@ -432,6 +432,16 @@ class ArmLedger:
     dtype_bytes: int = FP32_BYTES
     arithmetic: str = ""
     extra: Dict[str, Any] = field(default_factory=dict)
+    #: ⭐ **How many layers actually carry a cell** (geometry **G-B**, RATIFIED
+    #: Head+Advisor 2026-08-13). ``None`` => all ``n_layers``, the shipped
+    #: behaviour bit-for-bit. φ lives in **every** block either way, so the two
+    #: counts are tracked separately and never conflated.
+    n_store_layers: Optional[int] = None
+
+    @property
+    def store_layers(self) -> int:
+        return int(self.n_layers if self.n_store_layers is None
+                   else self.n_store_layers)
 
     @property
     def total_state_bytes(self) -> int:
@@ -440,9 +450,16 @@ class ArmLedger:
         ⚠ Per-layer is the seductive number and it is the wrong one — a 12-layer
         model holds 12 cell states at once. The scout's rival table is likewise
         summed over ``n_L``, so this is the like-for-like column.
+
+        ⭐ Under a ``store_layers`` selection the cell term is summed over the
+        **store-bearing** layers only (that is what G-B buys: 3 × 460,288 =
+        1,380,864 B instead of 12 ×), while φ's term stays over all ``n_layers``
+        because φ is in every block. φ's inference state is 0 B, so the second
+        term is 0 today — it is written out rather than dropped so that the
+        arithmetic string stays honest if φ ever gains state.
         """
-        return int(self.n_layers * (self.cell_state_bytes_per_layer
-                                    + self.phi_state_bytes_per_layer))
+        return int(self.store_layers * self.cell_state_bytes_per_layer
+                   + self.n_layers * self.phi_state_bytes_per_layer)
 
     @property
     def total_phi_params_bytes(self) -> int:
@@ -453,6 +470,10 @@ class ArmLedger:
         return {
             "arm": self.arm,
             "n_layers": self.n_layers,
+            # ⭐ the G-B denominator, ALWAYS printed: a reader of the artifact must
+            # never have to infer how many layers the total was summed over.
+            "n_store_layers": self.store_layers,
+            "store_layer_fraction": self.store_layers / float(max(self.n_layers, 1)),
             "dtype_bytes": self.dtype_bytes,
             "cell_params": self.cell_params,
             "cell_state_bytes_per_layer": self.cell_state_bytes_per_layer,
@@ -522,19 +543,30 @@ def arm_ledger(arm: str, pcfg, swap_ledger: Dict[str, Any],
         )
     ph_p, ph_s = phi_bytes(pcfg)
     n_L = int(pcfg.n_layers)
+    # ⭐ G-B: the cell term is summed over the STORE-BEARING layers. ⛔ Resolved by
+    # `chlu.core.blocks.resolve_store_layers` — the same function the model itself
+    # uses — so the ledger cannot drift from the geometry it is ledgering. The
+    # import is local because this module is otherwise JAX-free.
+    from chlu.core.blocks import resolve_store_layers
+
+    store_idx = resolve_store_layers(n_L, getattr(pcfg, "store_layers", None))
+    n_S = len(store_idx)
     cell_b = int(row["state_bytes"])
     led = ArmLedger(
-        arm=arm, n_layers=n_L,
+        arm=arm, n_layers=n_L, n_store_layers=n_S,
         cell_state_bytes_per_layer=cell_b,
         phi_params_bytes_per_layer=ph_p, phi_state_bytes_per_layer=ph_s,
         cell_params=int(row.get("params", 0)),
         arithmetic=(
-            f"total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) "
-            f"= {n_L} * ({cell_b} + {ph_s}) = {n_L * (cell_b + ph_s)} B; "
+            f"total_state_bytes = n_store_layers * cell_state_bytes + n_layers * "
+            f"phi_state_bytes = {n_S} * {cell_b} + {n_L} * {ph_s} = "
+            f"{n_S * cell_b + n_L * ph_s} B "
+            f"(store-bearing layers {list(store_idx)} of {n_L}); "
             f"phi_params_bytes = {n_L} * {ph_p} = {n_L * ph_p} B (SHARED, "
             f"bit-identical across arms); dtype = float32 ({FP32_BYTES} B/elt)."
         ),
-        extra={"state_floats_per_layer": int(row.get("state_floats", 0))},
+        extra={"state_floats_per_layer": int(row.get("state_floats", 0)),
+               "store_layer_indices": list(store_idx)},
     )
     return led.as_row(budget)
 
@@ -722,9 +754,26 @@ def build_byte_ledger(pcfg, swap_ledger: Dict[str, Any], arms,
                 f"    {a}: {r['total_state_bytes']:,} B = {r['occupancy']:.2f}x the "
                 f"{budget:,} B budget  ({r['arithmetic']})\n"
                 for a, r in sorted(over.items()))
-            + "  Shrink the store (capacity / atoms_per_item / addr_dim+payload_dim "
-              "/ n_layers) until it fits, or set enforce_state_byte_budget=false "
-              "to record a DECLARED, non-compliant run.\n"
+            + "  Shrink the store — ⚠⚠ but NOT with `capacity` or `atoms_per_item`: "
+              "at addr_dim=8 the w23 dimension-aware ATOM FLOOR "
+              "(round(min_atoms_base * min_atoms_c**addr_dim) = 512*sqrt(2)^8 = "
+              "8192) DOMINATES the max() in CluSystemConfig.n_atoms, which the "
+              "pilot's 32x256 ties exactly, so both of those knobs move ZERO "
+              "BYTES (measured: `c3-rival-ladder-prereg` §F1.1, handover 7.38). "
+              "The levers that DO move bytes:\n"
+              "    * store_layers  — carry the full-size cell in FEWER LAYERS "
+              "(geometry G-B, RATIFIED 2026-08-13: 3 of 12 => 1,380,864 B = "
+              "0.658x of 2 MiB). Breaks no design rule; the cell is untouched.\n"
+              "    * dim (= addr_dim + payload_dim) — bounded below by the d<=12 "
+              "reach ceiling, and arithmetically CANNOT fit 8192 atoms under "
+              "2 MiB on its own.\n"
+              "    * min_atoms_base — the FLOOR'S OWN HEIGHT. ⛔ Lowering it is a "
+              "descent below a design-ruled, empirically-anchored floor and is "
+              "claims-relevant: PRE-REGISTER it (geometry G-A + its gate job).\n"
+              "    * n_layers — moves the 26-47 M weight class the venue is "
+              "defined at. Not a byte knob.\n"
+              "  Or set enforce_state_byte_budget=false to record a DECLARED, "
+              "non-compliant run.\n"
               "  ⛔ The ONLY other path is a PRE-REGISTERED CONTINUATION "
               "(preregistered_continuation=journal=...,flag=...,prereg=...), and "
               "it is not a way round this check: it requires a prior journal on "
