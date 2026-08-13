@@ -72,6 +72,12 @@ from chlu.core.clu_system import CluSystemConfig, make_controller
 from chlu.core.monitors import MonitorContext, default_registry
 from chlu.data.enwik8 import bits_per_character
 from chlu.eval.byte_ledger import INTERIM_MATCHED_STATE_BYTE_BUDGET
+from chlu.eval.rivals.c3_registry import (
+    c3_rival_deployed_row,
+    is_c3_rival,
+    make_c3_rival_cell,
+    resolve_c3_rival,
+)
 
 
 # ==========================================================================
@@ -211,6 +217,15 @@ class PilotConfig:
     # -- the memory slot ------------------------------------------------------
     memory: Dict[str, Any] = field(default_factory=dict)   # -> StreamMemoryConfig
     store: Dict[str, Any] = field(default_factory=dict)    # -> CluSystemConfig extras
+    #: ⭐ C3 TUNED RIVALS: ``{arm_name: {knob: value}}`` overrides of a rival's
+    #: PINNED config (:mod:`chlu.eval.rivals.c3_registry`). ⛔ Empty by default,
+    #: which means *every* rival runs at the config its own paper / official
+    #: implementation states, shrunk to the ruled ceiling by
+    #: :func:`~chlu.eval.byte_ledger.shrink_to_budget` — a library default is
+    #: never inherited and an override is never silent (unknown keys raise).
+    #: ⭐ Empty-by-default also keeps it out of ``as_flag_table``, so in-flight
+    #: legs resume against their banked journals unchanged.
+    rival: Dict[str, Any] = field(default_factory=dict)
 
     # -- runtime --------------------------------------------------------------
     quick: bool = False
@@ -343,6 +358,10 @@ class ArmSpec:
     name: str
     hidden: Optional[int] = None
     ttt_shape: Optional[Tuple[int, int]] = None
+    #: ⭐ C3: a **tuned rival**'s resolved, pinned config
+    #: (:mod:`chlu.eval.rivals.c3_registry`). ``None`` for every native arm, so
+    #: this field is inert unless a rival is actually requested.
+    rival_cfg: Optional[Any] = None
 
 
 def solve_arms(pcfg: PilotConfig, key) -> Tuple[Dict[str, ArmSpec], Dict[str, Any]]:
@@ -374,6 +393,20 @@ def solve_arms(pcfg: PilotConfig, key) -> Tuple[Dict[str, ArmSpec], Dict[str, An
                                  ttt_normalized_write=bool(pcfg.ttt_normalized_write),
                                  key=key)
              for n in MEMORY_CELLS}
+    # ⭐ C3 TUNED RIVALS (chlu.eval.rivals.c3_registry). A rival's geometry is ITS
+    # OWN — pinned from its paper or its official implementation with per-number
+    # provenance, and shrunk to the ruled ceiling by shrink_to_budget — ⛔ NOT
+    # solved against our cell: "matched state bytes" for a published rival means
+    # the rival at its own published config, shrunk DOWN to the shared budget.
+    # Only rivals this job runs are constructed; every rival's pinned arithmetic
+    # is in the artifact regardless, via byte_ledger.rival_reference_table().
+    for name in pcfg.arms:
+        if name in specs or not is_c3_rival(name):
+            continue
+        rcfg = resolve_c3_rival(name, dict(pcfg.rival or {}).get(name))
+        specs[name] = ArmSpec(name, rival_cfg=rcfg)
+        cells[name] = make_c3_rival_cell(name, latent_dim=dim, config=rcfg,
+                                         key=key)
     ledger = swap_ledger(cells)
     # ⛔ the OTHER GRU column: matched state-bytes, which is what makes the swap
     # one-sided. Computed by arithmetic (constructing it would be 39 G params).
@@ -392,6 +425,14 @@ def solve_arms(pcfg: PilotConfig, key) -> Tuple[Dict[str, ArmSpec], Dict[str, An
     ledger["_table_rows_at_matched_state"] = int(
         led["state_floats"] // (int(scfg.addr_dim) + int(scfg.payload_dim)))
     ledger["_store_items"] = int(scfg.capacity)
+    # ⚠ A rival's AS-DEPLOYED row: the SHELL's layer count, which is not the
+    # rival's own reference geometry, so the occupancy is stated rather than
+    # assumed. ⛔ The knob is NOT re-solved here (task §1.4).
+    for name, sp in specs.items():
+        if sp.rival_cfg is not None:
+            ledger[name]["deployed"] = c3_rival_deployed_row(
+                name, sp.rival_cfg, int(pcfg.n_layers),
+                int(pcfg.state_byte_budget))
     return specs, ledger
 
 
@@ -469,12 +510,17 @@ def build_arm(name: str, pcfg: PilotConfig, specs: Dict[str, ArmSpec], *, key
     scfg, mcfg = pcfg.store_cfg(), pcfg.memory_cfg()
     spec = specs[name]
     ks = jax.random.split(key, pcfg.n_layers + 4)
-    cells = [make_memory_cell(name, latent_dim=int(scfg.dim), clu_cfg=scfg,
-                              mcfg=mcfg, hidden=spec.hidden,
-                              ttt_shape=spec.ttt_shape,
-                              ttt_normalized_write=bool(pcfg.ttt_normalized_write),
-                              key=ks[i])
-             for i in range(pcfg.n_layers)]
+    if spec.rival_cfg is not None:          # ⭐ a C3 tuned rival arm
+        cells = [make_c3_rival_cell(name, latent_dim=int(scfg.dim),
+                                    config=spec.rival_cfg, key=ks[i])
+                 for i in range(pcfg.n_layers)]
+    else:
+        cells = [make_memory_cell(name, latent_dim=int(scfg.dim), clu_cfg=scfg,
+                                  mcfg=mcfg, hidden=spec.hidden,
+                                  ttt_shape=spec.ttt_shape,
+                                  ttt_normalized_write=bool(pcfg.ttt_normalized_write),
+                                  key=ks[i])
+                 for i in range(pcfg.n_layers)]
     return StreamModel(vocab_size=pcfg.vocab_size, d_model=pcfg.d_model,
                        n_layers=pcfg.n_layers, max_len=pcfg.seq_len, cells=cells,
                        mcfg=mcfg, latent_dim=int(scfg.dim),

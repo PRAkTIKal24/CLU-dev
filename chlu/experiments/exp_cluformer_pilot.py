@@ -1257,6 +1257,14 @@ def main(argv: Optional[List[str]] = None) -> int:
                          "ledger is still computed and printed in full, stamped "
                          "with the journal, its sha256 and the flag's old->new "
                          "value. A second differing key is refused BY NAME.")
+    ap.add_argument("--rival", nargs="*", default=None, metavar="ARM.KEY=VALUE",
+                    help="⭐ C3 TUNED RIVAL overrides, e.g. mamba2.d_state=128 "
+                         "(the PUBLISHED value, i.e. the un-shrunk arm). ⛔ Every "
+                         "rival already runs at its own pinned config — paper or "
+                         "official implementation, with per-number provenance, "
+                         "shrunk to the ruled ceiling by shrink_to_budget — so "
+                         "this flag exists to DECLARE a deviation, never to "
+                         "supply a missing default. Unknown keys raise.")
     a = ap.parse_args(argv)
     ov: Dict[str, Any] = {}
     for flag, key in (("set", None), ("mem", "memory"), ("store", "store")):
@@ -1283,6 +1291,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                                  f"got {p!r}")
             k, v = p.split("=", 1)
             pc[k.strip()] = v.strip()
+    if a.rival:
+        riv: Dict[str, Any] = {}
+        for p in a.rival:
+            k, v = _parse_kv(p)
+            arm, _, knob = k.partition(".")
+            if not knob:
+                raise SystemExit(
+                    f"--rival takes ARM.KEY=VALUE (e.g. mamba2.d_state=128), got {k!r}")
+            riv.setdefault(arm, {})[knob] = v
+        ov["rival"] = riv
     if a.steps is not None:
         ov["steps"] = a.steps
         ov["warmup"] = max(1, a.steps // 10)
