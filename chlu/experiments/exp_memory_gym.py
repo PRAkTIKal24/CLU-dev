@@ -48,6 +48,7 @@ import numpy as np
 from chlu.core.clu_system import CluSystemConfig, build_system
 from chlu.eval.dividend import (
     ByteAccount,
+    barycentric_launder,
     blank_store_control,
     byte_account,
     dividend,
@@ -71,6 +72,7 @@ from chlu.experiments.memory_gym import (
     queries_manifold,
     queries_overload,
     queries_recency,
+    queries_triad,
     readout_occupancy,
     readout_point_assign,
     readout_settled,
@@ -148,6 +150,8 @@ def _build_queries(gcfg: GymConfig, ccfg: CluSystemConfig, stream, system,
         return queries_overload(gcfg, ccfg, stream, rng)
     if fam == "aggregate":
         return queries_aggregate(gcfg, ccfg, centers, pays, rng)
+    if fam == "triad":
+        return queries_triad(gcfg, ccfg, centers, pays, rng)
     if fam == "recency":
         return queries_recency(gcfg, ccfg, centers, born, rng)
     if fam == "manifold":
@@ -187,12 +191,23 @@ def _clu_predictions(gcfg: GymConfig, ccfg: CluSystemConfig, res,
 def _launder_predictions(qs: QuerySet, centers: np.ndarray, pays: np.ndarray,
                          born: np.ndarray, rng: np.random.Generator,
                          shared_M: Optional[np.ndarray],
-                         restrict_pairs: Optional[np.ndarray] = None
+                         restrict_pairs: Optional[np.ndarray] = None,
+                         family: Optional[str] = None
                          ) -> Dict[str, np.ndarray]:
     """Every control's prediction, scored later by the SAME family scorer.
 
     The first two keys are the frozen harness-native controls and are present on
     every cell by construction; the rest are the family's strong substitutes.
+
+    ``family`` (default ``None``) selects the family's **declared** extra +0 B
+    readers. ⛔ Only ``"triad"`` adds any — the ``aggregate`` / ``overload`` /
+    ``recency`` / ``manifold`` reader sets are bit-for-bit what they were, so no
+    registered family-1 number can move (asserted in the test suite). For
+    ``triad`` the additions are the three-row readers its own construction rule
+    calls for (``TRIAD_PREREG["zero_byte_readers_added"]``): a 3-NN mean, a 3-NN
+    IDW mean and :func:`~chlu.eval.dividend.barycentric_launder`, which inverts
+    the construction up to the query jitter and is expected to be the strongest
+    +0 B reader on the family.
     """
     out: Dict[str, np.ndarray] = {}
     if qs.kind == "value":
@@ -201,6 +216,11 @@ def _launder_predictions(qs: QuerySet, centers: np.ndarray, pays: np.ndarray,
         out["knn2_mean_+0B"] = knn_mean_launder(centers, pays, qs.keys, k=2)
         out["knn2_idw_+0B"] = knn_mean_launder(centers, pays, qs.keys, k=2,
                                                weighting="inverse_distance")
+        if family == "triad":
+            out["knn3_mean_+0B"] = knn_mean_launder(centers, pays, qs.keys, k=3)
+            out["knn3_idw_+0B"] = knn_mean_launder(
+                centers, pays, qs.keys, k=3, weighting="inverse_distance")
+            out["bary3_+0B"] = barycentric_launder(centers, pays, qs.keys, k=3)
         if shared_M is not None:
             out["shared_metric_+40B"] = shared_metric_launder(centers, pays, qs.keys,
                                                               shared_M)

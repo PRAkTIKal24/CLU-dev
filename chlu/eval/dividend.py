@@ -317,6 +317,50 @@ def knn_mean_launder(keys: np.ndarray, payloads: np.ndarray, queries: np.ndarray
     return np.asarray(np.sum(sel * w[:, :, None], axis=1))
 
 
+def barycentric_launder(keys: np.ndarray, payloads: np.ndarray,
+                        queries: np.ndarray, *, k: int = 3) -> np.ndarray:
+    """⭐ The ``triad`` family's strongest **+0 B** control: a barycentric reader.
+
+    Take the ``k`` rows nearest the query, solve for the query's **barycentric
+    coordinates** in the affine hull of their addresses (least squares, weights
+    constrained to sum to 1), clip to the simplex, renormalise, and return
+    ``sum_r w_r a_r``. It costs **zero extra bytes** — it reads the same table the
+    arg-min launder reads, with no learned parameter — and it **inverts the
+    ``triad`` construction up to the query jitter**, which is exactly why it ships
+    with the family instead of waiting for a referee to build it (the same role
+    :func:`knn_mean_launder` plays for ``aggregate``, where it *is* expected to
+    win, and does).
+
+    ⚠ Unlike a ``k``-NN mean this reader is **not** restricted to convex weights
+    *before* clipping — the least-squares solve can place the query outside the
+    simplex — so the clip is stated rather than hidden: it is what keeps the arm a
+    *reader of stored values* rather than an extrapolator.
+
+    Returns the retrieved values, ``(n_queries, m)``.
+    """
+    q = np.asarray(queries, dtype=float)
+    ky = np.asarray(keys, dtype=float)
+    pays = np.asarray(payloads, dtype=float)
+    if pays.ndim == 1:
+        pays = pays[:, None]
+    kk = int(min(max(k, 1), ky.shape[0]))
+    d = np.linalg.norm(q[:, None, :] - ky[None, :, :], axis=-1)
+    idx = np.argsort(d, axis=1)[:, :kk]
+    out = np.zeros((q.shape[0], pays.shape[1]), dtype=float)
+    for n in range(q.shape[0]):
+        sel = idx[n]
+        c = ky[sel]                                    # (kk, d)
+        # [c^T ; 1^T] w = [q ; 1]  — the affine (sum-to-one) least-squares solve
+        a = np.concatenate([c.T, np.ones((1, kk))], axis=0)
+        b = np.concatenate([q[n], np.ones((1,))], axis=0)
+        w, *_ = np.linalg.lstsq(a, b, rcond=None)
+        w = np.clip(w, 0.0, None)
+        ssum = float(np.sum(w))
+        w = (w / ssum) if ssum > 1e-12 else np.full((kk,), 1.0 / kk)
+        out[n] = np.sum(w[:, None] * pays[sel], axis=0)
+    return out
+
+
 def order_aware_launder(keys: np.ndarray, order: np.ndarray, queries: np.ndarray,
                         *, k: int = 2, newest: bool = True) -> np.ndarray:
     """⛔ The recency family's strong control: **insertion order at +0 B**.
@@ -466,7 +510,8 @@ __all__ = [
     "shared_metric_launder", "same_keys_null", "blank_store_control",
     "trajectory_launder", "count_bytes", "byte_account",
     # gym-side callers (memory-gym-v0)
-    "knn_mean_launder", "order_aware_launder", "echo_launder", "fit_shared_metric",
+    "knn_mean_launder", "barycentric_launder", "order_aware_launder",
+    "echo_launder", "fit_shared_metric",
     # the structural ledger identity (bprime-rivals D7 / theorist C3)
     "LedgerIdentityError", "ledger_identity", "assert_ledger_identity",
 ]

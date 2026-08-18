@@ -232,6 +232,22 @@ class GymConfig:
     #: interpolation window for the aggregate family (0.5 = exact midpoint)
     lam_lo: float = 0.35
     lam_hi: float = 0.65
+    #: -- the ``triad`` family (B′ dividend family 2; every value REGISTERED in
+    #: :data:`TRIAD_PREREG` and ⛔ not tunable after a run) ------------------
+    #: queries attempted per admissible triple
+    n_query_per_triple: int = 8
+    #: a triple is used when its MAXIMUM pairwise distance is <= this x ``sep``
+    triad_dist_mult: float = 2.0
+    #: the barycentric weight box, before normalisation (=> each w in
+    #: [0.217, 0.474], so all three items are materially involved)
+    triad_w_lo: float = 0.25
+    triad_w_hi: float = 0.45
+    #: rejection draws per query slot before the slot is dropped and counted
+    triad_max_draws: int = 32
+    #: construction rule C2 — require the target to sit ``payload_tol`` OUTSIDE
+    #: the payload range of the two rows nearest the query. ⛔ The registered
+    #: primary is ``True``; ``False`` is the pre-registered coverage fallback.
+    triad_outside_pair_hull: bool = True
     #: occupancy kernel radius as a fraction of ``sep`` (trajectory read-out)
     occupancy_radius_frac: float = 0.5
     #: ⛔ **C2W2 D4 — the recency-family harness DEFECT fix** (default ``False``
@@ -343,6 +359,15 @@ FAMILY_DEFAULTS: Dict[str, Dict[str, Any]] = {
         n_offer=8, capacity=6, budget=6, reference_capacity=6,
         n_query_per_pair=8, consolidate_every=2,
         clu_overrides=dict(stage_admission=True, stage_lifetimes=True, leak=0.06),
+    ),
+    # (e) multi-way superposition — B′'s SECOND dividend family. ⭐ IDENTICAL to
+    # `aggregate` in every store knob (same admission gate, same 192 atoms, same
+    # capacity pressure, same byte ledger); ONLY the query law differs, so the two
+    # families are directly attributable to one another.
+    "triad": dict(
+        n_offer=8, capacity=6, budget=6, reference_capacity=6,
+        n_query_per_triple=8, consolidate_every=2,
+        clu_overrides=dict(stage_admission=True),
     ),
     # (d) flat directions: one unconstrained spectator axis.
     "manifold": dict(
@@ -663,6 +688,118 @@ def queries_aggregate(gcfg: GymConfig, ccfg: CluSystemConfig, centers: np.ndarra
     )
 
 
+def _triples_within(centers: np.ndarray, mult: float) -> List[Tuple[int, int, int]]:
+    """Triples whose **maximum** pairwise distance is ``<= mult * sep``.
+
+    ``sep`` is the stream's minimum separation, exactly as :func:`_pairs_within`
+    uses it, so the two families read the same geometry off the same store. If no
+    triple qualifies the single **tightest** triple is kept, so a cell is never
+    empty by accident (the same fallback ``_pairs_within`` has).
+    """
+    k = int(centers.shape[0])
+    if k < 3:
+        return []
+    d = np.linalg.norm(centers[:, None, :] - centers[None, :, :], axis=-1)
+    np.fill_diagonal(d, np.inf)
+    sep = float(np.min(d))
+    out: List[Tuple[int, int, int]] = []
+    best: Optional[Tuple[int, int, int]] = None
+    best_span = np.inf
+    for i in range(k):
+        for j in range(i + 1, k):
+            for lidx in range(j + 1, k):
+                span = float(max(d[i, j], d[i, lidx], d[j, lidx]))
+                if span <= mult * sep:
+                    out.append((i, j, lidx))
+                if span < best_span:
+                    best_span, best = span, (i, j, lidx)
+    if not out and best is not None:
+        out = [best]
+    return out
+
+
+def queries_triad(gcfg: GymConfig, ccfg: CluSystemConfig, centers: np.ndarray,
+                  pays: np.ndarray, rng: np.random.Generator) -> QuerySet:
+    """⭐⭐ **B′ dividend family 2** — the barycentric mixture of **three** items.
+
+    The query sits at ``sum_r w_r c_r`` (plus jitter) for a triple of neighbouring
+    live items with ``w`` drawn in a box and normalised, and the target is
+    ``sum_r w_r a_r``. Two construction rules are enforced **at draw time**
+    (:data:`TRIAD_PREREG`; both asserted in the test suite):
+
+    * **C1** — the target is dropped if it lands within ``payload_tol`` of **any**
+      stored payload (N.5's subsuming rule; ``aggregate``'s rule too), so an
+      arg-min lookup, which can only return something stored, cannot be right.
+    * **C2** — the target is dropped unless it lies at least ``payload_tol``
+      **outside** the payload range of the **two live items nearest the jittered
+      query address**.
+
+    ⭐ C1 + C2 give the family its bound, and it is one level above
+    ``aggregate``'s: **any reader that returns a convex combination of the two
+    nearest rows** — the arg-min launder, the 2-NN mean, the 2-NN IDW reader —
+    **has an error of at least ``payload_tol`` on every admissible query.** The
+    family therefore discriminates *2-row readers from >=3-row readers*, and ships
+    the 3-row readers (``knn3_*``, ``bary3_+0B``) as its own strongest controls
+    rather than waiting for a referee to build them.
+
+    ⚠ The bound is a statement about **readers**, not about memories: it says
+    nothing about whether any particular store then wins, which is the measurement.
+    """
+    tol = float(ccfg.payload_tol)
+    pay = np.asarray(pays, dtype=float).reshape(int(centers.shape[0]), -1)
+    triples = _triples_within(centers, gcfg.triad_dist_mult)
+    rows_q, rows_t, rows_tri, rows_w, rows_near = [], [], [], [], []
+    n_attempt = n_c1 = n_c2 = 0
+    for tri in triples:
+        idx = np.asarray(tri, dtype=int)
+        for _ in range(int(gcfg.n_query_per_triple)):
+            n_attempt += 1
+            for _draw in range(int(gcfg.triad_max_draws)):
+                w = rng.uniform(gcfg.triad_w_lo, gcfg.triad_w_hi, size=3)
+                w = w / float(np.sum(w))
+                tgt = np.sum(w[:, None] * pay[idx], axis=0)
+                pos = np.sum(w[:, None] * centers[idx], axis=0)
+                q = pos + _jitter(rng, 1, ccfg.addr_dim, ccfg.query_sigma)[0]
+                if np.min(np.abs(pay - tgt[None, :])) < tol:
+                    n_c1 += 1           # C1: a stored payload would answer it
+                    continue
+                near = np.argsort(np.linalg.norm(centers - q[None, :], axis=1))[:2]
+                lo = np.min(pay[near], axis=0)
+                hi = np.max(pay[near], axis=0)
+                outside = np.where(tgt > hi, tgt - hi,
+                                   np.where(tgt < lo, lo - tgt, -1.0))
+                if gcfg.triad_outside_pair_hull and float(np.min(outside)) < tol:
+                    n_c2 += 1           # C2: a two-row convex reader could be right
+                    continue
+                rows_q.append(q)
+                rows_t.append(tgt)
+                rows_tri.append(tri)
+                rows_w.append(w)
+                rows_near.append(np.sort(near))
+                break
+    if not rows_q:
+        raise RuntimeError("triad family produced no admissible queries")
+    q_addr = np.stack(rows_q)
+    tgt = np.stack(rows_t)
+    return QuerySet(
+        q0=_launch(ccfg, q_addr), keys=q_addr, target=tgt,
+        label=np.full((tgt.shape[0],), -1, dtype=int), alphabet=None, kind="value",
+        meta={"triples": np.asarray(rows_tri, dtype=int),
+              "weights": np.asarray(rows_w, dtype=float),
+              "nearest_pair": np.asarray(rows_near, dtype=int),
+              "n_triples": len(triples), "stored_payloads": pay,
+              "n_attempted": int(n_attempt),
+              "n_dropped_C1_target_is_stored": int(n_c1),
+              "n_dropped_C2_inside_two_row_hull": int(n_c2),
+              "coverage": float(len(rows_q) / max(n_attempt, 1)),
+              "two_row_reader_bound": float(tol),
+              "rule": ("C1: |t - a| >= payload_tol for every stored payload; "
+                       "C2: t sits >= payload_tol outside the payload range of "
+                       "the two rows nearest the jittered query => every two-row "
+                       "convex reader has error >= payload_tol")},
+    )
+
+
 def queries_recency(gcfg: GymConfig, ccfg: CluSystemConfig, centers: np.ndarray,
                     born: np.ndarray, rng: np.random.Generator) -> QuerySet:
     """F3: at the midpoint of two live items — **which was written more recently?**
@@ -856,7 +993,7 @@ SCORERS = {"value": score_value, "index": score_index, "coord": score_coord}
 
 #: Primary (higher-is-better) metric per family — the dividend's own metric.
 PRIMARY_METRIC = {"overload": "decode", "aggregate": "neg_mae",
-                  "recency": "acc", "manifold": "r2"}
+                  "recency": "acc", "manifold": "r2", "triad": "neg_mae"}
 
 
 def score(qs: QuerySet, pred: np.ndarray) -> Dict[str, float]:
@@ -868,6 +1005,7 @@ __all__ = [
     "FAMILIES", "FAMILY_DEFAULTS", "ARMS", "GymConfig", "GymStream", "QuerySet",
     "gym_config", "byte_ratio_law", "make_gym_stream",
     "queries_overload", "queries_aggregate", "queries_recency", "queries_manifold",
+    "queries_triad", "TRIAD_PREREG",
     "readout_settled", "readout_tail_mean", "readout_spectator",
     "readout_occupancy", "readout_point_assign", "restrict_to_pair",
     "score", "score_value", "score_index", "score_coord", "SCORERS",
