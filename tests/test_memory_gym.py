@@ -80,7 +80,10 @@ def _tiny(family="aggregate", **kw):
 
 # -- configuration ----------------------------------------------------------
 def test_families_and_arms_are_declared():
-    assert FAMILIES == ("overload", "aggregate", "recency", "manifold")
+    # the four C2W1 openings, in their declared order, plus `triad` — B′'s second
+    # dividend family (registered in `TRIAD_PREREG`), appended so the four
+    # incumbents keep their identity and their order
+    assert FAMILIES == ("overload", "aggregate", "recency", "manifold", "triad")
     assert set(PRIMARY_METRIC) == set(FAMILIES)
     with pytest.raises(ValueError):
         gym_config("not_a_family")
