@@ -93,6 +93,12 @@ DEFAULT_PLAN: Tuple[Tuple[str, str], ...] = (
     ("recency", "base"),
     ("manifold", "base"),
 )
+
+#: ⭐ Families this module can gate **on request** but that are NOT in the
+#: registered four-family plan, so a default run is unchanged: ``triad`` is B′'s
+#: candidate SECOND dividend family and must clear this gate *before* it is
+#: scored (``TRIAD_PREREG["validation_gate"]``). Reached with ``--families triad``.
+EXTRA_PLAN: Tuple[Tuple[str, str], ...] = (("triad", "base"),)
 DEFAULT_SEEDS: Tuple[int, ...] = (0, 1, 2)
 
 #: ⛔ C2W2 D4: the recency family's shipped default grades a **K-way** answer on a
@@ -258,7 +264,8 @@ def run_fb4_cell(family: str, arm: str = "base", seed: int = 0,
     full = float(score(qs, preds["clu"])[metric])
 
     # --- arms 2/3: the launder and every +0 B reader of its table ------------
-    launders = _launder_predictions(qs, centers, pays, born, rng, None, restrict_pairs)
+    launders = _launder_predictions(qs, centers, pays, born, rng, None, restrict_pairs,
+                                    family=family)
     if family == "recency" and qs.meta.get("pairs") is not None:
         launders["order_aware_pair_+0B"] = order_aware_pair_launder(
             born, np.asarray(qs.meta["pairs"], dtype=int))
@@ -389,7 +396,7 @@ def gate(records: Sequence[dict]) -> Dict[str, Any]:
         if not r.get("degenerate"):
             by_fam.setdefault(r["family"], []).append(r)
     rows = []
-    for fam in ("overload", "aggregate", "recency", "manifold"):
+    for fam in ("overload", "aggregate", "recency", "manifold", "triad"):
         cells = sorted(by_fam.get(fam, []), key=lambda c: c["seed"])
         if not cells:
             continue
@@ -416,7 +423,7 @@ def gate(records: Sequence[dict]) -> Dict[str, Any]:
     # the declared SECONDARY: the same rule with the launder excluded from the
     # +0 B reader set (PREREG §1.1(c)) — reported beside the primary, never instead
     sec_rows = []
-    for fam in ("overload", "aggregate", "recency", "manifold"):
+    for fam in ("overload", "aggregate", "recency", "manifold", "triad"):
         cells = sorted(by_fam.get(fam, []), key=lambda c: c["seed"])
         if not cells or not np.all([np.isfinite(c["substitute_excl_launder"]["score"])
                                     for c in cells]):
@@ -445,8 +452,8 @@ def run_experiment_fb4_gate(config=None, save_dir: str = "results",
     os.makedirs(save_dir, exist_ok=True)
     base_seed = int(seed if seed is not None else getattr(
         getattr(config, "project", None), "seed", 0) or 0)
-    plan = [(f, a) for f, a in DEFAULT_PLAN
-            if (not families or f in set(families))]
+    known = DEFAULT_PLAN + (EXTRA_PLAN if families else ())
+    plan = [(f, a) for f, a in known if (not families or f in set(families))]
     cell_seeds = tuple(int(s) for s in (seeds if seeds else DEFAULT_SEEDS))
     if base_seed and not seeds:
         cell_seeds = tuple(s + base_seed for s in cell_seeds)
@@ -458,7 +465,8 @@ def run_experiment_fb4_gate(config=None, save_dir: str = "results",
                      "task, not the memory."),
         "plan": [{"family": f, "arm": a, "seeds": list(cell_seeds)} for f, a in plan],
         "quick": bool(quick),
-        "sd_convention": "sample sd (ddof=1); SE = sd/sqrt(n); n = 3",
+        "sd_convention": ("sample sd (ddof=1); SE = sd/sqrt(n); n = "
+                          f"{len(cell_seeds)} (seeds {list(cell_seeds)})"),
         "prereg": (".claude/outputs/bprime-fb4-gate/PREREG.md — the rule, its two "
                    "constants and the predicted S(f) were filed BEFORE this ran"),
         "byte_note": ("⛔ no cell here is a byte-matched dividend; the minimum "

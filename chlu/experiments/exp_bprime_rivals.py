@@ -100,12 +100,28 @@ DEFAULT_PLAN: Tuple[Tuple[str, str], ...] = (
     ("aggregate", "base"),
     ("overload", "load1x_shipped"),
 )
+
+#: ⭐⭐ **B′ dividend family 2**, reachable with ``--families triad`` and ⛔ NOT in
+#: the default plan, so a default run reproduces the registered audit byte for
+#: byte. ``triad`` is the answer to `draft-r6` §6 L1 ("a second dividend family is
+#: the cheapest thing that would strengthen this work") and it is scored **only
+#: after** it clears the FB4 protocol-validation gate
+#: (``TRIAD_PREREG["validation_gate"]``); a saturated family is STRUCK and the
+#: failure is the deliverable.
+EXTRA_PLAN: Tuple[Tuple[str, str], ...] = (("triad", "base"),)
 DEFAULT_SEEDS: Tuple[int, ...] = (0, 1, 2)
 
 #: ⛔ The label that must travel with every ``overload`` number.
 FRONTIER_LABEL = ("BYTE-FRONTIER COLUMN — not a dividend family; declared "
                   "secondary reading S_excl = 0.6500 (arg-min launder excluded "
                   "from the +0 B reader set)")
+
+#: ⭐ The label that must travel with every ``triad`` number: it is a SECOND
+#: dividend family, its CLU column is **measured, not banked**, and its reader set
+#: is one level stronger than family 1's (three-row readers, declared in advance).
+TRIAD_LABEL = ("reader-discrimination family 2 (`triad`) — three-way "
+               "superposition; the bound is against EVERY two-row convex reader, "
+               "not only arg-min; the CLU column here is MEASURED, not banked")
 
 #: The head-width sweep for the frontier column (declared, filed in the PREREG).
 FRONTIER_HEADS: Tuple[int, ...] = (2, 4, 8, 16, 36)
@@ -302,7 +318,8 @@ def run_rivals_cell(family: str, arm: str = "base", seed: int = 0, *,
     preds = _clu_predictions(gcfg, ccfg, res, centers, sep, None)
     preds.pop("_occupancy", None)
     clu_full = float(score(qs, preds["clu"])[metric])
-    launders = _launder_predictions(qs, centers, pays, born, rng, None, None)
+    launders = _launder_predictions(qs, centers, pays, born, rng, None, None,
+                                    family=family)
     clu_lnd = {k: float(score(qs, p)[metric]) for k, p in launders.items()}
     blank_sys = build_system(replace(ccfg, seed=ccfg.seed + 991),
                              key=jax.random.PRNGKey(seed + 991), loud=False)
@@ -468,13 +485,18 @@ def run_rivals_cell(family: str, arm: str = "base", seed: int = 0, *,
     phi_rows["clu/launder"] = dict(phi)
     phi_id = assert_identical_phi(phi_rows)
 
-    n_attempt = int(qs.meta.get("n_pairs", 0)) * int(gcfg.n_query_per_pair) \
-        if family == "aggregate" else len(qs)
+    if family == "aggregate":
+        n_attempt = int(qs.meta.get("n_pairs", 0)) * int(gcfg.n_query_per_pair)
+    elif family == "triad":
+        n_attempt = int(qs.meta.get("n_attempted", len(qs)))
+    else:
+        n_attempt = len(qs)
     return {
         "cell": label, "family": family, "arm": arm, "seed": seed,
         "degenerate": False, "metric": metric,
         "frontier_only": bool(family == "overload"),
         "label": (FRONTIER_LABEL if family == "overload" else
+                  TRIAD_LABEL if family == "triad" else
                   "reader-discrimination family (S = 0.5068) — the sole dividend family"),
         "n_live": int(len(ids)), "n_queries": int(len(qs)),
         "admissible_coverage": {
@@ -691,7 +713,7 @@ def _clu_columns(cells: Sequence[dict]) -> Dict[str, Any]:
 def audit_table(records: Sequence[dict]) -> Dict[str, Any]:
     """⭐ The audit table — one row per (family, rival), 3-seed mean ± SE."""
     out: Dict[str, Any] = {}
-    for fam in ("aggregate", "overload"):
+    for fam in ("aggregate", "overload", "triad"):
         cells = [r for r in records
                  if r.get("family") == fam and not r.get("degenerate")]
         if not cells:
@@ -750,7 +772,7 @@ def audit_table(records: Sequence[dict]) -> Dict[str, Any]:
                 "metric_native": per[0]["metric_native"]["verdict"],
             }
         out[fam] = {
-            "is_dividend_family": bool(fam == "aggregate"),
+            "is_dividend_family": bool(fam in ("aggregate", "triad")),
             "label": cells[0]["label"],
             "rivals": fam_rows,
             "clu_banked": BANKED_CLU.get(f"{fam}/{cells[0]['arm']}", {}),
@@ -1125,6 +1147,112 @@ def falsifier_adjudication(table: Dict[str, Any]) -> Dict[str, Any]:
 # --------------------------------------------------------------------------
 # the experiment
 # --------------------------------------------------------------------------
+def triad_prereg_scorecard(table: Dict[str, Any],
+                           cells: Sequence[dict]) -> Dict[str, Any]:
+    """⭐ Family 2's pre-registration scorecard — **computed, not argued**.
+
+    Every row is one line of ``TRIAD_PREREG["predictions"]`` (filed 2026-08-18,
+    before any cell ran) beside what was measured, with a HIT / MISS verdict at
+    the registered band. ⛔ A MISS is a **finding**, not a defect to be tuned away:
+    the constants in :data:`~chlu.experiments.memory_gym.TRIAD_PREREG` may not be
+    edited after a run.
+    """
+    from chlu.experiments.memory_gym import TRIAD_PREREG
+
+    pred = dict(TRIAD_PREREG["predictions"])
+    live = [c for c in cells if c.get("family") == "triad" and not c.get("degenerate")]
+    rows: List[Dict[str, Any]] = []
+
+    def _band(key: str, measured: float, lower_is_ok: bool = False) -> Dict[str, Any]:
+        mu, band = pred[key]
+        hit = bool(np.isfinite(measured) and abs(measured - mu) <= band)
+        return {"registered": f"{mu:+.4f} ± {band:.4f}", "measured": float(measured),
+                "verdict": "HIT" if hit else "MISS",
+                "direction": ("" if hit else
+                              ("measured ABOVE the band" if measured > mu
+                               else "measured BELOW the band"))}
+
+    clu = table.get("clu_reproduced", {})
+    lnd = [c["clu_reproduction"]["all_launder_scores"] for c in live]
+
+    cov = [float(c["admissible_coverage"]["fraction"]) for c in live]
+    nq = [int(c["n_queries"]) for c in live]
+    rows.append({"id": "P2", "quantity": "admissible coverage / queries per seed",
+                 "registered": (f">= {pred['coverage_fraction_min']:.2f} and "
+                                f">= {pred['n_queries_min_per_seed']} queries"),
+                 "measured": {"coverage_min": float(np.min(cov)) if cov else float("nan"),
+                              "n_queries_min": int(np.min(nq)) if nq else 0},
+                 "verdict": ("HIT" if cov and np.min(cov) >= pred["coverage_fraction_min"]
+                             and np.min(nq) >= pred["n_queries_min_per_seed"]
+                             else "MISS — kill condition K1")})
+    rows.append(dict(id="P3", quantity="blank store (CLU)",
+                     **_band("blank", float(clu.get("blank", float("nan"))))))
+    am = [float(x.get("settle_deleted", float("nan"))) for x in lnd]
+    rows.append({"id": "P4a", "quantity": "arg-min launder <= -payload_tol (PROVABLE)",
+                 "registered": f"<= {pred['argmin_launder_upper_bound']:+.2f}",
+                 "measured": float(np.max(am)) if am else float("nan"),
+                 "verdict": ("HIT" if am and np.max(am) <= pred[
+                     "argmin_launder_upper_bound"] + 1e-9 else "MISS — F4 (bug)")})
+    rows.append(dict(id="P4b", quantity="arg-min launder (point estimate)",
+                     **_band("argmin_launder", float(np.mean(am)) if am else np.nan)))
+    idw = [float(x.get("knn2_idw_+0B", float("nan"))) for x in lnd]
+    rows.append(dict(id="P5", quantity="knn2_idw_+0B",
+                     **_band("knn2_idw", float(np.mean(idw)) if idw else np.nan)))
+    best_names, best_vals = [], []
+    for x in lnd:
+        cand = {k: float(v) for k, v in x.items() if k.endswith("+0B")}
+        if cand:
+            nm = max(cand, key=lambda k: cand[k])
+            best_names.append(nm)
+            best_vals.append(cand[nm])
+    modal = max(set(best_names), key=best_names.count) if best_names else ""
+    rows.append({"id": "P6", "quantity": "the strongest +0 B reader (modal over seeds)",
+                 "registered": pred.get("expected_best_zero_byte_reader",
+                                        TRIAD_PREREG["expected_best_zero_byte_reader"]),
+                 "measured": {"modal": modal, "per_seed": best_names},
+                 "verdict": ("HIT" if modal == TRIAD_PREREG[
+                     "expected_best_zero_byte_reader"] else "MISS")})
+    rows.append(dict(id="P7", quantity="the strongest +0 B reader (value)",
+                     **_band("best_zero_byte",
+                             float(np.mean(best_vals)) if best_vals else np.nan)))
+    rows.append(dict(id="P9", quantity="CLU full (MEASURED, not banked)",
+                     **_band("clu_full", float(clu.get("full", float("nan"))))))
+    rows.append(dict(id="P10", quantity="CLU raw-table margin",
+                     **_band("clu_raw_table_margin",
+                             float(clu.get("raw_table_margin", float("nan"))))))
+    riv = table.get("rivals", {})
+    pos = [n for n, r in riv.items()
+           if np.isfinite(r["raw_table_margin"]) and r["raw_table_margin"] > 0]
+    marg = [r["raw_table_margin"] for r in riv.values()]
+    rows.append({"id": "P11", "quantity": "rivals with a POSITIVE raw-table margin",
+                 "registered": f"{pred['n_rivals_with_positive_raw_margin']} of 6, "
+                               f"range {pred['rival_raw_margin_range']}",
+                 "measured": {"n_positive": len(pos), "positive": sorted(pos),
+                              "range": [float(np.min(marg)) if marg else float("nan"),
+                                        float(np.max(marg)) if marg else float("nan")]},
+                 "verdict": ("HIT" if len(pos) == pred[
+                     "n_rivals_with_positive_raw_margin"] else
+                     "MISS — falsifier F3 fires: check the 2-SE test before quoting")})
+    resc = sorted(n for n, r in riv.items() if r["RESCUED_above_own_blank_2se"])
+    rows.append({"id": "P12", "quantity": "the rescue gate (full > blank + 2 SE)",
+                 "registered": {"rescued": list(pred["rescued"]),
+                                "not_rescued": list(pred["not_rescued"])},
+                 "measured": {"rescued": resc,
+                              "clu": bool(clu.get("RESCUED_above_own_blank_2se")),
+                              "not_rescued": sorted(set(riv) - set(resc))},
+                 "verdict": ("HIT" if set(pred["rescued"]) <= set(resc)
+                             and not (set(pred["not_rescued"]) & set(resc))
+                             else "MISS")})
+    return {"prereg": TRIAD_PREREG["prereg_path"],
+            "filed": TRIAD_PREREG["filed"],
+            "note": ("⛔ P1 (the byte ledger) is asserted per cell as an integer "
+                     "identity and P8 (the FB4 gate) is scored by the separate "
+                     "protocol-validation run — neither is re-derived here."),
+            "rows": rows,
+            "n_hits": sum(1 for r in rows if r["verdict"] == "HIT"),
+            "n_rows": len(rows)}
+
+
 def run_experiment_bprime_rivals(config=None, save_dir: str = "results",
                                  models_dir: Optional[str] = None,
                                  seed: Optional[int] = None,
@@ -1139,7 +1267,8 @@ def run_experiment_bprime_rivals(config=None, save_dir: str = "results",
     os.makedirs(save_dir, exist_ok=True)
     base_seed = int(seed if seed is not None else getattr(
         getattr(config, "project", None), "seed", 0) or 0)
-    plan = [(f, a) for f, a in DEFAULT_PLAN if (not families or f in set(families))]
+    known = DEFAULT_PLAN + (EXTRA_PLAN if families else ())
+    plan = [(f, a) for f, a in known if (not families or f in set(families))]
     cell_seeds = tuple(int(s) for s in (seeds if seeds else DEFAULT_SEEDS))
     if base_seed and not seeds:
         cell_seeds = tuple(s + base_seed for s in cell_seeds)
@@ -1280,7 +1409,7 @@ def run_experiment_bprime_rivals(config=None, save_dir: str = "results",
                     for c in results["cells"]]
         by_sel[lb] = audit_table(cells_lb)
     results["audit_table_by_selection"] = by_sel
-    if by_sel:
+    if by_sel and any("aggregate" in t for t in by_sel.values()):
         results["before_after"] = before_after(by_sel)
         for name, row in results["before_after"]["rows"].items():
             if isinstance(row, dict) and "chosen_config_f3" in row:
@@ -1291,8 +1420,16 @@ def run_experiment_bprime_rivals(config=None, save_dir: str = "results",
                                                   "final", "val_final")}}
                     for c in results["cells"]
                     if name in c.get("rivals_by_selection", {}).get("f3", {})]
-    results["prereg_scorecard"] = prereg_scorecard(results["audit_table"])
-    results["falsifiers"] = falsifier_adjudication(results["audit_table"])
+    # ⛔ the before/after, the scorecard and the falsifier adjudication are all
+    # written against FAMILY 1's registered incumbents; they are computed only when
+    # `aggregate` actually ran, so a family-2 run cannot manufacture a comparison
+    # against numbers that were never measured on its own query law.
+    if "aggregate" in results["audit_table"]:
+        results["prereg_scorecard"] = prereg_scorecard(results["audit_table"])
+        results["falsifiers"] = falsifier_adjudication(results["audit_table"])
+    if "triad" in results["audit_table"]:
+        results["triad_scorecard"] = triad_prereg_scorecard(
+            results["audit_table"]["triad"], results["cells"])
     try:
         results["figures"] = _plot(results, save_dir)
     except Exception as exc:  # pragma: no cover - figures are not the result
@@ -1319,7 +1456,8 @@ def _plot(results: dict, save_dir: str):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    tab = results.get("audit_table", {}).get("aggregate", {})
+    tab = (results.get("audit_table", {}).get("aggregate")
+           or results.get("audit_table", {}).get("triad", {}))
     rows = tab.get("rivals", {})
     fig, axes = plt.subplots(1, 2, figsize=(13.5, 4.8))
     ax = axes[0]
@@ -1427,8 +1565,9 @@ def main():
         overrides=({"fit": fit} if fit else None))
     print(json.dumps({"audit_table": res["audit_table"],
                       "before_after": res.get("before_after", {}),
-                      "prereg_scorecard": res["prereg_scorecard"],
-                      "falsifiers": res["falsifiers"]},
+                      "prereg_scorecard": res.get("prereg_scorecard", {}),
+                      "triad_scorecard": res.get("triad_scorecard", {}),
+                      "falsifiers": res.get("falsifiers", {})},
                      indent=2, default=_json_default))
 
 
