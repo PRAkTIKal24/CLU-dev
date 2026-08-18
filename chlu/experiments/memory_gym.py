@@ -49,6 +49,18 @@ ceiling*) is a theorem about our situation, confirmed four times:
     F3 dividend against the frozen control is therefore a laundering artefact of
     that control's byte allocation, not a dynamics dividend.
 
+``triad``     (e) multi-way superposition -- B′'s SECOND dividend family
+    the query sits at the barycentre of **three** neighbouring items and the
+    answer is the barycentric mixture of their three payloads, constructed to lie
+    **outside** the payload range of the **two nearest** rows.
+    *Metric-native argument:* ``aggregate`` bounds **arg-min** from below;
+    ``triad`` bounds **every two-row convex reader** (arg-min, 2-NN mean, 2-NN
+    IDW) by ``payload_tol`` -- a statement about the *cardinality of the read*,
+    not about interpolation. It therefore ships its own strongest control one
+    level up: ``bary3_+0B``, the barycentric reader over the 3 nearest rows,
+    which inverts the construction up to the query jitter and is expected to win.
+    Registered in :data:`TRIAD_PREREG`.
+
 ``manifold``  (d) manifold-valued memories via flat directions
     a scoped, honest **stub with its blocker named** (the task file's own
     acceptance for this opening): the store is given a spectator axis the write
@@ -84,8 +96,96 @@ import numpy as np
 from chlu.core.clu_system import CluSystemConfig
 from chlu.core.memory_potentials import designed_payloads, designed_sites
 
-#: The four gym families, one per charter §2.1 opening.
-FAMILIES = ("overload", "aggregate", "recency", "manifold")
+#: The gym families, one per charter §2.1 opening (``triad`` is B′'s second
+#: dividend family, §2.1 opening (e); see :data:`TRIAD_PREREG`).
+FAMILIES = ("overload", "aggregate", "recency", "manifold", "triad")
+
+#: ⭐⭐ **The pre-registration of B′'s SECOND dividend family** (``triad``), filed
+#: 2026-08-18 before any cell of it ran — the full text is
+#: ``.claude/outputs/bprime-dividend-family-2/PREREG.md`` and this block is its
+#: machine-readable half, so a prediction cannot be quietly edited after a result.
+#: ⛔ Constants here are **registered**: changing one after a run invalidates the
+#: scorecard it is scored against (``triad_prereg_scorecard``).
+#:
+#: **The family, in one line.** The query sits at the barycentre of *three*
+#: neighbouring stored items and the answer is the barycentric mixture of their
+#: three payloads, constructed to lie **outside** the payload range of the **two
+#: nearest** rows — so every reader that returns a convex combination of the two
+#: nearest rows (arg-min, 2-NN mean, 2-NN IDW) has an error bounded below by
+#: ``payload_tol``. ``aggregate`` bounds **arg-min**; ``triad`` bounds every
+#: **two-row** reader, which is one level up and is a statement about the
+#: *cardinality of the read* rather than about interpolation.
+TRIAD_PREREG: Dict[str, Any] = {
+    "filed": "2026-08-18",
+    "prereg_path": ".claude/outputs/bprime-dividend-family-2/PREREG.md",
+    "family": "triad",
+    "metric": "neg_mae",
+    "metric_max": 0.0,
+    "opening": ("(e) multi-way superposition: is the read a function of MORE than "
+                "the two nearest rows?"),
+    # the four N.5 rules, argued in advance (paper Appendix N.5)
+    "n5_rules": {
+        "not_row_order": ("the target is a symmetric function of the SET of "
+                          "(address, payload) rows and the query; permuting rows "
+                          "leaves it invariant"),
+        "not_query_alone": ("the target depends on three stored payloads drawn per "
+                            "seed; identical query addresses with different "
+                            "payloads give different targets"),
+        "argmin_not_at_metric_max": ("PROVABLE: construction rules C1+C2 force an "
+                                     "arg-min error >= payload_tol = 0.1, so "
+                                     "neg_mae <= -0.1 < 0 = M"),
+        "target_absent_from_table": ("C1, enforced at draw time and asserted in "
+                                     "the test suite"),
+    },
+    # the construction rules, both enforced in `queries_triad`
+    "construction_rules": {
+        "C1": "drop if min_r |t - a_r| < payload_tol over ALL stored payloads",
+        "C2": ("drop unless t lies at least payload_tol OUTSIDE the payload range "
+               "of the TWO live items nearest the jittered query address"),
+        "provable_consequence": ("any reader returning a convex combination of the "
+                                 "two nearest rows scores neg_mae <= -payload_tol"),
+    },
+    # the declared +0 B reader set (the family's own strongest control)
+    "zero_byte_readers_added": ("knn3_mean_+0B", "knn3_idw_+0B", "bary3_+0B"),
+    "expected_best_zero_byte_reader": "bary3_+0B",
+    # the protocol-validation gate that must pass BEFORE any scoring
+    "validation_gate": ("FB4 (chlu.eval.fb4_gate): saturated iff S >= 0.95 AND "
+                        "sub >= attn - 2 SE; the family is released iff NOT "
+                        "saturated. Saturation => STRUCK, and the failure is the "
+                        "deliverable."),
+    # ⭐ the registered numbers (mean, +/- band), scored by `triad_prereg_scorecard`
+    "predictions": {
+        "coverage_fraction_min": 0.40,
+        "n_queries_min_per_seed": 24,
+        "blank": (-0.45, 0.15),
+        "argmin_launder_upper_bound": -0.10,
+        "argmin_launder": (-0.30, 0.08),
+        "knn2_idw": (-0.22, 0.06),
+        "best_zero_byte": (-0.12, 0.05),
+        "S_fb4": (0.70, 0.15),
+        "clu_full": (-0.42, 0.10),
+        "clu_raw_table_margin": (-0.30, 0.10),
+        "n_rivals_with_positive_raw_margin": 0,
+        "rival_raw_margin_range": (-0.55, -0.10),
+        "rescued": ("deltanet", "gdn", "gdn2", "mamba2"),
+        "not_rescued": ("ttt_mlp",),
+        "S_aggregate_extended_readers": (0.67, 0.12),
+    },
+    "kill_conditions": {
+        "K1": "coverage below 40 % or fewer than 24 admissible queries at any seed",
+        "K2": "FB4 saturation (S >= 0.95 AND sub >= attn - 2 SE)",
+        "K3": "fewer than 3 live items at any seed (no triple exists)",
+        "K4": "identical-phi assertion or the byte-ledger integer identity fails",
+    },
+    "falsifier_F3": ("any arm's raw-table margin > 0 by >= 2 SE would CONTRADICT "
+                     "the paper's headline at a second family — reported loudly, "
+                     "never suppressed"),
+    "seed_plan": tuple(range(9)),
+    "tuning": ("full F3 grid on EVERY rival arm: lr in {1e-4, 3.16e-4, 5e-4, 1e-3, "
+               "3.16e-3, 1e-2} x wd in {0, 0.1}, TTT arms also b in {1, 16}, 400 "
+               "outer steps, best-of-grid on the fit split"),
+    "dtype": "float32 (4 B per float) on every ledger row, every arm",
+}
 
 
 # --------------------------------------------------------------------------
