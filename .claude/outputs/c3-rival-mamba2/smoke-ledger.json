@@ -1,0 +1,226 @@
+{
+  "swap_ledger_mamba2": {
+    "params": 59322,
+    "state_floats": 43242,
+    "state_bytes": 86484,
+    "dtype_bytes": 2,
+    "state_breakdown": {
+      "ssm_state": 39936,
+      "conv_state": 3306
+    },
+    "state_convention": "nheads*headdim*d_state + (d_inner + 2*ngroups*d_state)*(d_conv-1) \u2014 the official implementation's own two-tensor inference cache (mamba_ssm/modules/mamba2.py: allocate_inference_cache). dtype = bf16 AS DEPLOYED (no dtype normalisation).",
+    "rival_spec": "mamba2",
+    "rival_config": {
+      "d_model": 512,
+      "n_layers": 24,
+      "d_state": 39,
+      "d_conv": 4,
+      "expand": 2,
+      "headdim": 64,
+      "ngroups": 1,
+      "dtype_bytes": 2,
+      "conv_bias": true,
+      "proj_bias": false,
+      "rmsnorm": true,
+      "use_D": true
+    },
+    "learned_init_is_params": true,
+    "params_vs_clu": 9.718545216251638,
+    "params_matched_pct": 871.8545216251638,
+    "state_vs_clu": 8.406298600311041,
+    "clu_state_over_arm": 0.11895842005457657,
+    "deployed": {
+      "rival": "mamba2",
+      "deployed_n_layers": 2,
+      "state_bytes_per_layer": 86484,
+      "total_state_bytes": 172968,
+      "budget_bytes": 2097152,
+      "occupancy": 0.08247756958007812,
+      "within_budget": true,
+      "reference_n_layers": 24,
+      "reference_total_state_bytes": 2075616
+    }
+  },
+  "byte_ledger_mamba2": {
+    "arm": "mamba2",
+    "n_layers": 2,
+    "dtype_bytes": 4,
+    "cell_params": 59322,
+    "cell_state_bytes_per_layer": 86484,
+    "phi_params_bytes_per_layer": 3404,
+    "phi_params_bytes_total": 6808,
+    "phi_state_bytes_per_layer": 0,
+    "phi_state_bytes_total": 0,
+    "phi_accounted": true,
+    "total_state_bytes": 172968,
+    "budget_bytes": 2097152,
+    "occupancy": 0.08247756958007812,
+    "within_budget": true,
+    "arithmetic": "total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) = 2 * (86484 + 0) = 172968 B; phi_params_bytes = 2 * 3404 = 6808 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+    "state_floats_per_layer": 43242
+  },
+  "byte_ledger_clu_store": {
+    "arm": "clu_store",
+    "n_layers": 2,
+    "dtype_bytes": 4,
+    "cell_params": 6104,
+    "cell_state_bytes_per_layer": 20576,
+    "phi_params_bytes_per_layer": 3404,
+    "phi_params_bytes_total": 6808,
+    "phi_state_bytes_per_layer": 0,
+    "phi_state_bytes_total": 0,
+    "phi_accounted": true,
+    "total_state_bytes": 41152,
+    "budget_bytes": 2097152,
+    "occupancy": 0.019622802734375,
+    "within_budget": true,
+    "arithmetic": "total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) = 2 * (20576 + 0) = 41152 B; phi_params_bytes = 2 * 3404 = 6808 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+    "state_floats_per_layer": 5144
+  },
+  "rival_reference_mamba2": {
+    "state_bytes": 6475776,
+    "elements": 3237888,
+    "dtype_bytes": 2,
+    "n_layers": 24,
+    "d_model": 512,
+    "formula": "n_L * (n_heads*headdim*d_state + (d_inner + 2*ngroups*d_state)*(d_conv-1))",
+    "pinned_params": {
+      "d_state": 128,
+      "d_conv": 4,
+      "expand": 2,
+      "headdim": 64,
+      "ngroups": 1
+    },
+    "provenance": "OFFICIAL IMPLEMENTATION: state-spaces/mamba, mamba_ssm/modules/mamba2.py defaults; allocate_inference_cache allocates (batch, nheads, headdim, d_state). \u26a0 The paper's per-size appendix table was NOT OBTAINED (arXiv:2405.21060) \u2014 this row's provenance is CODE, not a paper table.",
+    "occupancy": 3.087890625,
+    "within_budget": false,
+    "shrink_to_match": {
+      "rival": "mamba2",
+      "knob": "d_state",
+      "published_value": 128,
+      "shrunk_value": 39,
+      "state_bytes_published": 6475776,
+      "state_bytes_shrunk": 2075616,
+      "budget_bytes": 2097152,
+      "occupancy_published": 3.087890625,
+      "occupancy_shrunk": 0.9897308349609375,
+      "shrink_factor": 3.119929697978817,
+      "formula": "n_L * (n_heads*headdim*d_state + (d_inner + 2*ngroups*d_state)*(d_conv-1))",
+      "provenance": "OFFICIAL IMPLEMENTATION: state-spaces/mamba, mamba_ssm/modules/mamba2.py defaults; allocate_inference_cache allocates (batch, nheads, headdim, d_state). \u26a0 The paper's per-size appendix table was NOT OBTAINED (arXiv:2405.21060) \u2014 this row's provenance is CODE, not a paper table.",
+      "dtype_bytes": 2
+    }
+  },
+  "total_params": {
+    "mamba2": 165754,
+    "clu_store": 59318
+  },
+  "shell": {
+    "shared_shell_params": 47110,
+    "shared_shell_bytes": 188440
+  },
+  "flags": {
+    "pilot": {
+      "d_model": 32,
+      "n_layers": 2,
+      "seq_len": 256,
+      "batch": 2,
+      "addr_dim": 2,
+      "payload_dim": 1,
+      "capacity": 8,
+      "atoms_per_item": 128,
+      "steps": 3,
+      "warmup": 1,
+      "eval_batches": 2,
+      "dyneval_batches": 2,
+      "data_bytes": 600000,
+      "slice_min_n": 5,
+      "slice_batches": 2,
+      "arms": [
+        "mamba2",
+        "clu_store"
+      ],
+      "memory": {
+        "chunk": 32,
+        "address_steps": 4,
+        "read_steps": 4,
+        "traj_stride": 2,
+        "psi_hidden": 16,
+        "write_inner_steps": 1,
+        "write_n_perturb": 4,
+        "retry_rounds": 1,
+        "conv_kernel": 4,
+        "mlp_mult": 4
+      },
+      "monitor_every": 1
+    },
+    "memory": {
+      "chunk": 32,
+      "address_steps": 4,
+      "read_steps": 4,
+      "traj_stride": 2,
+      "read_mode": "trajectory",
+      "write_inner_steps": 1,
+      "write_lr": 0.05,
+      "write_n_perturb": 4,
+      "write_sign": true,
+      "psi_hidden": 16,
+      "phi_gain": 6.363021901548892,
+      "retry_rounds": 1,
+      "trainable_gamma": true,
+      "trainable_mass": true,
+      "conv_kernel": 4,
+      "mlp_mult": 4,
+      "atom_local_radius": 0.0,
+      "atom_group_centers": null,
+      "atom_place_radius": 0.0,
+      "write_lambda_traj": 0.0,
+      "write_traj_steps": 0,
+      "write_traj_n_launch": 2,
+      "psi_payload_residual": false,
+      "psi_residual_source": "q_star",
+      "psi_residual_gain": 1.0,
+      "psi_residual_trainable": true,
+      "erosion_partition": false,
+      "refresh_monotonic": false,
+      "refresh_max_gain": 4.0,
+      "refresh_amp_ceiling": 0.0,
+      "remat_chunks": false,
+      "remat_read_segments": 0
+    },
+    "store": {
+      "addr_dim": 2,
+      "atoms_per_item": 128,
+      "budget": 6,
+      "leak": 0.02,
+      "retry_max_rounds": 1,
+      "stage_lifetimes": true,
+      "stage_admission": true,
+      "stage_capacity_pressure": true,
+      "stage_deletion": true,
+      "stage_basin_interaction": true,
+      "stage_retry": true,
+      "stage_trajectory_read": true,
+      "soft_certificate": true
+    },
+    "store_dim": 3,
+    "store_n_atoms": 1024,
+    "jax_version": "0.9.0",
+    "jax_backend": "cpu"
+  },
+  "data": {
+    "train_B": 540000,
+    "valid_B": 30000,
+    "test_B": 30000,
+    "n_bytes_staged": 600000
+  },
+  "arms_bpc_NOT_QUOTABLE": {
+    "mamba2": {
+      "static": 8.092379127032434,
+      "dyneval": 8.086490441066891
+    },
+    "clu_store": {
+      "static": 8.187254732242108,
+      "dyneval": 8.185285186924428
+    }
+  }
+}

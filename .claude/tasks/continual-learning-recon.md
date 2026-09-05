@@ -1,0 +1,17 @@
+# Task: continual-learning-recon — pick the HG1 benchmark: where can a designed store + learned φ actually WIN? (w23)
+
+- **Agent:** `web-scout` · **Output:** `.claude/outputs/continual-learning-recon.md` · **Branch:** none (read-only)
+- **Read first:** `.claude/AGENT_PROTOCOL.md` · `.claude/research_roadmap.md` v0.6 · `.claude/outputs/scout-benchmark-targeting.md` (the winnability-audit method — weight class + protocol pinning; reuse it verbatim) · `.claude/outputs/sequential-write-interference.md` §0/§3 (what CLU's write machinery measurably does: masked-write interference advantage 197×→6332×, designed-store gate retention 1.000 vs 0.16, but learned-everything CLU WORST of four at K=64) · registry N75, N78
+- **⭐ Purpose:** the Head has picked **continual learning / catastrophic forgetting** as the primary external-benchmark family for the phase (interference is THE problem there; our anti-interference machinery is the program's most robust mechanistic result, and the competition is EWC/replay-class methods, not attention-at-scale). This recon picks the exact target and de-risks the Phase-2 entry — **before** we build it.
+
+## Item 1 — the benchmark map (pin from source repos, hashes)
+For each family — Split-MNIST/CIFAR (task/class/domain-incremental: distinguish!), Permuted-MNIST, CLEAR, online/streaming CL (e.g. CLOC-style), and any memory-module-specific suites — pin: exact protocol (task boundaries known? replay allowed? single-pass?), headline metrics (avg accuracy, forgetting/BWT — formulas from source), canonical baselines with their published numbers at small scale (EWC, SI, GEM/A-GEM, ER/replay buffers, iCaRL), and the harness repo the field actually uses (Avalanche? Mammoth?). ⚠ The rescued-baseline discipline (N78) applies to whatever we'd compare against — note per benchmark how baselines are tuned.
+
+## Item 2 — the winnability audit (the deliverable that matters)
+Rank ≥3 candidate targets by: (a) is the headline metric something graceful-capacity-under-load / per-item retention *natively* measures? (b) weight class — are the SOTA lines at our laptop/CSF3 scale or 100-GPU scale? (c) does an *episodic-memory-module* entry (designed store + learned `φ`, replay-free) have precedent and a fair slot, or would referees call it a category error? (d) known benchmark pathologies (the C18-2 lesson: check label/protocol integrity complaints in the literature). **Recommend ONE primary target + one fallback, with the predicted-loss modes stated.**
+
+## Item 3 — prior art on memory-module CL + our novelty surface
+Who has run Hopfield-class / associative-memory stores on CL benchmarks? (Search: modern Hopfield continual learning, episodic memory catastrophic forgetting, key-value memory CL, complementary learning systems.) What did they claim, and what's left for a *designed-landscape* store to own — per-item decay schedules? admission gating? no-replay retention? **Also:** does anything in test-time-compute-for-retrieval prior art collide with `retry-compute-study`'s created-benchmark spec? (One paragraph; its Item 3 needs the novelty check.)
+
+## Acceptance
+A cited, verified brief: the map (Item 1, protocols pinned), the ranked audit with ONE recommendation + entry-design sketch (what CLU-as-episodic-memory concretely looks like in the chosen harness, φ included), the prior-art delta, the retry-collision paragraph. Flag anything that would kill the family outright (a "CL is solved by replay buffers at this scale" finding is a valid recon outcome — report it plainly).

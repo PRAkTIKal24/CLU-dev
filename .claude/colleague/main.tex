@@ -1,0 +1,25 @@
+\documentclass{article}
+
+\title{Memory ML CLU - physics content only}
+\date{August 2026}
+
+\begin{document}
+
+\maketitle
+
+
+
+To demonstrate how each architecture realises a different memory latch, we will focus on the latent position parameter, $q$, while assuming a two-dimensional latent space. A relevant symmetry group that should prove to be important later is the well known $\mathrm{SO(2)}$ group whose Lie algebra corresponds to two-dimensional rotations by an angle $\alpha$, such that the latent space transforms as $q \mapsto R(\alpha)\, q$, with $R(\alpha)$ representing the rotation matrix. The potential is symmetric under $\mathrm{SO(2)}$ when,
+\begin{equation}
+V(R(\alpha)\,q)= V(q)\quad \forall\, \alpha.
+\label{symmetry_definig_eq}
+\end{equation}
+Therefore, a symmetric potential is equivalent to a potential with only a radial dependence and no angular dependence, $V \equiv V(r)$.
+
+Considering the minimum of the potential being at the origin, $r^\star = 0$, then the minimum (also called a vacuum expectation value in the physics literature) is non-degenerate and is trivially at $q^\star=(0,0)$ with $q^\star \mapsto R(\alpha)\, q^\star = q^\star$. This is the unbroken symmetry realisation, also known as a Wigner-Weyl realisation. Another case could involve a potential with degenerate minima, $r^\star > 0$. Then, there is a set of vacua that minimise the potential, $q^\star=r^\star (\cos \omega,\, \sin \omega )\; \forall\, \omega$. However, the vacuum is not necessarily invariant, $R(\alpha)\, q^\star \neq q^\star$, while equation \ref{symmetry_definig_eq} still holds and $R(\alpha)\, q^\star$ is of the same potential as $q^\star$. This act of choosing a vacuum from a degenerate set of vacua is called \textit{spontaneous symmetry breaking}, where a system is invariant under symmetry group $G$ transformations but its ground-state is only invariant under a subset symmetry group $H \in G$ (which is the trivial subgroup in this case). The coset space $G/H$ which corresponds to the number of broken generators, forms the \textit{Nambu-Goldstone modes}. To understand why spontaneous symmetry breaking gives rise to a spectral mass of zero, one has to borrow the fact from group theory that the rotation matrix can be rewritten in terms of the only generator of $SO(2)$, $J$, such that $R(\alpha)= e^{\alpha J}$. So the tangent vector to the vacuum orbit is $Jq^\star$ and every point $e^{\alpha J}q^\star$ is another vacuum. Differentiating the stationarity condition along the vacuum orbit with respect to $\alpha$ gives,
+\begin{equation}
+\nabla^2 V\, Jq^\star= 0.
+\end{equation}
+In other words, $Jq^\star$ is an eigenvector of the Hessian associated with the Goldstone mode with an eigenvalue of zero. Heuristically, moving along the tangent direction does not cost energy as there is no curvature in the potential across the tangent (Goldstone) direction. The analogy to particle physics is therefore apparent: Spontaneous symmetry breaking gives rise to massless Goldstone bosons as a result of the flat direction in the potential, whereas in the context of ML, it produces a neutral direction in which information can be stored without being pulled back. This argument also makes clear why the unbroken symmetry realisation doesn't give a zero spectral mass, since the vacuum is unique, $q^\star=0$, and $Jq^\star$ would be trivial giving no information about the eigenvalue.
+
+\end{document}

@@ -1,0 +1,17 @@
+# Task: r19-r20-reconciliations — adjudicate the three measurable open conflicts (R19-1, R19-2, R20-1) (w23)
+
+- **Agent:** `results-analyst` · **Output:** `.claude/outputs/r19-r20-reconciliations.md` · **Branch:** none (analysis; flag any code defect for the engineer — do not fix)
+- **Read first:** `.claude/AGENT_PROTOCOL.md` · `.claude/negative_results.md` § Open reconciliations (R19-1…R19-4, R20-1 — the conflict statements are canonical there; do NOT re-derive them) · `.claude/outputs/clu-latent-io-audit.md` · `.claude/outputs/cmapss-fd002-004-fetch.md` · `.claude/outputs/dt-units-split.md`
+- **Scope:** the three conflicts that are *measurements disagreeing* — R19-1, R19-2, R20-1. **R19-3 is recorded (N7/N64) and R19-4 is doctrine (its working resolution was adopted by the Head 2026-07-23 as the phase doctrine) — touch neither.** Every run at the post-`dt-fix` shipped defaults unless a leg of a conflict specifically requires legacy settings — state which you used, always.
+
+## Item 1 — R19-1: the two persistence gates disagree (unblocks N86)
+`cmapss-fd002-004-fetch` measured CLU LOSING to persistence at n=1 (0.825 vs 0.600); `clu-latent-io-audit` measured CLU WINNING at n=1 (0.4545 vs 0.5673) — different protocols. **Enumerate the protocol deltas** (split, window count/selection, launch state, same-engine guard, normalization, γ, `dt`), then **run the crossing**: starting from one protocol, flip deltas one at a time (or a fractional factorial if the space is big) until the n=1 sign flips. Deliverable: *which delta carries the sign*, which protocol is the defensible measurement of "does the rollout beat persistence" (argue it — launch-state and window-selection choices have right answers), and the **single quotable wording** for the registry. ⚠ Keep the Hub's separate withdrawal of the raw-space gate (issue (b) in the registry entry) out of scope — you are resolving (a), the measurement conflict, only.
+
+## Item 2 — R19-2: single-basin collapse at correct units — re-verify before re-promoting
+The audit reinstated the collapse (spread 0.0000, 100% finite, dt=1.0, γ=0.5, 64 steps) at the exact configuration that has never been exercised end-to-end. Re-verify independently: ≥3 seeds, vary init distribution and γ ∈ {0.2, 0.5, 1.0}, longer horizons, and apply the standing overflow rule (*a floating-point-exact order parameter is an overflow suspect until proven otherwise* — show finiteness AND resolution, e.g. the spread at higher precision). Verdict: REAL single basin (⇒ promote to an N-entry candidate, flag for curator) or artifact (⇒ record what it was).
+
+## Item 3 — R20-1: the ballistic fraction (98.3% vs 79.7%)
+Same quantity, two measurements. Find the definitional difference (window? threshold? per-step vs per-trajectory? pre/post-fix `dt`?), recompute both under one stated definition, and produce either one number or a scoped two-number statement ("X% under definition A, Y% under B"). The qualitative conclusion (free-streaming-dominated) is not in dispute — the digit is.
+
+## Acceptance
+Per-conflict: the adjudication, the evidence (tables/commands, reproducible), and the **proposed registry wording** (you do NOT edit `negative_results.md` — the curator applies it; flag your output for the next curator pass). Pre-register per conflict which side you expect to survive. If a conflict resists adjudication after an honest attempt, say so and state exactly what experiment would settle it — an honest "still open, here's the decider" beats a forced verdict.

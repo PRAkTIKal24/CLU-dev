@@ -1,0 +1,6186 @@
+{
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "head_ruling": {
+    "primary": "task1_only",
+    "reference_upper_bound": "generic_frozen",
+    "not_run": "online",
+    "roles": {
+      "task1_only": "PRIMARY \u2014 the defensible arm; all headline numbers",
+      "generic_frozen": "REFERENCE \u2014 declared upper bound; never the headline",
+      "online": "NOT RUN \u2014 stub/interface only (its own experiment later)"
+    },
+    "online_stub_note": "online \u03c6 is a deliberate extension point, not implemented in w24 (Head ruling): \u03c6 would be refit/updated as each task arrives, using only data already seen by the stream. Implementing it means (a) a per-task update hook (OnlineReadIn.observe_task) called BEFORE the task's items are written, (b) re-keying every already-stored well through the new \u03c6 (or accepting a stale-address penalty), and (c) a decision about whether re-keying counts as replay. Until that is settled it must not enter the CL results."
+  },
+  "protocol": {
+    "stream": "Split-MNIST-shaped: 5 tasks \u00d7 2 classes, class-incremental",
+    "store": "DESIGNED Gaussian wells over \u03c6(x); payload = raw x; read-out \u03c8 = damped-Verlet settle \u2192 payload of nearest well",
+    "phi_law": "\u03c6 is NEVER trained through the store (w20) and NEVER fit on a stored pattern (store/fit regions are disjoint)",
+    "queries": "torch.dropout(x, p=0.5) \u2014 generated once per stored item, IDENTICAL across regimes/arms/positions",
+    "laundering_control": "kNN-in-\u03c6 reported in EVERY regime (N89, CM-22(i))",
+    "uhop_commit": "cdac75431df968b7142b4fb605a0fcd56feb59cb",
+    "ramsauer_commit": "f56f929c95b77a070ae675ea4f56b6d54d36e730",
+    "scope_caveat": "diagnostic of \u03c6's stream discipline, NOT a competitive claim; masked recall is appendix-only (Head ruling)"
+  },
+  "config": {
+    "dataset": "mnist",
+    "n_tasks": 5,
+    "classes_per_task": 2,
+    "phi_regimes": [
+      "task1_only",
+      "generic_frozen"
+    ],
+    "phi_arms": [
+      "pca",
+      "ae"
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "items_per_task": 32,
+    "n_fit_pool": 3000,
+    "n_store_region": 20000,
+    "mask_p": 0.5,
+    "phi_dim": 32,
+    "ae_hidden": 256,
+    "ae_epochs": 400,
+    "ae_lr": 0.001,
+    "ae_batch": 512,
+    "clu_s_frac": 0.3,
+    "clu_b": 1.0,
+    "clu_alpha": 0.001,
+    "clu_gamma": 0.1,
+    "clu_steps": 200,
+    "clu_tail_frac": 0.1,
+    "clu_kinetic_mode": "newtonian_identity",
+    "s_policy": "refit",
+    "laundering_tie_band": 0.03,
+    "success_cosine": 0.9
+  },
+  "online_regime_skipped": false,
+  "runs": [
+    {
+      "regime": "task1_only",
+      "arm": "pca",
+      "seed": 0,
+      "phi_provenance": {
+        "regime": "task1_only",
+        "role": "PRIMARY \u2014 the defensible arm; all headline numbers",
+        "may_see": "task-1 classes only [0, 1]",
+        "frozen_from": "end of task 1 (never updated again)",
+        "arm": "pca",
+        "k": 32,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 1.0377764225006103,
+          "clu_dt": 0.5188882112503052,
+          "median_nn_keys": 3.459254741668701,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.75,
+                "mean_sqdiff": 2.9449315071105957,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.8125,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.75,
+              "mean_sqdiff": 2.9449315071105957,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8125,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.96875,
+              "mean_sqdiff": 0.4731622636318207,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.96875,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.32519254088401794
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 1.1953803062438964,
+          "clu_dt": 0.5976901531219482,
+          "median_nn_keys": 3.9846010208129883,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 4.907042980194092,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8125,
+              "mean_sqdiff": 2.453521490097046,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.859375,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.984375,
+              "mean_sqdiff": 0.23658113181591034,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.984375,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.2174133062362671
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 1.2476995468139649,
+          "clu_dt": 0.6238497734069824,
+          "median_nn_keys": 4.158998489379883,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 6.3181071281433105,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 1.3431204557418823,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8541666666666666,
+              "mean_sqdiff": 2.5537426471710205,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8854166666666666,
+              "class_acc": 1.0,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9895833333333334,
+              "mean_sqdiff": 0.15772075951099396,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9895833333333334,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.20809943974018097
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 1.2344344139099122,
+          "clu_dt": 0.6172172069549561,
+          "median_nn_keys": 4.114781379699707,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 6.3181071281433105,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 1.3431204557418823,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 1.7939594984054565,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8671875,
+              "mean_sqdiff": 2.3637969493865967,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8984375,
+              "class_acc": 1.0,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9921875,
+              "mean_sqdiff": 0.11829056590795517,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9921875,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.20566841959953308
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 1.2051328182220458,
+          "clu_dt": 0.6025664091110229,
+          "median_nn_keys": 4.017109394073486,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 4.907042980194092,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 1.3431204557418823,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.84375,
+                "mean_sqdiff": 3.4904849529266357,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.90625,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 3.2405261993408203,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.90625,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.86875,
+              "mean_sqdiff": 2.5962347984313965,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9,
+              "class_acc": 0.9875,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.99375,
+              "mean_sqdiff": 0.09463245421648026,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.99375,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.18979904055595398
+        }
+      ]
+    },
+    {
+      "regime": "task1_only",
+      "arm": "ae",
+      "seed": 0,
+      "phi_provenance": {
+        "regime": "task1_only",
+        "role": "PRIMARY \u2014 the defensible arm; all headline numbers",
+        "may_see": "task-1 classes only [0, 1]",
+        "frozen_from": "end of task 1 (never updated again)",
+        "arm": "ae",
+        "k": 32,
+        "hidden": 256,
+        "epochs": 400,
+        "recon_mse": 0.008863484486937523,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 0.5173581004142761,
+          "clu_dt": 0.25867905020713805,
+          "median_nn_keys": 1.7245270013809204,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.78125,
+                "mean_sqdiff": 2.360288143157959,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.84375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.78125,
+              "mean_sqdiff": 2.360288143157959,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.84375,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.96875,
+              "mean_sqdiff": 0.4731622636318207,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.96875,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.16785407066345215
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 0.5970659852027893,
+          "clu_dt": 0.29853299260139465,
+          "median_nn_keys": 1.9902199506759644,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 5.274267673492432,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8125,
+              "mean_sqdiff": 2.637133836746216,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.84375,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.984375,
+              "mean_sqdiff": 0.23658113181591034,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.984375,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.12922553718090057
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 0.6336630821228028,
+          "clu_dt": 0.3168315410614014,
+          "median_nn_keys": 2.112210273742676,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 5.274267673492432,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 1.3431204557418823,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8645833333333334,
+              "mean_sqdiff": 2.205796003341675,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8854166666666666,
+              "class_acc": 1.0,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9895833333333334,
+              "mean_sqdiff": 0.15772075951099396,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9895833333333334,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.1123107299208641
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 0.6192805767059326,
+          "clu_dt": 0.3096402883529663,
+          "median_nn_keys": 2.0642685890197754,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 5.274267673492432,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 1.3431204557418823,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.875,
+                "mean_sqdiff": 2.7459030151367188,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8671875,
+              "mean_sqdiff": 2.340822696685791,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8828125,
+              "class_acc": 1.0,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9921875,
+              "mean_sqdiff": 0.11829056590795517,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9921875,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.10511237382888794
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 0.6014992475509643,
+          "clu_dt": 0.30074962377548214,
+          "median_nn_keys": 2.004997491836548,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 5.274267673492432,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 1.3431204557418823,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.84375,
+                "mean_sqdiff": 3.6651535034179688,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.84375,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 0.875,
+                "mean_sqdiff": 5.728453636169434,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.875,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 2.267294406890869,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8625,
+              "mean_sqdiff": 3.2021992206573486,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.875,
+              "class_acc": 0.9875,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9875,
+              "mean_sqdiff": 0.5480912923812866,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9875,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.1025717481970787
+        }
+      ]
+    },
+    {
+      "regime": "generic_frozen",
+      "arm": "pca",
+      "seed": 0,
+      "phi_provenance": {
+        "regime": "generic_frozen",
+        "role": "REFERENCE \u2014 declared upper bound; never the headline",
+        "may_see": "all stream classes [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] (LEAKS future tasks)",
+        "frozen_from": "before the stream starts (never updated)",
+        "arm": "pca",
+        "k": 32,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 0.9024264335632324,
+          "clu_dt": 0.4512132167816162,
+          "median_nn_keys": 3.0080881118774414,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.71875,
+                "mean_sqdiff": 3.239013671875,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.8125,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 1.1026129722595215,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.71875,
+              "mean_sqdiff": 3.239013671875,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8125,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.90625,
+              "mean_sqdiff": 1.1026129722595215,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9375,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.5185586214065552
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 1.371952772140503,
+          "clu_dt": 0.6859763860702515,
+          "median_nn_keys": 4.57317590713501,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 7.000655174255371,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 1.1026129722595215,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.796875,
+              "mean_sqdiff": 3.5003275871276855,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.84375,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.953125,
+              "mean_sqdiff": 0.5513064861297607,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.96875,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.28708916902542114
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 1.4634891986846923,
+          "clu_dt": 0.7317445993423461,
+          "median_nn_keys": 4.878297328948975,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 7.000655174255371,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 1.1026129722595215,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 1.5443733930587769,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8541666666666666,
+              "mean_sqdiff": 2.8483428955078125,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8854166666666666,
+              "class_acc": 0.9895833333333334,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.96875,
+              "mean_sqdiff": 0.36753764748573303,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9791666666666666,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.251488596200943
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 1.4634891986846923,
+          "clu_dt": 0.7317445993423461,
+          "median_nn_keys": 4.878297328948975,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 7.000655174255371,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 1.1026129722595215,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 1.5443733930587769,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.8125,
+                "mean_sqdiff": 4.646265029907227,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.84375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.84375,
+              "mean_sqdiff": 3.297823429107666,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.875,
+              "class_acc": 0.9921875,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9765625,
+              "mean_sqdiff": 0.27565324306488037,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.984375,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.25855302810668945
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 1.41210880279541,
+          "clu_dt": 0.706054401397705,
+          "median_nn_keys": 4.707029342651367,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 7.000655174255371,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 1.1026129722595215,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 1.5443733930587769,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.8125,
+                "mean_sqdiff": 4.646265029907227,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.84375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.875,
+              "mean_sqdiff": 2.638258695602417,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9,
+              "class_acc": 0.99375,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.98125,
+              "mean_sqdiff": 0.22052259743213654,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9875,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.2066180258989334
+        }
+      ]
+    },
+    {
+      "regime": "generic_frozen",
+      "arm": "ae",
+      "seed": 0,
+      "phi_provenance": {
+        "regime": "generic_frozen",
+        "role": "REFERENCE \u2014 declared upper bound; never the headline",
+        "may_see": "all stream classes [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] (LEAKS future tasks)",
+        "frozen_from": "before the stream starts (never updated)",
+        "arm": "ae",
+        "k": 32,
+        "hidden": 256,
+        "epochs": 400,
+        "recon_mse": 0.017296520993113518,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 0.4462826013565063,
+          "clu_dt": 0.22314130067825316,
+          "median_nn_keys": 1.4876086711883545,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.75,
+                "mean_sqdiff": 3.0828003883361816,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.8125,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.75,
+              "mean_sqdiff": 3.0828003883361816,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8125,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.96875,
+              "mean_sqdiff": 0.4731622636318207,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.96875,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.24062056839466095
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 0.6250577688217163,
+          "clu_dt": 0.31252888441085813,
+          "median_nn_keys": 2.0835258960723877,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 6.3181071281433105,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.796875,
+              "mean_sqdiff": 3.1590535640716553,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.84375,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.984375,
+              "mean_sqdiff": 0.23658113181591034,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.984375,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.13844557106494904
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 0.6792629241943359,
+          "clu_dt": 0.33963146209716794,
+          "median_nn_keys": 2.264209747314453,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 6.3181071281433105,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8645833333333334,
+              "mean_sqdiff": 2.1060357093811035,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8958333333333334,
+              "class_acc": 1.0,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9895833333333334,
+              "mean_sqdiff": 0.15772075951099396,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9895833333333334,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.1141066923737526
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 0.6669556617736816,
+          "clu_dt": 0.3334778308868408,
+          "median_nn_keys": 2.2231855392456055,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 6.3181071281433105,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.84375,
+                "mean_sqdiff": 4.045931816101074,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.84375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.859375,
+              "mean_sqdiff": 2.5910096168518066,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8828125,
+              "class_acc": 1.0,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9921875,
+              "mean_sqdiff": 0.11829056590795517,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9921875,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.10923220217227936
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 0.6734345912933349,
+          "clu_dt": 0.33671729564666747,
+          "median_nn_keys": 2.244781970977783,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 6.3181071281433105,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.4731622636318207,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.84375,
+                "mean_sqdiff": 4.045931816101074,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.84375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8875,
+              "mean_sqdiff": 2.072807788848877,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.90625,
+              "class_acc": 1.0,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.99375,
+              "mean_sqdiff": 0.09463245421648026,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.99375,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.09859755635261536
+        }
+      ]
+    },
+    {
+      "regime": "task1_only",
+      "arm": "pca",
+      "seed": 1,
+      "phi_provenance": {
+        "regime": "task1_only",
+        "role": "PRIMARY \u2014 the defensible arm; all headline numbers",
+        "may_see": "task-1 classes only [0, 1]",
+        "frozen_from": "end of task 1 (never updated again)",
+        "arm": "pca",
+        "k": 32,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 1.432459259033203,
+          "clu_dt": 0.7162296295166015,
+          "median_nn_keys": 4.774864196777344,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.8125,
+                "mean_sqdiff": 3.6972367763519287,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.8125,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8125,
+              "mean_sqdiff": 3.6972367763519287,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8125,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.33753567934036255
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 1.319300365447998,
+          "clu_dt": 0.659650182723999,
+          "median_nn_keys": 4.39766788482666,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.8598818182945251,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.8432636260986328,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.953125,
+              "mean_sqdiff": 0.8515726923942566,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.953125,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.17429104447364807
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 1.3030926704406738,
+          "clu_dt": 0.6515463352203369,
+          "median_nn_keys": 4.343642234802246,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.8598818182945251,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.6865272521972656,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.6757445335388184,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.9375,
+              "mean_sqdiff": 1.4073845148086548,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9375,
+              "class_acc": 1.0,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.15893250703811646
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 1.2624485492706299,
+          "clu_dt": 0.6312242746353149,
+          "median_nn_keys": 4.2081618309021,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.8598818182945251,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.6865272521972656,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 2.575962781906128,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.90625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.7105671167373657,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.9375,
+              "mean_sqdiff": 1.4582346677780151,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9375,
+              "class_acc": 1.0,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.13829845190048218
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 1.2382701873779296,
+          "clu_dt": 0.6191350936889648,
+          "median_nn_keys": 4.127567291259766,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.3316190838813782,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.8432636260986328,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.6757445335388184,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.8952096700668335,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.819146990776062,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.95,
+              "mean_sqdiff": 1.312996745109558,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.95,
+              "class_acc": 0.99375,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.14429667592048645
+        }
+      ]
+    },
+    {
+      "regime": "task1_only",
+      "arm": "ae",
+      "seed": 1,
+      "phi_provenance": {
+        "regime": "task1_only",
+        "role": "PRIMARY \u2014 the defensible arm; all headline numbers",
+        "may_see": "task-1 classes only [0, 1]",
+        "frozen_from": "end of task 1 (never updated again)",
+        "arm": "ae",
+        "k": 32,
+        "hidden": 256,
+        "epochs": 400,
+        "recon_mse": 0.00877497997134924,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 0.7170302152633666,
+          "clu_dt": 0.3585151076316833,
+          "median_nn_keys": 2.3901007175445557,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.78125,
+                "mean_sqdiff": 4.0773115158081055,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.78125,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.78125,
+              "mean_sqdiff": 4.0773115158081055,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.78125,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.14712028205394745
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 0.6648160457611084,
+          "clu_dt": 0.3324080228805542,
+          "median_nn_keys": 2.2160534858703613,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.3316190838813782,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.8432636260986328,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.96875,
+              "mean_sqdiff": 0.5874413251876831,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.96875,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.0676855817437172
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 0.6634408235549927,
+          "clu_dt": 0.33172041177749634,
+          "median_nn_keys": 2.2114694118499756,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.3316190838813782,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.8432636260986328,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.775526225566864,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.96875,
+              "mean_sqdiff": 0.6501362919807434,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.96875,
+              "class_acc": 1.0,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.06539526581764221
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 0.634502363204956,
+          "clu_dt": 0.317251181602478,
+          "median_nn_keys": 2.1150078773498535,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.3316190838813782,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.775526225566864,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.7105671167373657,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.9765625,
+              "mean_sqdiff": 0.454428106546402,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9765625,
+              "class_acc": 1.0,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.053209975361824036
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 0.6272096157073974,
+          "clu_dt": 0.3136048078536987,
+          "median_nn_keys": 2.090698719024658,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.3316190838813782,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.775526225566864,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.7105671167373657,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 0.875,
+                "mean_sqdiff": 4.327620506286621,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.9653623700141907,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.95625,
+              "mean_sqdiff": 1.2290666103363037,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.95625,
+              "class_acc": 1.0,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.99375,
+              "mean_sqdiff": 0.19307246804237366,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.99375,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.06214112043380737
+        }
+      ]
+    },
+    {
+      "regime": "generic_frozen",
+      "arm": "pca",
+      "seed": 1,
+      "phi_provenance": {
+        "regime": "generic_frozen",
+        "role": "REFERENCE \u2014 declared upper bound; never the headline",
+        "may_see": "all stream classes [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] (LEAKS future tasks)",
+        "frozen_from": "before the stream starts (never updated)",
+        "arm": "pca",
+        "k": 32,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 1.3580560684204102,
+          "clu_dt": 0.6790280342102051,
+          "median_nn_keys": 4.526853561401367,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.78125,
+                "mean_sqdiff": 4.213504314422607,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.78125,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.78125,
+              "mean_sqdiff": 4.213504314422607,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.78125,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.36848437786102295
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 1.521925163269043,
+          "clu_dt": 0.7609625816345215,
+          "median_nn_keys": 5.073083877563477,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.71875,
+                "mean_sqdiff": 6.088043689727783,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.875,
+                "mean_sqdiff": 3.4211878776550293,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.796875,
+              "mean_sqdiff": 4.754615783691406,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.796875,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.38927164673805237
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 1.5381003856658935,
+          "clu_dt": 0.7690501928329467,
+          "median_nn_keys": 5.1270012855529785,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.6875,
+                "mean_sqdiff": 7.884098052978516,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.875,
+                "mean_sqdiff": 3.4211878776550293,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.571636438369751,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8333333333333334,
+              "mean_sqdiff": 4.292307376861572,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8333333333333334,
+              "class_acc": 0.9895833333333334,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.3470233976840973
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 1.5016359329223632,
+          "clu_dt": 0.7508179664611816,
+          "median_nn_keys": 5.005453109741211,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.71875,
+                "mean_sqdiff": 6.671261787414551,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 2.5779242515563965,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.90625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.571636438369751,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.7815171480178833,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.875,
+              "mean_sqdiff": 3.1505849361419678,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.875,
+              "class_acc": 0.9921875,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.2984158992767334
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 1.482399845123291,
+          "clu_dt": 0.7411999225616455,
+          "median_nn_keys": 4.941332817077637,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.71875,
+                "mean_sqdiff": 6.671261787414551,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 2.5779242515563965,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.90625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.775526225566864,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.7815171480178833,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.90625,
+              "mean_sqdiff": 2.36124587059021,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.90625,
+              "class_acc": 1.0,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.25509312748908997
+        }
+      ]
+    },
+    {
+      "regime": "generic_frozen",
+      "arm": "ae",
+      "seed": 1,
+      "phi_provenance": {
+        "regime": "generic_frozen",
+        "role": "REFERENCE \u2014 declared upper bound; never the headline",
+        "may_see": "all stream classes [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] (LEAKS future tasks)",
+        "frozen_from": "before the stream starts (never updated)",
+        "arm": "ae",
+        "k": 32,
+        "hidden": 256,
+        "epochs": 400,
+        "recon_mse": 0.01705032028257847,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 0.61314218044281,
+          "clu_dt": 0.306571090221405,
+          "median_nn_keys": 2.0438072681427,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.78125,
+                "mean_sqdiff": 4.4650983810424805,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.78125,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.78125,
+              "mean_sqdiff": 4.4650983810424805,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.78125,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.18766266107559204
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 0.6871410369873047,
+          "clu_dt": 0.34357051849365233,
+          "median_nn_keys": 2.2904701232910156,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.71875,
+                "mean_sqdiff": 6.16169548034668,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.9819742441177368,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.84375,
+              "mean_sqdiff": 3.5718350410461426,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.84375,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.16176946461200714
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 0.705716586112976,
+          "clu_dt": 0.352858293056488,
+          "median_nn_keys": 2.352388620376587,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.6875,
+                "mean_sqdiff": 7.510171890258789,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 2.5779242515563965,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.90625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.571636438369751,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.84375,
+              "mean_sqdiff": 3.886577606201172,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.84375,
+              "class_acc": 0.9895833333333334,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.14596572518348694
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 0.6980796575546264,
+          "clu_dt": 0.3490398287773132,
+          "median_nn_keys": 2.326932191848755,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.71875,
+                "mean_sqdiff": 6.103906631469727,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 2.5779242515563965,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.90625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.571636438369751,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.7105671167373657,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8828125,
+              "mean_sqdiff": 2.741008758544922,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8828125,
+              "class_acc": 0.9921875,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.12631675601005554
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 0.6765260696411133,
+          "clu_dt": 0.33826303482055664,
+          "median_nn_keys": 2.255086898803711,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.71875,
+                "mean_sqdiff": 6.16169548034668,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.7105671167373657,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.9375,
+              "mean_sqdiff": 1.3744524717330933,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9375,
+              "class_acc": 1.0,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 1.0,
+              "mean_sqdiff": 0.0,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.09940283000469208
+        }
+      ]
+    },
+    {
+      "regime": "task1_only",
+      "arm": "pca",
+      "seed": 2,
+      "phi_provenance": {
+        "regime": "task1_only",
+        "role": "PRIMARY \u2014 the defensible arm; all headline numbers",
+        "may_see": "task-1 classes only [0, 1]",
+        "frozen_from": "end of task 1 (never updated again)",
+        "arm": "pca",
+        "k": 32,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 1.3336878776550292,
+          "clu_dt": 0.6668439388275146,
+          "median_nn_keys": 4.445626258850098,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 5.835911750793457,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.625,
+              "mean_sqdiff": 5.835911750793457,
+              "median_cosine": 0.9999998807907104,
+              "success_at_cosine": 0.71875,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9375,
+              "mean_sqdiff": 0.4725196957588196,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.4000900089740753
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 1.4653261184692383,
+          "clu_dt": 0.7326630592346192,
+          "median_nn_keys": 4.884420394897461,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 6.541986465454102,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.796875,
+              "mean_sqdiff": 3.270993232727051,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.84375,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.96875,
+              "mean_sqdiff": 0.2362598478794098,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.26826098561286926
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 1.4005419731140136,
+          "clu_dt": 0.7002709865570068,
+          "median_nn_keys": 4.668473243713379,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 6.726410865783691,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 2.0161702632904053,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.84375,
+              "mean_sqdiff": 2.9141933917999268,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.875,
+              "class_acc": 1.0,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9791666666666666,
+              "mean_sqdiff": 0.1575065702199936,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.20757217705249786
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 1.3165233135223389,
+          "clu_dt": 0.6582616567611694,
+          "median_nn_keys": 4.388411045074463,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 6.541986465454102,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 2.220670461654663,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.90625,
+                "class_acc": 0.90625,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.875,
+              "mean_sqdiff": 2.190664291381836,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8984375,
+              "class_acc": 0.9765625,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.984375,
+              "mean_sqdiff": 0.1181299239397049,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.19343847036361694
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 1.3011411666870116,
+          "clu_dt": 0.6505705833435058,
+          "median_nn_keys": 4.337137222290039,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 5.651487350463867,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 1.4294536113739014,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 0.9375,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 0.90625,
+                "mean_sqdiff": 2.934739589691162,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.90625,
+                "class_acc": 0.96875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.89375,
+              "mean_sqdiff": 2.003136157989502,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9125,
+              "class_acc": 0.98125,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9875,
+              "mean_sqdiff": 0.09450393915176392,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.19915467500686646
+        }
+      ]
+    },
+    {
+      "regime": "task1_only",
+      "arm": "ae",
+      "seed": 2,
+      "phi_provenance": {
+        "regime": "task1_only",
+        "role": "PRIMARY \u2014 the defensible arm; all headline numbers",
+        "may_see": "task-1 classes only [0, 1]",
+        "frozen_from": "end of task 1 (never updated again)",
+        "arm": "ae",
+        "k": 32,
+        "hidden": 256,
+        "epochs": 400,
+        "recon_mse": 0.008859317749738693,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 0.6277168035507202,
+          "clu_dt": 0.3138584017753601,
+          "median_nn_keys": 2.0923893451690674,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.65625,
+                "mean_sqdiff": 4.963204383850098,
+                "median_cosine": 0.9999999403953552,
+                "success_at_cosine": 0.75,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.2990642786026001,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.65625,
+              "mean_sqdiff": 4.963204383850098,
+              "median_cosine": 0.9999999403953552,
+              "success_at_cosine": 0.75,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.96875,
+              "mean_sqdiff": 0.2990642786026001,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.18638718128204346
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 0.6990299463272095,
+          "clu_dt": 0.34951497316360475,
+          "median_nn_keys": 2.3300998210906982,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 5.866050720214844,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.2990642786026001,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8125,
+              "mean_sqdiff": 2.933025360107422,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.859375,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.984375,
+              "mean_sqdiff": 0.14953213930130005,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.12947812676429749
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 0.6911194324493408,
+          "clu_dt": 0.3455597162246704,
+          "median_nn_keys": 2.3037314414978027,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 5.866050720214844,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.2990642786026001,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.875,
+              "mean_sqdiff": 1.9553502798080444,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.90625,
+              "class_acc": 1.0,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9895833333333334,
+              "mean_sqdiff": 0.0996880903840065,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.09664540737867355
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 0.6512466430664062,
+          "clu_dt": 0.3256233215332031,
+          "median_nn_keys": 2.1708221435546875,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 5.866050720214844,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.2990642786026001,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.875,
+                "mean_sqdiff": 3.4302611351013184,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.875,
+                "class_acc": 0.90625,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.875,
+              "mean_sqdiff": 2.324077844619751,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8984375,
+              "class_acc": 0.9765625,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9921875,
+              "mean_sqdiff": 0.07476606965065002,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.09555089473724365
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 0.6541517972946167,
+          "clu_dt": 0.32707589864730835,
+          "median_nn_keys": 2.1805059909820557,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.625,
+                "mean_sqdiff": 5.866050720214844,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.71875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 0.2990642786026001,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.875,
+                "mean_sqdiff": 3.4302611351013184,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.875,
+                "class_acc": 0.90625,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 0.875,
+                "mean_sqdiff": 4.427150249481201,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.875,
+                "class_acc": 0.9375,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.875,
+              "mean_sqdiff": 2.744692325592041,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.89375,
+              "class_acc": 0.96875,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.99375,
+              "mean_sqdiff": 0.05981285497546196,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.10998890548944473
+        }
+      ]
+    },
+    {
+      "regime": "generic_frozen",
+      "arm": "pca",
+      "seed": 2,
+      "phi_provenance": {
+        "regime": "generic_frozen",
+        "role": "REFERENCE \u2014 declared upper bound; never the headline",
+        "may_see": "all stream classes [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] (LEAKS future tasks)",
+        "frozen_from": "before the stream starts (never updated)",
+        "arm": "pca",
+        "k": 32,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 1.2583996295928954,
+          "clu_dt": 0.6291998147964477,
+          "median_nn_keys": 4.194665431976318,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.5625,
+                "mean_sqdiff": 8.68993091583252,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.65625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.5625,
+              "mean_sqdiff": 8.68993091583252,
+              "median_cosine": 0.9999998807907104,
+              "success_at_cosine": 0.65625,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9375,
+              "mean_sqdiff": 0.4725196957588196,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.39898568391799927
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 1.5066019535064696,
+          "clu_dt": 0.7533009767532348,
+          "median_nn_keys": 5.022006511688232,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.5625,
+                "mean_sqdiff": 8.68993091583252,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.65625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.78125,
+              "mean_sqdiff": 4.34496545791626,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.828125,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.96875,
+              "mean_sqdiff": 0.2362598478794098,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.24756696820259094
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 1.573809242248535,
+          "clu_dt": 0.7869046211242675,
+          "median_nn_keys": 5.246030807495117,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.5625,
+                "mean_sqdiff": 9.3590087890625,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 1.0170540809631348,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.84375,
+              "mean_sqdiff": 3.4586875438690186,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8645833333333334,
+              "class_acc": 1.0,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9791666666666666,
+              "mean_sqdiff": 0.1575065702199936,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.22485800087451935
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 1.4782670974731444,
+          "clu_dt": 0.7391335487365722,
+          "median_nn_keys": 4.927556991577148,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.5625,
+                "mean_sqdiff": 9.3590087890625,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 2.0341081619262695,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.875,
+                "mean_sqdiff": 3.3507790565490723,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.875,
+                "class_acc": 0.875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.84375,
+              "mean_sqdiff": 3.685973882675171,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.859375,
+              "class_acc": 0.96875,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.984375,
+              "mean_sqdiff": 0.1181299239397049,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.20689037442207336
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 1.4769350051879881,
+          "clu_dt": 0.7384675025939941,
+          "median_nn_keys": 4.923116683959961,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.5625,
+                "mean_sqdiff": 9.3590087890625,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 0.96875,
+                "mean_sqdiff": 1.0170540809631348,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.96875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.84375,
+                "mean_sqdiff": 4.584755897521973,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.84375,
+                "class_acc": 0.84375,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 2.6495015621185303,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.9375,
+                "class_acc": 0.9375,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8625,
+              "mean_sqdiff": 3.522064208984375,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.875,
+              "class_acc": 0.95625,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9875,
+              "mean_sqdiff": 0.09450393915176392,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.21209898591041565
+        }
+      ]
+    },
+    {
+      "regime": "generic_frozen",
+      "arm": "ae",
+      "seed": 2,
+      "phi_provenance": {
+        "regime": "generic_frozen",
+        "role": "REFERENCE \u2014 declared upper bound; never the headline",
+        "may_see": "all stream classes [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] (LEAKS future tasks)",
+        "frozen_from": "before the stream starts (never updated)",
+        "arm": "ae",
+        "k": 32,
+        "hidden": 256,
+        "epochs": 400,
+        "recon_mse": 0.01716829463839531,
+        "frozen": true,
+        "n_fit_pool": 3000
+      },
+      "rows": [
+        {
+          "position": 1,
+          "M": 32,
+          "well_width_s": 0.5393173813819885,
+          "clu_dt": 0.26965869069099424,
+          "median_nn_keys": 1.7977246046066284,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.59375,
+                "mean_sqdiff": 6.756549835205078,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.6875,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.59375,
+              "mean_sqdiff": 6.756549835205078,
+              "median_cosine": 0.9999998807907104,
+              "success_at_cosine": 0.6875,
+              "class_acc": 1.0,
+              "n": 32
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9375,
+              "mean_sqdiff": 0.4725196957588196,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 32
+            }
+          },
+          "mean_dist_to_well": 0.17098963260650635
+        },
+        {
+          "position": 2,
+          "M": 64,
+          "well_width_s": 0.6671450614929199,
+          "clu_dt": 0.3335725307464599,
+          "median_nn_keys": 2.2238168716430664,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.5625,
+                "mean_sqdiff": 10.133707046508789,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.78125,
+              "mean_sqdiff": 5.0668535232543945,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.8125,
+              "class_acc": 1.0,
+              "n": 64
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.96875,
+              "mean_sqdiff": 0.2362598478794098,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 64
+            }
+          },
+          "mean_dist_to_well": 0.11160600185394287
+        },
+        {
+          "position": 3,
+          "M": 96,
+          "well_width_s": 0.671303129196167,
+          "clu_dt": 0.3356515645980835,
+          "median_nn_keys": 2.2376770973205566,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.5625,
+                "mean_sqdiff": 10.714985847473145,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8541666666666666,
+              "mean_sqdiff": 3.571661949157715,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.875,
+              "class_acc": 1.0,
+              "n": 96
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9791666666666666,
+              "mean_sqdiff": 0.1575065702199936,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 96
+            }
+          },
+          "mean_dist_to_well": 0.08249601721763611
+        },
+        {
+          "position": 4,
+          "M": 128,
+          "well_width_s": 0.6639608860015869,
+          "clu_dt": 0.33198044300079343,
+          "median_nn_keys": 2.213202953338623,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.5625,
+                "mean_sqdiff": 10.095854759216309,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.875,
+                "mean_sqdiff": 3.8740508556365967,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.875,
+                "class_acc": 0.875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.859375,
+              "mean_sqdiff": 3.492476463317871,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.875,
+              "class_acc": 0.96875,
+              "n": 128
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.984375,
+              "mean_sqdiff": 0.1181299239397049,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 128
+            }
+          },
+          "mean_dist_to_well": 0.0868193730711937
+        },
+        {
+          "position": 5,
+          "M": 160,
+          "well_width_s": 0.659955096244812,
+          "clu_dt": 0.329977548122406,
+          "median_nn_keys": 2.19985032081604,
+          "per_task": {
+            "0": {
+              "clu_in_phi": {
+                "identity_acc": 0.5625,
+                "mean_sqdiff": 9.573572158813477,
+                "median_cosine": 0.9999998807907104,
+                "success_at_cosine": 0.625,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 0.9375,
+                "mean_sqdiff": 0.4725196957588196,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "1": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "2": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "3": {
+              "clu_in_phi": {
+                "identity_acc": 0.875,
+                "mean_sqdiff": 3.8740508556365967,
+                "median_cosine": 1.0,
+                "success_at_cosine": 0.875,
+                "class_acc": 0.875,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            },
+            "4": {
+              "clu_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              },
+              "knn_in_phi": {
+                "identity_acc": 1.0,
+                "mean_sqdiff": 0.0,
+                "median_cosine": 1.0,
+                "success_at_cosine": 1.0,
+                "class_acc": 1.0,
+                "n": 32
+              }
+            }
+          },
+          "overall": {
+            "clu_in_phi": {
+              "identity_acc": 0.8875,
+              "mean_sqdiff": 2.6895246505737305,
+              "median_cosine": 1.0,
+              "success_at_cosine": 0.9,
+              "class_acc": 0.975,
+              "n": 160
+            },
+            "knn_in_phi": {
+              "identity_acc": 0.9875,
+              "mean_sqdiff": 0.09450393915176392,
+              "median_cosine": 1.0,
+              "success_at_cosine": 1.0,
+              "class_acc": 1.0,
+              "n": 160
+            }
+          },
+          "mean_dist_to_well": 0.07961636781692505
+        }
+      ]
+    }
+  ],
+  "cost_of_strictness": {
+    "identity_acc": {
+      "ae": {
+        "metric": "identity_acc",
+        "line": "clu_in_phi",
+        "final_by_task": {
+          "generic_frozen": [
+            {
+              "task": 0,
+              "mean": 0.625,
+              "std": 0.06750771560841522,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.8958333333333334,
+              "std": 0.05311478659992484,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "task": 0,
+              "mean": 0.7395833333333334,
+              "std": 0.16204530402191714,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 0.9791666666666666,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.8958333333333334,
+              "std": 0.05311478659992484,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 0.875,
+              "std": 0.0,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "stream_by_position": {
+          "generic_frozen": [
+            {
+              "position": 1,
+              "mean": 0.7083333333333334,
+              "std": 0.0820209153542897,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 0.8072916666666666,
+              "std": 0.02655739329996242,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 0.8541666666666666,
+              "std": 0.008505172717997162,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.8671875,
+              "std": 0.011048543456039806,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.9041666666666667,
+              "std": 0.023570226039551608,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "position": 1,
+              "mean": 0.7395833333333334,
+              "std": 0.05892556509887896,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 0.8645833333333334,
+              "std": 0.0736569563735987,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 0.9027777777777778,
+              "std": 0.046842838761222354,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.90625,
+              "std": 0.049820641848200495,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.8979166666666667,
+              "std": 0.04156236946512501,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "gap_generic_minus_task1": {
+          "by_task_index": [
+            -0.11458333333333337,
+            0.0,
+            0.02083333333333337,
+            0.0,
+            0.125
+          ],
+          "slope_per_task_index": 0.04791666666666667,
+          "by_stream_position": [
+            -0.03125,
+            -0.05729166666666674,
+            -0.04861111111111116,
+            -0.0390625,
+            0.006249999999999978
+          ],
+          "slope_per_stream_position": 0.009322916666666677,
+          "gap_at_task1": -0.11458333333333337,
+          "gap_at_last_task": 0.125,
+          "gap_end_of_stream": 0.006249999999999978,
+          "note": "positive = the (leaky) generic \u03c6 is better; this is the COST OF STRICTNESS paid by the primary task-1-only arm"
+        }
+      },
+      "pca": {
+        "metric": "identity_acc",
+        "line": "clu_in_phi",
+        "final_by_task": {
+          "generic_frozen": [
+            {
+              "task": 0,
+              "mean": 0.625,
+              "std": 0.06750771560841522,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 0.9583333333333334,
+              "std": 0.03897559777889522,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 0.9791666666666666,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.8645833333333334,
+              "std": 0.05311478659992484,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 0.9791666666666666,
+              "std": 0.02946278254943948,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "task": 0,
+              "mean": 0.7395833333333334,
+              "std": 0.16204530402191714,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 0.9895833333333334,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 0.96875,
+              "std": 0.02551551815399144,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.90625,
+              "std": 0.04419417382415922,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 0.9166666666666666,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "stream_by_position": {
+          "generic_frozen": [
+            {
+              "position": 1,
+              "mean": 0.6875,
+              "std": 0.0919975090242484,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 0.7916666666666666,
+              "std": 0.00736569563735987,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 0.84375,
+              "std": 0.008505172717997117,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.8541666666666666,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.88125,
+              "std": 0.018399501804849665,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "position": 1,
+              "mean": 0.7291666666666666,
+              "std": 0.07795119555779044,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 0.8541666666666666,
+              "std": 0.07026425814183355,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 0.8784722222222222,
+              "std": 0.04195502074164783,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.8932291666666666,
+              "std": 0.03146626555623586,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.9041666666666668,
+              "std": 0.03397813839645849,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "gap_generic_minus_task1": {
+          "by_task_index": [
+            -0.11458333333333337,
+            -0.03125,
+            0.01041666666666663,
+            -0.04166666666666663,
+            0.0625
+          ],
+          "slope_per_task_index": 0.03437500000000002,
+          "by_stream_position": [
+            -0.04166666666666663,
+            -0.0625,
+            -0.03472222222222221,
+            -0.0390625,
+            -0.022916666666666807
+          ],
+          "slope_per_stream_position": 0.006093749999999969,
+          "gap_at_task1": -0.11458333333333337,
+          "gap_at_last_task": 0.0625,
+          "gap_end_of_stream": -0.022916666666666807,
+          "note": "positive = the (leaky) generic \u03c6 is better; this is the COST OF STRICTNESS paid by the primary task-1-only arm"
+        }
+      }
+    },
+    "class_acc": {
+      "ae": {
+        "metric": "class_acc",
+        "line": "clu_in_phi",
+        "final_by_task": {
+          "generic_frozen": [
+            {
+              "task": 0,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.9583333333333334,
+              "std": 0.05892556509887896,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "task": 0,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.9583333333333334,
+              "std": 0.03897559777889522,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 0.96875,
+              "std": 0.02551551815399144,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "stream_by_position": {
+          "generic_frozen": [
+            {
+              "position": 1,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 0.9965277777777778,
+              "std": 0.0049104637582398965,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.9869791666666666,
+              "std": 0.01327869664998121,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.9916666666666667,
+              "std": 0.011785113019775802,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "position": 1,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.9921875,
+              "std": 0.011048543456039806,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.9854166666666666,
+              "std": 0.012842529172852037,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "gap_generic_minus_task1": {
+          "by_task_index": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.03125
+          ],
+          "slope_per_task_index": 0.006249999999999999,
+          "by_stream_position": [
+            0.0,
+            0.0,
+            -0.00347222222222221,
+            -0.00520833333333337,
+            0.006250000000000089
+          ],
+          "slope_per_stream_position": 0.0007291666666666808,
+          "gap_at_task1": 0.0,
+          "gap_at_last_task": 0.03125,
+          "gap_end_of_stream": 0.006250000000000089,
+          "note": "positive = the (leaky) generic \u03c6 is better; this is the COST OF STRICTNESS paid by the primary task-1-only arm"
+        }
+      },
+      "pca": {
+        "metric": "class_acc",
+        "line": "clu_in_phi",
+        "final_by_task": {
+          "generic_frozen": [
+            {
+              "task": 0,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 0.9895833333333334,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.9479166666666666,
+              "std": 0.0736569563735987,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 0.9791666666666666,
+              "std": 0.02946278254943948,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "task": 0,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 1,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 2,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "task": 3,
+              "mean": 0.9583333333333334,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            },
+            {
+              "task": 4,
+              "mean": 0.9791666666666666,
+              "std": 0.01473139127471974,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "stream_by_position": {
+          "generic_frozen": [
+            {
+              "position": 1,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 0.9930555555555557,
+              "std": 0.004910463758239896,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.984375,
+              "std": 0.011048543456039806,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.9833333333333334,
+              "std": 0.0193200385322827,
+              "n_seeds": 3
+            }
+          ],
+          "task1_only": [
+            {
+              "position": 1,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "position": 2,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "position": 3,
+              "mean": 1.0,
+              "std": 0.0,
+              "n_seeds": 3
+            },
+            {
+              "position": 4,
+              "mean": 0.9921875,
+              "std": 0.011048543456039806,
+              "n_seeds": 3
+            },
+            {
+              "position": 5,
+              "mean": 0.9875000000000002,
+              "std": 0.005103103630798315,
+              "n_seeds": 3
+            }
+          ]
+        },
+        "gap_generic_minus_task1": {
+          "by_task_index": [
+            0.0,
+            -0.01041666666666663,
+            0.0,
+            -0.01041666666666674,
+            0.0
+          ],
+          "slope_per_task_index": -1.1718481872190646e-17,
+          "by_stream_position": [
+            0.0,
+            0.0,
+            -0.006944444444444309,
+            -0.0078125,
+            -0.004166666666666763
+          ],
+          "slope_per_stream_position": -0.0016145833333333524,
+          "gap_at_task1": 0.0,
+          "gap_at_last_task": 0.0,
+          "gap_end_of_stream": -0.004166666666666763,
+          "note": "positive = the (leaky) generic \u03c6 is better; this is the COST OF STRICTNESS paid by the primary task-1-only arm"
+        }
+      }
+    }
+  },
+  "laundering_control": [
+    {
+      "arm": "ae",
+      "regime": "generic_frozen",
+      "metric": "identity_acc",
+      "tie_band": 0.03,
+      "per_task": [
+        {
+          "task": 0,
+          "clu_minus_knn": -0.34375
+        },
+        {
+          "task": 1,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 2,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 3,
+          "clu_minus_knn": -0.10416666666666667
+        },
+        {
+          "task": 4,
+          "clu_minus_knn": 0.0
+        }
+      ],
+      "n_points": 5,
+      "n_clu_wins": 0,
+      "n_knn_wins": 2,
+      "n_tie": 3,
+      "mean_clu_minus_knn": -0.08958333333333333,
+      "max_clu_margin": 0.0,
+      "laundered": true,
+      "verdict": "LAUNDERED \u2014 CLU-in-\u03c6 never beats kNN-in-\u03c6 in this regime: the win is \u03c6's, not ours."
+    },
+    {
+      "arm": "ae",
+      "regime": "task1_only",
+      "metric": "identity_acc",
+      "tie_band": 0.03,
+      "per_task": [
+        {
+          "task": 0,
+          "clu_minus_knn": -0.23958333333333334
+        },
+        {
+          "task": 1,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 2,
+          "clu_minus_knn": -0.020833333333333332
+        },
+        {
+          "task": 3,
+          "clu_minus_knn": -0.10416666666666667
+        },
+        {
+          "task": 4,
+          "clu_minus_knn": -0.10416666666666667
+        }
+      ],
+      "n_points": 5,
+      "n_clu_wins": 0,
+      "n_knn_wins": 3,
+      "n_tie": 2,
+      "mean_clu_minus_knn": -0.09375000000000001,
+      "max_clu_margin": 0.0,
+      "laundered": true,
+      "verdict": "LAUNDERED \u2014 CLU-in-\u03c6 never beats kNN-in-\u03c6 in this regime: the win is \u03c6's, not ours."
+    },
+    {
+      "arm": "pca",
+      "regime": "generic_frozen",
+      "metric": "identity_acc",
+      "tie_band": 0.03,
+      "per_task": [
+        {
+          "task": 0,
+          "clu_minus_knn": -0.3229166666666667
+        },
+        {
+          "task": 1,
+          "clu_minus_knn": -0.041666666666666664
+        },
+        {
+          "task": 2,
+          "clu_minus_knn": -0.020833333333333332
+        },
+        {
+          "task": 3,
+          "clu_minus_knn": -0.13541666666666666
+        },
+        {
+          "task": 4,
+          "clu_minus_knn": -0.020833333333333332
+        }
+      ],
+      "n_points": 5,
+      "n_clu_wins": 0,
+      "n_knn_wins": 3,
+      "n_tie": 2,
+      "mean_clu_minus_knn": -0.10833333333333335,
+      "max_clu_margin": -0.020833333333333332,
+      "laundered": true,
+      "verdict": "LAUNDERED \u2014 CLU-in-\u03c6 never beats kNN-in-\u03c6 in this regime: the win is \u03c6's, not ours."
+    },
+    {
+      "arm": "pca",
+      "regime": "task1_only",
+      "metric": "identity_acc",
+      "tie_band": 0.03,
+      "per_task": [
+        {
+          "task": 0,
+          "clu_minus_knn": -0.22916666666666666
+        },
+        {
+          "task": 1,
+          "clu_minus_knn": -0.010416666666666666
+        },
+        {
+          "task": 2,
+          "clu_minus_knn": -0.03125
+        },
+        {
+          "task": 3,
+          "clu_minus_knn": -0.09375
+        },
+        {
+          "task": 4,
+          "clu_minus_knn": -0.08333333333333333
+        }
+      ],
+      "n_points": 5,
+      "n_clu_wins": 0,
+      "n_knn_wins": 4,
+      "n_tie": 1,
+      "mean_clu_minus_knn": -0.08958333333333332,
+      "max_clu_margin": -0.010416666666666666,
+      "laundered": true,
+      "verdict": "LAUNDERED \u2014 CLU-in-\u03c6 never beats kNN-in-\u03c6 in this regime: the win is \u03c6's, not ours."
+    },
+    {
+      "arm": "ae",
+      "regime": "generic_frozen",
+      "metric": "class_acc",
+      "tie_band": 0.03,
+      "per_task": [
+        {
+          "task": 0,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 1,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 2,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 3,
+          "clu_minus_knn": -0.041666666666666664
+        },
+        {
+          "task": 4,
+          "clu_minus_knn": 0.0
+        }
+      ],
+      "n_points": 5,
+      "n_clu_wins": 0,
+      "n_knn_wins": 1,
+      "n_tie": 4,
+      "mean_clu_minus_knn": -0.008333333333333333,
+      "max_clu_margin": 0.0,
+      "laundered": true,
+      "verdict": "LAUNDERED \u2014 CLU-in-\u03c6 never beats kNN-in-\u03c6 in this regime: the win is \u03c6's, not ours."
+    },
+    {
+      "arm": "ae",
+      "regime": "task1_only",
+      "metric": "class_acc",
+      "tie_band": 0.03,
+      "per_task": [
+        {
+          "task": 0,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 1,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 2,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 3,
+          "clu_minus_knn": -0.041666666666666664
+        },
+        {
+          "task": 4,
+          "clu_minus_knn": -0.03125
+        }
+      ],
+      "n_points": 5,
+      "n_clu_wins": 0,
+      "n_knn_wins": 2,
+      "n_tie": 3,
+      "mean_clu_minus_knn": -0.014583333333333332,
+      "max_clu_margin": 0.0,
+      "laundered": true,
+      "verdict": "LAUNDERED \u2014 CLU-in-\u03c6 never beats kNN-in-\u03c6 in this regime: the win is \u03c6's, not ours."
+    },
+    {
+      "arm": "pca",
+      "regime": "generic_frozen",
+      "metric": "class_acc",
+      "tie_band": 0.03,
+      "per_task": [
+        {
+          "task": 0,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 1,
+          "clu_minus_knn": -0.010416666666666666
+        },
+        {
+          "task": 2,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 3,
+          "clu_minus_knn": -0.052083333333333336
+        },
+        {
+          "task": 4,
+          "clu_minus_knn": -0.020833333333333332
+        }
+      ],
+      "n_points": 5,
+      "n_clu_wins": 0,
+      "n_knn_wins": 1,
+      "n_tie": 4,
+      "mean_clu_minus_knn": -0.016666666666666666,
+      "max_clu_margin": 0.0,
+      "laundered": true,
+      "verdict": "LAUNDERED \u2014 CLU-in-\u03c6 never beats kNN-in-\u03c6 in this regime: the win is \u03c6's, not ours."
+    },
+    {
+      "arm": "pca",
+      "regime": "task1_only",
+      "metric": "class_acc",
+      "tie_band": 0.03,
+      "per_task": [
+        {
+          "task": 0,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 1,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 2,
+          "clu_minus_knn": 0.0
+        },
+        {
+          "task": 3,
+          "clu_minus_knn": -0.041666666666666664
+        },
+        {
+          "task": 4,
+          "clu_minus_knn": -0.020833333333333332
+        }
+      ],
+      "n_points": 5,
+      "n_clu_wins": 0,
+      "n_knn_wins": 1,
+      "n_tie": 4,
+      "mean_clu_minus_knn": -0.0125,
+      "max_clu_margin": 0.0,
+      "laundered": true,
+      "verdict": "LAUNDERED \u2014 CLU-in-\u03c6 never beats kNN-in-\u03c6 in this regime: the win is \u03c6's, not ours."
+    }
+  ],
+  "store_advantage_watch_item": {
+    "identity_acc": [
+      {
+        "arm": "ae",
+        "metric": "identity_acc",
+        "margin_task1_only": -0.09375000000000001,
+        "margin_generic_frozen": -0.08958333333333333,
+        "delta_strict_minus_generic": -0.00416666666666668,
+        "store_advantage_under_strictness": false,
+        "note": "watch-item only: a positive delta with laundering NOT firing in the strict regime would be the first store-advantage evidence; a positive delta alone is not a claim."
+      },
+      {
+        "arm": "pca",
+        "metric": "identity_acc",
+        "margin_task1_only": -0.08958333333333332,
+        "margin_generic_frozen": -0.10833333333333335,
+        "delta_strict_minus_generic": 0.01875000000000003,
+        "store_advantage_under_strictness": false,
+        "note": "watch-item only: a positive delta with laundering NOT firing in the strict regime would be the first store-advantage evidence; a positive delta alone is not a claim."
+      }
+    ],
+    "class_acc": [
+      {
+        "arm": "ae",
+        "metric": "class_acc",
+        "margin_task1_only": -0.014583333333333332,
+        "margin_generic_frozen": -0.008333333333333333,
+        "delta_strict_minus_generic": -0.006249999999999999,
+        "store_advantage_under_strictness": false,
+        "note": "watch-item only: a positive delta with laundering NOT firing in the strict regime would be the first store-advantage evidence; a positive delta alone is not a claim."
+      },
+      {
+        "arm": "pca",
+        "metric": "class_acc",
+        "margin_task1_only": -0.0125,
+        "margin_generic_frozen": -0.016666666666666666,
+        "delta_strict_minus_generic": 0.004166666666666666,
+        "store_advantage_under_strictness": false,
+        "note": "watch-item only: a positive delta with laundering NOT firing in the strict regime would be the first store-advantage evidence; a positive delta alone is not a claim."
+      }
+    ]
+  },
+  "figures": [
+    "results/phi_stream_cost_ae_identity_acc.png",
+    "results/phi_stream_cost_pca_identity_acc.png",
+    "results/phi_stream_cost_ae_class_acc.png",
+    "results/phi_stream_cost_pca_class_acc.png"
+  ]
+}

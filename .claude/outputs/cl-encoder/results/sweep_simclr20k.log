@@ -1,0 +1,54 @@
+fit pool = 4966 images
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+fit simclr in 3829s: {'arm': 'simclr', 'k': 32, 'h_dim': 512, 'objective': 'simclr', 'steps': 20000, 'loss_first': 5.512242317199707, 'loss_final': 3.990884780883789, 'n_fit': 4966, 'frozen': True}
+keep        pca d=128  l2=0 ring=0.3744 full=0.4848
+keep        pca d=128  l2=1 ring=0.3648 full=0.4792
+keep        pca d=256  l2=0 ring=0.3732 full=0.4932
+keep        pca d=256  l2=1 ring=0.3652 full=0.4900
+ gap        pca d=128  l2=0 ring=0.3416 full=0.4540
+ gap        pca d=128  l2=1 ring=0.3364 full=0.4388
+budget=400    ring=0.3992
+budget=1000   ring=0.4376
+budget=5000   ring=0.4848
+BEST: {"spatial": "keep", "head": "pca", "phi_dim": 128, "l2": false, "acc_ring": 0.37439999999999996, "acc_full_stream": 0.4848}

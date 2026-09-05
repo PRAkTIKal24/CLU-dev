@@ -1,0 +1,55 @@
+====================================================================================================
+S = mean_B sum_{A!=B} R[B][A]   seeds=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]  N=[2, 4, 6, 8, 12, 16]
+====================================================================================================
+modular_uniform  6.4091e-05+/-6e-05 9.7624e-05+/-7e-05 1.2405e-04+/-4e-05 1.3229e-04+/-4e-05 1.1214e-04+/-3e-05 1.1257e-04+/-4e-05
+modular_banded   6.4091e-05+/-6e-05 9.7624e-05+/-7e-05 1.2405e-04+/-4e-05 1.3229e-04+/-4e-05 1.1214e-04+/-3e-05 1.1257e-04+/-4e-05
+monolith         2.1786e-01+/-1e-01 6.4042e-01+/-1e-01 1.0238e+00+/-8e-02 1.3415e+00+/-2e-01 1.8966e+00+/-3e-01 2.3245e+00+/-4e-01
+block_untied     0.0000e+00+/-0e+00 0.0000e+00+/-0e+00 0.0000e+00+/-0e+00 0.0000e+00+/-0e+00 0.0000e+00+/-0e+00 0.0000e+00+/-0e+00
+block_trunk      7.0794e-02+/-6e-02 2.2007e-01+/-5e-02 3.6747e-01+/-5e-02 4.8792e-01+/-7e-02 7.7776e-01+/-1e-01 1.0494e+00+/-1e-01
+block_tied       9.6371e-01+/-4e-02 2.8953e+00+/-8e-02 4.8265e+00+/-7e-02 6.7844e+00+/-9e-02 1.0651e+01+/-1e-01 1.4525e+01+/-2e-01
+
+--- per-seed log-log slopes b (S ~ N^b), mean +/- 95% CI ---
+modular_uniform  b_full[2..16] = +0.463 +/- 0.311
+modular_banded   b_full[2..16] = +0.463 +/- 0.311
+monolith         b_full[2..16] = +1.184 +/- 0.170
+block_untied     S == 0 exactly at every N/seed -> slope undefined (perfect firewall)
+block_trunk      b_full[2..16] = +1.507 +/- 0.359
+block_tied       b_full[2..16] = +1.292 +/- 0.012
+modular_uniform  b[4,8] = +0.563 +/- 0.527   b[8,16] = -0.232 +/- 0.371
+modular_banded   b[4,8] = +0.563 +/- 0.527   b[8,16] = -0.232 +/- 0.371
+monolith         b[4,8] = +1.068 +/- 0.154   b[8,16] = +0.791 +/- 0.085
+block_trunk      b[4,8] = +1.168 +/- 0.153   b[8,16] = +1.111 +/- 0.100
+block_tied       b[4,8] = +1.229 +/- 0.019   b[8,16] = +1.098 +/- 0.006
+
+--- MF-1 verdict: modular vs monolith slope ---
+b_modular = +0.463 +/- 0.311   b_monolith = +1.184 +/- 0.170
+difference = +0.721   Welch t=-4.48 p=3.28e-04   paired t=-4.80 p=5.52e-04
+per-seed: monolith slope > modular slope in 11/12 seeds
+
+--- per-pair neighbour leak R_nn vs N (is it flat?) ---
+modular_uniform  6.409e-05 6.508e-05 7.443e-05 7.559e-05 6.116e-05 6.004e-05   b_Rnn = +0.174 +/- 0.311
+monolith         2.179e-01 2.225e-01 2.086e-01 1.785e-01 1.681e-01 1.523e-01   b_Rnn = -0.132 +/- 0.174
+block_trunk      7.079e-02 6.841e-02 6.894e-02 6.361e-02 6.559e-02 6.527e-02   b_Rnn = +0.189 +/- 0.393
+block_tied       9.637e-01 9.631e-01 9.645e-01 9.690e-01 9.718e-01 9.720e-01   b_Rnn = +0.005 +/- 0.013
+
+--- coordination-number identity  S = mean_deg * R_edge  (exact if R_nonedge==0) ---
+chain       N= 4 deg=1.50  S=7.934e-05+/-3e-05  R_edge=5.289e-05  S/(deg*R_edge)=1.000000  non-edge nonzero=0
+chain       N= 8 deg=1.75  S=1.496e-04+/-3e-05  R_edge=8.549e-05  S/(deg*R_edge)=1.000000  non-edge nonzero=0
+chain       N=16 deg=1.88  S=1.148e-04+/-4e-05  R_edge=6.124e-05  S/(deg*R_edge)=1.000000  non-edge nonzero=0
+circulant4  N= 8 deg=4.00  S=2.829e-04+/-8e-05  R_edge=7.072e-05  S/(deg*R_edge)=1.000000  non-edge nonzero=0
+circulant4  N=16 deg=4.00  S=2.642e-04+/-4e-05  R_edge=6.605e-05  S/(deg*R_edge)=1.000000  non-edge nonzero=0
+ring        N= 4 deg=2.00  S=1.189e-04+/-4e-05  R_edge=5.944e-05  S/(deg*R_edge)=1.000000  non-edge nonzero=0
+ring        N= 8 deg=2.00  S=1.724e-04+/-5e-05  R_edge=8.622e-05  S/(deg*R_edge)=1.000000  non-edge nonzero=0
+ring        N=16 deg=2.00  S=1.315e-04+/-5e-05  R_edge=6.575e-05  S/(deg*R_edge)=1.000000  non-edge nonzero=0
+
+--- exact-zero audit (max off-diagonal R over ALL seeds/N) ---
+modular_uniform  max R_off = 9.342063e-04   far-field nonzero entries (all runs) = 0
+modular_banded   max R_off = 9.342063e-04   far-field nonzero entries (all runs) = 0
+monolith         max R_off = 6.219937e-01   far-field nonzero entries (all runs) = 4656
+block_untied     max R_off = 0.000000e+00   far-field nonzero entries (all runs) = 0
+block_trunk      max R_off = 3.502829e-01   far-field nonzero entries (all runs) = 4656
+block_tied       max R_off = 1.265195e+00   far-field nonzero entries (all runs) = 4656
+
+saved .claude/outputs/v3-interference-extra/fig_scaling_curve.png
+saved .claude/outputs/v3-interference-extra/fig_block_monolith.png
+saved .claude/outputs/v3-interference-extra/fig_coordination.png

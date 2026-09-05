@@ -1,0 +1,376 @@
+\documentclass{article}
+
+\usepackage{neurips_2025_ml4ps}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{bm}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+
+% Venue-neutral build: the style file's workshop notice box is suppressed so that
+% no venue string appears in the artifact.
+\makeatletter
+\renewcommand{\@notice}{}
+\makeatother
+
+\title{The Price of a Flat Direction:\\ Transverse Curvature Sets Retention in a Trained Recurrent Memory}
+
+\author{}
+
+\begin{document}
+\maketitle
+
+
+\begin{abstract}
+A recurrent state can store a continuous value on a manifold of marginally stable states, and this literature already knows that such a manifold is fragile: noise diffuses the state along it, most infinitesimal perturbations of the dynamical law destroy it, and corrective mechanisms that keep it alive are classic. \emph{What has not been available is the exchange rate.} We measure one, on a trained potential. The object is a recurrent unit advancing a latent state $(q,p)$ by a damped symplectic velocity-Verlet step of a learned Hamiltonian, whose trained potential $V_\theta$ is $G$-invariant with minimisers on a $G$-orbit, so that the curvature $\mu$ transverse to that orbit prices how long a written value survives. The price list has three parts, every number at latent dimension $4$ on an $S^1$ testbed, $\le5$ seeds, laptop CPU. Retention half-life scales as $n_{1/2}\propto\mu^{-2}$, at fitted overdamped slope $-0.985$ against a predicted $-1$, the underlying curvature identity exact to $1.000000\pm5\!\times\!10^{-12}$ over $4.5$ decades. The law stops at a crossover $\varepsilon\mu\approx\gamma/2$, past which the half-life saturates at a curvature-independent floor. And the whole list survives the training-time correction that keeps the orbit alive, at $\approx20\times$ the horizon on which the objective would otherwise destroy it. Its evidence on a learned system is a head-to-head: a recently posted machine-learning lifetime law, run unchanged on our trained checkpoints, is this price list's overdamped face --- matching to $\le3\%$ below the crossover and mispredicting by $\approx3.2\times$ above it, in the calculable direction. \emph{We therefore also report where the price list does not extend, and those boundaries are part of the result:} on this architecture class symmetric training data alone does not produce a near-flat direction, a gap of $13$--$14$ orders in $\mu^2$ that is a measurement on our recipe and never a general claim about learning; the continuous coset register is designed-only; the raw retention ratio against recurrent baselines inverts under compute normalization and is retired as a compute claim; and four positioning claims are retired against prior art. Designed-testbed results are labeled verification; learned-system results, evidence.
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+
+A recurrent state holding an analog value can be built on a flat direction: a set of states the dynamics do not distinguish, so a written value neither decays nor is pulled to a preferred point. Symmetry supplies such directions for free. If a learned potential $V_\theta$ is $G$-invariant and its minimiser is not, the minimisers form a $G$-orbit, the Hessian annihilates every orbit tangent, and the orbit coordinate is neutral. \emph{However}, a flat direction is only as useful as its price list, and none existed for a trained model: how much retention a given transverse curvature buys, where that law stops holding, and whether it survives the correction that keeps the orbit alive. \emph{We measure all three.} The object advances $(q,p)$ by a symplectic velocity-Verlet step of a learnable separable Hamiltonian $H(q,p)=T(p)+V_\theta(q)$, with a per-step damping $p\mapsto(1-\gamma)p$ supplying controllable forgetting. This is not a new architecture but a closed-form account of retention on a trained one. The reference unit is the CLU (Causal Learning Unit), introduced as CHLU in Jawahar \& Pierini (2026); results hold for the class of damped symplectic recurrences, and the exactly-solvable theory verified here is developed in a separate note, cited as \emph{the theory note} (Anonymous, 2026, in the supplementary material).
+
+\paragraph{Two masses, and one conversion.} Two quantities here are called ``mass'' and run in opposite directions. The inertial mass $M_i$ is the learned diagonal of $T$: larger $M$, slower. The spectral mass $\mu_k$, which we lead with as the \emph{transverse curvature}, is $\mu_k^2=\lambda_k(M^{-1/2}\nabla^2V_\theta M^{-1/2})$ at a critical point: larger $\mu$, shorter memory. All retention statements use $\mu$. One conversion precedes any cross-field comparison: flow-Jacobian eigenvalues are inverse time, whereas $\mu^2$ are eigenvalues of a mass-whitened Hessian of a \emph{potential}, inverse time squared. Lifetimes are half-lives $n_{1/2}$ in map applications, not $\tau$ and not diffusion coefficients $D$; each is reported with the metric defining it, because those metrics bifurcate past the crossover.
+
+\paragraph{Contribution.} This paper makes one, and it is quantitative: \emph{the transverse-curvature price list of a trained recurrent memory} (\S\ref{sec:pricelist}), in three parts --- what a given curvature buys, where the law stops, and whether it survives the training-time correction. \emph{Its evidence on a learned system} is the head-to-head of \S\ref{sec:headtohead}: a recently posted lifetime law, run unchanged on our trained checkpoints, is the price list's overdamped face and fails above the crossover in the direction the list predicts. \emph{Its honest negative} is the boundary of \S\ref{sec:boundary}: on this architecture class the flat direction has to be designed rather than trained for, the continuous register does not transfer to an emergent potential, and the retention advantage over recurrent baselines inverts under compute normalization. Designed-testbed results --- invariant potentials, analytic tilts and spurions --- are verification of the theory's exactness; learned-system, training-dynamics and head-to-head results are evidence.
+
+\section{Related work}\label{sec:related}
+
+Two questions this audience is asking --- how neural representations behave \emph{dynamically}, and what symmetry buys a learning system --- meet in one object, and this paper is about the price of that object. Neutrality of group-orbit directions is classical (Golubitsky, Stewart \& Schaeffer 1988; Krupa 1990; Rumberger 2001). The same object is studied as a \emph{continuous attractor}: a manifold whose points are all fixed points, ``marginally stable tangent to the manifold and stable normal to the manifold'' (S\'agodi et al.\ 2024), the substrate of the neural integrator (Seung 1996) and of measured ring and toroidal codes (Kim et al.\ 2017; Gardner et al.\ 2022; Khona \& Fiete 2022). We make no claim about biological systems and do not model neural data.
+
+\emph{Five facts about that object are established, and none of them is ours.} Noise diffuses the coordinate along the manifold, the diffusion coefficient lower-bounded by the code's own Fisher information (Burak \& Fiete 2012). The manifold is structurally unstable, destroyed by most infinitesimal changes of the dynamical law, with online learning named as one perturbation source --- the \emph{fine-tuning problem}, whose memory error S\'agodi et al.\ bound by the unknown perturbation's size, worst-case and linear in $t$. A homeostatic mechanism that restores a destroyed flat direction is $23$ years old (Renart, Song \& Wang 2003), so a corrective term is not our idea, and nothing here is a first report of the destroy-and-restore pattern. A local learning rule can \emph{produce} accurate ring-attractor tuning (Vafidis et al.\ 2022), so nothing we measure implies that learning cannot build a flat direction. And approximate continuous attractors arise in other task-trained recurrent networks by themselves, with a recent analytical model of the slow structure appearing during training (Dinc et al.\ 2025, preprint), where \S\ref{sec:cure} runs the opposite direction. \emph{Absent is the exchange rate: how much retention a given transverse curvature buys, where that law stops holding, and whether it survives the correction. We measure all three on trained models, in closed form, with a regime map --- floor, crossover --- that a first-order flow cannot exhibit.}
+
+Closest to our object among this audience's own work is Xu et al.\ (2023), where a Lie-group representation is carried in the recurrent state of a grid-cell network and the compact, connected, abelian representation forces the torus topology over a continuous attractor. That is our geometry, in a network that path-integrates; what we add to it is a price list for time. Two further neighbours ask the same question in different currency: the optimal packing of attractor states in a representation, where symmetries of the environment's transition statistics imply symmetries of the optimal code (Vastola 2024), and memory modification approached through symmetry and geometry (D\"onmez 2024). Exact-versus-relaxed equivariance is this audience's own name for our designed-versus-emergent axis (van der Ouderaa \& van der Wilk 2023). Reading a landscape by its level sets and critical points is likewise native here (Akhtiamov \& Thomson 2023; Wang \& Ponce 2023, whose level sets are of tuning landscapes over \emph{stimuli}, not of a latent-state potential --- the two must not be conflated). A quotient coordinate has been used as an input encoding (Aslan, Platt \& Sheard 2023), where ours is a storage device.
+
+A recent preprint on symmetry-protected Lyapunov neutral modes (arXiv:2605.03338), the equivariant-Lyapunov preprint below, proves that a $C^1$ field exactly equivariant under a Lie group has at least $\dim(G/\mathcal H)$ zero Lyapunov exponents tangent to the orbit; we use its diagnostics and its breaking-and-censoring protocol, and \S\ref{sec:headtohead} runs its estimator unchanged on our trained models. That result is the \emph{kinematics} of protection, silent on what sets the gap; here the gap is \emph{constitutive}, and Lyapunov spectra are blind to the write semantics --- transport, latch, noise accumulation --- that make a neutral direction a \emph{memory}. The theorem states sufficiency; equivariance is not necessary, the latch being a modulus of $V_\theta$. Constructive equivariant memory (Di Bernardo et al.\ 2025; Keller 2025; Iqbal, Keller, Song, Miyato \& Welling 2026) engineers \emph{which} symmetry a network expresses but does not price \emph{time}: we claim no novelty for choosing a symmetry group or coset, only the price list attached to a chosen structure. Cross-session representational drift (Driscoll et al.\ 2017; Aitken et al.\ 2022; Jude et al.\ 2023) is a different phenomenon from motion along a flat direction and we do not address it; the only motion we report is of the coset coordinate under our own dynamics. Our comparators are LSTM (Hochreiter \& Schmidhuber 1997), LEM (Rusch et al.\ 2022) and coRNN (Rusch \& Mishra 2021a); conformal symplecticity is McLachlan \& Perlmutter (2001), the leapfrog $h<2$ limit standard (Hairer, Lubich \& Wanner 2006), and wake--sleep (Hinton et al.\ 1995) with PCD (Tieleman 2008) the contrastive objective, whose landscape distortion is classical (Fischer \& Igel 2010; Nijkamp et al.\ 2020).
+
+{\paragraph{Four claims we retire, so that a reviewer's first objections are answered in writing (elaborated, with their numbers, in Appendix~\ref{app:pos}).} \emph{(1)} Attention and state-space models \emph{do} have retention-guarantee analogues, and HiPPO-LegS (Gu et al.\ 2020) is the counterexample. \emph{(2)} ``Retrieval is a rollout, not a weighted sum'' is Kong, Brewer \& Lai's (2024) move, not our novelty. \emph{(3)} Continuity is no escape hatch from the NTM/DNC lineage (Graves et al.\ 2014, 2016; Csord\'as \& Schmidhuber 2019), which was already fully soft. \emph{(4)} This is no competitor to the transformer, and was never claimed to be. Our claim is correspondingly narrow: a physics-structured associative memory in which retention is a designed, per-item property --- permanent (symmetry-protected, $\mu^2\equiv0$ exactly) or of a finite half-life set by $\mu^2$ --- rather than an emergent consequence of a learned recurrence --- \emph{controllability}, which we evidence, not \emph{capability}, which we do not claim against transformers or state-space models. The nearest published neighbour to our write is Titans (Behrouz et al.\ 2025), test-time gradient descent with momentum on an associative-memory loss: the same family of discretized damped second-order dynamics, differing in that our damping and inertia are \emph{read out and priced}, not optimizer hyperparameters.\par}
+
+\section{Setup}\label{sec:setup}
+
+\paragraph{The map, and the three bands.} One dissipative velocity-Verlet step with step $\varepsilon$ and damping $\gamma$ advances $(q,p)$ by a kick--drift--kick of $H=T(p)+V_\theta(q)$ followed by $p\mapsto(1-\gamma)p$. It is conformally symplectic --- $J^\top\Omega J=(1-\gamma)\Omega$, $\det J=(1-\gamma)^d$: phase-space volume contracts by a fixed factor per step, so the geometry is preserved and only the scale is spent. Memory at each normal mode reduces to one $2\times2$ block ($\mu^2=k/m$, $h=\varepsilon\mu$) with three bands: a latch ($\mu=0$, symmetry-protected) with frozen displacement $q_\infty=q_0+\varepsilon p_0/(M\gamma)$ and infinite half-life; an overdamped register ($0<\varepsilon\mu\lesssim\gamma/2$) at $n_{1/2}\approx2\gamma\ln2/[(2-\gamma)(\varepsilon\mu)^2]$; and an underdamped working memory ($\gamma/2\lesssim\varepsilon\mu<2$) at the curvature-independent envelope half-life $2\ln2/(-\ln(1-\gamma))$. The boundary is the exceptional point $h^*\approx\gamma/2$, the overdamped-to-underdamped crossover at which the block becomes defective. Relaxation onto the orbit is the fast normal flow; retention is the slow tangent flow. One difference from a classical neural integrator we do not smooth over: an integrator stores by \emph{not} damping, whereas at $\gamma=0$ our flat mode never freezes a write and any $\gamma>0$ gives an exact latch.
+
+\paragraph{What the curvature can be, and what the unit stores.} At a critical point of $V_\theta$ the transverse curvature takes one of three values, and trained models here realize all three: \emph{exactly} zero along $\dim(G/\mathcal H)$ directions when the trained minimisers form a $G$-orbit (a Nambu--Goldstone mode --- the designed unit, and the exactly-flat-direction geometry); small but nonzero when an explicit tilt breaks the orbit, giving a slow manifold rather than a flat one (a pseudo-Goldstone mode --- the \emph{explicitly-broken cell}, which the analytic tilts of Appendix~\ref{app:gmor} instantiate and the self-broken MLP exhibits); and strictly positive with no orbit of minimisers at all when the minimiser is itself invariant, degenerate within each irrep by Schur's lemma (the contrastive-divergence--eroded vacuum of \S\ref{sec:cure}). Only the \emph{classical, tree-level} Goldstone theorem is used, a statement about a Hessian. No thermodynamic limit, no phase transition, no $\hbar$, and no loops, chiral logarithms, running low-energy constants or anomalies anywhere in this paper. What the unit stores is the \emph{coset coordinate}, the position along the flat direction; the map's $(\varepsilon,\gamma,T)$ fixes what a given $\mu^2$ buys, through the three bands above.
+
+\paragraph{Trained models.} All checkpoints are the reference unit's Experiment-D configuration --- dim $4$, hidden $64$, learned-Newtonian kinetic term, $\mathrm{dt}=0.05$, unit circle at $256$ points, $150$ epochs (\S\ref{sec:cure} for why not the default $1000$) --- in two families: designed, an architecturally-$SO(2)$-invariant $V_\theta$ on $5$ seeds, and emergent, a generic MLP $V_\theta$ on the same data on $3$ seeds.
+
+{
+\emph{Fine print, next to the claims it qualifies.} \emph{(a)} The latch's infinite half-life is a $T=0$ statement about the deterministic damped map; at $T>0$ the coset coordinate diffuses with $D_\theta=\varepsilon T(2-\gamma)/(2F^2\gamma)$, $F^2=M_{\rm ch}r^{*2}$ --- a \emph{diffusive register} of finite computable lifetime, verified on the trained designed checkpoints, where raising friction \emph{lengthens} coset memory by $3.77\pm0.23\times$ for $\gamma:0.05\to0.2$ on $5/5$ seeds, and holding only under fluctuation--dissipation-consistent noise and a Newtonian kinetic mode, never under the reference implementation's legacy noise default. All \S\ref{sec:results} results are $T=0$. \emph{(b)} By Sylvester's law of inertia a flat direction keeps $\mu^2=0$ under any inertial anisotropy: symmetry protects the write \emph{current}, flatness protects the \emph{register}, and map equivariance is sufficient but not necessary for a neutral memory direction --- our kinetically-broken battery is a \emph{measured} non-equivariant map that latches exactly (Appendix~\ref{app:neg}). \emph{(c)} The \emph{tilt-as-a-designed-lifetime-dial} construction is claimed for designed geometries only, the self-broken MLP being an \emph{observed} instance of the cell and not a dial: in a separate battery of ours on a \emph{learned, multi-atom} store, a breaking coefficient intended as the lifetime dial moved the softest eigenvalue \emph{the wrong way}, and a coercivity term --- not the breaking --- set the ceiling (Appendix~\ref{app:neg}).
+
+\emph{Mandatory flag, travels with every finite-temperature number in this paper.} All such results require \texttt{langevin\_noise="fdt"} --- the fluctuation--dissipation-consistent noise scale $\sigma^\star_i=\sqrt{M_iT\gamma(2-\gamma)}$ --- and a Newtonian kinetic mode (\texttt{newtonian\_identity}/\texttt{newtonian\_learned}). The reference implementation's default is \texttt{legacy}, under which $T$ is not in energy units and none of these laws hold; and in the relativistic kinetic mode no noise scale targets Gibbs at all (Appendix~\ref{app:neg}; \emph{theory note}, Prop-9$'$), so the laws are undefined there. The checkpoints here are \texttt{newtonian\_learned}, so every finite-temperature number here is in scope. Nothing in \S\ref{sec:results} depends on it: all main-text retention results are $T=0$ deterministic rollouts.
+\par}
+
+\section{Results: the price list, its evidence, and its boundary}\label{sec:results}
+
+\subsection{What a curvature buys, and where the law stops}\label{sec:pricelist}
+
+A zero eigenvalue certifies that a direction is neutral. \emph{It does not say what a nearly-zero one costs.} \emph{We therefore tilt a trained potential by a known amount, read the resulting transverse curvature off its Hessian, and measure the half-life of a written value.} On the trained designed vacuum, whose flat mode has $\mu^2\le2.4\!\times\!10^{-15}$ and is machine-flat, the constitutive identity holds: the Hessian-derived spectral mass equals the measured one-step-Jacobian gap to $3.2\!\times\!10^{-10}$ over all $70$ tilt rows. The retention law follows, with the curvature ratio $\mu^2_{\mathrm{meas}}/\mu^2_{\mathrm{pred}}=1.000000\pm5\!\times\!10^{-12}$ at every tilt and seed across $4.5$ decades and a fitted overdamped slope of $-0.985$ ($n=35$; predicted $-1$). Past the crossover the half-life stops depending on curvature at all, saturating at the floor $27.03$ steps at $\gamma=0.05$. Two second-order signatures confirm that the crossover is a genuine exceptional --- defective --- point and not a fitting artifact: the retention metric bifurcates there, envelope half-life and first-crossing time agreeing to $0.01\%$ overdamped and splitting by $3.2\times$ at the deepest tilt, which is why every lifetime in this paper names its metric; and the oscillation frequency turns on with the predicted square root, $\varphi=0$ exactly below $h^*$ ($15/15$ rows) and $\varphi\propto\sqrt{h-h^*}$ above it at fitted slope $0.5165$ against the predicted $1/2$. The latch corner of the same block is the transport law $q_\infty=q_0+\varepsilon p_0/(M\gamma)$, which holds to $\le1\%$ over two decades of $\gamma$, the written angle then frozen to $\le1.2\!\times\!10^{-15}$ rad. \emph{These are trained checkpoints carrying analytic tilts: verification of the theory's exactness on a learned potential, not a discovery.} Appendix~\ref{app:gmor} records the battery in full, the probe's own roundoff floor, and the damping corollary that makes $n_{1/2}(\gamma)$ non-monotone.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\linewidth]{figs/fig1_gmor.png}
+\caption{The price list, verified on trained checkpoints. Left: the retention half-life $n_{1/2}$ against the analytic tilt $\delta$ that sets the transverse curvature. The overdamped branch follows the predicted law at fitted slope $-0.985$ against a predicted $-1$ and then saturates, past the crossover $h=h^*(\gamma)$, at the curvature-independent floor $27.03$ steps at $\gamma=0.05$; the two retention metrics --- envelope half-life (circles) and raw first-crossing time (squares) --- agree through the overdamped band and separate underdamped, by up to $3.2\times$ at the deepest tilt, which is the exceptional point's second-order signature and the reason every lifetime in this paper names its metric. Right: the underlying curvature identity, measured over predicted spectral mass, flat at $1.000000\pm5\times10^{-12}$ across $4.5$ decades of $\delta$. \emph{Trained designed checkpoints carrying analytic tilts, $5$ seeds, dim $4$, $\gamma=0.05$, laptop CPU: verification of the theory's exactness. The full battery, the probe's own roundoff floor and the damping corollary are in Appendix~\ref{app:gmor}.}}
+\label{fig:pricelist}
+\end{figure}
+
+\subsection{Evidence: a published lifetime law is the price list's overdamped face}\label{sec:headtohead}
+
+The price list should predict what other instruments see. \emph{A published estimator gives the direct test, because it was fitted to a different object.} \emph{We therefore run it unchanged on our trained models and read where it holds.} The equivariant-Lyapunov preprint (arXiv:2605.03338) shows that a ``pseudo-gap'' predicts a finite memory lifetime through a single-exponential estimator. Running its exact code-level protocol --- phase $0.35$ rad, threshold $0.2$ rad, its censoring, cap $15000$ steps --- unchanged on the $5$ trained models across $14$ breaking magnitudes gives measured/predicted $1.012\pm0.000\to1.029\pm0.001$ overdamped against its reported median $1.013$, $2.202\pm0.155$ at the exceptional point, and $0.309\pm0.012$ deep underdamped. That law is the overdamped face of our price list: there the two coincide, $\mathrm{corr}(\log\mathrm{pred},\log\mathrm{meas})=0.9987$ overdamped-only, and its predictor fails only past the crossover --- by $\approx3.2\times$ at the deepest trained-model breaking we test, $\delta=4$, our sweep going no deeper underdamped --- in the calculable ballistic direction, with the $2.2\times$ exceptional-point delay spike as the third signature. On the \emph{exact analytic map} the same mechanism continues to $\approx5\times$ further underdamped (theory note, check (k), $\gamma=0.1$); the $\approx3.2\times$ is the trained-model number, the $\approx5\times$ is exact-map only, and we never quote it as evidence about a trained network. This is containment, not conflict: below $h^*$ we recover its reported number, and above it the regime structure --- floor, ringing, exceptional point --- is what a first-order flow cannot exhibit and what a \emph{constitutive} curvature adds. It also does not rest on substituting the exact Jacobian gap for its predictor: the result reproduces on the preprint's own finite-horizon estimator (Appendix~\ref{app:pos}). \emph{Evidence: a recently posted ML lifetime law, run on trained checkpoints.}
+
+\begin{figure}[t]\centering
+\includegraphics[width=\linewidth]{figs/fig_lifetime_headtohead.png}
+\caption{The single-exponential lifetime law of the equivariant-Lyapunov preprint (arXiv:2605.03338), run \emph{unchanged} on the trained models, is the overdamped face of the transverse-curvature price list. Measured/predicted lifetime ratio versus breaking magnitude, $14$ regimes, $5$ seeds: $\approx1$ overdamped, reproducing its reported median $1.013$; a $2.2\times$ delay spike at the exceptional point; declining to $0.31\times$ deep underdamped --- containment exact below the crossover, failing above it in the calculable ballistic direction. \emph{Evidence.}}
+\label{fig:lifetime_headtohead}
+\end{figure}
+
+\subsection{The honest negative: where the price list does not extend}\label{sec:boundary}
+
+Symmetric training data might be expected to induce a flat direction on its own. \emph{On this architecture class it does not.} A generic MLP potential trained on that data develops \emph{no} near-flat direction: softest emergent $\mu^2=5.1/5.9/5.4\!\times\!10^{-2}$ on $3$ seeds against the designed flat mode $\le2.4\!\times\!10^{-15}$, a gap of $13$--$14$ orders; the preprint's own attribution instrument separates the architectures by $15$ orders. This is a measurement on our architecture class and training recipe, not a general statement that learning cannot produce a tuned flat direction --- a local learning rule that does produce one is published (Vafidis et al.\ 2022). Operationally that arm stores nothing on a \emph{continuum}: $\approx1$--$1.6$ bits on $2$--$3$ washboard minima, a written $\delta$ relaxing completely, though the damping-optimum retention law itself still generalizes to it. The continuous coset register is therefore designed-only, and we mark it as the one face of the price list that does not transfer.
+
+\paragraph{The same boundary against learned baselines.} Gated and oscillatory recurrent networks fit this task well. \emph{Fitting it is not holding it.} \emph{We therefore write a value into each and let it run autonomously.} On the preprint's $S^1$ path-integration family the baselines are trained with a learning-rate sweep, best RMSE kept, and are not strawmen: LSTM and LEM reach train-horizon RMSE $0.18$/$0.23$ rad. Yet under its \emph{autonomous} protocol the structural triad of latch, $\mu^{-2}$ law and bounded motion of the stored coordinate is qualitatively absent in them: coRNN/LEM/LSTM forget the stored analog phase in $\approx5.6/56/69$ map-steps, the stored coordinate randomizes past $1.2$ rad, and they are \emph{perturbation-fragile}, a $0.1$ hidden kick collapsing LSTM $69\to2$ and LEM $56\to5$, while the generically-trained unit holds $\approx263$ map-steps with bounded motion of that coordinate ($\approx0.35$ rad, price-list law to $+12$--$15\%$) and the designed unit never moves ($5/5$ seeds). \emph{Evidence.}
+
+\paragraph{Honest gap.} The load-bearing claim is the qualitative triad, architecture- and compute-independent. The raw $263$-versus-$69$ map-step ratio does not survive compute normalization, and we retire it as a compute claim: per step the Verlet update costs $\approx6.2\times$ an LSTM cell and $\approx3.1\times$ a LEM cell in wall time, $\approx14$--$15\times$ FLOPs, not width-matched, so per unit of retention the unit spends $\approx23.5\times$/$\approx14.6\times$ more wall time than the baselines it out-holds (Appendix~\ref{app:compute}). Lacking native velocity ingestion, it cannot enter the preprint's input-driven task-RMSE axis at all, so no task-RMSE was fabricated.
+
+\subsection{The price list survives the training-time correction}\label{sec:cure}
+
+A price list read off a potential is worth little if the training objective quietly rewrites the potential. \emph{Ours does exactly that.} Wake--sleep contrastive divergence drives the order parameter $r^*$ to zero, inverting the designed vacuum in $8/8$ runs at the default $1000$ epochs: the minimiser becomes invariant, with the degenerate $\mu^2$ pair predicted in \S\ref{sec:setup}, on a horizon set by sleep-update \emph{frequency} racing the wake clamp, and specific to flat or degenerate vacua. This is an instance of what the attractor literature calls the fine-tuning problem, the perturbation here being the training objective itself. {\emph{Scope clause, travelling with that finding:} our sweep varies chain length only over \texttt{sleep\_steps}$\in\{50,500\}$ at otherwise fixed sampler settings and does not resolve where either sits relative to this model's mixing time, so the finding is \emph{frequency-decisive across the two chain lengths we run}, and is not a claim that chain length is irrelevant to contrastive-divergence learning in general.\par} A $V(\text{data})$ energy anchor holds the condensate up --- $\lambda=100$: $5/5$ seeds, $r^*=0.911\pm0.016$, at the cost of weaker noise rejection and $\approx35\times$ higher wake MSE. \emph{That a corrective term can keep a flat direction alive is not new} (Renart, Song \& Wang 2003). What we add is the third part of the price list: every headline law of it still holds under the correction, at $\approx20\times$ the erosion horizon (Appendix~\ref{app:anchor}, Figure~\ref{fig:sf3}) --- $3000$ anchored epochs, $3$ seeds, curvature ratio exact to $1.5\!\times\!10^{-12}$ over $4.6$ decades, slope $-0.956$, the same floor, and the exceptional-point onset bit-identical at $0.5165$. The architecture \emph{breaks} the symmetry, the objective \emph{restores} it, the anchor \emph{keeps it broken}.
+
+\section{Discussion}\label{sec:discussion}
+
+{
+\emph{Scope box --- limitations and scope choices, stated so no reader has to infer them.} All results are laptop-CPU, dim $4$, the $S^1$ testbed, $\le5$ seeds; the solvable core is quadratic and trained statements are local at a critical point of $V_\theta$, with anharmonic deviations measured as a zero-kick retention bias of $+5$ to $+29\%$, kick-independent for $2/3$ emergent seeds and amplitude-dependent for the softest-$\mu^2$ seed. The head-to-head is on \emph{autonomous retention} in map-application units, and the unit does not enter the input-driven task-RMSE axis. BIBO boundedness is evidenced within the coercive-potential / compact-sublevel-set scope and concerns the autonomous, designed setting measured here --- nothing here claims that symplectic structure buys off-distribution stability in a \emph{trained, input-driven} setting, which we do not test and where a published symplectic architecture already holds the ground with a gradient bound --- and friction never stabilizes a saddle (Appendix~\ref{app:neg}). The symmetry framing is tree-level only. The finite-$T$ diffusion law holds on both the designed channel (verification) and the emergent arm (evidence, $3$ seeds, above $T^\star\approx3\!\times\!10^{-3}$) under FDT-consistent noise in a Newtonian kinetic mode; the one face that does not generalize is the continuous latch register, which is designed-only. \emph{(i) Scale is out of scope by choice:} every number here is dim $4$, hidden $64$, $\le5$ seeds, single-unit, laptop-CPU, and we report no result at larger dimension, wider layers, more units or accelerator scale. \emph{(ii) No external benchmark is won on its own headline metric anywhere in this paper}; the comparisons are diagnostic retention protocols on a synthetic $S^1$ family and matched-parameter ablations, not leaderboard results --- and \S\ref{sec:boundary}'s honest gap is part of the claim, not a caveat to it. \emph{(iii) The substrate scope, once, in our own voice: these laws govern the store; end-to-end performance additionally depends on the encoder, measured separately, with its parameter and state-byte budget ledgered.}
+\par}
+
+A price list changes what a flat direction is for. Read this way a trained memory has latches --- exact flat directions, the moduli of $V_\theta$ --- and registers, nearly-flat modes of a chosen half-life, fenced as designed-geometry in Appendix~\ref{app:neg}; kinetic isotropy is then the price of an equivariant write \emph{current}, not of the register. Named as directions, not results: the $\mu^{-2}$ law, crossover and floor re-measured at latent dimension $\gtrsim64$ and $N\ge8$ interacting units, where mode mixing can break the single-block reduction that makes the price list exact here; the head-to-head on a wider trained-model family; the anchored recipe at longer training and larger width; the equivariant-control wrapper that would put the unit on the supervised task axis; a learned-store re-test of the explicitly-broken cell respecting that fence; the map from $(\mu,\gamma,T)$ to lifetime whose $T=0$ face is \S\ref{sec:results}; and the price list re-derived beyond abelian $SO(2)$, for a torus $T^2$ or the non-abelian $SO(3)\to SO(2)$ coset --- a direction, on which this paper offers no evidence.
+
+
+\section*{References}
+{
+\begingroup
+\setlength{\parindent}{-0.22in}\setlength{\leftskip}{0.22in}\setlength{\parskip}{\smallskipamount}
+
+Aitken, K., Garrett, M., Olsen, S., \& Mihalas, S. (2022). The geometry of representational drift in natural and artificial neural networks. \emph{PLOS Computational Biology} 18(11):e1010716. doi:10.1371/journal.pcbi.1010716.\par
+Akhtiamov, D., \& Thomson, M. (2023). Connectedness of loss landscapes via the lens of Morse theory. \emph{PMLR} 197:171--181.\par
+Anonymous (2026). \emph{The theory note}: an exactly-solvable theory of retention, latching and forgetting for damped symplectic recurrences. Provided in the supplementary material.\par
+Aslan, B., Platt, D., \& Sheard, D. (2023). Group invariant machine learning by fundamental domain projections. \emph{PMLR} 197:181--218.\par
+Behrouz, A., Zhong, P., \& Mirrokni, V. (2025). Titans: Learning to memorize at test time. \emph{NeurIPS 2025}. arXiv:2501.00663.\par
+Burak, Y., \& Fiete, I. R. (2012). Fundamental limits on persistent activity in networks of noisy neurons. \emph{PNAS} 109(43):17645--17650. doi:10.1073/pnas.1117386109.\par
+Csord\'as, R., \& Schmidhuber, J. (2019). Improving differentiable neural computers through memory masking, de-allocation, and link distribution sharpness control. \emph{ICLR 2019}. arXiv:1904.10278.\par
+Di Bernardo, A., Valente, A., Mastrogiuseppe, F., \& Ostojic, S. (2025). Shaping manifolds in equivariant recurrent neural networks. arXiv:2511.04802 (preprint).\par
+Dinc, F., Cirakman, E., Kurtkaya, B., Yuksekgonul, M., Jiang, Y., Schnitzer, M. J., \& Tanaka, H. (2025). A ghost mechanism: An analytical model of abrupt learning in recurrent networks. arXiv:2501.02378 (preprint).\par
+D\"onmez, A. (2024). Discovering latent causes and memory modification: A computational approach using symmetry and geometry. \emph{PMLR} 228.\par
+Driscoll, L. N., Pettit, N. L., Minderer, M., Chettih, S. N., \& Harvey, C. D. (2017). Dynamic reorganization of neuronal activity patterns in parietal cortex. \emph{Cell} 170(5):986--999.e16.\par
+Fischer, A., \& Igel, C. (2010). Empirical analysis of the divergence of Gibbs-sampling-based learning algorithms for restricted Boltzmann machines. \emph{ICANN 2010}, LNCS 6354:208--217. doi:10.1007/978-3-642-15825-4\_26.\par
+Gardner, R. J., Hermansen, E., Pachitariu, M., Burak, Y., Baas, N. A., Dunn, B. A., Moser, M.-B., \& Moser, E. I. (2022). Toroidal topology of population activity in grid cells. \emph{Nature} 602(7895):123--128. doi:10.1038/s41586-021-04268-7.\par
+Golubitsky, M., Stewart, I., \& Schaeffer, D. G. (1988). \emph{Singularities and Groups in Bifurcation Theory: Volume II}. Applied Mathematical Sciences 69, Springer. doi:10.1007/978-1-4612-4574-2.\par
+Graves, A., Wayne, G., \& Danihelka, I. (2014). Neural Turing machines. arXiv:1410.5401 (preprint; never formally published).\par
+Graves, A., Wayne, G., Reynolds, M., Harley, T., Danihelka, I., Grabska-Barwi\'nska, A., et al. (2016). Hybrid computing using a neural network with dynamic external memory. \emph{Nature} 538(7626):471--476. doi:10.1038/nature20101.\par
+Gu, A., Dao, T., Ermon, S., Rudra, A., \& R\'e, C. (2020). HiPPO: Recurrent memory with optimal polynomial projections. \emph{NeurIPS 2020}. arXiv:2008.07669.\par
+Hairer, E., Lubich, C., \& Wanner, G. (2006). \emph{Geometric Numerical Integration: Structure-Preserving Algorithms for Ordinary Differential Equations} (2nd ed.). Springer Series in Computational Mathematics 31.\par
+Hinton, G. E., Dayan, P., Frey, B. J., \& Neal, R. M. (1995). The ``wake-sleep'' algorithm for unsupervised neural networks. \emph{Science} 268(5214):1158--1161. doi:10.1126/science.7761831.\par
+Hochreiter, S., \& Schmidhuber, J. (1997). Long short-term memory. \emph{Neural Computation} 9(8):1735--1780. doi:10.1162/neco.1997.9.8.1735.\par
+Iqbal, N., Keller, T. A., Song, Y., Miyato, T., \& Welling, M. (2026). Spontaneous symmetry breaking and Goldstone modes for deep information propagation. arXiv:2605.14685 (preprint).\par
+Jawahar, P., \& Pierini, M. (2026). CHLU: The causal Hamiltonian learning unit as a symplectic primitive for deep learning. arXiv:2603.01768 (short paper, ICLR 2026 AI \& PDE workshop).\par
+Jelassi, S., Brandfonbrener, D., Kakade, S. M., \& Malach, E. (2024). Repeat after me: Transformers are better than state space models at copying. \emph{ICML}, PMLR 235:21502--21521. arXiv:2402.01032.\par
+Jude, J., Perich, M. G., Miller, L. E., \& Hennig, M. H. (2023). Capturing cross-session neural population variability through self-supervised identification of consistent neuron ensembles. \emph{PMLR} 197:234--257.\par
+Karuvally, A., Lertsaroj, P., Sejnowski, T. J., \& Siegelmann, H. T. (2025). Exponential dynamic energy network for high-capacity sequence memory (EDEN). \emph{NeurIPS 2025}. arXiv:2510.24965.\par
+Keller, T. A. (2025). Flow equivariant recurrent neural networks. \emph{NeurIPS 2025} (spotlight). arXiv:2507.14793.\par
+Khona, M., \& Fiete, I. R. (2022). Attractor and integrator networks in the brain. \emph{Nature Reviews Neuroscience} 23:744--766. doi:10.1038/s41583-022-00642-0.\par
+Kim, S. S., Rouault, H., Druckmann, S., \& Jayaraman, V. (2017). Ring attractor dynamics in the \emph{Drosophila} central brain. \emph{Science} 356(6340):849--853. doi:10.1126/science.aal4835.\par
+Kong, L.-W., Brewer, G. A., \& Lai, Y.-C. (2024). Reservoir-computing based associative memory and itinerancy for complex dynamical attractors. \emph{Nature Communications} 15:4840. doi:10.1038/s41467-024-49190-4.\par
+Krupa, M. (1990). Bifurcations of relative equilibria. \emph{SIAM Journal on Mathematical Analysis} 21(6):1453--1486. doi:10.1137/0521081.\par
+McLachlan, R. I., \& Perlmutter, M. (2001). Conformal Hamiltonian systems. \emph{Journal of Geometry and Physics} 39(4):276--300.\par
+Mo, H. H. (2026). Symmetry-protected Lyapunov neutral modes in equivariant recurrent networks. arXiv:2605.03338 (preprint; single author).\par
+Nijkamp, E., Hill, M., Han, T., Zhu, S.-C., \& Wu, Y. N. (2020). On the anatomy of MCMC-based maximum likelihood learning of energy-based models. \emph{AAAI 2020}. arXiv:1903.12370.\par
+Ramsauer, H., Sch\"afl, B., Lehner, J., Seidl, P., Widrich, M., Adler, T., et al. (2021). Hopfield networks is all you need. \emph{ICLR 2021}. arXiv:2008.02217.\par
+Renart, A., Song, P., \& Wang, X.-J. (2003). Robust spatial working memory through homeostatic synaptic scaling in heterogeneous cortical networks. \emph{Neuron} 38(3):473--485. doi:10.1016/S0896-6273(03)00255-1.\par
+Rumberger, M. (2001). Lyapunov exponents on the orbit space. \emph{Discrete and Continuous Dynamical Systems} 7(1):91--113. doi:10.3934/dcds.2001.7.91.\par
+Rusch, T. K., \& Mishra, S. (2021a). Coupled oscillatory recurrent neural network (coRNN): An accurate and (gradient) stable architecture for learning long time dependencies. \emph{ICLR 2021}. arXiv:2010.00951.\par
+Rusch, T. K., \& Mishra, S. (2021b). UnICORNN: A recurrent model for learning very long time dependencies. \emph{ICML}, PMLR 139:9168--9178. arXiv:2103.05487.\par
+Rusch, T. K., Mishra, S., Erichson, N. B., \& Mahoney, M. W. (2022). Long expressive memory for sequence modeling. \emph{ICLR 2022}. arXiv:2110.04744.\par
+S\'agodi, \'A., Mart\'in-S\'anchez, G., Sokó\l, P., \& Park, I. M. (2024). Back to the continuous attractor. \emph{NeurIPS 2024}. arXiv:2408.00109.\par
+Seung, H. S. (1996). How the brain keeps the eyes still. \emph{PNAS} 93(23):13339--13344. doi:10.1073/pnas.93.23.13339.\par
+Tieleman, T. (2008). Training restricted Boltzmann machines using approximations to the likelihood gradient. \emph{ICML 2008}, 1064--1071. doi:10.1145/1390156.1390290.\par
+Vafidis, P., Owald, D., D'Albis, T., \& Kempter, R. (2022). Learning accurate path integration in ring attractor models of the head direction system. \emph{eLife} 11:e69841. doi:10.7554/eLife.69841.\par
+van der Ouderaa, T. F. A., \& van der Wilk, M. (2023). Sparse convolutions on Lie groups. \emph{PMLR} 197:48--62.\par
+Vastola, J. (2024). Optimal packing of attractor states in neural representations. \emph{PMLR} 228:425--442.\par
+Wang, B., \& Ponce, C. R. (2023). On the level sets and invariance of neural tuning landscapes. \emph{PMLR} 197:278--300.\par
+Xu, D., Gao, R., Zhang, W.-H., Wei, X.-X., \& Wu, Y. N. (2023). Conformal isometry of Lie group representation in recurrent network of grid cells. \emph{PMLR} 197:370--387.\par
+\endgroup}
+
+\appendix
+
+\section{The laws survive the training-time correction}\label{app:anchor}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\linewidth]{figs/fig2_anchor_cure_laws.png}
+\caption{The headline laws of the price list survive the shipped anchor cure at $3000$ epochs ($\approx20\times$ the erosion horizon; anchored $\lambda{=}100$, $3$ seeds). Left: the retention law $n_{1/2}$ versus tilt $\delta$ --- anchored-$3000$-epoch points on the predicted slope, fitted $-0.961$ against predicted $-1$, saturating at the curvature-independent floor $27.03$; the $\mu^2/\delta$ ratio is $1.0000\pm10^{-12}$ over $4.6$ decades. Right: the exceptional-point onset $\varphi\propto\sqrt{h-h^*}$ above the exceptional point, fitted slope $0.516$ against predicted $0.5$, with $\varphi=0$ exactly below --- bit-identical to the $150$-epoch value. \emph{Designed testbed under the shipped cure; the survival of the laws through $3000$ erosive epochs is evidence for the recipe.}}
+\label{fig:sf3}
+\end{figure}
+
+\section{The price of the prior, the loan curve and the recovery ladder}\label{app:loan}
+
+\emph{Demoted from the main text of this abstract, and retained in full: this appendix is a supporting result about what the physics prior costs, not one of this paper's claims.}
+
+\textbf{The price of the prior (evidence).} Against param-matched controls --- dim $4$, $150$ epochs, $\pm0.05\%$ params, $3$ seeds, same MLP potential --- the picture is Pareto, not podium. Volume conservation buys bounded (BIBO) dynamics within the coercive-potential / compact-sublevel-set scope ($1.00$ versus $0.33$ for a broken-volume arm), a protected near-flat direction ($\mu^2$ $0.008$ versus $0.122$) and vacuum survival under contrastive-divergence training ($r^*=0.72$ versus $0$); leapfrog buys the latch; and the prior costs raw fit, an unconstrained twin fitting $\approx15\times$ better, $0.0128$ against $0.190$ eval MSE. That cost is \emph{contraction-forbidden} by volume conservation --- the broken-volume arm recovers $\approx2.4\times$ of it precisely by leaking volume --- and is not the causal velocity cap, inactive here. The loan is called at $\approx700$ steps (measured): the twin leads by $1$--$2$ orders to $\approx500$ steps, crosses at $\approx700$ and diverges to $196$ at $5000$, while the unit holds a bounded plateau $\approx0.20$--$0.23$. Its asset is boundedness by construction, not the lowest steady MSE --- broken-volume ($0.14$) and LSTM ($0.13$) plateau below it --- and of the licensed repairs only global damping buys the fit back, a learned friction \emph{field} does not: paid mechanisms are not interchangeable. \emph{The non-comparability caveat printed below travels with every number in this appendix.}
+
+\emph{Dim $4$, hidden $64$, learned-Newtonian kinetic term, $\mathrm{dt}=0.05$, circle $R{=}1{\times}256$, $150$ epochs, $3$ seeds, wake-only objective except the $\gamma_\phi$ rung. Cumulative fit MSE against horizon on the stationary circle-vacuum orbit, param-matched to $\pm0.2\%$ (CLU $4549$ / broken-volume $4557$ / twin $4551$).}
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+horizon (steps) & \textbf{twin} & \textbf{CLU} & broken-volume & LSTM \\
+\midrule
+$10$ & $\mathbf{2.9{\times}10^{-6}}$ & $2.2{\times}10^{-5}$ & $1.1{\times}10^{-4}$ & $7.5{\times}10^{-2}$ \\
+$50$ & $\mathbf{6.2{\times}10^{-5}}$ & $1.2{\times}10^{-3}$ & $1.0{\times}10^{-3}$ & $4.9{\times}10^{-2}$ \\
+$100$ & $\mathbf{2.4{\times}10^{-4}}$ & $1.2{\times}10^{-2}$ & $4.1{\times}10^{-3}$ & $4.9{\times}10^{-2}$ \\
+$500$ & $\mathbf{1.1{\times}10^{-2}}$ & $1.8{\times}10^{-1}$ & $9.7{\times}10^{-2}$ & $7.7{\times}10^{-2}$ \\
+$1000$ & $3.2{\times}10^{-1}$ & $\mathbf{2.0{\times}10^{-1}}$ & $1.2{\times}10^{-1}$ & $9.9{\times}10^{-2}$ \\
+$5000$ & $1.96{\times}10^{2}$ & $2.2{\times}10^{-1}$ & $\mathbf{1.4{\times}10^{-1}}$ & $1.3{\times}10^{-1}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The twin is best by $1$--$2$ orders to $\approx500$ steps, crosses above CLU at $\approx700$ and diverges to $196$ at $5000$; CLU is the only arm flat \emph{by construction}, on a bounded plateau $\approx0.20$--$0.23$. Broken-volume ($0.14$) and LSTM ($0.13$) plateau slightly \emph{below} CLU ($0.22$): ``physics costs raw fit'' persists as a small steady-state penalty, and CLU's asset is boundedness, not the lowest plateau.
+
+\emph{\textbf{Non-comparability caveat, to be read before using these numbers.}} This ladder is a \textbf{separate wake-only experiment}, and its \textbf{absolute MSE scale and its twin ($0.0047$) are not cross-comparable} with the param-matched table above (twin $0.0128$, different seeds, different training objective). \textbf{Only within-table gaps are meaningful.} In particular, do not divide across tables: the ``$\approx15\times$'' above ($0.190/0.0128$) and this table's implicit ``$\approx44\times$'' ($0.2066/0.0047$) are the \emph{same qualitative statement} measured on two different scales, not two different findings, and the $92\%$ below is a fraction of \textbf{this} table's absolute gap ($0.202$) only. The $\gamma=0$ conservative rung ($0.2066$) is this experiment's counterpart of the $\gamma=0$ CLU of the param-matched table ($0.190$).
+
+\begin{center}
+\begin{tabular}{lccccc}
+\toprule
+rung & eval MSE & \textbf{\% gap recovered} & BIBO & latch drift & flat $\mu^2$ \\
+\midrule
+twin (no physics) & $0.0047$ & $100\%$ (def.) & $1.00$ & --- & --- \\
+\textbf{CLU conservative ($\gamma=0$)} & $0.2066$ & $0\%$ (def.) & $1.00$ & $0.778$ & $5.2{\times}10^{-3}$ \\
+\textbf{$+\gamma$ global ($\gamma=0.05$)} & $0.0216$ & $\mathbf{92\%}$ & $\mathbf{1.00}$ & $\mathbf{0.778}$ & $\mathbf{5.2{\times}10^{-3}}$ \\
+$+\gamma_\phi$ learned field ($K=2$) & $0.2548$ & $\mathbf{-24\%}$ & $1.00$ & $0.706$ & $2.1{\times}10^{-2}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Each licensed mechanism is added one at a time; the gap recovered is $(\mathrm{CLU}_{\gamma=0}-\mathrm{rung})/(\mathrm{CLU}_{\gamma=0}-\mathrm{twin})$, twin gap $0.202$. Global $\gamma$ recovers $92\%$ of the \textbf{absolute} gap at zero structural cost, leaving BIBO, latch and $\mu^2$ unchanged, while still trailing this table's twin by $\approx4.6\times$ in \emph{ratio} ($0.0216$ against $0.0047$); both statements must travel with the claim. The learned $\gamma_\phi$ field is a targeted-forgetting tool and does not recover fit, at $-24\%$; that rung retrained with the sleep phase on, so the ``wrong tool'' verdict is robust but the $-24\%$ is not a clean single-knob delta.
+
+\section{The autonomous-retention head-to-head against learned baselines}\label{app:retention}
+
+\emph{The figure behind \S\ref{sec:boundary}'s baseline paragraph; every number in it is stated there and none is added here.}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\linewidth]{figs/fig3_retention_overlay.png}
+\caption{Autonomous retention on the $S^1$ protocol of the equivariant-Lyapunov preprint (arXiv:2605.03338): a phase is written, the input is removed, and the drift of the stored phase is tracked across recurrent-map applications. The learned baselines lose the stored phase within $\approx5.6/56/69$ map-steps (coRNN/LEM/LSTM) and the stored coordinate randomizes past $1.2$ rad; the generically-trained unit holds a bounded $\approx0.35$ rad and the symmetry-designed unit does not move. \emph{Multi-seed status, stated plainly:} each baseline curve is the median over $5$ seeds and the emergent curve the median over $3$ seeds, while the designed curve is a single representative checkpoint --- the $5/5$-seed latch statement is \S\ref{sec:boundary}'s, not this figure's. Dim $4$, hidden $64$, laptop CPU, drift threshold $0.2$ rad, $T=0$. \emph{Evidence.}}
+\label{fig:retention}
+\end{figure}
+
+\section{Per-step compute: CLU-Verlet against LSTM and LEM}\label{app:compute}
+
+\emph{Single-core CPU, f32, XLA; this backs the retirement of the ``$\approx4\times$ longer'' as a compute claim in \S\ref{sec:boundary}.} One CLU dissipative-Verlet step (kick--drift--kick, two $\nabla_qV$ backprops through a dim-$4{\to}64{\to}64{\to}1$ tanh MLP, learned-Newtonian kinetic term, $\gamma{=}0.05$, $\mathrm{dt}{=}0.05$) is measured against one LSTM and one LEM cell, both input $1$, hidden $16$, output $2$, the exact retention baselines of \S\ref{sec:boundary}. Wall time is the median of $7$ scan-amortized repetitions over $2{\times}10^5$ steps; the na\"ive single-call timing is dispatch-bound at a $\approx5\,\mu$s floor and is \emph{not} reported.
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+unit & params & FLOPs/step & wall ns/step (scan-amortized) \\
+\midrule
+CLU Verlet (h$64$, dim $4$, KDK) & $4549$ & $\mathbf{36148}$ & $1554$ \\
+LSTM cell (h$16$) & $1186$ & $2512$ & $252$ \\
+LEM cell (h$16$) & $1186$ & $2400$ & $500$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+normalization & CLU vs.\ LSTM & CLU vs.\ LEM \\
+\midrule
+raw map-steps ($263$ vs.\ $69$/$56$) & $3.8\times$ longer & $4.7\times$ longer \\
+FLOP-normalized & $\mathbf{54.8\times}$ more & $\mathbf{70.7\times}$ more \\
+wall-normalized & $\mathbf{23.5\times}$ more & $\mathbf{14.6\times}$ more \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Per-step ratios:} CLU/LSTM $=14.4\times$ FLOPs and $6.2\times$ wall; CLU/LEM $=15.1\times$ FLOPs and $3.1\times$ wall. The $4\times$ \textbf{inverts} under compute normalization: per unit of retention the unit spends $\approx15$--$24\times$ the wall time and $\approx55$--$71\times$ the FLOPs of the RNN it out-holds. \textbf{Confound, flagged:} the comparison is not width-matched, CLU at hidden $64$ with two gradient evaluations against baselines at hidden $16$; a width-matched CLU would narrow the gap, but the sign is robust because the Verlet step requires two potential backprops, and the $263/69/56$ retention numbers come from these specific configurations. The measurement is single-core CPU at batch $1$; GPU or batched throughput could shift the wall ratios, though not the FLOPs. \S\ref{sec:boundary} accordingly leads with the qualitative triad, states the per-step $\approx6\times$ (LSTM) and $\approx3\times$ (LEM) wall factor, and does not carry the map-step ratio as a compute claim.
+
+\section{Prominent negatives}\label{app:neg}
+
+\emph{Negatives are recorded, never dropped. Each row states the claim tested, the result, and the number that settles it.}
+
+\begin{center}
+\begin{tabular}{@{}p{1.52in} p{1.52in} p{2.06in}@{}}
+\toprule
+claim tested & result & number \\
+\midrule
+Does a learned inertial mass isotropize on symmetric data? &
+No; and the breaking is invisible to the Hessian and to the latch, showing only as a bounded Noether-charge oscillation.   &
+Log-mass split ratios $0.98$ / $1.18$ / $5.4$ from init to $150$ ep; charge amplitudes $5.4/1.6/0.082{\times}10^{-2}$; tied controls exactly $1.0000$. \\[2pt]
+Does wake--sleep contrastive divergence preserve a designed degenerate vacuum? &
+No --- it inverts it. The cure is a $V(\text{data})$ energy anchor, and the headline laws survive it (\S\ref{sec:cure}). &
+$r^*\to0$ in $8/8$ runs at $1000$ ep; inversion at epoch $116$/$442$/$959$ by sleep frequency; anchor $\lambda{=}100$ holds $5/5$ seeds at $r^*{=}0.911\pm0.016$. \\[2pt]
+Does an emergent (MLP) unit have a continuous coset register? &
+No --- the continuous register is designed-only; an emergent unit stores a few bits on discrete washboard minima (evidence, $3$ seeds; \S\ref{sec:boundary}). &
+$1-|\lambda_{\rm coset}|\approx10^{-3}$ against the designed $\le1.1{\times}10^{-15}$, $\sim\!12$ orders; written $\delta$ retained $\le2.1{\times}10^{-3}$; capacity $\approx1$--$1.6$ bits. \\[2pt]
+Do raw $n_{1/2}$ exponents discriminate designed from emergent? &
+No --- instrument, not physics: a matched designed control on the same grid gives the same slopes, both carrying the $\ell_\theta/\Delta$ boundary layer. No $n_{1/2}$ may be quoted without its $\Delta$ and $\ell_\theta/\Delta$. &
+Designed control $\mathrm{d}\log n_{1/2}/\mathrm{d}\log T=-0.53,-0.60,-1.04$ and $\mathrm{d}\log n_{1/2}/\mathrm{d}\log\gamma=+0.78,+0.63,+0.55$; $\ell_\theta/\Delta$ up to $2.0$. \\[2pt]
+Is an explicit-breaking coefficient a lifetime dial on a learned store? &
+No, and the first half fails in sign: raising the breaking \emph{lowers} the softest eigenvalue, and a coercivity term, not the breaking, sets the ceiling. A designed degeneracy does not survive superposition. &
+$\lambda_{\min}$ runs $+0.0994\to-8.2846$ and $+0.3291\to-1.1980$ over four decades of breaking; hard ceiling $\tau_{\max}=\Gamma/2\alpha=4.0$; tilt-vacuum residual $0.140$--$0.343$ against a random-direction baseline $1/\mathrm{dim}=0.167$; tangential curvature predicted $0.100$, measured $0.0994$. \\[2pt]
+Can this unit enter the input-driven path-integration task-RMSE axis? &
+No --- it has no native velocity ingestion and the equivariant-control wrapper is unbuilt. No task-RMSE was fabricated. &
+--- \\[2pt]
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{@{}p{1.52in} p{1.52in} p{2.06in}@{}}
+\toprule
+claim tested & result & number \\
+\midrule
+
+Do a learned friction field and a curvature governor compose usefully? &
+No --- the pair is Pareto-dominated by either alone, and a learned compact-support gate under-covers without accurate placement. &
+Locus discovery $2/6$ before adaptive-$K$, $2/3$ after; best learned rejection $0.861$; a $\lambda$ re-sweep does not approach the oracle. \\[2pt]
+Can friction stabilize a saddle, or an energy gate catch isoenergetic escape? &
+No to both --- a genuine scope limitation of the class. Only curvature control of $V_\theta$ and the mass-anisotropic cap $v_i^{\max}=c/\sqrt{M_i}$ bound expanding or isoenergetic modes. &
+$\lambda_+>1$ for all $\gamma$, with $\min_\gamma(\lambda_+-1)=1.4{\times}10^{-5}$. \\[2pt]
+Is the coded momentum-coupled Langevin sampler FDT-exact in every kinetic mode? &
+No --- exact only in the Newtonian modes; in the relativistic mode \emph{no} noise scale gives the coded chain a Gibbs invariant at all. &
+Required per-mode scale $\sigma^\star_i=\sqrt{M_iT\gamma(2-\gamma)}$. \\[2pt]
+Is a mean-spectrum chaos regularizer informative? &
+No --- it is degenerate; a chaos penalty must use a max or positive-part statistic. &
+--- \\[2pt]
+Is \texttt{sleep\_temperature} active at \texttt{sleep\_friction=0}? &
+No --- a silent knob; cite it when reproducing temperature-swept sleep runs. &
+$\sigma\propto\sqrt{\gamma_{\rm sleep}}$, so the swept runs are bit-identical. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{A reporting caution travels with the isotropization row.} The closed-form charge-oscillation amplitude is an \textbf{on-vacuum-orbit} statement; \textbf{off the orbit only boundedness holds}. The amplitude-to-split ratio is moreover \textbf{not} constant, as the exact envelope requires, since it is linear only to leading order --- so no proportionality constant should be quoted as a law, and we report amplitudes and boundedness, never a ``drift rate''. The design rule attached to mass-tying is correspondingly about the \emph{current}, not the register: \textbf{an anisotropic channel still latches with infinite half-life}; tie the masses for an angle-independent write current, and at $\dim(G/\mathcal H)\ge2$ a degenerate pseudo-Goldstone multiplet, \textbf{not} to save the register.
+
+\textbf{Two reading rules travel with the learned-store row.} \emph{(a)} The breaking coefficient of that battery is an \textbf{explicit-symmetry-breaking magnitude}; it is \textbf{not} this paper's integrator step $\varepsilon$, and the two must never be conflated. \emph{(b)} No sentence in this paper may be read as claiming that a tilt magnitude is a lifetime dial on a learned store, or that a pseudo-Goldstone lifetime can be extended without bound by shrinking the breaking: on a store with a coercive confinement $\alpha\lVert q\rVert^2$ the ceiling is $\Gamma/2\alpha$, and lowering $\alpha$ breaks the write. This paper's own tilt results (Appendix~\ref{app:gmor}) are analytic tilts on \textbf{designed} architecturally-invariant potentials, where the construction is exact; the learned-store scope is exactly what this negative removes. That battery is a \emph{different architecture} from the trained units of this paper and shares none of their training configuration, which is why it is quoted as a scope fence and never as a measurement of the units here. What survives it is the \emph{geometry}: the identity $\lambda_{\min}=\epsilon$ holds in the single-atom geometry in which it was derived, unit-tested to $5\%$, and the registered damped-mode floor $\tau=2/\Gamma$ is confirmed, $5.0$ predicted against $4.23$--$6.58$ measured time units.
+
+\textbf{The sampler row's scope, stated precisely, because the qualifier is load-bearing.} The coded damping substep is an additive Gaussian momentum kick of fixed covariance, so the chain's invariant momentum marginal is necessarily Gaussian-smoothed; for a \emph{relativistic} kinetic term the Gibbs momentum marginal is Maxwell--J\"uttner, which is not of that form (\emph{theory note}, Prop-9$'$ --- a characteristic-function argument needing neither $V=0$ nor linear damping). \textbf{The failure is in the \emph{sampler}, not in the \emph{thermodynamics}}: the configurational equilibrium $\pi_q\propto e^{-V_\theta/T}$ is relativity-insensitive, since the momentum integral factorizes out, so a relativistic unit's equilibrium distribution is perfectly well-defined and the chain simply fails to sample it; a one-line thermostat carrying a randomized, momentum-dependent inertia equal to the relativistic mass repairs it. We therefore never assert that a relativistic unit ``has no equilibrium''. \textbf{This touches no result in this paper:} the trained units here are \texttt{newtonian\_learned} throughout, so $\sigma^\star$ is exact for every configuration we run --- the qualifier is a \emph{scope clause} on a class-level theorem, not a correction to a measurement.
+
+
+\section{Positioning: the four retirements in full, and the head-to-head on the preprint's own estimator}\label{app:pos}
+
+\emph{The four retirements of \S\ref{sec:related}, elaborated so that every number behind them is on the record.}
+
+\textbf{(1) Attention and state-space models have retention-guarantee analogues.} HiPPO-LegS (Gu et al.\ 2020) has an $O(tL/\sqrt N)$ approximation bound, a polynomial $\Theta(1/t)$ rather than exponential gradient decay, and \emph{exact} timescale equivariance with no discretization step to tune --- exact where ours is a discrete map at fixed $\varepsilon$ with $h=\varepsilon\mu<2$ a hard stability limit --- and we have no measurement saying a learned curvature spectrum is preferable to it. Tunable permanence is likewise occupied (EDEN, Karuvally et al.\ 2025); UnICORNN (Rusch \& Mishra 2021b) is Hamiltonian, structure-preserving and \emph{has} the gradient-bound theorem we lack; and the modern Hopfield update \emph{coincides with} attention for a single head with identity projections and $\beta=1/\sqrt D$ (Ramsauer et al.\ 2021).
+
+\textbf{(2) ``Retrieval is a rollout, not a weighted sum'' is not our novelty.} The move is Kong, Brewer \& Lai's (2024), at capacity $N_c\propto K^{1.08\pm0.01}$ for their one-hot and binary index codings and $1.17\pm0.02$ for their 2D coding. Our differences are structural: neither symplectic, Hamiltonian nor mass-structured there, and the address enters through an index channel rather than as the initial condition of the state.
+
+\textbf{(3) Continuity is not an escape hatch from the NTM/DNC lineage.} Both were already fully soft (Graves et al.\ 2014, 2016), so the precedent transfers as a warning. Of the three DNC failure modes Csord\'as \& Schmidhuber (2019) diagnose, key/value entanglement, which they rank first, is architectural in a memory whose address $q_0$ is both the key and the initial condition of the value; de-allocation aliasing maps onto any position-gated forgetting; chained-read degradation is the third. None are measured here.
+
+\textbf{(4) Not a competitor to the transformer.} Never claimed, and indefensible at this scale: $\approx1$--$1.6$ bits per emergent register, no win over a trivial baseline on any external benchmark, and formal limits on fixed-size latent state for copying and retrieval (Jelassi et al.\ 2024) that conservation does not evade --- it prevents \emph{decay}, not \emph{capacity}.
+
+\textbf{The head-to-head reproduced on the preprint's own instrument.} \S\ref{sec:headtohead}'s result does not depend on substituting the exact Jacobian gap for the preprint's predictor. With the preprint's own finite-horizon estimator $\hat\lambda(T{=}128)$ the result holds on that instrument: $\mathrm{corr}=0.9995$ overdamped, meas/pred $0.86$--$1.03$, and $0.30$ at $\delta=4$ against the exact-gap $0.31$.
+
+\section{The price list verified in full, and GMOR proper on trained checkpoints}\label{app:gmor}
+
+\emph{Designed testbed with analytic tilts and an analytic spurion, therefore verification of the theory's exactness; $5$ seeds at $150$ epochs plus $3$ anchored at $3000$ epochs, dim $4$, laptop CPU, $f64$ probes, probe-only with no retraining. The retention law $n_{1/2}\propto\mu^{-2}$ is a Gell-Mann--Oakes--Renner (GMOR) law in the spectral mass; we use the name for the identity $\mu^2F^2=\delta\Sigma$ throughout this appendix. \textbf{GMOR proper --- \S\ref{app:gmor}.3 onward --- is demoted from the main text of this abstract and retained here in full; it is a supporting result, not one of this paper's claims.}}
+
+\textbf{F.1 The price list, verified on trained models --- the battery behind \S\ref{sec:pricelist}.} \S\ref{sec:pricelist} states this battery's headline quantities: the constitutive identity to $3.2{\times}10^{-10}$ over all $70$ tilt rows on a machine-flat trained vacuum ($\mu^2\le2.4{\times}10^{-15}$); the GMOR law $\mu^2_{\mathrm{meas}}/\mu^2_{\mathrm{pred}}=1.000000\pm5{\times}10^{-12}$ at every $\delta$ and seed across $4.5$ decades; the fitted overdamped retention slope $-0.985$ ($n=35$; predicted $-1$); the curvature-independent floor $27.03$ steps at $\gamma=0.05$; the metric bifurcation ($0.01\%$ agreement overdamped, a $3.2\times$ split at $\delta=4$); the frequency onset ($\varphi=0$ exactly below $h^*$ on $15/15$ rows, fitted slope $0.5165$ against $1/2$ above); and the latch transport law to $\le1\%$ over two decades of $\gamma$ with the written angle frozen to $\le1.2{\times}10^{-15}$ rad. Four measurement details belong here rather than there. The $\sqrt{h-h^*}$ onset holds down to $h-h^*=2.6{\times}10^{-6}$ on a fine multiplicative grid ($h-h^*\in[-4.2{\times}10^{-3},2.6{\times}10^{-2}]$); the slight slope excess over $1/2$ is far-field bending. The onset prefactor is $0.268$ against the theory note's $2\times2$-normalized $0.3247$, a one-line units reconciliation. Where the quality factor permits ($f=2,4$) the trajectory frequency matches the Jacobian frequency to $0.06$--$0.3\%$; near onset the mode decays before one period completes, so the exceptional point is spectroscopically real but dynamically silent there. And the eigenvalue pair below $h^*$ is real, which is what makes $\varphi=0$ an exact statement rather than a resolution limit.
+
+\textbf{F.2 The damping corollary} --- a supporting result, deliberately not a headline. The same block fixes the half-life's dependence on the damping, and that dependence is \textbf{not} monotone: sweeping $\gamma$ at fixed spectral mass, $n_{1/2}(\gamma)$ traces a V-shape of depth $\approx8\times$ whose argmin sits at, or just below, the exact critical-damping value $\gamma^*\approx2\varepsilon\mu$, on all $5$ designed seeds. Below $\gamma^*$ the mode is underdamped at the floor $2\ln2/(-\ln(1-\gamma))$, which \emph{shortens} as $\gamma$ grows; above it the mode is overdamped at $n_{1/2}\approx2\gamma\ln2/[(2-\gamma)(\varepsilon\mu)^2]$, which \emph{lengthens}; the exceptional point is where the branches meet. Two consequences: \textbf{(i)} a retention measurement quoted at one $\gamma$ is uninformative about the sign of $\partial n_{1/2}/\partial\gamma$ unless the band is named, the same architecture giving both signs; \textbf{(ii)} the $\mu\to0$ latch corner is the limit $\gamma^*\to0$, so a Goldstone register is permanently overdamped, which is the structural reason friction cannot erase it.
+
+\textbf{F.3 GMOR proper: why a second spurion.} The angular tilt $V\to V+\delta(1-\cos n\theta)$ of F.1 is \emph{radius-independent} --- measured on these checkpoints, $\max|r^*_{\rm tilt}-r^*|=2.22{\times}10^{-15}$ over all $(\text{checkpoint},\delta)$ pairs --- so it measures only the \textbf{product} $\mu^2F^2=\delta n^2$, in which the condensate degenerates to the pure number $n^2$ (measured: $\max|\mu^2F^2/(\delta n^2)-1|=1.03{\times}10^{-11}$): the correct instrument for verifying a power law, and provably incapable of resolving the condensate. The \textbf{linear ambient spurion} $V\to V-\delta\,(u\cdot q)$ --- the exact analogue of the ChPT quark-mass term, with $u$ in the channel plane --- lets the vacuum radius run with $\delta$, so the three GMOR objects become separately measurable on a trained checkpoint: the pseudo-Goldstone spectral mass $\mu^2$ from the autodiff Hessian at the polished vacuum; the decay constant $F^2=M_{\rm ch}r^{*2}$, the learned channel inertia times the vacuum radius squared and \textbf{not} the orbit radius; and the condensate $\Sigma=r^*(\delta)=-\partial E_{\rm vac}/\partial\delta$. Over $8$ trained checkpoints and $\delta\in[10^{-8},0.3]$ ($10$ values, $8$ decades), $\max|\mu^2F^2-\delta\Sigma|=1.33{\times}10^{-15}$ over all $80$ pairs.
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+$\delta$ & $\Sigma=r^*$ (mean) & $\mu^2F^2$ (mean) & max rel.\ dev. & max \textbf{abs.} dev. \\
+\midrule
+$10^{-8}$ & $0.95186937111604$ & $9.5186937286{\times}10^{-9}$ & $1.10{\times}10^{-8}$ & $1.01{\times}10^{-16}$ \\
+$10^{-7}$ & $0.95186948174437$ & $9.5186948223{\times}10^{-8}$ & $1.87{\times}10^{-9}$ & $1.85{\times}10^{-16}$ \\
+$10^{-6}$ & $0.95187058802597$ & $9.5187058802{\times}10^{-7}$ & $1.87{\times}10^{-10}$ & $1.86{\times}10^{-16}$ \\
+$10^{-5}$ & $0.95188165067351$ & $9.5188165068{\times}10^{-6}$ & $2.18{\times}10^{-11}$ & $2.16{\times}10^{-16}$ \\
+$10^{-4}$ & $0.95199226031843$ & $9.5199226032{\times}10^{-5}$ & $1.34{\times}10^{-12}$ & $1.33{\times}10^{-16}$ \\
+$10^{-3}$ & $0.95309668422658$ & $9.5309668423{\times}10^{-4}$ & $2.27{\times}10^{-13}$ & $2.09{\times}10^{-16}$ \\
+$10^{-2}$ & $0.96398369127653$ & $9.6398369128{\times}10^{-3}$ & $2.69{\times}10^{-14}$ & $2.69{\times}10^{-16}$ \\
+$3{\times}10^{-2}$ & $0.98732513581811$ & $2.9619754075{\times}10^{-2}$ & $9.66{\times}10^{-15}$ & $2.71{\times}10^{-16}$ \\
+$10^{-1}$ & $1.06435252346294$ & $1.0643525235{\times}10^{-1}$ & $1.55{\times}10^{-15}$ & $1.53{\times}10^{-16}$ \\
+$3{\times}10^{-1}$ & $1.60757655208590$ & $4.8227296563{\times}10^{-1}$ & $1.55{\times}10^{-15}$ & $1.33{\times}10^{-15}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\linewidth]{figs/fig3_gmor_condensate.png}
+\caption{GMOR proper on trained checkpoints, with a linear ambient spurion. (a) The collapse $\mu^2F^2=\delta\Sigma$ over $8$ decades of $\delta$, $8$ trained $SO(2)$ checkpoints. (b) Absolute deviation pinned at the $f64$ floor ($\le1.33{\times}10^{-15}$) against the $\epsilon/\delta$ relative-roundoff line of the autodiff Hessian --- the small-$\delta$ relative residual is a probe artifact, not a law violation. (c) The running condensate $\Sigma(\delta)/\Sigma(0)$ under the linear spurion against the angular tilt's exactly flat $\Sigma\equiv r^*$ --- the shipped tilt cannot see the condensate. (d) The low-energy-constant ratio tending to $1$ as the chiral expansion parameter $x\to0$, with slope $-1.05$. \emph{Designed testbed, analytic spurion, trained checkpoints, therefore verification.}}
+\label{fig:gmor}
+\end{figure}
+
+\emph{\textbf{Precision fine print, next to the claim.}} GMOR holds to machine precision \textbf{in absolute terms at every $\delta$}; relative exactness ($\le2.7{\times}10^{-14}$) is demonstrated for $\delta\ge10^{-2}$. The growing \emph{relative} deviation at small $\delta$ is \textbf{not} a failure of the law but the roundoff floor of the \textbf{autodiff Hessian}: the angular curvature is $K_{\theta\theta}=\delta/r^*$, reconstructed as a difference of $O(\lVert K\rVert)$ terms, so its absolute error is $\sim\epsilon\lVert K\rVert$ and its relative error $\sim\epsilon/\delta$. This was confirmed directly: on the analytic Mexican hat a \textbf{cancellation-free} Hessian returns relative deviation $1.1$--$2.2{\times}10^{-16}$ at \emph{every} $\delta\in[10^{-8},0.3]$, while the autodiff Hessian on the same potential returns $2.28{\times}10^{-8}\to4.22{\times}10^{-15}$ across that range, exactly $\propto1/\delta$. \textbf{Do not quote ``$2.2{\times}10^{-16}$ relative'' for this experiment.} The same $\epsilon/\delta$ floor applies to every $\mu^2$ probe in this paper; all other sweeps here use $\delta\ge10^{-4}$, where the floor is $\sim10^{-12}$ and the quoted relative agreements are sound.
+
+\textbf{F.4 $\Sigma$ is genuinely measured, three ways; it runs, and the angular tilt cannot see it.} $\Sigma_{\rm geom}=r^*(\delta)$; $\Sigma_{\rm HF}=u\cdot q^*(\delta)$ by Hellmann--Feynman, agreeing to $\max|\Sigma_{\rm HF}-\Sigma_{\rm geom}|=0.0$ exactly; and $\Sigma_{\rm FD}=-\mathrm{d}E_{\rm vac}/\mathrm{d}\delta$ by central finite difference at $h{=}10^{-6}$ --- the envelope-theorem definition, structurally independent of the Hessian --- agreeing to $\max|\Sigma_{\rm FD}/\Sigma_{\rm geom}-1|=9.2{\times}10^{-11}$. Under the linear spurion $\Sigma$ runs by $+16.1\%$ to $+210.1\%$ across the $\delta$ grid (anchored-$3000$-epoch models $+19.8/+17.4/+16.1\%$; designed-$150$-epoch models $+210.1/+169.3/+35.9/+34.4/+41.1\%$), while under the angular tilt on the \emph{same} checkpoints it does not move at all ($\le2.22{\times}10^{-15}$). With $u$ at channel angles $\{0.0,0.7,-2.3\}$ on one designed checkpoint at $\delta{=}10^{-2}$, the $\mu^2$ relative spread is $6.21{\times}10^{-15}$, as exact channel invariance requires.
+
+\textbf{F.5 The leading low-energy constant is saturated by the radial resonance.} With $\mu^2_{\rm LO}\equiv\delta\Sigma(0)/F^2(0)$, the theory predicts a \emph{relative} leading-order error $x\equiv\delta/(M_{\rm ch}\mu_{\rm rad}^2f)$. Measured: the ratio is $0.99999607$, the mean over $8$ checkpoints at $\delta\le10^{-5}$, maximum deviation $2.20{\times}10^{-5}$; from the measured $\mu^2$ over $\delta\in[10^{-4},10^{-2}]$ it lies in $[0.97917,0.99992]$; and corrections are first order, $\mathrm{d}(\text{ratio})/\mathrm{d}x=-1.0504$ at small $x$, i.e.\ $\text{ratio}=1-O(x)$ --- exactly what ChPT demands of a \emph{leading} low-energy constant. The CLU therefore realizes ChPT's \textbf{resonance saturation of low-energy constants} exactly rather than phenomenologically, the radial ($\sigma$) mode being the saturating resonance. \textbf{Breakdown is visible and expected:} at $\delta=0.3$ the softest-radial seed, $\mu_{\rm rad}^2=0.670$, has $x=0.68$ --- not small --- and $\Sigma$ has run $+210\%$; the expansion is uncontrolled there, so \textbf{$\delta=0.3$ must not be quoted for the next-to-leading-order claim}: cap at $x<0.25$ or state $x$ explicitly.
+
+\textbf{F.6 Honest scope.} This appendix is tree-level and classical: no loops, chiral logarithms, running low-energy constants or anomalies; ``resonance saturation'' is an exact algebraic statement about a two-mode classical potential, not a phenomenological fit. It is probe-only on already-trained checkpoints, spurion off by default so as to be bit-compatible with every result elsewhere, on one architecture family --- designed exact $SO(2)$, dim $4$, laptop-CPU. The emergent MLP arm is untested and would carry its own self-breaking $\delta_{\rm eff}$, so GMOR there should be tested as $\delta\to\delta+\delta_{\rm eff}$: an open falsifiable, not a result.
+
+\end{document}

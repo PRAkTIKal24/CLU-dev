@@ -1,0 +1,141 @@
+{
+  "what": "geometry G-B as BUILT \u2014 the CLU store cell in 3 of 12 layers",
+  "ratified": "Head + Advisor 2026-08-13 (c3-rival-ladder-prereg \u00a7F1.3 / PREREG-C3-LADDER \u00a72.2, recommendation G-B)",
+  "commit": "a656746",
+  "seed": 0,
+  "scale": "PILOT (d_model 512, n_layers 12)",
+  "budget_bytes": 2097152,
+  "budget_status": "INTERIM (unchanged by this task)",
+  "store_layers": [
+    2,
+    6,
+    10
+  ],
+  "store_layer_rationale": "PREREG-C3-LADDER.md \u00a72.5 \u2014 period-4 placement, argued; NOT a byte-fitting default",
+  "per_layer_cell_state_bytes": {
+    "clu_store": 460288,
+    "gru_matched": 916,
+    "ttt_matched": 456976,
+    "none": 0,
+    "echo": 0,
+    "gru_matched_state_ARITHMETIC_ONLY": 460288
+  },
+  "arms_G_B": {
+    "clu_store": {
+      "n_layers": 12,
+      "n_store_layers": 3,
+      "cell_state_bytes_per_layer": 460288,
+      "total_state_bytes": 1380864,
+      "occupancy": 0.658447265625,
+      "within_budget": true,
+      "store_layer_indices": [
+        2,
+        6,
+        10
+      ],
+      "arithmetic": "total_state_bytes = n_store_layers * cell_state_bytes + n_layers * phi_state_bytes = 3 * 460288 + 12 * 0 = 1380864 B (store-bearing layers [2, 6, 10] of 12); phi_params_bytes = 12 * 334896 = 4018752 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt)."
+    },
+    "gru_matched": {
+      "n_layers": 12,
+      "n_store_layers": 3,
+      "cell_state_bytes_per_layer": 916,
+      "total_state_bytes": 2748,
+      "occupancy": 0.0013103485107421875,
+      "within_budget": true,
+      "store_layer_indices": [
+        2,
+        6,
+        10
+      ],
+      "arithmetic": "total_state_bytes = n_store_layers * cell_state_bytes + n_layers * phi_state_bytes = 3 * 916 + 12 * 0 = 2748 B (store-bearing layers [2, 6, 10] of 12); phi_params_bytes = 12 * 334896 = 4018752 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt)."
+    },
+    "ttt_matched": {
+      "n_layers": 12,
+      "n_store_layers": 3,
+      "cell_state_bytes_per_layer": 456976,
+      "total_state_bytes": 1370928,
+      "occupancy": 0.6537094116210938,
+      "within_budget": true,
+      "store_layer_indices": [
+        2,
+        6,
+        10
+      ],
+      "arithmetic": "total_state_bytes = n_store_layers * cell_state_bytes + n_layers * phi_state_bytes = 3 * 456976 + 12 * 0 = 1370928 B (store-bearing layers [2, 6, 10] of 12); phi_params_bytes = 12 * 334896 = 4018752 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt)."
+    },
+    "none": {
+      "n_layers": 12,
+      "n_store_layers": 3,
+      "cell_state_bytes_per_layer": 0,
+      "total_state_bytes": 0,
+      "occupancy": 0.0,
+      "within_budget": true,
+      "store_layer_indices": [
+        2,
+        6,
+        10
+      ],
+      "arithmetic": "total_state_bytes = n_store_layers * cell_state_bytes + n_layers * phi_state_bytes = 3 * 0 + 12 * 0 = 0 B (store-bearing layers [2, 6, 10] of 12); phi_params_bytes = 12 * 334896 = 4018752 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt)."
+    },
+    "echo": {
+      "n_layers": 12,
+      "n_store_layers": 3,
+      "cell_state_bytes_per_layer": 0,
+      "total_state_bytes": 0,
+      "occupancy": 0.0,
+      "within_budget": true,
+      "store_layer_indices": [
+        2,
+        6,
+        10
+      ],
+      "arithmetic": "total_state_bytes = n_store_layers * cell_state_bytes + n_layers * phi_state_bytes = 3 * 0 + 12 * 0 = 0 B (store-bearing layers [2, 6, 10] of 12); phi_params_bytes = 12 * 334896 = 4018752 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt)."
+    }
+  },
+  "arms_PILOT_12_layers": {
+    "clu_store": {
+      "n_store_layers": 12,
+      "total_state_bytes": 5523456,
+      "occupancy": 2.6337890625,
+      "within_budget": false
+    },
+    "gru_matched": {
+      "n_store_layers": 12,
+      "total_state_bytes": 10992,
+      "occupancy": 0.00524139404296875,
+      "within_budget": true
+    },
+    "ttt_matched": {
+      "n_store_layers": 12,
+      "total_state_bytes": 5483712,
+      "occupancy": 2.614837646484375,
+      "within_budget": false
+    },
+    "none": {
+      "n_store_layers": 12,
+      "total_state_bytes": 0,
+      "occupancy": 0.0,
+      "within_budget": true
+    },
+    "echo": {
+      "n_store_layers": 12,
+      "total_state_bytes": 0,
+      "occupancy": 0.0,
+      "within_budget": true
+    }
+  },
+  "match_ratio_clu_over_ttt": 1.0072476453905677,
+  "ttt_criterion": {
+    "solve_matched_ttt(k, n)": [
+      2197,
+      52
+    ],
+    "eta": 0.6931471824645996,
+    "dim": 12,
+    "eta_n_over_d": 3.0036377906799316,
+    "criterion": "eta*||theta_K z||^2 < 2 for a non-expansive inner loop; E||theta_K z||^2 = n||z||^2/d",
+    "FIRES": true,
+    "consequence": "ttt_normalized_write=True on the TTT arm \u2014 ALREADY RULED, PILOT-TTT-RULINGS.md ruling 1. \u26d4 Not a new decision.",
+    "why_unchanged_by_G_B": "G-B shrinks the NUMBER of cells, not the cell, so solve_matched_ttt sees the identical per-layer ledger."
+  }
+}

@@ -1,0 +1,336 @@
+\documentclass[11pt]{article}
+% F5 arXiv note — the citable common ancestor for the CHLU shorts.
+% Single-column note class; standard packages; builds with pdflatex or tectonic.
+% Source: .claude/outputs/f5-arxiv-note.md (physics-theorist distillation of F5 v1.1).
+% Head policy 2026-07-07: all corollaries retained; corollary-grade material to
+% appendices. w8 revision: all editorial margin notes resolved/stripped; Q3
+% parenthetical dropped; Cor-3 footnote de-anon clause cut per Head 2026-07-08.
+\usepackage[margin=1in,marginparwidth=1.05in,marginparsep=8pt]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{bm}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\theoremstyle{plain}
+\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+
+\newcommand{\Om}{\Omega}
+\newcommand{\half}{\tfrac12}
+
+\title{\textbf{[WORKING TITLE: Memory Budgets of Damped Symplectic Recurrences:\\
+an Exactly-Solvable Theory of Retention, Latching, and Forgetting]}}
+\author{[AUTHORS PLACEHOLDER]}
+\date{Preprint class: cs.LG / math.DS / nlin.CD (cross-list cond-mat.stat-mech)}
+
+\begin{document}
+\sloppy
+\maketitle
+
+\begin{abstract}
+A growing family of recurrent learning primitives replaces the black-box gated update with a \textbf{structure-preserving physical integrator}: a latent state $(q,p)$ is advanced by a symplectic (leapfrog / velocity-Verlet) step of a learnable separable Hamiltonian $H(q,p)=T(p)+V_\theta(q)$, with an optional per-step momentum damping $p\mapsto(1-\gamma)p$ that supplies controllable forgetting. One recent instantiation is the causal Hamiltonian learning unit of Jawahar \& Pierini (2026); the results below are stated for the whole class of \textbf{damped symplectic recurrences}. We give the exact single-mode solution of the dissipative Verlet map and read off a complete, closed-form account of what such a unit can remember and for how long. The update is \textbf{conformally symplectic} ($J^\top\Om J=(1-\gamma)\Om$, $\det J=(1-\gamma)^d$), from which memory reduces to the spectrum of one $2\times2$ matrix per normal mode. Symmetry-protected flat directions become \textbf{exact latches} --- a momentum impulse writes a finite displacement $\varepsilon p_0/(m\gamma)$ that then persists with infinite half-life --- while the associated Noether charge is the write current and decays exactly as $(1-\gamma)^n$. Massive modes retain memory for $n_{1/2}\propto\mu^{-2}$ steps (a Gell-Mann--Oakes--Renner-type law in the \textbf{spectral mass} $\mu$) up to a critical-damping crossover $\varepsilon\mu\approx\gamma/2$, beyond which retention \textbf{saturates} at the mass-independent floor $2\ln2/(-\ln(1-\gamma))$ and the stored value rings at frequency $\propto\sqrt{\text{breaking}}$. The crossover is a genuine exceptional (defective) point with a $\sqrt{h-h^*}$ frequency onset, and retention is \emph{non-monotone} in the damping with a minimum exactly at critical damping. We prove two negative results --- friction can never stabilize a saddle direction of $V_\theta$, and an energy-thresholded damping controller is blind to isoenergetic (constant-$H$) escape, which only a relativistic velocity bound $v_i^{\max}=c/\sqrt{M_i}$ contains --- and give the kinetic-isotropy (Schur) condition a conserved write current requires, showing that this condition binds the \textbf{current alone}: by Sylvester's law of inertia a flat direction keeps $\mu^2=0$ under \emph{any} inertia, so the latch is blind to kinetic anisotropy, which only makes the Noether charge oscillate within bounds. All results are verified numerically to machine precision on the exact map. We relate the neutrality of protected directions to the equivariant-dynamics literature and to Mo (2026), whose single-exponential lifetime law we recover exactly as the overdamped face of the budget.
+\end{abstract}
+
+\section{Setup: the damped symplectic recurrence}
+
+\subsection{State, Hamiltonian, kinetic modes}
+A latent state $z=(q,p)\in\mathbb R^d\times\mathbb R^d$ carries a \textbf{position/content} coordinate $q$ and a \textbf{momentum/change} coordinate $p$. The unit is defined by a learnable, \textbf{separable} Hamiltonian $H(q,p)=T(p)+V_\theta(q)$, with $V_\theta$ a learned scalar field (MLP/ConvNet, optionally with a confinement $\alpha\lVert q\rVert^2$). Three kinetic terms occur in practice, unified by a \textbf{rest-inertia} $M_{\rm eff}$:
+
+\begin{center}\small
+\begin{tabular}{llll}
+\toprule
+mode & $T(p)$ & $\nabla_pT$ & $M_{\rm eff}$ \\
+\midrule
+identity & $\half\lVert p\rVert^2$ & $p$ & $I$ \\
+learned Newtonian & $\half\,p^\top M^{-1}p$ & $M^{-1}p$ & $M$ \\
+relativistic & $c\sqrt{p^\top M^{-1}p+m_0^2c^2}$ & $\dfrac{cM^{-1}p}{\sqrt{p^\top M^{-1}p+m_0^2c^2}}$ & $m_0M$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Here $M=\mathrm{diag}(M_1,\dots,M_d)\succ0$ is a learned diagonal inertial-mass matrix, $m_0$ a rest mass, $c$ a causal speed. The relativistic branch has a hard velocity ceiling (\S6.1).
+
+\paragraph{One instantiation.} Jawahar \& Pierini (2026) realize exactly this class with the relativistic kinetic term, contrastive-divergence training of $V_\theta$, and an inference-time damping schedule; we take their update map as the concrete reference but state every result for the class. We use no property specific to their training objective.
+
+\subsection{The map}
+One dissipative velocity-Verlet (kick--drift--kick) step with step $\varepsilon$ and per-step damping $\gamma\in[0,1)$:
+\begin{equation}
+\begin{aligned}
+p_{1/2} &= p_n - \tfrac{\varepsilon}{2}\nabla V_\theta(q_n), &
+q_{n+1} &= q_n + \varepsilon\,\nabla T(p_{1/2}),\\
+p' &= p_{1/2} - \tfrac{\varepsilon}{2}\nabla V_\theta(q_{n+1}), &
+p_{n+1} &= (1-\gamma)\,p',
+\end{aligned}
+\qquad z_{n+1}=\Phi_{\varepsilon,\gamma}(z_n).
+\end{equation}
+$\gamma=0$ is the conservative symplectic leapfrog; $\gamma>0$ appends one momentum contraction per step. The continuous-time damping rate is $\gamma_c:=-\ln(1-\gamma)/\varepsilon\approx\gamma/\varepsilon$.
+
+\subsection{Two masses (do not conflate)}
+\begin{definition}[inertial vs.\ spectral mass]
+Two distinct quantities both get called ``mass'' and run in opposite directions:
+\begin{itemize}
+\item \textbf{Inertial mass $M_i$} --- the learned diagonal of $T$. Larger $M_i\Rightarrow$ \emph{slower}, lower speed cap.
+\item \textbf{Spectral (mode) mass $\mu_k$} --- defined at a critical point $q^\ast$ of $V_\theta$ ($\nabla V_\theta(q^\ast)=0$) with stiffness $K:=\nabla^2V_\theta(q^\ast)$ by $\mu_k^2:=\lambda_k(M_{\rm eff}^{-1/2}KM_{\rm eff}^{-1/2})$, the normal-mode frequencies $\omega_k=\mu_k$. Larger $\mu\Rightarrow$ \emph{faster} oscillation, \emph{shorter} memory (\S3.3).
+\end{itemize}
+\end{definition}
+At fixed curvature these are inverse: heavy inertial mass $\Rightarrow$ light spectral mass. All spectral statements below use $\mu$; the dimensionless mode step is $h_k:=\varepsilon\mu_k$.
+
+\section{Exact geometry of the map}
+
+\begin{proposition}[conformal symplecticity]\label{prop:conf}
+For separable smooth $H$, at every $z$ and every $\theta$, with $\Om=\left(\begin{smallmatrix}0&I\\-I&0\end{smallmatrix}\right)$ and $J=D\Phi_{\varepsilon,\gamma}(z)$,
+\[ J^\top\Om J=(1-\gamma)\,\Om,\qquad \det J=(1-\gamma)^d. \]
+\end{proposition}
+\begin{proof}
+Each kick has Jacobian $\left(\begin{smallmatrix}I&0\\-\frac{\varepsilon}{2}\nabla^2V&I\end{smallmatrix}\right)$ and the drift $\left(\begin{smallmatrix}I&\varepsilon\nabla^2T\\0&I\end{smallmatrix}\right)$; both are symplectic (symmetric Hessians). The damping $(q,p)\mapsto(q,(1-\gamma)p)$ satisfies $D^\top\Om D=(1-\gamma)\Om$. Conformal factors multiply under composition.
+\end{proof}
+Consequences: $\gamma=0$ gives \textbf{exact symplecticity} (phase-space volume and the symplectic 2-form are preserved); $\gamma>0$ gives \textbf{uniform volume contraction} $(1-\gamma)^d$ per step, and \emph{only the momentum half contracts}. Two corollaries of purely geometric character --- the reciprocal singular-value pairing (gradient stability), and the degeneracy of a mean-spectrum chaos penalty --- are collected in Appendix~\ref{app:cor}.
+
+\paragraph{Verified (check d).} On random anharmonic $V$ and random states: $\lVert J^\top\Om J-(1-\gamma)\Om\rVert_{\max}\le3.3\times10^{-16}$; $\mathrm{mean}_i\log\sigma_i-\half\ln(1-\gamma)$ deviates by $\le2.1\times10^{-16}$ across random $\theta$, while $\max_i\log\sigma_i$ spans $[+0.014,+0.136]$ over the same draws (a usable, non-degenerate signal; see Cor.~\ref{cor:mean}).
+
+For completeness, at $\gamma=0$ the KDK map follows a shadow Hamiltonian $\tilde H=H+O(\varepsilon^2)$; for a harmonic mode $\tilde H$ is the conserved quadratic $\tfrac{p^2}{2m}+\tfrac k2(1-\tfrac{h^2}{4})q^2$ and the measured frequency is $\omega_{\rm map}=\arccos(1-\tfrac{h^2}{2})/\varepsilon=\mu(1+\tfrac{h^2}{24}+\dots)$. Discretization renormalizes mode frequencies at $O(\varepsilon^2)$ and requires $h<2$ for stability (the stiffness limit). We use this only to justify the single-mode $2\times2$ analysis below; the exact eigenvalues are the ground truth.
+
+\section{The exact single-mode solution}
+Linearize at a critical point of $V_\theta$ and diagonalize $M_{\rm eff}^{-1}K$. Each normal mode (inertia $m$, stiffness $k$, $\mu^2=k/m$, $h=\varepsilon\mu$) evolves by the exact $2\times2$ map
+\begin{equation}
+A=\begin{pmatrix}1&0\\0&1-\gamma\end{pmatrix}
+\begin{pmatrix}1-\tfrac{h^2}{2} & \varepsilon/m\\[2pt] -\varepsilon k(1-\tfrac{h^2}{4}) & 1-\tfrac{h^2}{2}\end{pmatrix},
+\quad \operatorname{tr}A=(2-\gamma)(1-\tfrac{h^2}{2}),\ \det A=1-\gamma.
+\end{equation}
+Everything below is the eigenstructure of $A$; every retention claim is $\lambda(A)$.
+
+\subsection{The latch (flat direction, $\mu=0$)}
+\begin{theorem}[latch]\label{thm:latch}
+For a symmetry-protected flat direction ($\mu=0$), $A=\left(\begin{smallmatrix}1&\varepsilon/m\\0&1-\gamma\end{smallmatrix}\right)$, so
+\[ p_n=(1-\gamma)^np_0\to0,\qquad q_n\to q_\infty=q_0+\frac{\varepsilon\,p_0}{m\,\gamma}\quad(\text{geometrically, rate }1-\gamma). \]
+\end{theorem}
+Dissipation kills flat-direction momentum but \textbf{freezes} its displacement. At $\gamma=0$ the flat direction is a marginal integrator ($q_n=q_0+n\varepsilon p_0/m$, drifting forever); \emph{any} $\gamma>0$ converts it into an exact \textbf{latch} --- a momentum impulse $p_0$ writes the finite displacement $\varepsilon p_0/(m\gamma)$ and the stored value then persists with \textbf{infinite half-life}. Smaller $\gamma\Rightarrow$ longer coast $\Rightarrow$ larger written value. (The relativistic drift gives the same latch with $q_\infty=q_0+\varepsilon\sum_{j\ge0}\nabla T((1-\gamma)^jp_0)$, an absolutely convergent series.)
+
+\paragraph{Verified (check a).} Newtonian: $|q_N-q_\infty^{\rm pred}|=1.0\times10^{-15}$; relativistic limit matches its series to 0 ulp and is frozen between steps 2000$\to$4000 to 0 ulp; the companion curved mode decays to $10^{-45}$.
+
+\subsection{Noether charge = write current, and the kinetic-isotropy condition}
+Let a one-parameter group act linearly on $q$ and lift to phase space by $(q,p)\mapsto(g_sq,g_s^{-\top}p)$, generator $X$. If $V_\theta$ and $T$ are both invariant, $H$ is invariant and the \textbf{Noether charge}
+\[ Q_X(q,p)=p^\top X q\quad(\text{e.g. }L=q_1p_2-q_2p_1\text{ for }SO(2)) \]
+is conserved by the flow.
+\begin{proposition}[discrete exactness and decay]\label{prop:noether}
+The Verlet map conserves $Q_X$ \textbf{exactly} (machine precision, any $\varepsilon$) at $\gamma=0$; with damping, $Q_{X,n}=(1-\gamma)^n\,Q_{X,0}$.
+\end{proposition}
+\paragraph{Kinetic-isotropy (Schur) condition --- a condition on the current, not on the register.} For every kinetic mode $\nabla T\parallel M^{-1}p$, so $T$-invariance under a rotation channel requires $M$ to \textbf{commute with the group action} --- by Schur, $M\propto I$ on each irrep (``members of a multiplet share a mass,'' exactly as in HEP). An $SO(2)$ channel over $(q_1,q_2)$ therefore \textbf{requires $M_1=M_2$ for $Q_X$ to be conserved}; otherwise the kinetic term explicitly breaks the symmetry of $H$ no matter how equivariant $V_\theta$ is. It does \emph{not}, however, give the channel a mass.
+
+\begin{proposition}[kinetic-spurion blindness]\label{prop:kinblind}
+Let $V_\theta$ be $\mathcal G$-invariant with vacuum $q^\ast$ and stiffness $K=\nabla^2V_\theta(q^\ast)$, and let $M_{\rm eff}\succ0$ be \textbf{any} inertia (not necessarily commuting with the group action). With the spectral-mass matrix $W=M_{\rm eff}^{-1/2}KM_{\rm eff}^{-1/2}$,
+\[ \ker W=M_{\rm eff}^{1/2}\ker K,\qquad \operatorname{rank}W=\operatorname{rank}K,\qquad \operatorname{inertia}(W)=\operatorname{inertia}(K). \]
+Hence \textbf{every flat direction keeps $\mu^2=0$ exactly, for any anisotropy}: the vacuum manifold, the protected-channel count $\dim(\mathcal G/\mathcal H)$, and the $\gamma>0$ latch (Thm.~\ref{thm:latch}) are untouched, and the latched \emph{physical} direction is $\ker K$ itself --- not even rotated.
+\end{proposition}
+\begin{proof}
+$W=C^\top KC$ with $C=M_{\rm eff}^{-1/2}$ invertible, and congruence by an invertible matrix preserves inertia (Sylvester), hence the number of zero eigenvalues; explicitly $Wv=0\iff KM_{\rm eff}^{-1/2}v=0\iff v\in M_{\rm eff}^{1/2}\ker K$. In normal-mode coordinates $x=M_{\rm eff}^{1/2}q$ the flat block of the one-step map is exactly $\left(\begin{smallmatrix}1&\varepsilon\\0&1-\gamma\end{smallmatrix}\right)$, whose physical $q$-direction is $M_{\rm eff}^{-1/2}\ker W=\ker K$. Globally, every vacuum point with $p=0$ is an exact fixed point of the map ($\nabla V=0\Rightarrow p_{1/2}=p=0\Rightarrow q'=q$) for any $M$.
+\end{proof}
+
+\paragraph{What the kinetic spurion perturbs instead: the current, boundedly.} At $\gamma=0$, $\dot Q_X=p^\top XM^{-1}p\neq0$ when $[M,X]\neq0$ (for $SO(2)$, $\dot L=p_1p_2(M_1^{-1}-M_2^{-1})$). But $H$ is conserved and $V_\theta$ is coercive, so the orbit stays in a compact set and $|Q_X|\le\sup|q||p|$: \textbf{the charge cannot drift secularly --- it oscillates.} On the vacuum orbit the oscillation is exact and closed-form: with the induced coset metric $F^2(\vartheta)=r_\ast^2(M_1\sin^2\vartheta+M_2\cos^2\vartheta)$ and $E=\tfrac12F^2\dot\vartheta^2$ conserved,
+\[ Q=F^2\dot\vartheta=\sqrt{2E}\,F(\vartheta)\ \in\ \Big[\sqrt{2E}\,r_\ast\sqrt{M_{\min}},\ \sqrt{2E}\,r_\ast\sqrt{M_{\max}}\Big], \]
+a bounded oscillation of amplitude $\sqrt{2E}\,r_\ast(\sqrt{M_{\max}}-\sqrt{M_{\min}})$ with period \textbf{half a revolution}. Here $F:=\sqrt{M_{\rm eff}}\,r_\ast$ is the coset \textbf{decay constant} --- the object obeying $Q=F^2\dot\vartheta$ and, in Thm.~\ref{thm:gmor}, $\mu^2F^2=\delta n^2$ --- and \emph{not} the orbit radius $r_\ast$ (the vacuum radius, i.e.\ the order parameter).
+
+\paragraph{Design consequence.} An anisotropic channel \textbf{still latches, with the same infinite half-life}; what it loses is a \emph{conserved} write current (the write gain becomes $\vartheta$-dependent). Tie the channel masses to obtain a clean, $\vartheta$-independent write current --- not to save the register. \textbf{To detect kinetic symmetry breaking, measure the charge law, not the Hessian and not the latch:} both are blind to it by Prop.~\ref{prop:kinblind}.
+
+\paragraph{Where memory actually lives.} Under damping the retained quantity is \emph{not} the charge (friction kills it geometrically) but the \textbf{conjugate coset coordinate} --- the angle along the vacuum manifold, which freezes (the latch, globally on the orbit). Memory lives on $G/H$; the charge is the write current.
+
+\paragraph{Verified (check g).} Equal masses, $\gamma=0$: $\max_n|L_n-L_0|/|L_0|=3.0\times10^{-14}$ (exact conservation). Unequal masses $M=(1,2)$: $O(1)$ charge non-conservation --- a bounded excursion, \emph{not} a drift rate (check g$'$). Decay law error $=9.3\times10^{-16}$; on a Mexican-hat run ($\gamma=0.005$) the stored angle is frozen to $2.3\times10^{-9}$ and the radial mode relaxes to the vacuum circle to $3.4\times10^{-10}$.
+
+\paragraph{Verified (check g$'$).} Flat-mode $\mu^2=0.0$ \textbf{exactly} (bit-level) for $8$ random anisotropic diagonal $M$; $|\mu^2|\le7.2\times10^{-16}$ for $6$ random non-diagonal SPD $M$ (condition number $\le14$), with the flat $q$-directions matching $\ker K$ to $3.3\times10^{-16}$. The latched coset angle drifts by $0.0$ exactly over $2\times10^4$ steps at $\gamma=0.05$ for $M=(1,2)$ and $M=(0.31,4.7)$. On the vacuum ring the closed form is reproduced with amplitude ratio $1.0007$--$1.0064$ and (elliptic) half-period ratio $0.9994$--$1.0005$. The $O(1)$ charge excursion is bounded and stationary: over $10^6$ steps the per-decile $\sup|L|$ has slope $+6.1\times10^{-4}$ and $\sup_n|L_n|=0.582$ stays under the compact-set bound $0.820$.
+
+\subsection{Massive modes: the retention law (GMOR)}
+The over/underdamped boundary is the exact crossover
+\[ h^*(\gamma)=(1-\sqrt{1-\gamma})\sqrt{\tfrac{2}{2-\gamma}}=\tfrac\gamma2+O(\gamma^2). \]
+\textbf{Underdamped} ($h^*<h<2$): $|\lambda|=\sqrt{\det A}=\sqrt{1-\gamma}$, \textbf{independent of the mode mass}, with envelope half-life
+\[ n_{1/2}=\frac{2\ln2}{-\ln(1-\gamma)}\ \text{steps}\quad(\text{exact; }\approx\tfrac{2\ln2}{\gamma}\text{ for small }\gamma). \]
+\textbf{Overdamped} ($0<h<h^*$): real eigenvalues; perturbing the latch ($f(\lambda)=\lambda+\tfrac{1-\gamma}{\lambda}$, $f'(1)=\gamma$) gives the slow memory eigenvalue and half-life
+\[ \lambda_{\rm slow}=1-\frac{(2-\gamma)h^2}{2\gamma}+O(h^4),\qquad
+n_{1/2}\approx\frac{2\gamma\ln2}{(2-\gamma)\varepsilon^2\mu^2}\ \xrightarrow{\gamma\ll1}\ \frac{\gamma\ln2}{(\varepsilon\mu)^2}. \]
+\begin{theorem}[spectral-mass retention law / GMOR]\label{thm:gmor}
+A weakly-broken (small-$\mu$) channel sits overdamped, and
+\[ \boxed{\,n_{1/2}\ \propto\ \mu^{-2}\ \propto\ \delta^{-1}\,} \]
+for an explicit breaking $\delta$ (a symmetry tilt lifts a flat direction to $\mu^2=\delta\cdot(\text{curvature})/M_{\rm eff}$, the Gell-Mann--Oakes--Renner pattern $\mu^2\propto\delta$). The exponent is \textbf{exactly $-2$ in the spectral mass}, valid only while $\varepsilon\mu<h^*(\gamma)\approx\gamma/2$; past the crossover the half-life \textbf{saturates} at the mass-independent floor $2\ln2/(-\ln(1-\gamma))$.
+\end{theorem}
+\paragraph{Verified (check b).} Overdamped $n_{1/2}$ measured $1544\to6165\to24649$ for $\mu^2=0.04\to0.01\to0.0025$; ratios $3.993,3.998$ (predicted $4.0$). Underdamped $|\lambda|=0.974679434=\sqrt{0.95}$ for both $m=1$ and $m=0.25$ (mass-independence to 9 digits). Crossover confirmed real$\leftrightarrow$complex at $h^*=0.025643$ ($\gamma=0.05$) and $0.111284$ ($\gamma=0.2$).
+
+\subsection{Which lifetime? (metric bifurcation)}
+\begin{proposition}[retention-metric bifurcation]\label{prop:metric}
+Two lifetimes coexist: the \textbf{envelope half-life} $n_{1/2}$ above (amplitude/energy decay) and the \textbf{first-crossing time} $n_\times$ (first excursion of a readout past a threshold). Overdamped they agree ($n_\times/n_{1/2}\to1$). Underdamped they \textbf{diverge}: the readout crosses ballistically within the first quarter-period, $n_\times\propto1/(\varepsilon\mu)\propto\delta^{-1/2}$, while $n_{1/2}$ saturates at the mass-independent floor --- they then measure \emph{different physics} (phase transport vs.\ retention). Any single-exponential lifetime predictor fails by up to $\sim5\times$ past the crossover for exactly this reason. \textbf{Every reported lifetime must name its metric.}
+\end{proposition}
+\paragraph{Verified (check k).} First-crossing on the exact mode ($\gamma=0.1$, $\varepsilon=0.1$), measured/predicted ratio $=1.001,1.012$ (deep overdamped) $\to2.30$ (at the crossover) $\to0.93,0.44,0.19$ (underdamped); envelope floor pinned at $13.2=2\ln2/(-\ln0.9)$ throughout; $d\ln n_\times/d\ln\delta=-0.58$ underdamped (ballistic $-0.5$ plus small-$n$ threshold-geometry corrections).
+
+\subsection{Critical-damping minimum and the exceptional point}
+\begin{proposition}[critical-damping retention minimum]\label{prop:crit}
+At fixed $(\varepsilon,\mu)$ with $h<\sqrt2$, the spectral half-life $n_{1/2}(\gamma)=\ln2/(-\ln\max|\lambda|)$ is \textbf{non-monotone}: strictly decreasing on the underdamped side, strictly increasing on the overdamped side, with its \textbf{minimum exactly at the crossover}
+\[ \gamma^*(h)=2h(1-h)+O(h^3)\approx2\varepsilon\mu,\qquad n_{1/2}^{\min}=\frac{2\ln2}{-\ln(1-\gamma^*)}\approx\frac{\ln2}{\varepsilon\mu}. \]
+\end{proposition}
+Forgetting is \emph{fastest at critical damping} --- the memory-side inversion of control theory's ``fastest settling at critical damping.'' Design consequence: a memory channel must keep $\gamma$ away from $2\varepsilon\mu$ of its protected content; a channel one \emph{wants} to erase should be driven to $\gamma\approx2\varepsilon\mu$. (A friction-only mechanism erases massive-mode amplitude but \emph{cannot} delete an exactly-flat coset coordinate, which is latched at any $\gamma$; that needs curvature/tilt or noise.)
+
+\paragraph{Verified (check j).} $\gamma^*=0.039214$ vs $2h(1-h)=0.039200$ at $h=0.02$; argmin over a 40k-point $\gamma$-grid coincides to grid resolution ($2.3\times10^{-5}$); $n^{\min}=34.65$ vs $\ln2/h=34.66$; exact floor $2\ln2/(-\ln0.9)=13.158$ vs small-$\gamma$ approx $13.863$ at $\gamma=0.1$.
+
+\begin{proposition}[exceptional point]\label{prop:ep}
+The crossover $h=h^*(\gamma)$ is a \textbf{defective (Jordan) point} of $A$: the two eigenvalues merge at $\lambda=\sqrt{1-\gamma}$ with a single eigenvector. Consequences: (i) a $\sqrt{\ }$ \textbf{frequency onset} $\varphi=C(\gamma)\sqrt{h-h^*}+O(h-h^*)$ with the closed-form prefactor $C(\gamma)=\sqrt{(2-\gamma)h^*(\gamma)/\sqrt{1-\gamma}}$, and (ii) an \textbf{algebraic decay prefactor} $\lVert A^nz\rVert\sim(1+\kappa n)\lambda^n$ near the EP, so measured lifetimes exceed pure-exponential predictions there. These are second-order-only, sharp observables.
+\end{proposition}
+\paragraph{Verified (check l).} $C(0.1)=0.324724$ (formula) vs $\varphi/\sqrt{h-h^*}=0.324740$ at $h-h^*=10^{-5}$; nilpotency $\lVert(A-\lambda I)^2\rVert=1.1\times10^{-17}$ with $\lVert A-\lambda I\rVert=0.1$; $\lVert A^nz\rVert/\lambda^n$ growth ratios $1.76\to1.87\to(\to2$, linear-in-$n)$.
+
+\section{The mode-mass budget}
+Collecting \S3 into a design table (per step $\varepsilon$, damping $\gamma$):
+\begin{center}\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llll}
+\toprule
+band & condition & behavior & half-life (steps) \\
+\midrule
+latch & $\mu=0$ (symmetry-protected) & frozen displacement, dead momentum & $\infty$ \\
+register (overdamped) & $0<\varepsilon\mu\lesssim\gamma/2$ & slow leak, no oscillation & $\dfrac{2\gamma\ln2}{(2-\gamma)(\varepsilon\mu)^2}$ \\
+working memory (underdamped) & $\gamma/2\lesssim\varepsilon\mu<2$ & oscillation at $\approx\mu$, mass-indep.\ decay & $\dfrac{2\ln2}{-\ln(1-\gamma)}$ \\
+unstable & $\mu^2<0$ & escape; friction-slowed, never held & doubling $\approx\dfrac{2\gamma\ln2}{(2-\gamma)(\varepsilon\mu_{\rm im})^2}$ \\
+forbidden & $\varepsilon\mu>2$ & integrator instability & must not exist \\
+\bottomrule
+\end{tabular}}
+\end{center}
+Three design rules follow: (1) memory capacity at a fixed lifetime is set by how much spectral weight $V_\theta$ can park below $\mu\approx\gamma/(2\varepsilon)$; (2) $\gamma$ moves the register/working-memory boundary \emph{and} the working-memory lifetime simultaneously --- one knob, two effects; (3) $\varepsilon$ rescales the whole $\mu$-axis (and the forbidden zone). Every half-life here is an \textbf{envelope} statement (Prop.~\ref{prop:metric}); first-crossing lifetimes agree only in the overdamped band.
+
+\section{Two negative results}
+\begin{proposition}[friction never stabilizes a saddle]\label{prop:saddle}
+For an expanding mode ($\mu^2=-|k|/m<0$, $g:=\varepsilon\sqrt{|k|/m}$), the leading eigenvalue $\lambda_+>1$ for \textbf{every} $\gamma\in[0,1)$: $\lambda_+<1$ would require $\operatorname{tr}A<2-\gamma$, but $\operatorname{tr}A=(2-\gamma)(1+g^2/2)>2-\gamma$. Damping only \emph{slows} the escape:
+\[ \lambda_+\approx1+\frac{(2-\gamma)g^2}{2\gamma}\ (g\ll\gamma),\qquad \lambda_+\approx e^{g}\ (\gamma\to0). \]
+\end{proposition}
+Expanding directions are contained by nothing except curvature control of $V_\theta$ (a \emph{correct} chaos regularizer --- Cor.~\ref{cor:mean} --- not a mean-spectrum one) and the causal velocity cap (\S6.1).
+\paragraph{Verified (check b).} Over a $\gamma$-grid, $\min_\gamma(\max|\lambda|-1)=1.4\times10^{-5}>0$; exact escape rate $1.000112449$ matches asymptotic $1.000112500$ and the fitted simulation rate $1.000112449$.
+
+\begin{proposition}[controller blindness to isoenergetic escape]\label{prop:blind}
+An energy-thresholded, one-sided damping controller $\gamma_n=s\cdot\tanh(\max(0,H(z_n)-E^*))$ brakes only above a target energy $E^*$. Rolling off a saddle of $V_\theta$ converts $V\to T$ at \textbf{constant $H$}, so such a controller never triggers on isoenergetic instability. What bounds the resulting velocity is \emph{only} the relativistic causal bound (\S6.1); in Newtonian modes saddle escape can reach arbitrary speed at fixed energy. Energy-gating alone is therefore not a safety mechanism; the velocity-saturating kinetic term is.
+\end{proposition}
+
+\section{Kinematic budget of the inertial mass}
+The exact geometry (\S2--\S3) is invariant under the symplectic rescaling $(\tilde q,\tilde p)=(M_{\rm eff}^{1/2}q,M_{\rm eff}^{-1/2}p)$, so at linear order a \emph{constant} inertial $M$ is a gauge choice absorbed into $\mu$. Its irreducible roles are kinematic and live in physical (data) coordinates.
+
+\subsection{Anisotropic causal bound}
+\begin{proposition}[anisotropic velocity cap]\label{prop:cap}
+In relativistic mode the per-coordinate velocity saturates at
+\[ v_i^{\max}=c/\sqrt{M_i},\qquad \lVert\dot q\rVert\le c/\sqrt{\min_iM_i}, \]
+and the Newtonian$\to$relativistic crossover for coordinate $i$ sits at momentum $p_i^*=m_0c\sqrt{M_i}$ (where $v=v^{\max}/\sqrt2$). A single scalar ``$c$'' bounds the velocity only when $M=I$; with a learned mass the light-cone is \textbf{mass-anisotropic}. This is the only mechanism (Prop.~\ref{prop:blind}) that bounds isoenergetic saddle escape.
+\end{proposition}
+\paragraph{Verified (check i).} $v(p=10^8)=c/\sqrt M$ to 9 digits for $M\in\{0.25,1,4\}$; $v(p^*)/v^{\max}=0.707107=1/\sqrt2$.
+
+At finite momentum the relativistic $T$ couples modes: $\nabla^2T$ is off-diagonal, so a fast (``hot'') coordinate raises the effective inertia of \emph{all} coordinates through the shared square root. The spectral results of \S3, computed at rest, are exact only near $p=0$.
+
+\subsection{Thermal budget: a no-go for additive-noise thermostats}\label{sec:thermal}
+The velocity cap also determines what a \emph{stochastic} (Langevin) version of the recurrence can equilibrate to. Couple the momentum to noise by appending, \textbf{as the last sub-step of the map}, $p\mapsto(1-\gamma)p+\sigma\odot\xi$ with $\xi\sim\mathcal N(0,I)$ --- the standard construction for generative/exploratory use.
+
+\begin{proposition}[Gaussian smoothing]\label{prop:gsmooth}
+Let the last sub-step of a Markov chain on $(q,p)$ be $p_{n+1}=D_n+\sigma\odot\xi_n$, where $D_n$ is \emph{any} function of the pre-noise state, $\sigma_i>0$ are constants, and $\xi_n\sim\mathcal N(0,I)$ is independent of that state. Then every invariant probability measure $\mu$ has a momentum marginal that is a Gaussian smoothing, $\mu_p=\nu*\mathcal N(0,\Sigma)$ with $\Sigma=\mathrm{diag}(\sigma_i^2)$; hence $\lvert\widehat{\mu_p}(t)\rvert\le e^{-\frac12t^\top\Sigma t}$ for all $t\in\mathbb R^d$.
+\end{proposition}
+\begin{proof}
+$\widehat{\mu_p}(t)=\mathbb E[e^{it^\top D}]\,e^{-\frac12t^\top\Sigma t}$ by independence of $\xi$, and $\lvert\mathbb E[e^{it^\top D}]\rvert\le1$.
+\end{proof}
+The proposition never uses the form of $D$: it is a property of \emph{discrete splittings} whose final operation is an exact Gaussian convolution, and it has no continuous-time analogue (additive-noise SDEs routinely possess non-Gaussian invariant laws).
+
+\begin{proposition}[relativistic Gibbs no-go]\label{prop:relnogo}
+Fix $\gamma\in(0,2)$ and $T>0$. Since $H=T(p)+V_\theta(q)$ is separable, the Gibbs momentum marginal is potential-free, $\pi_p\propto e^{-T(p)/T}$, \emph{for every} $V_\theta$. In relativistic mode $\pi_p$ is the \textbf{Maxwell--J\"uttner} law, whose characteristic function decays exponentially rather than Gaussianly: for $d=1$, $M=1$, $\beta=c/T$, $\mu=m_0c$, $s=\sqrt{\beta^2+t^2}$,
+\[ \widehat{\pi_p}(t)=\frac{\beta}{s}\,\frac{K_1(\mu s)}{K_1(\beta\mu)}\ \sim\ C\lvert t\rvert^{-3/2}e^{-m_0c\lvert t\rvert},\qquad \lvert t\rvert\to\infty. \]
+By Prop.~\ref{prop:gsmooth} this violates $\lvert\widehat{\pi_p}(t)\rvert\le e^{-\sigma^2t^2/2}$ for all $\lvert t\rvert\gtrsim2m_0c/\sigma^2$. Hence \textbf{no noise scale} --- no per-mode $\sigma_i>0$, no full $\Sigma\succ0$ --- \textbf{makes the Gibbs measure invariant for the relativistic map.} In the Newtonian modes $\pi_p$ \emph{is} Gaussian and the bound is saturated by the unique exact discrete-FDT scale $\sigma_i^\star=\sqrt{M_{{\rm eff},i}T\gamma(2-\gamma)}$, for which $\sigma_i^{\star2}/(\gamma(2-\gamma))=M_{{\rm eff},i}T$.
+\end{proposition}
+The statement is independent of $V_\theta$ (separability makes $\pi_p$ potential-free, so no interacting potential can restore the missing non-Gaussianity), independent of $\gamma$, and independent of the form of the damping. It concerns the \textbf{sampler, not the thermodynamics}: the exact Gibbs configurational marginal $\propto e^{-V_\theta/T}$ is relativity-insensitive, so a relativistic unit has a perfectly good equilibrium --- the additive-noise chain simply does not sample it. Exactly three escapes exist: a state-dependent noise covariance, a Metropolis accept/reject \emph{after} the kick, or a non-separable $H$.
+
+\paragraph{The control parameter is $d\Theta$, not $\Theta$.} Write $\Theta:=T/(m_0c^2)$. Because $T(p)$ shares one square root across all $d$ coordinates, equipartition gives $\langle T_{\rm kin}\rangle/(m_0c^2)\approx d\Theta/2$, so the non-relativistic regime is $d\Theta\ll1$:
+\begin{align*}
+\frac{\mathrm{Var}_{\rm MJ}(p_i)}{M_{{\rm eff},i}T}&=1+\frac{(d+2)\Theta}{2}+O\bigl((d\Theta)^2\bigr)\ \xrightarrow[\ d\Theta\gg1\ ]{}\ (d+1)\Theta,\\
+\mathrm{KL}\bigl(\pi_p\,\Vert\,\mathcal N(0,M_{\rm eff}T)\bigr)&=\tfrac{1}{16}d(d+2)(d+3)\,\Theta^2+O(\Theta^3),
+\end{align*}
+with $\mathrm{Var}_{\rm MJ}/(M_{\rm eff}T)=K_2(1/\Theta)/K_1(1/\Theta)$ exactly at $d=1$ (both expansions require $d\Theta\ll1$; the arrow is the opposite, ultrarelativistic limit). A one-dimensional scan therefore badly understates a high-dimensional unit, and ``raise $c$ until $T\ll m_0c^2$'' must be read as $c\gtrsim\sqrt{dT/m_0}$.
+
+\paragraph{An exact repair (latent mass).} Since $A\mapsto\sqrt A$ is a Bernstein function, $e^{-\beta\sqrt A}=\frac{\beta}{2\sqrt\pi}\int_0^\infty s^{-3/2}e^{-\beta^2/4s}e^{-As}\,ds$, exhibiting Maxwell--J\"uttner as a Gaussian scale mixture with a \emph{single shared} latent scale:
+\[ p\mid s\ \sim\ \mathcal N\bigl(0,\,M/(2s)\bigr),\qquad s\mid p\ \sim\ \mathrm{InverseGaussian}\Bigl(\text{mean }\tfrac{c^2}{2\,T\,T(p)},\ \text{shape }\tfrac{c^2}{2T^2}\Bigr). \]
+Drawing $s\mid p$ and then applying the \emph{same} linear Gaussian O-step with variance $M/(2s)$ preserves $\pi_p$ exactly. Because $1/(2\,\mathbb E[s\mid p])=T\,T(p)/c^2$, the correct relativistic thermostat is the Gaussian one with a \textbf{randomized inertia equal to the relativistic mass} $m_0\gamma_{\rm Lorentz}$ --- the state-dependent-$\Sigma$ escape of Prop.~\ref{prop:gsmooth}, at the cost of one inverse-Gaussian draw per step.
+
+\paragraph{Verified (check e$'$).} Free particle on a torus at $\Theta=1$: the coded chain's stationary momentum is Gaussian (KS $D=0.0011$, $p=0.97$; $\mathrm{Var}=0.9973=M_{\rm eff}T$) while Maxwell--J\"uttner is rejected ($D=0.0845$, $p=0$; MJ $\mathrm{Var}=2.6995=K_2(1)/K_1(1)$). The closed-form characteristic function matches a numerical transform to $1.4\times10^{-14}$ with decay rate $\to m_0c$; the Gaussian bound is first violated at $\lvert t\rvert=22.79$ ($T{=}0.5$, $\gamma{=}0.1$) and is exceeded by $5.0\times10^{119}$ at $t=20$, $\Theta=8$. On the chain at fixed $\Theta=0.1$, $\mathrm{Var}(q)/(T/k)-1=-0.111,-0.196,-0.390,-0.633$ for $d=1,4,16,64$ against a $d$-independent Newtonian control $\le10^{-3}$. The latent-mass O-step reproduces Maxwell--J\"uttner (KS $D=0.0013$, $p=0.47$) and collapses the $O(1)$ bias $(-0.311,-0.536,-0.727)$ to the Newtonian shadow floor $(+0.0006,+0.0011,+0.0011)$.
+
+\section{Position-gated dissipation (open-system accounting)}
+Replace the scalar $\gamma$ by a learned \textbf{friction field} $\gamma_\phi(q)\in[0,\gamma_{\max}]$, applied as $(q,p)\mapsto(q,(1-\gamma_\phi(q_{n+1}))p)$ after the Verlet substeps.
+\begin{proposition}[position-gated volume contraction]\label{prop:gated}
+The damping Jacobian is block-triangular, so regardless of $\nabla\gamma_\phi$, $\det D\Phi=(1-\gamma_\phi(q_{n+1}))^d$.
+\end{proposition}
+Phase-space volume is destroyed \textbf{exactly and only where $\gamma_\phi>0$}; outside the superlevel set of $\gamma_\phi$ the dynamics is exactly conservative. Conformality (and the singular-value pairing of Cor.~\ref{cor:sv}) is lost wherever $\nabla\gamma_\phi\ne0$; the determinant statement is what remains, and it is exact. This is the clean classical open-system statement --- symplectic bulk with localized non-unitary channels --- and it makes information loss \emph{metered}: exactly $d\ln(1-\gamma_\phi(q))$ nats of differential entropy per step, localized to the dissipative region.
+\paragraph{Verified (check h).} $|\det J-(1-\gamma_\phi(q'))^d|\le1.1\times10^{-16}$ on random states (complex-step Jacobians).
+
+\section{Discrete equivariant neutrality}
+The latch's frozen direction is a \emph{neutral} mode (unit eigenvalue / zero Lyapunov exponent). Neutrality of symmetry-protected directions is classical equivariant dynamics (Golubitsky--Stewart--Schaeffer 1988; Krupa 1990; Rumberger 2001), recently specialized to recurrent flows by Mo (2026). We state the discrete-time counterpart for our map.
+\begin{proposition}[discrete equivariant neutrality]\label{prop:neutral}
+Let $\Phi$ be a $C^1$ diffeomorphism equivariant under a smooth Lie-group action ($\Phi(g\cdot x)=g\cdot\Phi(x)$), and $K$ a compact $\Phi$-invariant set of constant stabilizer type $\mathcal H$ on which the infinitesimal-action map $A_x:\mathfrak g\to T_xM$ has singular values uniformly bounded in $(0,\infty)$, of rank $q=\dim(\mathcal G/\mathcal H)$. Then the group-tangent bundle $E^G_x=A_x\mathfrak g$ is $D\Phi$-invariant and every Lyapunov exponent of the restricted cocycle is exactly $0$; the spectrum of $D\Phi$ on $K$ contains at least $q$ zeros.
+\end{proposition}
+\begin{proof}
+Differentiating $\Phi(e^{s\xi}\!\cdot x)=e^{s\xi}\!\cdot\Phi(x)$ at $s=0$ gives the cocycle identity $D\Phi(x)\,\xi_M(x)=\xi_M(\Phi(x))$, hence $D\Phi^n(x)\,\xi_M(x)=\xi_M(\Phi^n(x))$. For $v=A_x\xi\in E^G_x$, uniform bounds $a\le\sigma(A_\cdot)\le b$ give $(a/b)\lVert v\rVert\le\lVert D\Phi^n(x)v\rVert\le(b/a)\lVert v\rVert$ for all $n$ --- growth rate $0$.
+\end{proof}
+The damped Verlet map with $\mathcal G$-invariant $V_\theta$ and channel-isotropic $M$ is equivariant under the lifted action $(q,p)\mapsto(gq,g^{-\top}p)$, and the latched vacuum orbit $\times\{p=0\}$ satisfies the hypotheses --- so the latch's frozen direction is a symmetry-protected neutral mode at any $\gamma\in[0,1)$. (Channel isotropy is required for the \emph{map} to be equivariant; by Prop.~\ref{prop:kinblind} the flat direction and its latch persist without it, so equivariance is sufficient but not necessary here.) This is the precise, and \emph{only}, overlap with a Lyapunov-spectrum account. Everything else in \S3 --- the finite write transport $\varepsilon p_0/(m\gamma)$, the $\gamma$-controlled conversion of a drifting integrator into a deadbeat latch, the Noether charge as write current --- lives in the Jordan/transient sector that Lyapunov exponents are provably blind to (a marginal integrator and two frozen registers share the spectrum $\{0,0\}$ yet differ categorically in function).
+\paragraph{Verified (check m).} Cocycle identity holds to $1.2\times10^{-15}$ over 500 steps on a Mexican-hat damped map; the latched group-tangent exponent $\widehat\lambda(T=10,10^2,10^3)=0.0$ exactly.
+
+\section{Related work}
+\paragraph{Equivariant/continuous-attractor dynamics.} The neutrality of group-orbit directions is classical (Golubitsky, Stewart \& Schaeffer 1988; Krupa 1990; Rumberger 2001) and underlies continuous-attractor models of neural memory. Mo (2026) proves that a $C^1$ vector field exactly equivariant under a Lie group $G$, on a compact invariant set with nondegenerate orbit bundle and stabilizer $H$, has at least $\dim(G/H)$ zero Lyapunov exponents along the orbit, and shows that a ``pseudo-gap'' acquired under explicit breaking predicts a finite memory lifetime. That account is the \textbf{kinematics of protection}: it holds for \emph{any} equivariant flow and is therefore silent on what sets the gap. In the damped-Hamiltonian subclass the gap is a \textbf{constitutive} quantity, $\mathrm{gap}=\tfrac{(2-\gamma)}{2\gamma}\varepsilon^2\mu^2$ with $\mu^2=\mathrm{eig}(M_{\rm eff}^{-1}\nabla^2V_\theta)$, valid only below the critical-damping crossover, beyond which retention saturates and the stored coordinate rings at frequency $\propto\sqrt{\text{breaking}}$. Mo's single-exponential lifetime law, run unchanged on our mode, matches ours to $\sim1\%$ in the overdamped regime (his reported median ratio $1.013$ is our overdamped face; check (k) reproduces $1.001$--$1.012$) and mispredicts by up to $5\times$ past the crossover --- a clean containment rather than a conflict. Mo's diagnostics transfer verbatim and we adopt them.
+
+\paragraph{Symmetry breaking and Goldstone modes in deep networks.} A parallel physics-grounded route to stable long-range information propagation is spontaneous symmetry breaking with gapless Goldstone carriers (Iqbal, Keller, Song, Miyato \& Welling 2026). The present class realizes a related mechanism through symplectic conservation plus a causal velocity bound; the latch and the $\mu^{-2}$ pseudo-Goldstone lifetime are its retention-side signatures. The counting of protected channels, $\dim(\mathcal G/\mathcal H)$, and the nonrelativistic (type-B) refinements of Goldstone counting (Minami \& Hidaka) apply to the flat-direction sector here; a systematic treatment is left to companion work. Manifold-shaping in equivariant recurrent networks (Di Bernardo \emph{et al.}\ 2025) is adjacent on the \emph{geometry} side; we make no claim of novelty for choosing a symmetry group or coset --- our contribution is the exact price list attached to a chosen structure (the retention table, the kinetic-isotropy constraint), not the choice itself.
+
+\paragraph{Geometric integration.} The conformal-symplectic structure, shadow-Hamiltonian conservation, and $h<2$ stability limit are standard for (damped) leapfrog integrators (Hairer, Lubich \& Wanner; Benettin \& Giorgilli); our contribution is to read them as \emph{memory} statements for a learnable $H$.
+
+\paragraph{Reference instantiation.} Jawahar \& Pierini (2026) is one concrete member of the class and the source of the update map used here; all results are stated for the class and verified on the exact map.
+
+\section{Limitations and scope}
+\begin{itemize}\itemsep2pt
+\item \textbf{Exactly-solvable core is quadratic.} All boxed results are exact for quadratic $V$ (designed testbeds) and are the \emph{local} statement at a critical point $q^\ast$ of a learned $V_\theta$. Global flatness of a memory channel requires an \emph{exact} symmetry of $V_\theta$ and $T$; accidental flat directions of a learned potential are not protected. On learned, genuinely anharmonic potentials the linearized predictions degrade smoothly; quantifying that deviation is outside this note (it is measured in companion evidence-side work).
+\item \textbf{$\gamma>0$ breaks conservation and reversibility by construction} --- that is what forgetting \emph{is} here. There is no conserved shadow energy for $\gamma>0$; the structurally robust exact statement is conformal symplecticity (Prop.~\ref{prop:conf}).
+\item \textbf{Langevin sampling} (coupling the momentum to noise for generative use) is \textbf{kinetic-mode-dependent} (\S\ref{sec:thermal}). In the Newtonian modes the per-mode fluctuation--dissipation-consistent scale $\sigma_i^\star=\sqrt{M_{{\rm eff},i}T\gamma(2-\gamma)}$ targets the Gibbs measure (a uniform scale instead equilibrates each mode at its own temperature) and the residual bias in $H$ is the usual $O(\varepsilon^2)$ shadow bias. In relativistic mode \emph{no} $\sigma$ exists (Prop.~\ref{prop:relnogo}); the bias is then $O(1)$ and $\varepsilon$-independent, controlled by $dT/(m_0c^2)$. Exact repairs: a latent-mass (state-dependent-$\Sigma$) thermostat, a Metropolis adjustment, or a Newtonian kinetic mode. The full sampling analysis is companion material.
+\item \textbf{Away-from-attractor spectra} (Prop.~\ref{prop:cap}'s kinetic coupling at hot states; time-varying $K(q_t)$) require Oseledets/finite-time analysis; not covered.
+\item \textbf{Governor BIBO} is evidenced (compact sublevel sets under a coercive $V$ + monotone damping + the energy barrier), with the proven saddle-blindness caveat of Prop.~\ref{prop:blind}; a full discrete Lyapunov-function proof is open. Non-coercive learned potentials rely on external clipping and fall outside the boundedness assumptions.
+\end{itemize}
+
+\section{Numerical verification}
+All results are checked to machine precision on the exact map with a single self-contained script (numpy float64; complex-step Jacobians, step $10^{-30}$; fixed seeds; runs in seconds; the map mirrors the reference implementation exactly). Supplementary on request.
+\begin{center}\footnotesize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{cll}
+\toprule
+id & result & observed (re-run 2026-07-07) \\
+\midrule
+(a) & latch $q_\infty=q_0+\varepsilon p_0/(m\gamma)$ (Thm~\ref{thm:latch}) & Newtonian err $1.0\times10^{-15}$; relativistic 0 ulp, frozen 2000$\to$4000; curved $\to10^{-45}$ \\
+(b) & retention $\propto\mu^{-2}$, mass-indep., saddle (Thm~\ref{thm:gmor}, Prop~\ref{prop:saddle}) & ratios $3.993/3.998$; $|\lambda|=\sqrt{0.95}$ ($m=1,0.25$); $\min_\gamma(\max|\lambda|-1)=1.4\times10^{-5}$ \\
+(c) & squeeze/mass-weighted squeeze symplectic & $\le2.2\times10^{-16}$; $\det=1$ \\
+(d) & conformal symplecticity + mean-spectrum degeneracy (Prop~\ref{prop:conf}, Cor~\ref{cor:mean}) & $\le3.3\times10^{-16}$; mean-log-sv $\le2.1\times10^{-16}$; max-log-sv $[0.014,0.136]$ \\
+(e) & Langevin per-mode temperature, Newtonian (scope note \S11) & code Var$(p)=0.0263$; corrected $1.000000$, Var$(q)=0.500156$ \\
+(e$'$) & relativistic Gibbs no-go + latent-mass repair (Prop~\ref{prop:relnogo}) & coded $p$ Gaussian (KS $D{=}0.0011$, $p{=}0.97$), MJ rejected ($D{=}0.0845$); char.fn.\ vs FT $1.4{\times}10^{-14}$, rate $\to m_0c$; bound exceeded $5.0{\times}10^{119}$ at $t{=}20$; $d$-amp.\ $-0.111{\to}-0.633$ ($d{=}1{\to}64$) vs Newt.\ ctrl $\le10^{-3}$; fix: KS $D{=}0.0013$, bias $-0.727{\to}{+}0.0011$ \\
+(f) & shadow Hamiltonian $O(\varepsilon^4)$ & std$(H)\propto\varepsilon^2$; std$(\tilde H)\propto\varepsilon^4$ \\
+(g) & Noether: exact conservation/decay (Prop~\ref{prop:noether}) & equal-$M$ $3.0\times10^{-14}$; unequal-$M$ $O(1)$ (bounded excursion); decay-law $9.3\times10^{-16}$; angle $2.3\times10^{-9}$ \\
+(g$'$) & kinetic-spurion blindness (Prop~\ref{prop:kinblind}) & flat $\mu^2=0.0$ exactly (diag.\ $M$), $\le7.2\times10^{-16}$ (SPD $M$); latch drift $0.0$; ring amp.\ $1.0007$--$1.0064$; $\sup_n|L_n|=0.582<0.820$ \\
+(h) & $\det J=(1-\gamma_\phi(q'))^d$ (Prop~\ref{prop:gated}) & $\le1.1\times10^{-16}$ \\
+(i) & $v^{\max}=c/\sqrt M$, crossover $p^*$ (Prop~\ref{prop:cap}) & exact to 9 digits; $v(p^*)/v^{\max}=1/\sqrt2$ \\
+(j) & critical-damping min $\gamma^*\approx2\varepsilon\mu$ (Prop~\ref{prop:crit}) & $\gamma^*=0.039214$ vs $0.039200$; $n^{\min}=34.65$ vs $34.66$ \\
+(k) & metric bifurcation (Prop~\ref{prop:metric}) & ratios $1.001,1.012,\dots,2.30$ (EP)$,\dots,0.19$; floor $13.2$; slope $-0.58$ \\
+(l) & exceptional point (Prop~\ref{prop:ep}) & $C(0.1)=0.324724$ vs $0.324740$; $\lVert(A-\lambda I)^2\rVert=1.1\times10^{-17}$ \\
+(m) & discrete equivariant neutrality (Prop~\ref{prop:neutral}) & cocycle $1.2\times10^{-15}$/500 steps; latched exponent $0.0$ \\
+\bottomrule
+\end{tabular}}
+\end{center}
+Row (c) (squeeze / mass-weighted squeeze symplecticity) is a supplementary check of the shared script, used by the companion access-mechanism work; it is retained here for completeness.
+
+\appendix
+\section{Geometric corollaries of conformal symplecticity}\label{app:cor}
+\emph{Corollary-grade material, retained in full (Head policy 2026-07-07); both follow directly from Prop.~\ref{prop:conf}.}
+\begin{corollary}[singular-value pairing]\label{cor:sv}
+Since $J/\sqrt{1-\gamma}$ is symplectic, the $2d$ singular values of $J$ pair as $(\sigma,(1-\gamma)/\sigma)$; over $n$ steps $(\sigma,(1-\gamma)^n/\sigma)$. Through a conservative unroll, backpropagated gradients \textbf{cannot all vanish} (log-singular values are symmetric about $0$) but \textbf{can explode}, always in reciprocal expand/contract pairs. Depth stability is spectrum \emph{control}, not a freebie of symplecticity.
+\end{corollary}
+\begin{corollary}[a mean-spectrum chaos penalty is degenerate]\label{cor:mean}
+Any regularizer of the form $\mathrm{mean}_i\log\sigma_i(J)$ equals $\tfrac{1}{2d}\log\det J=\half\ln(1-\gamma)$ \textbf{identically} --- independent of $\theta$, of the state, and of $V_\theta$ --- because it measures the \emph{sum} of local Lyapunov exponents (fixed by conformality), not the \emph{max}. A chaos-suppressing regularizer must therefore use a max/positive-part statistic, e.g.\ $\max_i\log\sigma_i$ or $\sum_i\max(0,\log\sigma_i)$, which are $\theta$-sensitive.
+\end{corollary}
+\footnote{\emph{Practitioner note (Cor.~\ref{cor:mean}).} This is a purely geometric fact about the whole class: a mean-spectrum chaos penalty is degenerate, so a chaos-suppressing regularizer must instead use a max/positive-part statistic. A design caveat about the class, not a claim about any experiment.}
+
+\section*{Appendix: Provenance (for the Head / paper-writer --- strip on arXiv)}
+Source: \texttt{formalism-note.md} v1.1 (F5), \textbf{corrigendum 2026-07-09} (Prop.~\ref{prop:kinblind}; check (g$'$)), \textbf{corrigendum-2 2026-07-10} (Props.~\ref{prop:gsmooth}--\ref{prop:relnogo}; check (e$'$); \S\ref{sec:thermal}). Verification script re-run 2026-07-07; all 13 legacy checks (a)--(m) reproduce F5 App-N to printed digits; checks (g$'$) and (e$'$) are new with the corrigenda (15 table rows). Numerical config (constant unless noted): numpy float64, \texttt{np.random.default\_rng(42)}, simulation seed 7, complex-step step $10^{-30}$. Representative per-check parameters: (b) $\gamma=0.2,\varepsilon=0.1$; (d) $\gamma\in\{0,0.15\}$; (e) $m=2,k=1,\varepsilon=0.05,\gamma=0.1,T=0.5$; (g) Mexican-hat $V$, $\gamma\in\{0,0.005\}$; (j) $\varepsilon=0.1,\mu=0.2$; (k)(l) $\gamma=0.1,\varepsilon=0.1$. Check (g$'$): \texttt{.claude/scratch/f5-corrigendum/\{verify,verify2,verify3\}.py}, numpy 2.0.2 float64, \texttt{default\_rng(42/7/11)}, hat $\lambda=3,f=1$ (blindness) and $\lambda=1,r_0=1,\varepsilon=0.02$ (charge), ring $\lambda=400,\varepsilon=0.002$. \textbf{Corrigendum note (2026-07-09):} the previous version of \S3.2 asserted that a non-isotropic $M$ makes the channel ``a pseudo-Goldstone one with $\mu^2\propto$ the mass splitting.'' That is false (Prop.~\ref{prop:kinblind}); the earlier check (g) verified only the charge half of the claim, and its ``$2.6$'' is a running-supremum excursion, not a drift rate.
+\textbf{Corrigendum note (2026-07-10):} the previous version of \S11 stated the exact discrete-FDT noise $\sigma_i^\star$ as a class-level result and claimed the corrected relativistic chain is ``$O(\varepsilon^2)$-biased.'' Both are wrong: $\sigma^\star$ is exact \emph{only} in the Newtonian modes, in relativistic mode \emph{no} $\sigma$ yields a Gibbs invariant (Prop.~\ref{prop:relnogo}), and the residual bias is $O(1)$, $\varepsilon$-independent, and governed by $dT/(m_0c^2)$ --- amplified by the state dimension $d$, which a one-dimensional scan does not see. Check (e$'$): \texttt{.claude/scratch/f5-corrigendum-2/\{mj\_theory,mj\_dim,nogo\_chain,fixes\}.py}, numpy 2.x + scipy, float64, \texttt{default\_rng} seeds $\{5,7,11,99,2026,12345,20260710\}$; free particle $\gamma{=}0.2,\varepsilon{=}0.05$, $2{\times}10^5$ walkers $\times\,4000$ steps; harmonic $k{=}1$, $\gamma{=}0.1$, $\varepsilon\in\{0.01,0.05\}$, $2$--$20{\times}10^3$ walkers $\times\,2$--$3{\times}10^4$ steps. No trained checkpoints, seeds, or training flags enter this note --- all claims are properties of the map.
+
+\end{document}

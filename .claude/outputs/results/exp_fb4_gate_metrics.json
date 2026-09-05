@@ -1,0 +1,1418 @@
+{
+  "experiment": "fb4_gate",
+  "question": "FB4: is the +0 B substitute at ceiling for every family, INCLUDING full attention? If so the protocol measures the task, not the memory.",
+  "plan": [
+    {
+      "family": "overload",
+      "arm": "load1x_shipped",
+      "seeds": [
+        0
+      ]
+    },
+    {
+      "family": "aggregate",
+      "arm": "base",
+      "seeds": [
+        0
+      ]
+    },
+    {
+      "family": "recency",
+      "arm": "base",
+      "seeds": [
+        0
+      ]
+    },
+    {
+      "family": "manifold",
+      "arm": "base",
+      "seeds": [
+        0
+      ]
+    }
+  ],
+  "quick": true,
+  "sd_convention": "sample sd (ddof=1); SE = sd/sqrt(n); n = 3",
+  "prereg": ".claude/outputs/bprime-fb4-gate/PREREG.md \u2014 the rule, its two constants and the predicted S(f) were filed BEFORE this ran",
+  "byte_note": "\u26d4 no cell here is a byte-matched dividend; the minimum ratio measured anywhere is 17.11\u00d7",
+  "cells": [
+    {
+      "cell": "overload/load1x_shipped@s0",
+      "family": "overload",
+      "arm": "load1x_shipped",
+      "seed": 0,
+      "degenerate": false,
+      "metric": "decode",
+      "metric_max": 1.0,
+      "n_live": 6,
+      "n_queries": 12,
+      "sep": 1.3595156362724317,
+      "sep_over_sigma_q": 9.063437575149544,
+      "arms": {
+        "full": 0.3333333333333333,
+        "launder": 1.0,
+        "substitute": 1.0,
+        "blank": 0.3333333333333333,
+        "attention": 1.0
+      },
+      "substitute_name": "settle_deleted",
+      "substitute_excl_launder": {
+        "name": "knn2_idw_+0B",
+        "score": 0.8333333333333334
+      },
+      "all_zero_byte_readers": {
+        "settle_deleted": 1.0,
+        "knn2_mean_+0B": 0.16666666666666666,
+        "knn2_idw_+0B": 0.8333333333333334
+      },
+      "all_launder_scores": {
+        "settle_deleted": 1.0,
+        "same_keys_null": 0.0,
+        "knn2_mean_+0B": 0.16666666666666666,
+        "knn2_idw_+0B": 0.8333333333333334
+      },
+      "attention_fit": {
+        "tau": 0.01,
+        "fit_score": 1.0,
+        "grid": [
+          0.01,
+          0.012589254117941675,
+          0.015848931924611134,
+          0.0199526231496888,
+          0.025118864315095794,
+          0.03162277660168379,
+          0.039810717055349734,
+          0.05011872336272725,
+          0.06309573444801933,
+          0.07943282347242814,
+          0.1,
+          0.12589254117941676,
+          0.15848931924611143,
+          0.19952623149688797,
+          0.25118864315095807,
+          0.31622776601683794,
+          0.3981071705534973,
+          0.5011872336272725,
+          0.6309573444801934,
+          0.7943282347242817,
+          1.0,
+          1.2589254117941675,
+          1.584893192461114,
+          1.9952623149688808,
+          2.5118864315095824,
+          3.1622776601683795,
+          3.981071705534973,
+          5.011872336272725,
+          6.309573444801936,
+          7.943282347242821,
+          10.0,
+          12.589254117941675,
+          15.848931924611142,
+          19.952623149688808,
+          25.11886431509582,
+          31.622776601683793,
+          39.810717055349734,
+          50.11872336272725,
+          63.095734448019364,
+          79.43282347242821,
+          100.0
+        ],
+        "degenerate": false,
+        "bytes": 4,
+        "n_fit_queries": 12
+      },
+      "attention_curve": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.8333333333333334,
+        0.75,
+        0.5,
+        0.4166666666666667,
+        0.3333333333333333,
+        0.3333333333333333,
+        0.3333333333333333,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25
+      ],
+      "dividend_vs_launder": {
+        "metric": "decode",
+        "full": 0.3333333333333333,
+        "launder": 1.0,
+        "dividend": -0.6666666666666667,
+        "se": NaN,
+        "n_seeds": 1,
+        "controls": {},
+        "bytes": null,
+        "flags": {},
+        "notes": ""
+      },
+      "byte_ledger": {
+        "full_bytes": 2784,
+        "launder_bytes": 120,
+        "ratio": 23.2,
+        "matched": false,
+        "n_atoms": 96,
+        "atoms_per_live_item": 16.0,
+        "breakdown": {
+          "V_theta": 2688,
+          "codebook_addresses": 96,
+          "launder_keys": 96,
+          "launder_payloads": 24
+        },
+        "per_arm": {
+          "full": {
+            "bytes": 2784,
+            "phi_family": "identity_launch",
+            "phi_id": "ae9ab21987010262",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "launder": {
+            "bytes": 120,
+            "phi_family": "identity_launch",
+            "phi_id": "ae9ab21987010262",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "substitute": {
+            "bytes": 120,
+            "extra_bytes": 0,
+            "phi_family": "identity_launch",
+            "phi_id": "ae9ab21987010262",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "blank": {
+            "bytes": 0,
+            "phi_family": "identity_launch",
+            "phi_id": "ae9ab21987010262",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "attention": {
+            "bytes": 124,
+            "extra_bytes": 4,
+            "phi_family": "identity_launch",
+            "phi_id": "ae9ab21987010262",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          }
+        },
+        "note": "\u26d4 NOT a byte-matched dividend: the minimum ratio measured anywhere is 17.11\u00d7, and `ratio = 1.4\u00b7atoms_per_item + 0.8` makes matched bytes unreachable by construction under a masked write."
+      },
+      "phi_id": "ae9ab21987010262",
+      "gym_config_non_default": {
+        "arm": "load1x_shipped",
+        "n_offer": 6,
+        "reference_capacity": 3,
+        "capacity": 6,
+        "collision_offer": false,
+        "consolidate_every": 2,
+        "min_consolidations": 4,
+        "n_query_per_item": 2,
+        "n_query_per_pair": 3,
+        "n_manifold_launch": 4,
+        "clu_overrides": {
+          "stage_admission": true,
+          "d_safe_override": 0.58,
+          "atoms_per_item": 32,
+          "write_steps": 30,
+          "address_steps": 80,
+          "read_steps": 120,
+          "n_query_per_item": 2,
+          "quick": true
+        }
+      },
+      "clu_config_non_default": {
+        "capacity": 6,
+        "atoms_per_item": 16,
+        "min_atoms": 96,
+        "min_atoms_base": 96,
+        "min_atoms_c": 1.0,
+        "write_steps": 30,
+        "address_steps": 80,
+        "read_steps": 120,
+        "d_safe_override": 0.58,
+        "budget": 6,
+        "stage_admission": true,
+        "n_query_per_item": 2,
+        "quick": true
+      },
+      "n_admitted": 7,
+      "wall_write_s": 14.803553104400635,
+      "wall_read_s": 0.006201028823852539,
+      "blank_aux_decode_labels_argmin": 0.3333333333333333,
+      "wall_s": 15.22240424156189
+    },
+    {
+      "cell": "aggregate/base@s0",
+      "family": "aggregate",
+      "arm": "base",
+      "seed": 0,
+      "degenerate": false,
+      "metric": "neg_mae",
+      "metric_max": 0.0,
+      "n_live": 6,
+      "n_queries": 26,
+      "sep": 1.3595156362724317,
+      "sep_over_sigma_q": 9.063437575149544,
+      "arms": {
+        "full": -0.3748598373134481,
+        "launder": -0.36820046942555523,
+        "substitute": -0.14784357638642315,
+        "blank": -0.3748703192849104,
+        "attention": -0.1659042777650736
+      },
+      "substitute_name": "knn2_idw_+0B",
+      "substitute_excl_launder": {
+        "name": "knn2_idw_+0B",
+        "score": -0.14784357638642315
+      },
+      "all_zero_byte_readers": {
+        "settle_deleted": -0.36820046942555523,
+        "knn2_mean_+0B": -0.17382456877613206,
+        "knn2_idw_+0B": -0.14784357638642315
+      },
+      "all_launder_scores": {
+        "settle_deleted": -0.36820046942555523,
+        "same_keys_null": -0.560780631956354,
+        "knn2_mean_+0B": -0.17382456877613206,
+        "knn2_idw_+0B": -0.14784357638642315
+      },
+      "attention_fit": {
+        "tau": 0.1,
+        "fit_score": -0.20961632647370218,
+        "grid": [
+          0.01,
+          0.012589254117941675,
+          0.015848931924611134,
+          0.0199526231496888,
+          0.025118864315095794,
+          0.03162277660168379,
+          0.039810717055349734,
+          0.05011872336272725,
+          0.06309573444801933,
+          0.07943282347242814,
+          0.1,
+          0.12589254117941676,
+          0.15848931924611143,
+          0.19952623149688797,
+          0.25118864315095807,
+          0.31622776601683794,
+          0.3981071705534973,
+          0.5011872336272725,
+          0.6309573444801934,
+          0.7943282347242817,
+          1.0,
+          1.2589254117941675,
+          1.584893192461114,
+          1.9952623149688808,
+          2.5118864315095824,
+          3.1622776601683795,
+          3.981071705534973,
+          5.011872336272725,
+          6.309573444801936,
+          7.943282347242821,
+          10.0,
+          12.589254117941675,
+          15.848931924611142,
+          19.952623149688808,
+          25.11886431509582,
+          31.622776601683793,
+          39.810717055349734,
+          50.11872336272725,
+          63.095734448019364,
+          79.43282347242821,
+          100.0
+        ],
+        "degenerate": false,
+        "bytes": 4,
+        "n_fit_queries": 26
+      },
+      "attention_curve": [
+        -0.3654361190180496,
+        -0.34993016784904923,
+        -0.33353670251491435,
+        -0.31764333397748457,
+        -0.30011976578697036,
+        -0.28473077448952455,
+        -0.26771401325159955,
+        -0.24913586305938,
+        -0.23392269819190414,
+        -0.21821956343001475,
+        -0.20961632647370218,
+        -0.2139808019853575,
+        -0.22470850006296508,
+        -0.2502273382137986,
+        -0.2747921094097087,
+        -0.29618799443625865,
+        -0.3149414632460967,
+        -0.32993587204734937,
+        -0.34172147405904546,
+        -0.3509065079822235,
+        -0.35804249208264766,
+        -0.3635865106919859,
+        -0.36790074754573965,
+        -0.371265918311878,
+        -0.37389751568072543,
+        -0.3759605269250553,
+        -0.3775814163976357,
+        -0.3788574184591912,
+        -0.37986358420092475,
+        -0.3806580772342054,
+        -0.38128614767371716,
+        -0.38178312211378534,
+        -0.3821766640660773,
+        -0.3824884926981526,
+        -0.38273569746696506,
+        -0.38293174939450425,
+        -0.3830872830398394,
+        -0.3832107039463245,
+        -0.38330866239124745,
+        -0.383386424109614,
+        -0.3834481612144792
+      ],
+      "dividend_vs_launder": {
+        "metric": "neg_mae",
+        "full": -0.3748598373134481,
+        "launder": -0.36820046942555523,
+        "dividend": -0.006659367887892842,
+        "se": NaN,
+        "n_seeds": 1,
+        "controls": {},
+        "bytes": null,
+        "flags": {},
+        "notes": ""
+      },
+      "byte_ledger": {
+        "full_bytes": 2784,
+        "launder_bytes": 120,
+        "ratio": 23.2,
+        "matched": false,
+        "n_atoms": 96,
+        "atoms_per_live_item": 16.0,
+        "breakdown": {
+          "V_theta": 2688,
+          "codebook_addresses": 96,
+          "launder_keys": 96,
+          "launder_payloads": 24
+        },
+        "per_arm": {
+          "full": {
+            "bytes": 2784,
+            "phi_family": "identity_launch",
+            "phi_id": "a283260e546b4f0e",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "launder": {
+            "bytes": 120,
+            "phi_family": "identity_launch",
+            "phi_id": "a283260e546b4f0e",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "substitute": {
+            "bytes": 120,
+            "extra_bytes": 0,
+            "phi_family": "identity_launch",
+            "phi_id": "a283260e546b4f0e",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "blank": {
+            "bytes": 0,
+            "phi_family": "identity_launch",
+            "phi_id": "a283260e546b4f0e",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "attention": {
+            "bytes": 124,
+            "extra_bytes": 4,
+            "phi_family": "identity_launch",
+            "phi_id": "a283260e546b4f0e",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          }
+        },
+        "note": "\u26d4 NOT a byte-matched dividend: the minimum ratio measured anywhere is 17.11\u00d7, and `ratio = 1.4\u00b7atoms_per_item + 0.8` makes matched bytes unreachable by construction under a masked write."
+      },
+      "phi_id": "a283260e546b4f0e",
+      "gym_config_non_default": {
+        "family": "aggregate",
+        "n_offer": 6,
+        "reference_capacity": 3,
+        "capacity": 6,
+        "consolidate_every": 2,
+        "min_consolidations": 4,
+        "n_query_per_item": 2,
+        "n_query_per_pair": 3,
+        "n_manifold_launch": 4,
+        "clu_overrides": {
+          "stage_admission": true,
+          "write_steps": 30,
+          "address_steps": 80,
+          "read_steps": 120,
+          "n_query_per_item": 2,
+          "quick": true,
+          "atoms_per_item": 32
+        }
+      },
+      "clu_config_non_default": {
+        "capacity": 6,
+        "atoms_per_item": 16,
+        "min_atoms": 96,
+        "min_atoms_base": 96,
+        "min_atoms_c": 1.0,
+        "write_steps": 30,
+        "address_steps": 80,
+        "read_steps": 120,
+        "budget": 6,
+        "stage_admission": true,
+        "n_query_per_item": 2,
+        "quick": true
+      },
+      "n_admitted": 7,
+      "wall_write_s": 4.484293222427368,
+      "wall_read_s": 0.4996209144592285,
+      "wall_s": 5.3987650871276855
+    },
+    {
+      "cell": "recency/base@s0",
+      "family": "recency",
+      "arm": "base",
+      "seed": 0,
+      "degenerate": false,
+      "metric": "acc",
+      "metric_max": 1.0,
+      "n_live": 6,
+      "n_queries": 45,
+      "sep": 1.3595156362724317,
+      "sep_over_sigma_q": 9.063437575149544,
+      "arms": {
+        "full": 0.4666666666666667,
+        "launder": 0.4666666666666667,
+        "substitute": 1.0,
+        "blank": 0.4666666666666667,
+        "attention": 0.4666666666666667
+      },
+      "substitute_name": "order_aware_pair_+0B",
+      "substitute_excl_launder": {
+        "name": "order_aware_pair_+0B",
+        "score": 1.0
+      },
+      "all_zero_byte_readers": {
+        "settle_deleted": 0.4666666666666667,
+        "order_aware_+0B": 0.8666666666666667,
+        "order_aware_pair_+0B": 1.0
+      },
+      "all_launder_scores": {
+        "settle_deleted": 0.4666666666666667,
+        "same_keys_null": 0.4666666666666667,
+        "order_aware_+0B": 0.8666666666666667,
+        "order_aware_pair_+0B": 1.0
+      },
+      "attention_fit": {
+        "tau": 0.01,
+        "fit_score": 0.4666666666666667,
+        "grid": [
+          0.01,
+          0.012589254117941675,
+          0.015848931924611134,
+          0.0199526231496888,
+          0.025118864315095794,
+          0.03162277660168379,
+          0.039810717055349734,
+          0.05011872336272725,
+          0.06309573444801933,
+          0.07943282347242814,
+          0.1,
+          0.12589254117941676,
+          0.15848931924611143,
+          0.19952623149688797,
+          0.25118864315095807,
+          0.31622776601683794,
+          0.3981071705534973,
+          0.5011872336272725,
+          0.6309573444801934,
+          0.7943282347242817,
+          1.0,
+          1.2589254117941675,
+          1.584893192461114,
+          1.9952623149688808,
+          2.5118864315095824,
+          3.1622776601683795,
+          3.981071705534973,
+          5.011872336272725,
+          6.309573444801936,
+          7.943282347242821,
+          10.0,
+          12.589254117941675,
+          15.848931924611142,
+          19.952623149688808,
+          25.11886431509582,
+          31.622776601683793,
+          39.810717055349734,
+          50.11872336272725,
+          63.095734448019364,
+          79.43282347242821,
+          100.0
+        ],
+        "degenerate": true,
+        "bytes": 4,
+        "n_fit_queries": 45
+      },
+      "attention_curve": [
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667,
+        0.4666666666666667
+      ],
+      "dividend_vs_launder": {
+        "metric": "acc",
+        "full": 0.4666666666666667,
+        "launder": 0.4666666666666667,
+        "dividend": 0.0,
+        "se": NaN,
+        "n_seeds": 1,
+        "controls": {},
+        "bytes": null,
+        "flags": {},
+        "notes": ""
+      },
+      "byte_ledger": {
+        "full_bytes": 2784,
+        "launder_bytes": 120,
+        "ratio": 23.2,
+        "matched": false,
+        "n_atoms": 96,
+        "atoms_per_live_item": 16.0,
+        "breakdown": {
+          "V_theta": 2688,
+          "codebook_addresses": 96,
+          "launder_keys": 96,
+          "launder_payloads": 24
+        },
+        "per_arm": {
+          "full": {
+            "bytes": 2784,
+            "phi_family": "identity_launch",
+            "phi_id": "5f9e0730f52ac85c",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "launder": {
+            "bytes": 120,
+            "phi_family": "identity_launch",
+            "phi_id": "5f9e0730f52ac85c",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "substitute": {
+            "bytes": 120,
+            "extra_bytes": 0,
+            "phi_family": "identity_launch",
+            "phi_id": "5f9e0730f52ac85c",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "blank": {
+            "bytes": 0,
+            "phi_family": "identity_launch",
+            "phi_id": "5f9e0730f52ac85c",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "attention": {
+            "bytes": 124,
+            "extra_bytes": 4,
+            "phi_family": "identity_launch",
+            "phi_id": "5f9e0730f52ac85c",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          }
+        },
+        "note": "\u26d4 NOT a byte-matched dividend: the minimum ratio measured anywhere is 17.11\u00d7, and `ratio = 1.4\u00b7atoms_per_item + 0.8` makes matched bytes unreachable by construction under a masked write."
+      },
+      "phi_id": "5f9e0730f52ac85c",
+      "gym_config_non_default": {
+        "family": "recency",
+        "n_offer": 6,
+        "reference_capacity": 3,
+        "capacity": 6,
+        "consolidate_every": 2,
+        "min_consolidations": 4,
+        "n_query_per_item": 2,
+        "n_query_per_pair": 3,
+        "restrict_index_to_pair": true,
+        "n_manifold_launch": 4,
+        "clu_overrides": {
+          "stage_admission": true,
+          "stage_lifetimes": true,
+          "leak": 0.06,
+          "write_steps": 30,
+          "address_steps": 80,
+          "read_steps": 120,
+          "n_query_per_item": 2,
+          "quick": true,
+          "atoms_per_item": 32
+        }
+      },
+      "clu_config_non_default": {
+        "capacity": 6,
+        "atoms_per_item": 16,
+        "min_atoms": 96,
+        "min_atoms_base": 96,
+        "min_atoms_c": 1.0,
+        "write_steps": 30,
+        "address_steps": 80,
+        "read_steps": 120,
+        "budget": 6,
+        "leak": 0.06,
+        "stage_lifetimes": true,
+        "stage_admission": true,
+        "n_query_per_item": 2,
+        "quick": true
+      },
+      "n_admitted": 7,
+      "wall_write_s": 4.75208306312561,
+      "wall_read_s": 0.5134029388427734,
+      "recency_coverage": {
+        "restrict_index_to_pair": true,
+        "acc_unrestricted_K_way(traj)": 0.4666666666666667,
+        "acc_restricted_2_way(traj)": 0.4666666666666667,
+        "acc_restricted_2_way(point)": 0.4,
+        "coverage_answer_inside_own_pair": 0.9777777777777777,
+        "out_of_pair_rate": 0.022222222222222254,
+        "note": "\u26d4 the PRE-FIX unrestricted number is a SCORING-DOMAIN DEFECT (a K-way answer graded on a 2-way curve) and is never-quote as a null; both are emitted so the switch is auditable."
+      },
+      "wall_s": 5.694230079650879
+    },
+    {
+      "cell": "manifold/base@s0",
+      "family": "manifold",
+      "arm": "base",
+      "seed": 0,
+      "degenerate": false,
+      "metric": "r2",
+      "metric_max": 1.0,
+      "n_live": 6,
+      "n_queries": 24,
+      "sep": 1.3595156362724317,
+      "sep_over_sigma_q": 9.063437575149544,
+      "arms": {
+        "full": 0.2058375051545447,
+        "launder": -2.220446049250313e-16,
+        "substitute": 1.0,
+        "blank": 0.21037358809705387,
+        "attention": -2.220446049250313e-16
+      },
+      "substitute_name": "echo_+0B",
+      "substitute_excl_launder": {
+        "name": "echo_+0B",
+        "score": 1.0
+      },
+      "all_zero_byte_readers": {
+        "settle_deleted": -2.220446049250313e-16,
+        "echo_+0B": 1.0
+      },
+      "all_launder_scores": {
+        "settle_deleted": -2.220446049250313e-16,
+        "same_keys_null": -2.220446049250313e-16,
+        "echo_+0B": 1.0
+      },
+      "attention_fit": {
+        "tau": 0.01,
+        "fit_score": -2.220446049250313e-16,
+        "grid": [
+          0.01,
+          0.012589254117941675,
+          0.015848931924611134,
+          0.0199526231496888,
+          0.025118864315095794,
+          0.03162277660168379,
+          0.039810717055349734,
+          0.05011872336272725,
+          0.06309573444801933,
+          0.07943282347242814,
+          0.1,
+          0.12589254117941676,
+          0.15848931924611143,
+          0.19952623149688797,
+          0.25118864315095807,
+          0.31622776601683794,
+          0.3981071705534973,
+          0.5011872336272725,
+          0.6309573444801934,
+          0.7943282347242817,
+          1.0,
+          1.2589254117941675,
+          1.584893192461114,
+          1.9952623149688808,
+          2.5118864315095824,
+          3.1622776601683795,
+          3.981071705534973,
+          5.011872336272725,
+          6.309573444801936,
+          7.943282347242821,
+          10.0,
+          12.589254117941675,
+          15.848931924611142,
+          19.952623149688808,
+          25.11886431509582,
+          31.622776601683793,
+          39.810717055349734,
+          50.11872336272725,
+          63.095734448019364,
+          79.43282347242821,
+          100.0
+        ],
+        "degenerate": true,
+        "bytes": 4,
+        "n_fit_queries": 24
+      },
+      "attention_curve": [
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16,
+        -2.220446049250313e-16
+      ],
+      "dividend_vs_launder": {
+        "metric": "r2",
+        "full": 0.2058375051545447,
+        "launder": -2.220446049250313e-16,
+        "dividend": 0.2058375051545449,
+        "se": NaN,
+        "n_seeds": 1,
+        "controls": {},
+        "bytes": null,
+        "flags": {},
+        "notes": ""
+      },
+      "byte_ledger": {
+        "full_bytes": 3168,
+        "launder_bytes": 120,
+        "ratio": 26.4,
+        "matched": false,
+        "n_atoms": 96,
+        "atoms_per_live_item": 16.0,
+        "breakdown": {
+          "V_theta": 3072,
+          "codebook_addresses": 96,
+          "launder_keys": 96,
+          "launder_payloads": 24
+        },
+        "per_arm": {
+          "full": {
+            "bytes": 3168,
+            "phi_family": "identity_launch",
+            "phi_id": "71d1aa41bb3259e3",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "launder": {
+            "bytes": 120,
+            "phi_family": "identity_launch",
+            "phi_id": "71d1aa41bb3259e3",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "substitute": {
+            "bytes": 120,
+            "extra_bytes": 0,
+            "phi_family": "identity_launch",
+            "phi_id": "71d1aa41bb3259e3",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "blank": {
+            "bytes": 0,
+            "phi_family": "identity_launch",
+            "phi_id": "71d1aa41bb3259e3",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          },
+          "attention": {
+            "bytes": 124,
+            "extra_bytes": 4,
+            "phi_family": "identity_launch",
+            "phi_id": "71d1aa41bb3259e3",
+            "phi_params": 0,
+            "phi_bytes": 0,
+            "note": "all five arms consume the SAME QuerySet object; phi_id is a content hash of (q0, keys)"
+          }
+        },
+        "note": "\u26d4 NOT a byte-matched dividend: the minimum ratio measured anywhere is 17.11\u00d7, and `ratio = 1.4\u00b7atoms_per_item + 0.8` makes matched bytes unreachable by construction under a masked write."
+      },
+      "phi_id": "71d1aa41bb3259e3",
+      "gym_config_non_default": {
+        "family": "manifold",
+        "n_offer": 6,
+        "reference_capacity": 3,
+        "capacity": 6,
+        "deletion": false,
+        "revisit": false,
+        "collision_offer": false,
+        "consolidate_every": 2,
+        "min_consolidations": 4,
+        "n_query_per_item": 2,
+        "n_query_per_pair": 3,
+        "n_manifold_launch": 4,
+        "clu_overrides": {
+          "stage_admission": true,
+          "n_spectator": 1,
+          "write_steps": 30,
+          "address_steps": 80,
+          "read_steps": 120,
+          "n_query_per_item": 2,
+          "quick": true,
+          "atoms_per_item": 32
+        }
+      },
+      "clu_config_non_default": {
+        "n_spectator": 1,
+        "capacity": 6,
+        "atoms_per_item": 16,
+        "min_atoms": 96,
+        "min_atoms_base": 96,
+        "min_atoms_c": 1.0,
+        "write_steps": 30,
+        "address_steps": 80,
+        "read_steps": 120,
+        "budget": 6,
+        "stage_admission": true,
+        "n_query_per_item": 2,
+        "quick": true
+      },
+      "n_admitted": 6,
+      "wall_write_s": 11.706616878509521,
+      "wall_read_s": 0.6803410053253174,
+      "wall_s": 12.824823141098022
+    }
+  ],
+  "gate": {
+    "verdict": "PARTIAL = {manifold, overload, recency}",
+    "saturated": [
+      "manifold",
+      "overload",
+      "recency"
+    ],
+    "surviving_families": [
+      "aggregate"
+    ],
+    "families_measured": [
+      "overload",
+      "aggregate",
+      "recency",
+      "manifold"
+    ],
+    "rule": "S(f) = (sub - blank)/(M - blank); saturated iff S >= 0.95 AND sub >= attn - 2 SE (paired, 3 seeds, ddof=1). FIRES iff ALL FOUR saturate.",
+    "note": "\u25d0 each saturated family is STRUCK from B\u2032's cross-family audit as protocol-invalid; the wave proceeds on the survivors. Unexpectedly saturated (beyond the predicted `manifold`): overload, recency.",
+    "rows": [
+      {
+        "family": "overload",
+        "metric": "decode",
+        "metric_max": 1.0,
+        "blank": 0.3333333333333333,
+        "sub": 1.0,
+        "attn": 1.0,
+        "S": 1.0,
+        "se_paired": 0.0,
+        "saturated": true,
+        "sub_name": "settle_deleted",
+        "n_seeds": 1,
+        "detail": {
+          "arm": "load1x_shipped",
+          "seeds": [
+            0
+          ],
+          "full_seeds": [
+            0.3333333333333333
+          ],
+          "launder_seeds": [
+            1.0
+          ],
+          "byte_ratio_seeds": [
+            23.2
+          ],
+          "attention_tau": [
+            0.01
+          ],
+          "attention_tau_degenerate": [
+            false
+          ],
+          "sub_excl_launder_seeds": [
+            0.8333333333333334
+          ],
+          "sub_excl_launder_name": "knn2_idw_+0B",
+          "sub_seeds": [
+            1.0
+          ],
+          "attn_seeds": [
+            1.0
+          ],
+          "blank_seeds": [
+            0.3333333333333333
+          ],
+          "S_per_seed": [
+            1.0
+          ],
+          "se_sub": 0.0,
+          "se_attn": 0.0,
+          "se_paired_diff": 0.0,
+          "leg_ceiling(S>=0.95)": true,
+          "leg_attention(sub>=attn-2SE)": true,
+          "threshold": 0.95
+        }
+      },
+      {
+        "family": "aggregate",
+        "metric": "neg_mae",
+        "metric_max": 0.0,
+        "blank": -0.3748703192849104,
+        "sub": -0.14784357638642315,
+        "attn": -0.1659042777650736,
+        "S": 0.6056140783072812,
+        "se_paired": 0.0,
+        "saturated": false,
+        "sub_name": "knn2_idw_+0B",
+        "n_seeds": 1,
+        "detail": {
+          "arm": "base",
+          "seeds": [
+            0
+          ],
+          "full_seeds": [
+            -0.3748598373134481
+          ],
+          "launder_seeds": [
+            -0.36820046942555523
+          ],
+          "byte_ratio_seeds": [
+            23.2
+          ],
+          "attention_tau": [
+            0.1
+          ],
+          "attention_tau_degenerate": [
+            false
+          ],
+          "sub_excl_launder_seeds": [
+            -0.14784357638642315
+          ],
+          "sub_excl_launder_name": "knn2_idw_+0B",
+          "sub_seeds": [
+            -0.14784357638642315
+          ],
+          "attn_seeds": [
+            -0.1659042777650736
+          ],
+          "blank_seeds": [
+            -0.3748703192849104
+          ],
+          "S_per_seed": [
+            0.6056140783072812
+          ],
+          "se_sub": 0.0,
+          "se_attn": 0.0,
+          "se_paired_diff": 0.0,
+          "leg_ceiling(S>=0.95)": false,
+          "leg_attention(sub>=attn-2SE)": true,
+          "threshold": 0.95
+        }
+      },
+      {
+        "family": "recency",
+        "metric": "acc",
+        "metric_max": 1.0,
+        "blank": 0.4666666666666667,
+        "sub": 1.0,
+        "attn": 0.4666666666666667,
+        "S": 1.0,
+        "se_paired": 0.0,
+        "saturated": true,
+        "sub_name": "order_aware_pair_+0B",
+        "n_seeds": 1,
+        "detail": {
+          "arm": "base",
+          "seeds": [
+            0
+          ],
+          "full_seeds": [
+            0.4666666666666667
+          ],
+          "launder_seeds": [
+            0.4666666666666667
+          ],
+          "byte_ratio_seeds": [
+            23.2
+          ],
+          "attention_tau": [
+            0.01
+          ],
+          "attention_tau_degenerate": [
+            true
+          ],
+          "sub_excl_launder_seeds": [
+            1.0
+          ],
+          "sub_excl_launder_name": "order_aware_pair_+0B",
+          "sub_seeds": [
+            1.0
+          ],
+          "attn_seeds": [
+            0.4666666666666667
+          ],
+          "blank_seeds": [
+            0.4666666666666667
+          ],
+          "S_per_seed": [
+            1.0
+          ],
+          "se_sub": 0.0,
+          "se_attn": 0.0,
+          "se_paired_diff": 0.0,
+          "leg_ceiling(S>=0.95)": true,
+          "leg_attention(sub>=attn-2SE)": true,
+          "threshold": 0.95
+        }
+      },
+      {
+        "family": "manifold",
+        "metric": "r2",
+        "metric_max": 1.0,
+        "blank": 0.21037358809705387,
+        "sub": 1.0,
+        "attn": -2.220446049250313e-16,
+        "S": 1.0,
+        "se_paired": 0.0,
+        "saturated": true,
+        "sub_name": "echo_+0B",
+        "n_seeds": 1,
+        "detail": {
+          "arm": "base",
+          "seeds": [
+            0
+          ],
+          "full_seeds": [
+            0.2058375051545447
+          ],
+          "launder_seeds": [
+            -2.220446049250313e-16
+          ],
+          "byte_ratio_seeds": [
+            26.4
+          ],
+          "attention_tau": [
+            0.01
+          ],
+          "attention_tau_degenerate": [
+            true
+          ],
+          "sub_excl_launder_seeds": [
+            1.0
+          ],
+          "sub_excl_launder_name": "echo_+0B",
+          "sub_seeds": [
+            1.0
+          ],
+          "attn_seeds": [
+            -2.220446049250313e-16
+          ],
+          "blank_seeds": [
+            0.21037358809705387
+          ],
+          "S_per_seed": [
+            1.0
+          ],
+          "se_sub": 0.0,
+          "se_attn": 0.0,
+          "se_paired_diff": 0.0,
+          "leg_ceiling(S>=0.95)": true,
+          "leg_attention(sub>=attn-2SE)": true,
+          "threshold": 0.95
+        }
+      }
+    ],
+    "secondary_excl_launder": {
+      "verdict": "PARTIAL = {manifold, recency}",
+      "saturated": [
+        "manifold",
+        "recency"
+      ],
+      "surviving_families": [
+        "aggregate",
+        "overload"
+      ],
+      "families_measured": [
+        "overload",
+        "aggregate",
+        "recency",
+        "manifold"
+      ],
+      "rule": "S(f) = (sub - blank)/(M - blank); saturated iff S >= 0.95 AND sub >= attn - 2 SE (paired, 3 seeds, ddof=1). FIRES iff ALL FOUR saturate.",
+      "note": "\u25d0 each saturated family is STRUCK from B\u2032's cross-family audit as protocol-invalid; the wave proceeds on the survivors. Unexpectedly saturated (beyond the predicted `manifold`): recency.",
+      "rows": [
+        {
+          "family": "overload",
+          "metric": "decode",
+          "metric_max": 1.0,
+          "blank": 0.3333333333333333,
+          "sub": 0.8333333333333334,
+          "attn": 1.0,
+          "S": 0.7499999999999999,
+          "se_paired": 0.0,
+          "saturated": false,
+          "sub_name": "knn2_idw_+0B",
+          "n_seeds": 1,
+          "detail": {
+            "sub_seeds": [
+              0.8333333333333334
+            ],
+            "attn_seeds": [
+              1.0
+            ],
+            "blank_seeds": [
+              0.3333333333333333
+            ],
+            "S_per_seed": [
+              0.7499999999999999
+            ],
+            "se_sub": 0.0,
+            "se_attn": 0.0,
+            "se_paired_diff": 0.0,
+            "leg_ceiling(S>=0.95)": false,
+            "leg_attention(sub>=attn-2SE)": false,
+            "threshold": 0.95
+          }
+        },
+        {
+          "family": "aggregate",
+          "metric": "neg_mae",
+          "metric_max": 0.0,
+          "blank": -0.3748703192849104,
+          "sub": -0.14784357638642315,
+          "attn": -0.1659042777650736,
+          "S": 0.6056140783072812,
+          "se_paired": 0.0,
+          "saturated": false,
+          "sub_name": "knn2_idw_+0B",
+          "n_seeds": 1,
+          "detail": {
+            "sub_seeds": [
+              -0.14784357638642315
+            ],
+            "attn_seeds": [
+              -0.1659042777650736
+            ],
+            "blank_seeds": [
+              -0.3748703192849104
+            ],
+            "S_per_seed": [
+              0.6056140783072812
+            ],
+            "se_sub": 0.0,
+            "se_attn": 0.0,
+            "se_paired_diff": 0.0,
+            "leg_ceiling(S>=0.95)": false,
+            "leg_attention(sub>=attn-2SE)": true,
+            "threshold": 0.95
+          }
+        },
+        {
+          "family": "recency",
+          "metric": "acc",
+          "metric_max": 1.0,
+          "blank": 0.4666666666666667,
+          "sub": 1.0,
+          "attn": 0.4666666666666667,
+          "S": 1.0,
+          "se_paired": 0.0,
+          "saturated": true,
+          "sub_name": "order_aware_pair_+0B",
+          "n_seeds": 1,
+          "detail": {
+            "sub_seeds": [
+              1.0
+            ],
+            "attn_seeds": [
+              0.4666666666666667
+            ],
+            "blank_seeds": [
+              0.4666666666666667
+            ],
+            "S_per_seed": [
+              1.0
+            ],
+            "se_sub": 0.0,
+            "se_attn": 0.0,
+            "se_paired_diff": 0.0,
+            "leg_ceiling(S>=0.95)": true,
+            "leg_attention(sub>=attn-2SE)": true,
+            "threshold": 0.95
+          }
+        },
+        {
+          "family": "manifold",
+          "metric": "r2",
+          "metric_max": 1.0,
+          "blank": 0.21037358809705387,
+          "sub": 1.0,
+          "attn": -2.220446049250313e-16,
+          "S": 1.0,
+          "se_paired": 0.0,
+          "saturated": true,
+          "sub_name": "echo_+0B",
+          "n_seeds": 1,
+          "detail": {
+            "sub_seeds": [
+              1.0
+            ],
+            "attn_seeds": [
+              -2.220446049250313e-16
+            ],
+            "blank_seeds": [
+              0.21037358809705387
+            ],
+            "S_per_seed": [
+              1.0
+            ],
+            "se_sub": 0.0,
+            "se_attn": 0.0,
+            "se_paired_diff": 0.0,
+            "leg_ceiling(S>=0.95)": true,
+            "leg_attention(sub>=attn-2SE)": true,
+            "threshold": 0.95
+          }
+        }
+      ]
+    }
+  },
+  "figures": [
+    "/Users/user/Desktop/CHLU/.claude/outputs/bprime-fb4-gate/exp_fb4_gate.png"
+  ]
+}

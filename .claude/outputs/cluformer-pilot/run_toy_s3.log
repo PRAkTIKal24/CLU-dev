@@ -1,0 +1,37 @@
+[clu_store] static bpc 4.5996 | dyneval bpc 4.5977 | 1332s
+[gru_matched] static bpc 4.5911 | dyneval bpc 4.5893 | 83s
+[ttt_matched] static bpc 4.5630 | dyneval bpc 4.5612 | 80s
+[none] static bpc 4.5816 | dyneval bpc 4.5798 | 62s
+[echo] static bpc 4.6136 | dyneval bpc 4.6117 | 62s
+wrote /Users/user/Desktop/CHLU/.claude/outputs/cluformer-pilot/pilot_toy_seed0_S3.json (1741s, stages S1+S2+S3)
+[clu_store] static bpc 4.6470 | dyneval bpc 4.6451 | 1299s
+[gru_matched] static bpc 4.6452 | dyneval bpc 4.6433 | 93s
+[ttt_matched] static bpc 4.6310 | dyneval bpc 4.6287 | 86s
+[none] static bpc 4.6451 | dyneval bpc 4.6432 | 67s
+[echo] static bpc 4.6618 | dyneval bpc 4.6600 | 64s
+wrote /Users/user/Desktop/CHLU/.claude/outputs/cluformer-pilot/pilot_toy_seed1_S3.json (1725s, stages S1+S2+S3)
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/user/Desktop/CHLU-pilot/chlu/experiments/exp_cluformer_pilot.py", line 437, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/Users/user/Desktop/CHLU-pilot/chlu/experiments/exp_cluformer_pilot.py", line 427, in main
+    recs = [run_pilot(a.scale, s, a.stage, a.out, ov, a.d5) for s in seeds]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/user/Desktop/CHLU-pilot/chlu/experiments/exp_cluformer_pilot.py", line 427, in <listcomp>
+    recs = [run_pilot(a.scale, s, a.stage, a.out, ov, a.d5) for s in seeds]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/user/Desktop/CHLU-pilot/chlu/experiments/exp_cluformer_pilot.py", line 191, in run_pilot
+    m, hist = train_arm(a, models[a], pcfg, iter(batches), log=rec["train_log"],
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/user/Desktop/CHLU-pilot/chlu/training/train_cluformer.py", line 523, in train_arm
+    mp = monitor_pass(model, pcfg, monitor_tokens,
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/user/Desktop/CHLU-pilot/chlu/training/train_cluformer.py", line 928, in monitor_pass
+    a_u = saddle_reach_threshold(D, s_i, float(scfg.confine),
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/user/Desktop/CHLU-pilot/chlu/core/monitors.py", line 1451, in saddle_reach_threshold
+    beta = D / (2.0 * al * s * s)
+           ~~^~~~~~~~~~~~~~~~~~~~
+ZeroDivisionError: float division by zero

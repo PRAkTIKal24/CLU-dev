@@ -1,0 +1,512 @@
+{
+  "corpus": "enwik8",
+  "split": "test",
+  "citation": {
+    "slice_definition": "Sun, Krishna, Mattarella-Micke, Iyyer (2021), EMNLP, arXiv:2109.09115 \u2014 distance-to-last-occurrence buckets + the 'never appears in the prefix' bucket.",
+    "control_precedent": "Khandelwal, He, Qi, Jurafsky (2018), ACL, aclanthology.org/P18-1027 \u2014 perturbation-by-distance.",
+    "ours": [
+      "the bin edges",
+      "computed on enwik8/WT-103 BYTES",
+      "computed for EVERY arm incl. the dyn-eval column",
+      "the shuffled-position control applied to the slice"
+    ]
+  },
+  "arms": {
+    "mamba2": {
+      "static": {
+        "unit": "token",
+        "edges": [
+          1,
+          8,
+          32,
+          128,
+          512,
+          2048,
+          8192
+        ],
+        "labels": [
+          "[1,8)",
+          "[8,32)",
+          "[32,128)",
+          "[128,512)",
+          "[512,2048)",
+          "[2048,8192)",
+          "[8192,inf)",
+          "never"
+        ],
+        "n_documents": 3,
+        "bins": {
+          "[1,8)": {
+            "n": 0,
+            "bpc": null,
+            "nll_nats": null,
+            "sufficient": false
+          },
+          "[8,32)": {
+            "n": 15,
+            "bpc": 8.065036155716239,
+            "nll_nats": 5.590257072448731,
+            "sufficient": true
+          },
+          "[32,128)": {
+            "n": 36,
+            "bpc": 8.107056852606036,
+            "nll_nats": 5.619383600023058,
+            "sufficient": true
+          },
+          "[128,512)": {
+            "n": 65,
+            "bpc": 8.36401635233871,
+            "nll_nats": 5.797494352780856,
+            "sufficient": true
+          },
+          "[512,2048)": {
+            "n": 2,
+            "bpc": null,
+            "nll_nats": null,
+            "sufficient": false
+          },
+          "[2048,8192)": {
+            "n": 63,
+            "bpc": 8.203470861736863,
+            "nll_nats": 5.686212698618571,
+            "sufficient": true
+          },
+          "[8192,inf)": {
+            "n": 21,
+            "bpc": 8.006777776356685,
+            "nll_nats": 5.549875441051665,
+            "sufficient": true
+          },
+          "never": {
+            "n": 682,
+            "bpc": 8.224854350017404,
+            "nll_nats": 5.701034603230765,
+            "sufficient": true
+          }
+        },
+        "n_scored": 884,
+        "bpc_all_binned": 8.221439605467399,
+        "min_n": 5,
+        "corpus": "enwik8",
+        "split": "test"
+      },
+      "dyneval": {
+        "unit": "token",
+        "edges": [
+          1,
+          8,
+          32,
+          128,
+          512,
+          2048,
+          8192
+        ],
+        "labels": [
+          "[1,8)",
+          "[8,32)",
+          "[32,128)",
+          "[128,512)",
+          "[512,2048)",
+          "[2048,8192)",
+          "[8192,inf)",
+          "never"
+        ],
+        "n_documents": 3,
+        "bins": {
+          "[1,8)": {
+            "n": 0,
+            "bpc": null,
+            "nll_nats": null,
+            "sufficient": false
+          },
+          "[8,32)": {
+            "n": 15,
+            "bpc": 8.065194563203193,
+            "nll_nats": 5.590366872151693,
+            "sufficient": true
+          },
+          "[32,128)": {
+            "n": 36,
+            "bpc": 8.10492679014755,
+            "nll_nats": 5.617907153235541,
+            "sufficient": true
+          },
+          "[128,512)": {
+            "n": 65,
+            "bpc": 8.360070414147959,
+            "nll_nats": 5.794759236849272,
+            "sufficient": true
+          },
+          "[512,2048)": {
+            "n": 2,
+            "bpc": null,
+            "nll_nats": null,
+            "sufficient": false
+          },
+          "[2048,8192)": {
+            "n": 63,
+            "bpc": 8.197644024008431,
+            "nll_nats": 5.682173842475528,
+            "sufficient": true
+          },
+          "[8192,inf)": {
+            "n": 21,
+            "bpc": 8.00445650194904,
+            "nll_nats": 5.548266456240699,
+            "sufficient": true
+          },
+          "never": {
+            "n": 682,
+            "bpc": 8.22229599460753,
+            "nll_nats": 5.699261286391541,
+            "sufficient": true
+          }
+        },
+        "n_scored": 884,
+        "bpc_all_binned": 8.218553521023956,
+        "min_n": 5,
+        "corpus": "enwik8",
+        "split": "test",
+        "dyneval_lr": 0.01
+      },
+      "dyneval_minus_static": {
+        "[1,8)": {
+          "gap_bpc": null,
+          "n_a": 0,
+          "n_b": 0
+        },
+        "[8,32)": {
+          "gap_bpc": 0.00015840748695339357,
+          "n_a": 15,
+          "n_b": 15
+        },
+        "[32,128)": {
+          "gap_bpc": -0.002130062458485682,
+          "n_a": 36,
+          "n_b": 36
+        },
+        "[128,512)": {
+          "gap_bpc": -0.003945938190751619,
+          "n_a": 65,
+          "n_b": 65
+        },
+        "[512,2048)": {
+          "gap_bpc": null,
+          "n_a": 2,
+          "n_b": 2
+        },
+        "[2048,8192)": {
+          "gap_bpc": -0.0058268377284314,
+          "n_a": 63,
+          "n_b": 63
+        },
+        "[8192,inf)": {
+          "gap_bpc": -0.0023212744076452907,
+          "n_a": 21,
+          "n_b": 21
+        },
+        "never": {
+          "gap_bpc": -0.00255835540987448,
+          "n_a": 682,
+          "n_b": 682
+        }
+      }
+    },
+    "clu_store": {
+      "static": {
+        "unit": "token",
+        "edges": [
+          1,
+          8,
+          32,
+          128,
+          512,
+          2048,
+          8192
+        ],
+        "labels": [
+          "[1,8)",
+          "[8,32)",
+          "[32,128)",
+          "[128,512)",
+          "[512,2048)",
+          "[2048,8192)",
+          "[8192,inf)",
+          "never"
+        ],
+        "n_documents": 3,
+        "bins": {
+          "[1,8)": {
+            "n": 0,
+            "bpc": null,
+            "nll_nats": null,
+            "sufficient": false
+          },
+          "[8,32)": {
+            "n": 15,
+            "bpc": 8.006201808096876,
+            "nll_nats": 5.549476210276286,
+            "sufficient": true
+          },
+          "[32,128)": {
+            "n": 36,
+            "bpc": 8.215218327795881,
+            "nll_nats": 5.694355421596104,
+            "sufficient": true
+          },
+          "[128,512)": {
+            "n": 65,
+            "bpc": 8.382118134896016,
+            "nll_nats": 5.810041552323561,
+            "sufficient": true
+          },
+          "[512,2048)": {
+            "n": 2,
+            "bpc": null,
+            "nll_nats": null,
+            "sufficient": false
+          },
+          "[2048,8192)": {
+            "n": 63,
+            "bpc": 8.253656196384568,
+            "nll_nats": 5.720998521835085,
+            "sufficient": true
+          },
+          "[8192,inf)": {
+            "n": 21,
+            "bpc": 8.035002946602887,
+            "nll_nats": 5.569439638228643,
+            "sufficient": true
+          },
+          "never": {
+            "n": 682,
+            "bpc": 8.239981572787205,
+            "nll_nats": 5.711519995043354,
+            "sufficient": true
+          }
+        },
+        "n_scored": 884,
+        "bpc_all_binned": 8.243101218004812,
+        "min_n": 5,
+        "corpus": "enwik8",
+        "split": "test"
+      },
+      "dyneval": {
+        "unit": "token",
+        "edges": [
+          1,
+          8,
+          32,
+          128,
+          512,
+          2048,
+          8192
+        ],
+        "labels": [
+          "[1,8)",
+          "[8,32)",
+          "[32,128)",
+          "[128,512)",
+          "[512,2048)",
+          "[2048,8192)",
+          "[8192,inf)",
+          "never"
+        ],
+        "n_documents": 3,
+        "bins": {
+          "[1,8)": {
+            "n": 0,
+            "bpc": null,
+            "nll_nats": null,
+            "sufficient": false
+          },
+          "[8,32)": {
+            "n": 15,
+            "bpc": 8.004645342175547,
+            "nll_nats": 5.548397350311279,
+            "sufficient": true
+          },
+          "[32,128)": {
+            "n": 36,
+            "bpc": 8.213786056279496,
+            "nll_nats": 5.693362646632725,
+            "sufficient": true
+          },
+          "[128,512)": {
+            "n": 65,
+            "bpc": 8.380054999265624,
+            "nll_nats": 5.8086114956782415,
+            "sufficient": true
+          },
+          "[512,2048)": {
+            "n": 2,
+            "bpc": null,
+            "nll_nats": null,
+            "sufficient": false
+          },
+          "[2048,8192)": {
+            "n": 63,
+            "bpc": 8.251136241066925,
+            "nll_nats": 5.7192518219115245,
+            "sufficient": true
+          },
+          "[8192,inf)": {
+            "n": 21,
+            "bpc": 8.032461305091935,
+            "nll_nats": 5.567677906581333,
+            "sufficient": true
+          },
+          "never": {
+            "n": 682,
+            "bpc": 8.23851286717493,
+            "nll_nats": 5.710501965889134,
+            "sufficient": true
+          }
+        },
+        "n_scored": 884,
+        "bpc_all_binned": 8.241477521237794,
+        "min_n": 5,
+        "corpus": "enwik8",
+        "split": "test",
+        "dyneval_lr": 0.01
+      },
+      "dyneval_minus_static": {
+        "[1,8)": {
+          "gap_bpc": null,
+          "n_a": 0,
+          "n_b": 0
+        },
+        "[8,32)": {
+          "gap_bpc": -0.0015564659213289644,
+          "n_a": 15,
+          "n_b": 15
+        },
+        "[32,128)": {
+          "gap_bpc": -0.001432271516385697,
+          "n_a": 36,
+          "n_b": 36
+        },
+        "[128,512)": {
+          "gap_bpc": -0.0020631356303919546,
+          "n_a": 65,
+          "n_b": 65
+        },
+        "[512,2048)": {
+          "gap_bpc": null,
+          "n_a": 2,
+          "n_b": 2
+        },
+        "[2048,8192)": {
+          "gap_bpc": -0.002519955317643152,
+          "n_a": 63,
+          "n_b": 63
+        },
+        "[8192,inf)": {
+          "gap_bpc": -0.0025416415109518198,
+          "n_a": 21,
+          "n_b": 21
+        },
+        "never": {
+          "gap_bpc": -0.0014687056122753006,
+          "n_a": 682,
+          "n_b": 682
+        }
+      }
+    }
+  },
+  "controls": {
+    "non_degeneracy": {
+      "median_distance_token_unit": 456.0,
+      "median_distance_byte_unit": 14.0,
+      "ratio": 32.57142857142857,
+      "min_ratio_required": 10.0,
+      "min_median_required": 64.0,
+      "token_counts": {
+        "[1,8)": 2,
+        "[8,32)": 318,
+        "[32,128)": 1404,
+        "[128,512)": 2163,
+        "[512,2048)": 2010,
+        "[2048,8192)": 1410,
+        "[8192,inf)": 144,
+        "never": 18266
+      },
+      "byte_counts": {
+        "[1,8)": 8853,
+        "[8,32)": 12860,
+        "[32,128)": 5814,
+        "[128,512)": 1627,
+        "[512,2048)": 405,
+        "[2048,8192)": 142,
+        "[8192,inf)": 11,
+        "never": 288
+      },
+      "n_bytes_sampled": 30000,
+      "passed": true
+    },
+    "shuffled_position": {
+      "counts_ordered": {
+        "[1,8)": 2,
+        "[8,32)": 318,
+        "[32,128)": 1404,
+        "[128,512)": 2163,
+        "[512,2048)": 2010,
+        "[2048,8192)": 1410,
+        "[8192,inf)": 144,
+        "never": 18266
+      },
+      "counts_shuffled": {
+        "[1,8)": 84,
+        "[8,32)": 262,
+        "[32,128)": 874,
+        "[128,512)": 1598,
+        "[512,2048)": 2038,
+        "[2048,8192)": 1568,
+        "[8192,inf)": 142,
+        "never": 19151
+      },
+      "median_distance_ordered": 456.0,
+      "median_distance_shuffled": 683.5,
+      "total_variation_distance": 0.04483415639460276,
+      "seed": 0,
+      "n_bytes_sampled": 30000,
+      "slice_moved": true
+    },
+    "content_relabel": {
+      "counts_original": {
+        "[1,8)": 2,
+        "[8,32)": 318,
+        "[32,128)": 1404,
+        "[128,512)": 2163,
+        "[512,2048)": 2010,
+        "[2048,8192)": 1410,
+        "[8192,inf)": 144,
+        "never": 18266
+      },
+      "counts_relabelled": {
+        "[1,8)": 2,
+        "[8,32)": 318,
+        "[32,128)": 1404,
+        "[128,512)": 2163,
+        "[512,2048)": 2010,
+        "[2048,8192)": 1410,
+        "[8192,inf)": 144,
+        "never": 18266
+      },
+      "n_distinct_tokens": 1956,
+      "n_structural_tokens_kept": 89,
+      "relabelling_injective": true,
+      "n_documents_original": 3,
+      "n_documents_relabelled": 3,
+      "n_bytes_sampled": 30000,
+      "slice_invariant": true
+    }
+  },
+  "meta": {
+    "scale": "toy",
+    "seed": 0,
+    "eval_batches": 2,
+    "min_n": 5
+  }
+}

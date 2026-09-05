@@ -1,0 +1,2767 @@
+{
+  "config": {
+    "n_wells": 32,
+    "f_subset": 4,
+    "n_items": 128,
+    "n_unseen": 512,
+    "atoms_per_well": 32,
+    "addr_dim": 4,
+    "payload_dim": 8,
+    "ball_radius": 2.0,
+    "payload_radius": 1.0,
+    "atom_width": 0.3,
+    "atom_depth_init": 0.0001,
+    "atom_init_scale": 1.0,
+    "atom_local_radius": 0.25,
+    "atom_payload_init_radius": 1.0,
+    "confine": 0.05,
+    "target_ds": 2.7,
+    "s_measured": 0.318,
+    "depth_ratio": 3.0,
+    "write_steps": 300,
+    "write_lr": 0.003,
+    "write_weight_decay": 0.0001,
+    "write_sigma_addr": 0.25,
+    "write_sigma_pay": 0.6,
+    "write_margin": 0.15,
+    "write_barrier": 0.2,
+    "write_n_perturb": 32,
+    "lambda_traj": 0.0,
+    "n_particles": 4,
+    "launch_radius": 0.6,
+    "dt": 0.05,
+    "gamma_address": 0.05,
+    "gamma_read": 0.02,
+    "address_steps": 400,
+    "read_steps": 800,
+    "kinetic_mode": "newtonian_learned",
+    "query_sigma": 0.15,
+    "organize_steps": 200,
+    "organize_lr": 0.003,
+    "organize_retain": 40,
+    "organize_batch": 32,
+    "tol_frac": 0.25,
+    "seed": 0,
+    "quick": false,
+    "soft_cert_B": 0.542
+  },
+  "non_default_flags": {
+    "atoms_per_well": 32
+  },
+  "grid": {
+    "lrs": [
+      0.001,
+      0.003,
+      0.01,
+      0.03,
+      0.1
+    ],
+    "tune_seeds": [
+      0,
+      1,
+      2
+    ],
+    "score_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "n_val": 32,
+    "steps": 400,
+    "n1_atoms_per_well": [
+      12,
+      32,
+      64
+    ],
+    "n1_taus": [
+      0.05,
+      0.2,
+      1.0
+    ],
+    "n1_inits": [
+      "shell",
+      "written"
+    ],
+    "n2_variants": [
+      "kmeans",
+      "vq_ste",
+      "product_vq"
+    ],
+    "n2_codes": [
+      32,
+      64,
+      128
+    ],
+    "n2_commitments": [
+      0.0,
+      0.1,
+      0.25,
+      1.0,
+      4.0
+    ],
+    "n2_restarts": 10,
+    "n3_levels": [
+      "b",
+      "sb",
+      "csb"
+    ],
+    "n3_payloads": [
+      "written",
+      "fitted"
+    ],
+    "n4_ks": [
+      1,
+      2,
+      3,
+      5,
+      10
+    ],
+    "n4_weights": [
+      "uniform",
+      "idw"
+    ],
+    "n4_keys": [
+      "set_code",
+      "launch_mean"
+    ],
+    "n5_hidden": [
+      64,
+      413,
+      1024
+    ],
+    "n5_momentum": [
+      0.0,
+      0.9
+    ],
+    "n5_decay": [
+      0.0,
+      0.01
+    ],
+    "n5_gate": [
+      "none",
+      "surprise"
+    ],
+    "n5_chunk": [
+      1,
+      32
+    ],
+    "n5_passes": 4,
+    "n5_pretrain_steps": 400
+  },
+  "quick": false,
+  "arms": [
+    "N1",
+    "N2",
+    "N3",
+    "N4",
+    "N5"
+  ],
+  "stage_reader_audit": {
+    "rows": [
+      {
+        "seed": 0,
+        "cell": "N1_selected",
+        "arm": "N1",
+        "config": {
+          "lr": 0.1,
+          "atoms_per_well": 64,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.0,
+        "tol": 0.47826677297046505,
+        "n_params_arm": 28672,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 1.0,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0703125,
+          "well_identity": 0.0,
+          "sum_identity": 1.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.47826677297046505,
+          "diag_W": [
+            0.3914415907491246,
+            0.1816790649149141,
+            0.1637303878775311,
+            0.34072687845157895,
+            0.2504297034785046,
+            0.31035442585955436,
+            0.2877801662124006,
+            0.09937659192643007
+          ],
+          "diag_W_mean": 0.2531898511837548,
+          "diag_W_abs_mean": 0.2531898511837548,
+          "offdiag_rms": 0.1492440117259123,
+          "bias_norm": 0.40260074407660457,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.9394955666007438,
+          "resid_identity_mean": 2.1024299077206967,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.47826677297046505,
+          "diag_W": [
+            -8.770096100131408e-05,
+            -4.6273312397998904e-05,
+            6.167146304745572e-06,
+            7.340631509950945e-05,
+            -5.5661074197581565e-05,
+            -0.00016942897824449868,
+            3.4073833509032164e-06,
+            -0.00019005643058706207
+          ],
+          "diag_W_mean": -5.826748895916214e-05,
+          "diag_W_abs_mean": 7.901270014795168e-05,
+          "offdiag_rms": 0.24997584629413963,
+          "bias_norm": 1.9999362689860387,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.2122705645299794,
+          "resid_identity_mean": 2.2123958400459616,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 4.1
+      },
+      {
+        "seed": 0,
+        "cell": "N1_gridmax",
+        "arm": "N1",
+        "config": {
+          "lr": 0.001,
+          "atoms_per_well": 12,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.0,
+        "tol": 0.47826677297046505,
+        "n_params_arm": 5376,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.001953125,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.1171875,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0078125,
+          "well_identity": 0.0,
+          "sum_identity": 0.140625
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.47826677297046505,
+          "diag_W": [
+            0.5554518142175418,
+            0.5972559609724797,
+            0.6290518466719924,
+            0.5818518242548157,
+            0.3941813039495071,
+            0.4543490364807389,
+            0.3816092125001062,
+            0.5466821656213453
+          ],
+          "diag_W_mean": 0.5175541455835658,
+          "diag_W_abs_mean": 0.5175541455835658,
+          "offdiag_rms": 0.10735752841621495,
+          "bias_norm": 0.36476140884462693,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.001953125,
+          "resid_fitted_mean": 2.019402506760901,
+          "resid_identity_mean": 2.0018154667520176,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.47826677297046505,
+          "diag_W": [
+            -0.0001844631582266295,
+            -0.0009447294263015682,
+            0.008737619387501472,
+            0.012608229991479043,
+            -0.03686047554962797,
+            0.11015759265628994,
+            -0.006420446646754017,
+            -0.06080032431414678
+          ],
+          "diag_W_mean": 0.003286625367526685,
+          "diag_W_abs_mean": 0.029589235141290925,
+          "offdiag_rms": 0.266957299044896,
+          "bias_norm": 2.0486288534436037,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.4042971822832047,
+          "resid_identity_mean": 2.3243686131289274,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 2.3
+      },
+      {
+        "seed": 0,
+        "cell": "N2_gridmax",
+        "arm": "N2",
+        "config": {
+          "variant": "product_vq",
+          "n_codes": 32,
+          "payload_source": "fitted",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "chance": 0.0,
+        "tol": 0.47826677297046505,
+        "n_params_arm": 640,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.001953125,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.0078125,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.47826677297046505,
+          "diag_W": [
+            0.5212170808003014,
+            0.862690444001866,
+            0.32962627780522347,
+            0.5481969196051997,
+            0.23770482718376904,
+            0.4590914948401139,
+            0.021789639285981766,
+            -0.4930611909577176
+          ],
+          "diag_W_mean": 0.31090693657059215,
+          "diag_W_abs_mean": 0.43417223431002155,
+          "offdiag_rms": 0.2834381359505682,
+          "bias_norm": 0.3593984750652333,
+          "n_queries": 512,
+          "acc_fitted": 0.001953125,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.8564362598856894,
+          "resid_identity_mean": 1.87537863881867,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.47826677297046505,
+          "diag_W": [
+            -0.010138456983112139,
+            0.014825807741744213,
+            0.0068771622921113065,
+            -0.0031816211363225205,
+            0.19139797695506586,
+            0.0022659020464807045,
+            -0.07667483960826008,
+            0.017169484607111613
+          ],
+          "diag_W_mean": 0.017817676989352365,
+          "diag_W_abs_mean": 0.04031640642127605,
+          "offdiag_rms": 0.40828793576812233,
+          "bias_norm": 2.9356783343541375,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.044913857456006,
+          "resid_identity_mean": 1.8995369702225056,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.6
+      },
+      {
+        "seed": 0,
+        "cell": "N3_gridmax",
+        "arm": "N3",
+        "config": {
+          "lr": 0.01,
+          "level": "csb",
+          "payload_source": "written",
+          "tau": 0.2
+        },
+        "chance": 0.0,
+        "tol": 0.47826677297046505,
+        "n_params_arm": 448,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.001953125,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.0078125,
+          "well_table": 0.0078125,
+          "knn": 0.828125,
+          "mlp": 0.0,
+          "well_identity": 0.015625,
+          "sum_identity": 0.015625
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.47826677297046505,
+          "diag_W": [
+            0.29858498213383244,
+            0.43239592280205896,
+            0.35887856658438144,
+            0.3833404500390355,
+            0.3410266986623154,
+            0.3428670701210065,
+            0.44917468351108236,
+            0.44424624891303977
+          ],
+          "diag_W_mean": 0.38131432784584407,
+          "diag_W_abs_mean": 0.38131432784584407,
+          "offdiag_rms": 0.0857760864491135,
+          "bias_norm": 0.37909828975546245,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.0057495466406285,
+          "resid_identity_mean": 2.060441321234854,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.47826677297046505,
+          "diag_W": [
+            -0.005420176564258196,
+            0.042779251906420325,
+            0.06228344249892694,
+            0.006952543848882049,
+            0.06048825046836528,
+            -0.19860637359128677,
+            0.0012333733206875846,
+            -0.08804947077483266
+          ],
+          "diag_W_mean": -0.014792394860886932,
+          "diag_W_abs_mean": 0.058226610371707475,
+          "offdiag_rms": 0.11215851726056457,
+          "bias_norm": 1.1331679893135922,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.9984997859183853,
+          "resid_identity_mean": 2.9607060913055663,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.6
+      },
+      {
+        "seed": 0,
+        "cell": "N4_gridmax",
+        "arm": "N4",
+        "config": {
+          "key": "set_code",
+          "k": 2,
+          "weight": "idw"
+        },
+        "chance": 0.0,
+        "tol": 0.47826677297046505,
+        "n_params_arm": 0,
+        "has_latent": false,
+        "unseen": {
+          "native_zero_param": 0.001953125
+        },
+        "seen": {
+          "native_zero_param": 1.0
+        },
+        "reader_params": {
+          "native_zero_param": 0
+        },
+        "wall_s": 0.2
+      },
+      {
+        "seed": 0,
+        "cell": "N5_nullstar",
+        "arm": "N5",
+        "config": {
+          "lr": 0.003,
+          "hidden": 64,
+          "momentum": 0.9,
+          "decay": 0.01,
+          "gate": "none",
+          "chunk": 1
+        },
+        "chance": 0.0,
+        "tol": 0.47826677297046505,
+        "n_params_arm": 840,
+        "has_latent": false,
+        "unseen": {
+          "native_zero_param": 0.0
+        },
+        "seen": {
+          "native_zero_param": 0.0
+        },
+        "reader_params": {
+          "native_zero_param": 0
+        },
+        "wall_s": 0.8
+      },
+      {
+        "seed": 1,
+        "cell": "N1_selected",
+        "arm": "N1",
+        "config": {
+          "lr": 0.1,
+          "atoms_per_well": 64,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.001953125,
+        "tol": 0.4714082938676035,
+        "n_params_arm": 28672,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 1.0,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0703125,
+          "well_identity": 0.0,
+          "sum_identity": 1.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4714082938676035,
+          "diag_W": [
+            0.4319550512787199,
+            0.20744937264718075,
+            0.1865037665101676,
+            0.12046560717901071,
+            0.12247907290404877,
+            0.24881976324733635,
+            0.18796689992993076,
+            0.4024273840895981
+          ],
+          "diag_W_mean": 0.23850836472324913,
+          "diag_W_abs_mean": 0.23850836472324913,
+          "offdiag_rms": 0.10311436883253494,
+          "bias_norm": 0.656819921800465,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.921777025765326,
+          "resid_identity_mean": 2.177108583282911,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4714082938676035,
+          "diag_W": [
+            0.0014633002014558005,
+            -0.002348458555668139,
+            0.00234911981779704,
+            0.0014884321326524193,
+            0.003434223026399418,
+            -0.0006878827736497694,
+            0.0024778922054089244,
+            0.0002750834285815663
+          ],
+          "diag_W_mean": 0.0010564636853721576,
+          "diag_W_abs_mean": 0.0018155490177016345,
+          "offdiag_rms": 0.249099019999228,
+          "bias_norm": 1.9972325275030403,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.2655469938615385,
+          "resid_identity_mean": 2.272980415340952,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 1.8
+      },
+      {
+        "seed": 1,
+        "cell": "N1_gridmax",
+        "arm": "N1",
+        "config": {
+          "lr": 0.001,
+          "atoms_per_well": 12,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.001953125,
+        "tol": 0.4714082938676035,
+        "n_params_arm": 5376,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.046875,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0078125,
+          "well_identity": 0.0,
+          "sum_identity": 0.0546875
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4714082938676035,
+          "diag_W": [
+            0.687102219505305,
+            0.550553103084403,
+            0.1841506300329551,
+            0.33732836862564564,
+            0.41946516931647915,
+            0.2743087201825774,
+            0.4073395636813183,
+            0.7176025271962411
+          ],
+          "diag_W_mean": 0.4472312877031156,
+          "diag_W_abs_mean": 0.4472312877031156,
+          "offdiag_rms": 0.12285751126464713,
+          "bias_norm": 0.39561670302395313,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.042251176762265,
+          "resid_identity_mean": 2.0559061691377662,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4714082938676035,
+          "diag_W": [
+            -0.001733218874003127,
+            -0.009381476496328915,
+            0.007842731301170844,
+            0.007289572090465392,
+            0.07702760741892485,
+            0.03402949458452652,
+            -0.13871433785837434,
+            -0.031107023434536252
+          ],
+          "diag_W_mean": -0.006843331408519378,
+          "diag_W_abs_mean": 0.03839068275729128,
+          "offdiag_rms": 0.26931556855253125,
+          "bias_norm": 2.156728981902378,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.4215386040914213,
+          "resid_identity_mean": 2.3372763927752365,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.5
+      },
+      {
+        "seed": 1,
+        "cell": "N2_gridmax",
+        "arm": "N2",
+        "config": {
+          "variant": "product_vq",
+          "n_codes": 32,
+          "payload_source": "fitted",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "chance": 0.001953125,
+        "tol": 0.4714082938676035,
+        "n_params_arm": 640,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.001953125,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.015625,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4714082938676035,
+          "diag_W": [
+            0.3894391397050562,
+            0.64694163032674,
+            0.41261915394099763,
+            0.42354070641099933,
+            0.2719701297369611,
+            -0.26953189246369774,
+            0.18839741143752262,
+            0.4174106550186501
+          ],
+          "diag_W_mean": 0.31009836676415364,
+          "diag_W_abs_mean": 0.37748133988007804,
+          "offdiag_rms": 0.2246195322023243,
+          "bias_norm": 0.6164228418570521,
+          "n_queries": 512,
+          "acc_fitted": 0.001953125,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.8359894424491017,
+          "resid_identity_mean": 1.8588490729744063,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4714082938676035,
+          "diag_W": [
+            -0.010134899763895052,
+            0.011221163792221864,
+            -0.0018475194486529652,
+            -0.0014691941432162492,
+            -0.16853483918453507,
+            -0.10779709522504977,
+            0.057264974987544376,
+            -0.09313153311496264
+          ],
+          "diag_W_mean": -0.03930361776256818,
+          "diag_W_abs_mean": 0.05642515245750975,
+          "offdiag_rms": 0.3856729853335055,
+          "bias_norm": 3.1558437445431173,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.0546489784397814,
+          "resid_identity_mean": 1.9054518786562595,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.6
+      },
+      {
+        "seed": 1,
+        "cell": "N3_gridmax",
+        "arm": "N3",
+        "config": {
+          "lr": 0.01,
+          "level": "csb",
+          "payload_source": "written",
+          "tau": 0.2
+        },
+        "chance": 0.001953125,
+        "tol": 0.4714082938676035,
+        "n_params_arm": 448,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.828125,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4714082938676035,
+          "diag_W": [
+            0.3386063330132248,
+            0.44549478294799394,
+            0.25140350227341246,
+            0.2967045399361861,
+            0.46532719805097655,
+            0.37177227022696363,
+            0.17181328657091838,
+            0.42286923816651284
+          ],
+          "diag_W_mean": 0.3454988938982736,
+          "diag_W_abs_mean": 0.3454988938982736,
+          "offdiag_rms": 0.07279715357853281,
+          "bias_norm": 0.45048915523284766,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.9674990356525868,
+          "resid_identity_mean": 2.0522956084558888,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4714082938676035,
+          "diag_W": [
+            0.004590597025264653,
+            0.011712962822574245,
+            -0.03590744128638061,
+            -0.01631678727965032,
+            -0.07468019390880593,
+            -0.01694242825785787,
+            -0.06499475705497008,
+            0.12730081188066766
+          ],
+          "diag_W_mean": -0.00815465450739478,
+          "diag_W_abs_mean": 0.044055747439521425,
+          "offdiag_rms": 0.08843705850991931,
+          "bias_norm": 1.0002429065447649,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.956956789660584,
+          "resid_identity_mean": 2.922699851662528,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.2
+      },
+      {
+        "seed": 1,
+        "cell": "N4_gridmax",
+        "arm": "N4",
+        "config": {
+          "key": "set_code",
+          "k": 2,
+          "weight": "idw"
+        },
+        "chance": 0.001953125,
+        "tol": 0.4714082938676035,
+        "n_params_arm": 0,
+        "has_latent": false,
+        "unseen": {
+          "native_zero_param": 0.001953125
+        },
+        "seen": {
+          "native_zero_param": 1.0
+        },
+        "reader_params": {
+          "native_zero_param": 0
+        },
+        "wall_s": 0.0
+      },
+      {
+        "seed": 1,
+        "cell": "N5_nullstar",
+        "arm": "N5",
+        "config": {
+          "lr": 0.003,
+          "hidden": 64,
+          "momentum": 0.9,
+          "decay": 0.01,
+          "gate": "none",
+          "chunk": 1
+        },
+        "chance": 0.001953125,
+        "tol": 0.4714082938676035,
+        "n_params_arm": 840,
+        "has_latent": false,
+        "unseen": {
+          "native_zero_param": 0.00390625
+        },
+        "seen": {
+          "native_zero_param": 0.0
+        },
+        "reader_params": {
+          "native_zero_param": 0
+        },
+        "wall_s": 0.0
+      },
+      {
+        "seed": 2,
+        "cell": "N1_selected",
+        "arm": "N1",
+        "config": {
+          "lr": 0.1,
+          "atoms_per_well": 64,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.0,
+        "tol": 0.46600799056126213,
+        "n_params_arm": 28672,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 1.0,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0859375,
+          "well_identity": 0.0,
+          "sum_identity": 1.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.46600799056126213,
+          "diag_W": [
+            0.13429389260755478,
+            0.1647751276878089,
+            0.25909163396520946,
+            0.4074860832910282,
+            0.39340874615069893,
+            0.23606232484269338,
+            0.3170673148396777,
+            0.49403385122247195
+          ],
+          "diag_W_mean": 0.3007773718258929,
+          "diag_W_abs_mean": 0.3007773718258929,
+          "offdiag_rms": 0.12080168247218302,
+          "bias_norm": 0.615767159446295,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.8886447005206313,
+          "resid_identity_mean": 2.103479566349433,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.46600799056126213,
+          "diag_W": [
+            5.3974287041314005e-05,
+            -0.00011487145741001674,
+            -1.4434983213125341e-05,
+            0.00017920720275428124,
+            0.00016298517637166864,
+            0.0002851690186430541,
+            5.881259659459998e-06,
+            3.774694188754238e-05
+          ],
+          "diag_W_mean": 7.44571807167723e-05,
+          "diag_W_abs_mean": 0.00010678379087255782,
+          "offdiag_rms": 0.2500245442228822,
+          "bias_norm": 2.0002816011056606,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.270813313115287,
+          "resid_identity_mean": 2.2708240554555594,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 1.9
+      },
+      {
+        "seed": 2,
+        "cell": "N1_gridmax",
+        "arm": "N1",
+        "config": {
+          "lr": 0.001,
+          "atoms_per_well": 12,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.0,
+        "tol": 0.46600799056126213,
+        "n_params_arm": 5376,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.001953125
+        },
+        "seen": {
+          "sum_linear": 0.109375,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.109375
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.46600799056126213,
+          "diag_W": [
+            0.4647977000081408,
+            0.43618991988151823,
+            0.675963491489622,
+            0.5283443431396397,
+            0.5137290112757347,
+            0.48768257160565154,
+            0.47584520314265333,
+            0.5924748759688592
+          ],
+          "diag_W_mean": 0.5218783895639774,
+          "diag_W_abs_mean": 0.5218783895639774,
+          "offdiag_rms": 0.09471240385634558,
+          "bias_norm": 0.5646444067311224,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.9554116401902322,
+          "resid_identity_mean": 1.9547404851487484,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.46600799056126213,
+          "diag_W": [
+            0.0003632208425473544,
+            -0.007899308539271614,
+            0.008728206141452598,
+            -0.004462884766432919,
+            -0.054922042176022964,
+            -0.04856361869787807,
+            -0.04341723082389195,
+            0.07004896163048753
+          ],
+          "diag_W_mean": -0.010015587048626255,
+          "diag_W_abs_mean": 0.029800684202248125,
+          "offdiag_rms": 0.27527060480183346,
+          "bias_norm": 2.0464433584510995,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.001953125,
+          "resid_fitted_mean": 2.3586037105389854,
+          "resid_identity_mean": 2.2728465986802595,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.5
+      },
+      {
+        "seed": 2,
+        "cell": "N2_gridmax",
+        "arm": "N2",
+        "config": {
+          "variant": "product_vq",
+          "n_codes": 32,
+          "payload_source": "fitted",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "chance": 0.0,
+        "tol": 0.46600799056126213,
+        "n_params_arm": 640,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0078125
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.46600799056126213,
+          "diag_W": [
+            0.7729898231284007,
+            0.4041594889912135,
+            -0.14300808104274965,
+            0.2129601766939923,
+            0.18829702074635604,
+            -0.11288456821285732,
+            0.26533674990999134,
+            0.30963378565673116
+          ],
+          "diag_W_mean": 0.23718554948388476,
+          "diag_W_abs_mean": 0.3011587117977865,
+          "offdiag_rms": 0.25793406307954175,
+          "bias_norm": 0.8667660819241308,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.8300408024803412,
+          "resid_identity_mean": 1.8681125352063146,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.46600799056126213,
+          "diag_W": [
+            -0.008742600953588099,
+            -0.005319075011197067,
+            -0.025914827582855703,
+            0.0001821928739329392,
+            -0.1976567235019143,
+            0.1300202475969471,
+            0.08614148958052976,
+            -0.07924524198633827
+          ],
+          "diag_W_mean": -0.012566817373060452,
+          "diag_W_abs_mean": 0.0666527998859129,
+          "offdiag_rms": 0.4300048672318981,
+          "bias_norm": 3.0714675646382563,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.10042194184841,
+          "resid_identity_mean": 1.8782761301448827,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.6
+      },
+      {
+        "seed": 2,
+        "cell": "N3_gridmax",
+        "arm": "N3",
+        "config": {
+          "lr": 0.01,
+          "level": "csb",
+          "payload_source": "written",
+          "tau": 0.2
+        },
+        "chance": 0.0,
+        "tol": 0.46600799056126213,
+        "n_params_arm": 448,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.001953125,
+          "mlp": 0.0,
+          "well_identity": 0.00390625,
+          "sum_identity": 0.00390625
+        },
+        "seen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.859375,
+          "mlp": 0.0,
+          "well_identity": 0.0078125,
+          "sum_identity": 0.0078125
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.46600799056126213,
+          "diag_W": [
+            0.5216554950111348,
+            0.18125113010266897,
+            0.3419967245720229,
+            0.5040369809921524,
+            0.32025231819927563,
+            0.29617351409504,
+            0.4334099806548489,
+            0.3000954289871061
+          ],
+          "diag_W_mean": 0.36235894657678125,
+          "diag_W_abs_mean": 0.36235894657678125,
+          "offdiag_rms": 0.08236771031399982,
+          "bias_norm": 0.5708660146790552,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.00390625,
+          "resid_fitted_mean": 2.0018477939930706,
+          "resid_identity_mean": 2.019777996365262,
+          "n_set_exactly_right": 2,
+          "frac_set_exactly_right": 0.00390625,
+          "resid_identity_on_exact_mean": 0.0,
+          "resid_fitted_on_exact_mean": 1.3539108189348081,
+          "identity_within_tol_on_exact": 2,
+          "fitted_within_tol_on_exact": 0,
+          "c2w7_crossing_fires": true
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.46600799056126213,
+          "diag_W": [
+            0.025766400352681212,
+            0.041879932538186115,
+            -0.049670151397436246,
+            0.019904614064591757,
+            0.0652285984664147,
+            0.00026532779504848125,
+            0.08511777080009474,
+            -0.16544572405688074
+          ],
+          "diag_W_mean": 0.0028808460703375017,
+          "diag_W_abs_mean": 0.05665981493391675,
+          "offdiag_rms": 0.10542795746283247,
+          "bias_norm": 1.0228538035476726,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.00390625,
+          "resid_fitted_mean": 1.9766194525134073,
+          "resid_identity_mean": 2.913852168519689,
+          "n_set_exactly_right": 2,
+          "frac_set_exactly_right": 0.00390625,
+          "resid_identity_on_exact_mean": 8.539213021802175e-08,
+          "resid_fitted_on_exact_mean": 1.308759204432403,
+          "identity_within_tol_on_exact": 2,
+          "fitted_within_tol_on_exact": 0,
+          "c2w7_crossing_fires": true
+        },
+        "wall_s": 0.2
+      },
+      {
+        "seed": 2,
+        "cell": "N4_gridmax",
+        "arm": "N4",
+        "config": {
+          "key": "set_code",
+          "k": 2,
+          "weight": "idw"
+        },
+        "chance": 0.0,
+        "tol": 0.46600799056126213,
+        "n_params_arm": 0,
+        "has_latent": false,
+        "unseen": {
+          "native_zero_param": 0.0
+        },
+        "seen": {
+          "native_zero_param": 1.0
+        },
+        "reader_params": {
+          "native_zero_param": 0
+        },
+        "wall_s": 0.0
+      },
+      {
+        "seed": 2,
+        "cell": "N5_nullstar",
+        "arm": "N5",
+        "config": {
+          "lr": 0.003,
+          "hidden": 64,
+          "momentum": 0.9,
+          "decay": 0.01,
+          "gate": "none",
+          "chunk": 1
+        },
+        "chance": 0.0,
+        "tol": 0.46600799056126213,
+        "n_params_arm": 840,
+        "has_latent": false,
+        "unseen": {
+          "native_zero_param": 0.001953125
+        },
+        "seen": {
+          "native_zero_param": 0.0
+        },
+        "reader_params": {
+          "native_zero_param": 0
+        },
+        "wall_s": 0.0
+      },
+      {
+        "seed": 3,
+        "cell": "N1_selected",
+        "arm": "N1",
+        "config": {
+          "lr": 0.1,
+          "atoms_per_well": 64,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.0,
+        "tol": 0.4722960852793891,
+        "n_params_arm": 28672,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 1.0,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0546875,
+          "well_identity": 0.0,
+          "sum_identity": 1.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4722960852793891,
+          "diag_W": [
+            0.18736143314815315,
+            0.26769606994066447,
+            0.21318264088124234,
+            0.31440803359371566,
+            0.3379725008247503,
+            0.28479719555952576,
+            0.3341128421520764,
+            0.42681401825446397
+          ],
+          "diag_W_mean": 0.295793091794324,
+          "diag_W_abs_mean": 0.295793091794324,
+          "offdiag_rms": 0.10122082101819152,
+          "bias_norm": 0.4959245319192631,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.9531682383147126,
+          "resid_identity_mean": 2.1099507125756527,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4722960852793891,
+          "diag_W": [
+            0.00015847683161075655,
+            5.135117303831368e-06,
+            -0.0007944126511719462,
+            -0.00046450899636556837,
+            -0.000243477838100462,
+            -0.002532511564277133,
+            0.001206982608396232,
+            0.00021325583125395803
+          ],
+          "diag_W_mean": -0.0003063825826687915,
+          "diag_W_abs_mean": 0.000702345179809986,
+          "offdiag_rms": 0.2501467542626982,
+          "bias_norm": 2.001551207887112,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.3215820489009102,
+          "resid_identity_mean": 2.3205506113862286,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 1.8
+      },
+      {
+        "seed": 3,
+        "cell": "N1_gridmax",
+        "arm": "N1",
+        "config": {
+          "lr": 0.001,
+          "atoms_per_well": 12,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.0,
+        "tol": 0.4722960852793891,
+        "n_params_arm": 5376,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.0703125,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0078125,
+          "well_identity": 0.0,
+          "sum_identity": 0.0859375
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4722960852793891,
+          "diag_W": [
+            0.2910540404442535,
+            0.25315471899425984,
+            0.3296825217409526,
+            0.24494636177698312,
+            0.3308136670381216,
+            0.3027802974295622,
+            0.2697195202851935,
+            0.5704091293043986
+          ],
+          "diag_W_mean": 0.3240700321267156,
+          "diag_W_abs_mean": 0.3240700321267156,
+          "offdiag_rms": 0.0895763747349159,
+          "bias_norm": 0.5099719822418415,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.8941150379472365,
+          "resid_identity_mean": 2.063695167019266,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4722960852793891,
+          "diag_W": [
+            -0.004694823039958381,
+            -0.010445478666871635,
+            0.005569363841127597,
+            -0.010847913873228001,
+            -0.013201747465476064,
+            -0.1600589537740023,
+            -0.009357255514255829,
+            -0.02896599944929896
+          ],
+          "diag_W_mean": -0.02900035099274545,
+          "diag_W_abs_mean": 0.030392691953027347,
+          "offdiag_rms": 0.26685528523651825,
+          "bias_norm": 2.2130814822558635,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.4807651024123514,
+          "resid_identity_mean": 2.3615126794655756,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.6
+      },
+      {
+        "seed": 3,
+        "cell": "N2_gridmax",
+        "arm": "N2",
+        "config": {
+          "variant": "product_vq",
+          "n_codes": 32,
+          "payload_source": "fitted",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "chance": 0.0,
+        "tol": 0.4722960852793891,
+        "n_params_arm": 640,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.0078125,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4722960852793891,
+          "diag_W": [
+            1.1306854068190924,
+            0.054216022649726234,
+            0.5402369317025354,
+            -0.1278047697520883,
+            0.622070709499133,
+            0.17321835774557054,
+            0.33695265832757093,
+            0.7352965945467321
+          ],
+          "diag_W_mean": 0.433108988942284,
+          "diag_W_abs_mean": 0.4650601813803061,
+          "offdiag_rms": 0.2540583072677262,
+          "bias_norm": 0.561206267430374,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.8973745280324852,
+          "resid_identity_mean": 1.934039278646474,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4722960852793891,
+          "diag_W": [
+            -0.004974439596344727,
+            -0.0043401930285867875,
+            0.006231332478426165,
+            0.006426735666254326,
+            0.07796315920012298,
+            0.10339380094111289,
+            0.06826101877080568,
+            0.06387297456716884
+          ],
+          "diag_W_mean": 0.03960429862486992,
+          "diag_W_abs_mean": 0.0419329567811028,
+          "offdiag_rms": 0.3874189092252796,
+          "bias_norm": 3.1865863497583518,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.093039360344428,
+          "resid_identity_mean": 1.9031346759730574,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.6
+      },
+      {
+        "seed": 3,
+        "cell": "N3_gridmax",
+        "arm": "N3",
+        "config": {
+          "lr": 0.01,
+          "level": "csb",
+          "payload_source": "written",
+          "tau": 0.2
+        },
+        "chance": 0.0,
+        "tol": 0.4722960852793891,
+        "n_params_arm": 448,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.001953125,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.828125,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4722960852793891,
+          "diag_W": [
+            0.20190977902264043,
+            0.1872600936567328,
+            0.5096886079414711,
+            0.3486012635850528,
+            0.2720745655681111,
+            0.31503097988283996,
+            0.3552293506866444,
+            0.446240323086079
+          ],
+          "diag_W_mean": 0.3295043704286964,
+          "diag_W_abs_mean": 0.3295043704286964,
+          "offdiag_rms": 0.0876718966226795,
+          "bias_norm": 0.38656101944326454,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.001953125,
+          "resid_fitted_mean": 1.961216445154217,
+          "resid_identity_mean": 2.0067439759319323,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4722960852793891,
+          "diag_W": [
+            -0.05848731847890655,
+            -0.011037947037404114,
+            0.0030296057599555927,
+            0.037544649036708365,
+            -0.06503260645535752,
+            -0.09678960567267966,
+            -0.004446864727944979,
+            0.0028195179263616824
+          ],
+          "diag_W_mean": -0.0240500712061584,
+          "diag_W_abs_mean": 0.03489851438691481,
+          "offdiag_rms": 0.10147810671633561,
+          "bias_norm": 0.9554953675152396,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.9570545593320157,
+          "resid_identity_mean": 2.9371837448819718,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.2
+      },
+      {
+        "seed": 3,
+        "cell": "N4_gridmax",
+        "arm": "N4",
+        "config": {
+          "key": "set_code",
+          "k": 2,
+          "weight": "idw"
+        },
+        "chance": 0.0,
+        "tol": 0.4722960852793891,
+        "n_params_arm": 0,
+        "has_latent": false,
+        "unseen": {
+          "native_zero_param": 0.0
+        },
+        "seen": {
+          "native_zero_param": 1.0
+        },
+        "reader_params": {
+          "native_zero_param": 0
+        },
+        "wall_s": 0.0
+      },
+      {
+        "seed": 3,
+        "cell": "N5_nullstar",
+        "arm": "N5",
+        "config": {
+          "lr": 0.003,
+          "hidden": 64,
+          "momentum": 0.9,
+          "decay": 0.01,
+          "gate": "none",
+          "chunk": 1
+        },
+        "chance": 0.0,
+        "tol": 0.4722960852793891,
+        "n_params_arm": 840,
+        "has_latent": false,
+        "unseen": {
+          "native_zero_param": 0.0
+        },
+        "seen": {
+          "native_zero_param": 0.0
+        },
+        "reader_params": {
+          "native_zero_param": 0
+        },
+        "wall_s": 0.0
+      },
+      {
+        "seed": 4,
+        "cell": "N1_selected",
+        "arm": "N1",
+        "config": {
+          "lr": 0.1,
+          "atoms_per_well": 64,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.0,
+        "tol": 0.4761630658517766,
+        "n_params_arm": 28672,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 1.0,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0546875,
+          "well_identity": 0.0,
+          "sum_identity": 1.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4761630658517766,
+          "diag_W": [
+            0.3091444069627158,
+            0.4551269182098077,
+            0.1324282733022349,
+            0.21084290606522818,
+            0.32046118929648004,
+            0.22676566184855523,
+            0.24153424199468035,
+            0.4520448478531956
+          ],
+          "diag_W_mean": 0.2935435556916123,
+          "diag_W_abs_mean": 0.2935435556916123,
+          "offdiag_rms": 0.11287431979021945,
+          "bias_norm": 0.4674256658122077,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.9158257372959073,
+          "resid_identity_mean": 2.096997886334136,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4761630658517766,
+          "diag_W": [
+            -0.0001220730914148663,
+            0.0003187184605345009,
+            -0.000219106583708175,
+            -0.00014834500789332424,
+            -0.000417949942145606,
+            -2.3191826232845364e-05,
+            -0.00017185719725042672,
+            -8.895095827560414e-05
+          ],
+          "diag_W_mean": -0.00010909451829829336,
+          "diag_W_abs_mean": 0.00018877413343191857,
+          "offdiag_rms": 0.2500188855635262,
+          "bias_norm": 2.000044194545729,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.364420560644058,
+          "resid_identity_mean": 2.364160816979493,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 1.8
+      },
+      {
+        "seed": 4,
+        "cell": "N1_gridmax",
+        "arm": "N1",
+        "config": {
+          "lr": 0.001,
+          "atoms_per_well": 12,
+          "tau": 1.0,
+          "init": "written",
+          "read": "soft"
+        },
+        "chance": 0.0,
+        "tol": 0.4761630658517766,
+        "n_params_arm": 5376,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.09375,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.1015625
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4761630658517766,
+          "diag_W": [
+            0.4259003417184878,
+            0.42349379310634394,
+            0.3831508557721765,
+            0.5214511200179585,
+            0.2695383599113194,
+            0.36096138844761877,
+            0.4934175765845667,
+            0.4770551484684678
+          ],
+          "diag_W_mean": 0.4193710730033674,
+          "diag_W_abs_mean": 0.4193710730033674,
+          "offdiag_rms": 0.0915888336011635,
+          "bias_norm": 0.3649636380703528,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.973225243404288,
+          "resid_identity_mean": 1.9797364485311044,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4761630658517766,
+          "diag_W": [
+            0.026605385922973852,
+            0.002607567259585607,
+            -0.005839367485699044,
+            0.003116978061798043,
+            0.0311701859797664,
+            -0.04493212889813335,
+            0.07651903872852828,
+            -0.06297259933772131
+          ],
+          "diag_W_mean": 0.0032843825288873096,
+          "diag_W_abs_mean": 0.031720406459275735,
+          "offdiag_rms": 0.26047525967400265,
+          "bias_norm": 2.1176743841975827,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 2.3246941024475993,
+          "resid_identity_mean": 2.2787048944492687,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.6
+      },
+      {
+        "seed": 4,
+        "cell": "N2_gridmax",
+        "arm": "N2",
+        "config": {
+          "variant": "product_vq",
+          "n_codes": 32,
+          "payload_source": "fitted",
+          "commitment": 0.0,
+          "lr": 0.0
+        },
+        "chance": 0.0,
+        "tol": 0.4761630658517766,
+        "n_params_arm": 640,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.001953125
+        },
+        "seen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 1.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4761630658517766,
+          "diag_W": [
+            0.5877333334212869,
+            0.57779703055455,
+            0.47923138987938213,
+            0.15332617155045603,
+            0.9753319019194382,
+            0.8270900161581595,
+            0.37459653509899743,
+            0.7299598909791818
+          ],
+          "diag_W_mean": 0.5881332836951816,
+          "diag_W_abs_mean": 0.5881332836951816,
+          "offdiag_rms": 0.31469822465158964,
+          "bias_norm": 0.8960731063135683,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.8424433435338798,
+          "resid_identity_mean": 1.8758805300001669,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4761630658517766,
+          "diag_W": [
+            -0.015494533748468027,
+            -0.009449632567507464,
+            0.0010936122155454724,
+            -0.0006087104404629535,
+            -0.062435532910324235,
+            -0.12523135686753797,
+            0.000496235929329722,
+            -0.04684856695746396
+          ],
+          "diag_W_mean": -0.03230981066836118,
+          "diag_W_abs_mean": 0.03270727270457998,
+          "offdiag_rms": 0.42291121296308704,
+          "bias_norm": 3.2457126033393466,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.001953125,
+          "resid_fitted_mean": 1.9966433643948245,
+          "resid_identity_mean": 1.855362108431615,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.6
+      },
+      {
+        "seed": 4,
+        "cell": "N3_gridmax",
+        "arm": "N3",
+        "config": {
+          "lr": 0.01,
+          "level": "csb",
+          "payload_source": "written",
+          "tau": 0.2
+        },
+        "chance": 0.0,
+        "tol": 0.4761630658517766,
+        "n_params_arm": 448,
+        "has_latent": true,
+        "unseen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.0,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "seen": {
+          "sum_linear": 0.0,
+          "well_table": 0.0,
+          "knn": 0.8359375,
+          "mlp": 0.0,
+          "well_identity": 0.0,
+          "sum_identity": 0.0
+        },
+        "reader_params": {
+          "sum_linear": 104,
+          "well_table": 72,
+          "knn": 0,
+          "mlp": 92,
+          "well_identity": 0,
+          "sum_identity": 0
+        },
+        "mechanism_well_table_vs_identity": {
+          "tol": 0.4761630658517766,
+          "diag_W": [
+            0.3707988336630728,
+            0.3831632786332137,
+            0.44139352459663833,
+            0.3767279802395132,
+            0.43260459006673585,
+            0.2261426982443828,
+            0.30699478961000704,
+            0.39974978809927286
+          ],
+          "diag_W_mean": 0.3671969353941046,
+          "diag_W_abs_mean": 0.3671969353941046,
+          "offdiag_rms": 0.08087083412902055,
+          "bias_norm": 0.543346551444175,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.9510483742441609,
+          "resid_identity_mean": 2.046962151245481,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "mechanism_sum_linear_vs_identity": {
+          "tol": 0.4761630658517766,
+          "diag_W": [
+            0.010266410691557868,
+            -0.03670403981054317,
+            0.01070097055851931,
+            -0.0273028591372028,
+            -0.08635719469763335,
+            0.22333970011430274,
+            0.14759096947551192,
+            -0.12180275993858689
+          ],
+          "diag_W_mean": 0.014966399656990707,
+          "diag_W_abs_mean": 0.08300811305298225,
+          "offdiag_rms": 0.10773456132219553,
+          "bias_norm": 1.115646826362049,
+          "n_queries": 512,
+          "acc_fitted": 0.0,
+          "acc_identity": 0.0,
+          "resid_fitted_mean": 1.9467682486996676,
+          "resid_identity_mean": 2.947154854382857,
+          "n_set_exactly_right": 0,
+          "frac_set_exactly_right": 0.0,
+          "c2w7_crossing_fires": false,
+          "note": "no query has an exactly-right asserted set \u21d2 the shrinkage has nothing to destroy at this cell"
+        },
+        "wall_s": 0.2
+      },
+      {
+        "seed": 4,
+        "cell": "N4_gridmax",
+        "arm": "N4",
+        "config": {
+          "key": "set_code",
+          "k": 2,
+          "weight": "idw"
+        },
+        "chance": 0.0,
+        "tol": 0.4761630658517766,
+        "n_params_arm": 0,
+        "has_latent": false,
+        "unseen": {
+          "native_zero_param": 0.0
+        },
+        "seen": {
+          "native_zero_param": 1.0
+        },
+        "reader_params": {
+          "native_zero_param": 0
+        },
+        "wall_s": 0.0
+      },
+      {
+        "seed": 4,
+        "cell": "N5_nullstar",
+        "arm": "N5",
+        "config": {
+          "lr": 0.003,
+          "hidden": 64,
+          "momentum": 0.9,
+          "decay": 0.01,
+          "gate": "none",
+          "chunk": 1
+        },
+        "chance": 0.0,
+        "tol": 0.4761630658517766,
+        "n_params_arm": 840,
+        "has_latent": false,
+        "unseen": {
+          "native_zero_param": 0.0
+        },
+        "seen": {
+          "native_zero_param": 0.0
+        },
+        "reader_params": {
+          "native_zero_param": 0
+        },
+        "wall_s": 0.0
+      }
+    ],
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "cells": [
+      "N1_selected",
+      "N1_gridmax",
+      "N2_gridmax",
+      "N3_gridmax",
+      "N4_gridmax",
+      "N5_nullstar"
+    ],
+    "aggregate": {
+      "N1_selected": {
+        "per_reader": {
+          "knn": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "mlp": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 92,
+            "clears_bar": false
+          },
+          "sum_identity": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "sum_linear": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 104,
+            "clears_bar": false
+          },
+          "well_identity": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "well_table": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 72,
+            "clears_bar": false
+          }
+        },
+        "has_fitted_column": true,
+        "best_identity": 0.0,
+        "best_fitted": 0.0,
+        "identity_minus_fitted": {
+          "mean": 0.0,
+          "two_se": 0.0,
+          "per_seed": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "identity_clears_bar": false,
+        "seen_best_identity": 1.0,
+        "seen_best_fitted": 1.0
+      },
+      "N1_gridmax": {
+        "per_reader": {
+          "knn": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "mlp": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 92,
+            "clears_bar": false
+          },
+          "sum_identity": {
+            "mean": 0.000390625,
+            "two_se": 0.0007812500000000002,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.001953125,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "sum_linear": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 104,
+            "clears_bar": false
+          },
+          "well_identity": {
+            "mean": 0.000390625,
+            "two_se": 0.0007812500000000002,
+            "per_seed": [
+              0.001953125,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "well_table": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 72,
+            "clears_bar": false
+          }
+        },
+        "has_fitted_column": true,
+        "best_identity": 0.000390625,
+        "best_fitted": 0.0,
+        "identity_minus_fitted": {
+          "mean": 0.00078125,
+          "two_se": 0.000956831930774679,
+          "per_seed": [
+            0.001953125,
+            0.0,
+            0.001953125,
+            0.0,
+            0.0
+          ]
+        },
+        "identity_clears_bar": false,
+        "seen_best_identity": 0.0984375,
+        "seen_best_fitted": 1.0
+      },
+      "N2_gridmax": {
+        "per_reader": {
+          "knn": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "mlp": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 92,
+            "clears_bar": false
+          },
+          "sum_identity": {
+            "mean": 0.000390625,
+            "two_se": 0.00078125,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.001953125
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "sum_linear": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 104,
+            "clears_bar": false
+          },
+          "well_identity": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "well_table": {
+            "mean": 0.00078125,
+            "two_se": 0.000956831930774679,
+            "per_seed": [
+              0.001953125,
+              0.001953125,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 72,
+            "clears_bar": false
+          }
+        },
+        "has_fitted_column": true,
+        "best_identity": 0.000390625,
+        "best_fitted": 0.00078125,
+        "identity_minus_fitted": {
+          "mean": -0.000390625,
+          "two_se": 0.0014615849167085707,
+          "per_seed": [
+            -0.001953125,
+            -0.001953125,
+            0.0,
+            0.0,
+            0.001953125
+          ]
+        },
+        "identity_clears_bar": false,
+        "seen_best_identity": 0.0015625,
+        "seen_best_fitted": 1.0
+      },
+      "N3_gridmax": {
+        "per_reader": {
+          "knn": {
+            "mean": 0.000390625,
+            "two_se": 0.0007812500000000002,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.001953125,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "mlp": {
+            "mean": 0.000390625,
+            "two_se": 0.0007812500000000002,
+            "per_seed": [
+              0.001953125,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 92,
+            "clears_bar": false
+          },
+          "sum_identity": {
+            "mean": 0.00078125,
+            "two_se": 0.0015625000000000003,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.00390625,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "sum_linear": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 104,
+            "clears_bar": false
+          },
+          "well_identity": {
+            "mean": 0.001171875,
+            "two_se": 0.0015624999999999999,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.00390625,
+              0.001953125,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          },
+          "well_table": {
+            "mean": 0.0,
+            "two_se": 0.0,
+            "per_seed": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 72,
+            "clears_bar": false
+          }
+        },
+        "has_fitted_column": true,
+        "best_identity": 0.001171875,
+        "best_fitted": 0.000390625,
+        "identity_minus_fitted": {
+          "mean": 0.000390625,
+          "two_se": 0.0014615849167085707,
+          "per_seed": [
+            -0.001953125,
+            0.0,
+            0.001953125,
+            0.001953125,
+            0.0
+          ]
+        },
+        "identity_clears_bar": false,
+        "seen_best_identity": 0.0046875,
+        "seen_best_fitted": 0.8359375
+      },
+      "N4_gridmax": {
+        "per_reader": {
+          "native_zero_param": {
+            "mean": 0.00078125,
+            "two_se": 0.000956831930774679,
+            "per_seed": [
+              0.001953125,
+              0.001953125,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          }
+        },
+        "has_fitted_column": false,
+        "best_identity": 0.00078125,
+        "best_fitted": NaN,
+        "identity_minus_fitted": {
+          "mean": 0.0,
+          "two_se": 0.0,
+          "per_seed": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "identity_clears_bar": false,
+        "seen_best_identity": 1.0,
+        "seen_best_fitted": 0.0
+      },
+      "N5_nullstar": {
+        "per_reader": {
+          "native_zero_param": {
+            "mean": 0.001171875,
+            "two_se": 0.0015624999999999999,
+            "per_seed": [
+              0.0,
+              0.00390625,
+              0.001953125,
+              0.0,
+              0.0
+            ],
+            "n_params": 0,
+            "clears_bar": false
+          }
+        },
+        "has_fitted_column": false,
+        "best_identity": 0.001171875,
+        "best_fitted": NaN,
+        "identity_minus_fitted": {
+          "mean": 0.0,
+          "two_se": 0.0,
+          "per_seed": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "identity_clears_bar": false,
+        "seen_best_identity": 0.0,
+        "seen_best_fitted": 0.0
+      }
+    },
+    "chance": 0.000390625,
+    "bar": 0.050390625,
+    "max_identity_minus_fitted": 0.00078125,
+    "verdict": "SURVIVES",
+    "verdict_rule": "MOVES iff any identity mean-2SE > chance+0.05; PARTIAL iff any (identity-fitted) >= 0.01 and >2SE from 0; else SURVIVES (PREREG reader-fitting-audit \u00a71)"
+  }
+}

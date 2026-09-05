@@ -1,0 +1,192 @@
+[env.sh] repo=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/CHLU python=Python 3.11.12 venv=/net/scratch/x10719pj/CHLU/.venv
+[env.sh] MPLBACKEND=Agg JAX_COMPILATION_CACHE_DIR=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/.jax_cache
+=== node/GPU provenance ===
+node852.csf3.man.alces.network
+Sun Aug  2 10:40:16 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.71.05              Driver Version: 595.71.05      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:81:00.0 Off |                    0 |
+| N/A   27C    P0             59W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+SLURM_GPUS=1 CUDA_VISIBLE_DEVICES=0
+=== JAX GPU preflight (fail fast rather than burn 12 h on CPU) ===
+jax 0.9.0 backend: gpu devices: [CudaDevice(id=0)]
+=== enwik8 cache preflight (must already be staged by STAGE_ONLY=1) ===
+enwik8: /mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/enwik8/enwik8
+=== config overrides === MEM='atom_place_radius=0.3 write_inner_steps=40 remat_chunks=true' STORE='write_margin=0.6' SET='monitor_every=25 plan_workers=8 liveness_lanes=1'
+=== tier-iii pilot: scale=pilot stage=s4 seeds=1 ===
+[watch/clu_store] step 0 (untrained): depth 0.3163 (x1 vs untrained) | q* payload spread 0.446 (x1) | n_live 3
+[watch/clu_store] step 25 (trained): depth 0.273 (x0.863 vs untrained) | q* payload spread 0.06584 (x0.148) | n_live 2
+[watch/clu_store] step 50 (trained): depth 0.4323 (x1.37 vs untrained) | q* payload spread 0.07601 (x0.17) | n_live 2
+[watch/clu_store] step 75 (trained): depth 0.3692 (x1.17 vs untrained) | q* payload spread 0.0007218 (x0.00162) | n_live 2
+[watch/clu_store] step 100 (trained): depth 0.3143 (x0.994 vs untrained) | q* payload spread 0.6013 (x1.35) | n_live 6
+[watch/clu_store] step 125 (trained): depth 0.2103 (x0.665 vs untrained) | q* payload spread 1.199 (x2.69) | n_live 7
+[watch/clu_store] step 150 (trained): depth 0.2756 (x0.872 vs untrained) | q* payload spread 1.391 (x3.12) | n_live 12
+[watch/clu_store] step 175 (trained): depth 0.1822 (x0.576 vs untrained) | q* payload spread 1.095 (x2.46) | n_live 13
+[watch/clu_store] step 200 (trained): depth 0.151 (x0.477 vs untrained) | q* payload spread 1.951 (x4.38) | n_live 15
+[watch/clu_store] step 225 (trained): depth 0.2355 (x0.745 vs untrained) | q* payload spread 1.872 (x4.2) | n_live 15
+[watch/clu_store] step 250 (trained): depth 0.1906 (x0.603 vs untrained) | q* payload spread 2.538 (x5.69) | n_live 16
+[watch/clu_store] step 275 (trained): depth 0.3048 (x0.964 vs untrained) | q* payload spread 0.7926 (x1.78) | n_live 15
+[watch/clu_store] step 300 (trained): depth 0.1838 (x0.581 vs untrained) | q* payload spread 1.582 (x3.55) | n_live 16
+[watch/clu_store] step 325 (trained): depth 0.3305 (x1.04 vs untrained) | q* payload spread 2.651 (x5.94) | n_live 16
+[watch/clu_store] step 350 (trained): depth 0.3639 (x1.15 vs untrained) | q* payload spread 1.626 (x3.65) | n_live 16
+[watch/clu_store] step 375 (trained): depth 0.2572 (x0.813 vs untrained) | q* payload spread 1.161 (x2.6) | n_live 16
+[watch/clu_store] step 400 (trained): depth 0.1602 (x0.507 vs untrained) | q* payload spread 2.066 (x4.63) | n_live 16
+[watch/clu_store] step 425 (trained): depth 0.206 (x0.651 vs untrained) | q* payload spread 0.8202 (x1.84) | n_live 16
+[watch/clu_store] step 450 (trained): depth 0.1133 (x0.358 vs untrained) | q* payload spread 1.138 (x2.55) | n_live 16
+[watch/clu_store] step 475 (trained): depth 0.152 (x0.481 vs untrained) | q* payload spread 2.066 (x4.63) | n_live 16
+[watch/clu_store] step 500 (trained): depth 0.162 (x0.512 vs untrained) | q* payload spread 2.499 (x5.6) | n_live 16
+[watch/clu_store] step 525 (trained): depth 0.1404 (x0.444 vs untrained) | q* payload spread 0.9727 (x2.18) | n_live 16
+[watch/clu_store] step 550 (trained): depth 0.153 (x0.484 vs untrained) | q* payload spread 1.628 (x3.65) | n_live 16
+[watch/clu_store] step 575 (trained): depth 0.114 (x0.36 vs untrained) | q* payload spread 1.789 (x4.01) | n_live 16
+[watch/clu_store] step 600 (trained): depth 0.1477 (x0.467 vs untrained) | q* payload spread 1.253 (x2.81) | n_live 16
+[watch/clu_store] step 625 (trained): depth 0.1287 (x0.407 vs untrained) | q* payload spread 1.821 (x4.08) | n_live 16
+[watch/clu_store] step 650 (trained): depth 0.2292 (x0.725 vs untrained) | q* payload spread 1.342 (x3.01) | n_live 16
+[watch/clu_store] step 675 (trained): depth 0.1665 (x0.526 vs untrained) | q* payload spread 2.378 (x5.33) | n_live 16
+[watch/clu_store] step 700 (trained): depth 0.07348 (x0.232 vs untrained) | q* payload spread 2.231 (x5) | n_live 16
+[watch/clu_store] step 725 (trained): depth 0.07195 (x0.227 vs untrained) | q* payload spread 1.141 (x2.56) | n_live 16
+[watch/clu_store] step 750 (trained): depth 0.1324 (x0.419 vs untrained) | q* payload spread 1.135 (x2.54) | n_live 16
+[watch/clu_store] step 775 (trained): depth 0.1393 (x0.441 vs untrained) | q* payload spread 1.52 (x3.41) | n_live 16
+[watch/clu_store] step 800 (trained): depth 0.1335 (x0.422 vs untrained) | q* payload spread 1.004 (x2.25) | n_live 16
+[watch/clu_store] step 825 (trained): depth 0.08251 (x0.261 vs untrained) | q* payload spread 1.861 (x4.17) | n_live 16
+[watch/clu_store] step 850 (trained): depth 0.1082 (x0.342 vs untrained) | q* payload spread 1.049 (x2.35) | n_live 16
+[watch/clu_store] step 875 (trained): depth 0.1045 (x0.33 vs untrained) | q* payload spread 1.764 (x3.96) | n_live 16
+[watch/clu_store] step 900 (trained): depth 0.0551 (x0.174 vs untrained) | q* payload spread 1.14 (x2.56) | n_live 16
+[watch/clu_store] step 925 (trained): depth 0.1481 (x0.468 vs untrained) | q* payload spread 2.36 (x5.29) | n_live 16
+[watch/clu_store] step 950 (trained): depth 0.1234 (x0.39 vs untrained) | q* payload spread 1.312 (x2.94) | n_live 16
+[watch/clu_store] step 975 (trained): depth 0.1428 (x0.452 vs untrained) | q* payload spread 0.8832 (x1.98) | n_live 16
+[watch/clu_store] step 1000 (trained): depth 0.1288 (x0.407 vs untrained) | q* payload spread 1.583 (x3.55) | n_live 16
+[watch/clu_store] step 1025 (trained): depth 0.144 (x0.455 vs untrained) | q* payload spread 1.487 (x3.33) | n_live 16
+[watch/clu_store] step 1050 (trained): depth 0.05327 (x0.168 vs untrained) | q* payload spread 1.755 (x3.94) | n_live 16
+[watch/clu_store] step 1075 (trained): depth 0.08855 (x0.28 vs untrained) | q* payload spread 2.097 (x4.7) | n_live 16
+[watch/clu_store] step 1100 (trained): depth 0.08076 (x0.255 vs untrained) | q* payload spread 1.947 (x4.36) | n_live 16
+[watch/clu_store] step 1125 (trained): depth 0.08668 (x0.274 vs untrained) | q* payload spread 1.5 (x3.36) | n_live 16
+[watch/clu_store] step 1150 (trained): depth 0.1098 (x0.347 vs untrained) | q* payload spread 1.217 (x2.73) | n_live 16
+[watch/clu_store] step 1175 (trained): depth 0.2041 (x0.645 vs untrained) | q* payload spread 1.513 (x3.39) | n_live 16
+[watch/clu_store] step 1200 (trained): depth 0.1244 (x0.393 vs untrained) | q* payload spread 1.531 (x3.43) | n_live 16
+[watch/clu_store] step 1225 (trained): depth 0.1752 (x0.554 vs untrained) | q* payload spread 1.975 (x4.43) | n_live 16
+[watch/clu_store] step 1250 (trained): depth 0.1343 (x0.425 vs untrained) | q* payload spread 2.482 (x5.56) | n_live 16
+[watch/clu_store] step 1275 (trained): depth 0.09946 (x0.314 vs untrained) | q* payload spread 2.71 (x6.08) | n_live 16
+[watch/clu_store] step 1300 (trained): depth 0.07272 (x0.23 vs untrained) | q* payload spread 1.312 (x2.94) | n_live 16
+[watch/clu_store] step 1325 (trained): depth 0.09426 (x0.298 vs untrained) | q* payload spread 2.258 (x5.06) | n_live 16
+[watch/clu_store] step 1350 (trained): depth 0.04361 (x0.138 vs untrained) | q* payload spread 2.226 (x4.99) | n_live 16
+[watch/clu_store] step 1375 (trained): depth 0.06926 (x0.219 vs untrained) | q* payload spread 2.811 (x6.3) | n_live 16
+[watch/clu_store] step 1400 (trained): depth 0.06609 (x0.209 vs untrained) | q* payload spread 1.895 (x4.25) | n_live 16
+[watch/clu_store] step 1425 (trained): depth 0.04612 (x0.146 vs untrained) | q* payload spread 1.807 (x4.05) | n_live 16
+[watch/clu_store] step 1450 (trained): depth 0.06708 (x0.212 vs untrained) | q* payload spread 1.328 (x2.98) | n_live 16
+[watch/clu_store] step 1475 (trained): depth 0.06777 (x0.214 vs untrained) | q* payload spread 1.429 (x3.21) | n_live 16
+[watch/clu_store] step 1500 (trained): depth 0.08746 (x0.277 vs untrained) | q* payload spread 2.723 (x6.11) | n_live 16
+[watch/clu_store] step 1525 (trained): depth 0.05778 (x0.183 vs untrained) | q* payload spread 1.936 (x4.34) | n_live 16
+[watch/clu_store] step 1550 (trained): depth 0.06703 (x0.212 vs untrained) | q* payload spread 2.437 (x5.46) | n_live 16
+[watch/clu_store] step 1575 (trained): depth 0.09355 (x0.296 vs untrained) | q* payload spread 2.364 (x5.3) | n_live 16
+[watch/clu_store] step 1600 (trained): depth 0.1211 (x0.383 vs untrained) | q* payload spread 1.804 (x4.04) | n_live 16
+[watch/clu_store] step 1625 (trained): depth 0.09316 (x0.295 vs untrained) | q* payload spread 2.213 (x4.96) | n_live 16
+[watch/clu_store] step 1650 (trained): depth 0.09719 (x0.307 vs untrained) | q* payload spread 1.826 (x4.09) | n_live 16
+[watch/clu_store] step 1675 (trained): depth 0.06276 (x0.198 vs untrained) | q* payload spread 1.268 (x2.84) | n_live 16
+[watch/clu_store] step 1700 (trained): depth 0.1024 (x0.324 vs untrained) | q* payload spread 2.19 (x4.91) | n_live 16
+[watch/clu_store] step 1725 (trained): depth 0.1234 (x0.39 vs untrained) | q* payload spread 1.552 (x3.48) | n_live 16
+[watch/clu_store] step 1750 (trained): depth 0.05052 (x0.16 vs untrained) | q* payload spread 1.171 (x2.63) | n_live 16
+[watch/clu_store] step 1775 (trained): depth 0.03271 (x0.103 vs untrained) | q* payload spread 1.846 (x4.14) | n_live 16
+[watch/clu_store] step 1800 (trained): depth 0.01406 (x0.0445 vs untrained) | q* payload spread 1.545 (x3.47) | n_live 16
+[watch/clu_store] step 1825 (trained): depth 0.02338 (x0.0739 vs untrained) | q* payload spread 2.084 (x4.67) | n_live 16
+[watch/clu_store] step 1850 (trained): depth 0.03643 (x0.115 vs untrained) | q* payload spread 1.783 (x4) | n_live 16
+[watch/clu_store] step 1875 (trained): depth 0.04603 (x0.146 vs untrained) | q* payload spread 2.565 (x5.75) | n_live 16
+[watch/clu_store] step 1900 (trained): depth 0.03964 (x0.125 vs untrained) | q* payload spread 2.047 (x4.59) | n_live 16
+[watch/clu_store] step 1925 (trained): depth 0.054 (x0.171 vs untrained) | q* payload spread 1.902 (x4.26) | n_live 16
+[watch/clu_store] step 1950 (trained): depth 0.04247 (x0.134 vs untrained) | q* payload spread 1.355 (x3.04) | n_live 16
+[watch/clu_store] step 1975 (trained): depth 0.0813 (x0.257 vs untrained) | q* payload spread 1.148 (x2.57) | n_live 16
+[watch/clu_store] step 2000 (trained): depth 0.1067 (x0.337 vs untrained) | q* payload spread 1.734 (x3.89) | n_live 16
+[watch/clu_store] step 2025 (trained): depth 0.02436 (x0.077 vs untrained) | q* payload spread 1.305 (x2.93) | n_live 16
+[watch/clu_store] step 2050 (trained): depth 0.02212 (x0.07 vs untrained) | q* payload spread 2.825 (x6.33) | n_live 16
+[watch/clu_store] step 2075 (trained): depth 0.07448 (x0.235 vs untrained) | q* payload spread 2.883 (x6.47) | n_live 16
+[watch/clu_store] step 2100 (trained): depth 0.04108 (x0.13 vs untrained) | q* payload spread 2.665 (x5.98) | n_live 16
+[watch/clu_store] step 2125 (trained): depth 0.03269 (x0.103 vs untrained) | q* payload spread 1.46 (x3.27) | n_live 16
+[watch/clu_store] step 2150 (trained): depth 0.03494 (x0.11 vs untrained) | q* payload spread 2.286 (x5.13) | n_live 16
+[watch/clu_store] step 2175 (trained): depth 0.06066 (x0.192 vs untrained) | q* payload spread 2.596 (x5.82) | n_live 16
+[watch/clu_store] step 2200 (trained): depth 0.06064 (x0.192 vs untrained) | q* payload spread 2.468 (x5.53) | n_live 16
+[watch/clu_store] step 2225 (trained): depth 0.01653 (x0.0523 vs untrained) | q* payload spread 2.277 (x5.1) | n_live 16
+[watch/clu_store] step 2250 (trained): depth 0.04681 (x0.148 vs untrained) | q* payload spread 2.679 (x6.01) | n_live 16
+[watch/clu_store] step 2275 (trained): depth 0.04552 (x0.144 vs untrained) | q* payload spread 2.559 (x5.74) | n_live 16
+[watch/clu_store] step 2300 (trained): depth 0.06649 (x0.21 vs untrained) | q* payload spread 1.499 (x3.36) | n_live 16
+[watch/clu_store] step 2325 (trained): depth 0.03046 (x0.0963 vs untrained) | q* payload spread 1.951 (x4.37) | n_live 16
+[watch/clu_store] step 2350 (trained): depth 0.02468 (x0.078 vs untrained) | q* payload spread 1.793 (x4.02) | n_live 16
+[watch/clu_store] step 2375 (trained): depth 0.01034 (x0.0327 vs untrained) | q* payload spread 1.844 (x4.13) | n_live 16
+[watch/clu_store] step 2400 (trained): depth 0.02009 (x0.0635 vs untrained) | q* payload spread 2.819 (x6.32) | n_live 16
+[watch/clu_store] step 2425 (trained): depth 0.02367 (x0.0748 vs untrained) | q* payload spread 2.283 (x5.12) | n_live 16
+[watch/clu_store] step 2450 (trained): depth 0.007352 (x0.0232 vs untrained) | q* payload spread 1.44 (x3.23) | n_live 16
+[watch/clu_store] step 2475 (trained): depth 0.03059 (x0.0967 vs untrained) | q* payload spread 2.568 (x5.76) | n_live 16
+[watch/clu_store] step 2500 (trained): depth 0.01816 (x0.0574 vs untrained) | q* payload spread 1.567 (x3.51) | n_live 16
+[watch/clu_store] step 2525 (trained): depth 0.04766 (x0.151 vs untrained) | q* payload spread 2.453 (x5.5) | n_live 16
+[watch/clu_store] step 2550 (trained): depth 0.109 (x0.345 vs untrained) | q* payload spread 2.613 (x5.86) | n_live 16
+[watch/clu_store] step 2575 (trained): depth 0.06555 (x0.207 vs untrained) | q* payload spread 2.675 (x6) | n_live 16
+[watch/clu_store] step 2600 (trained): depth 0.05472 (x0.173 vs untrained) | q* payload spread 0.9268 (x2.08) | n_live 16
+[watch/clu_store] step 2625 (trained): depth 0.08123 (x0.257 vs untrained) | q* payload spread 2.142 (x4.8) | n_live 16
+[watch/clu_store] step 2650 (trained): depth 0.02473 (x0.0782 vs untrained) | q* payload spread 1.32 (x2.96) | n_live 16
+[watch/clu_store] step 2675 (trained): depth 0.0369 (x0.117 vs untrained) | q* payload spread 2.235 (x5.01) | n_live 16
+[watch/clu_store] step 2700 (trained): depth 0.03287 (x0.104 vs untrained) | q* payload spread 2.039 (x4.57) | n_live 16
+[watch/clu_store] step 2725 (trained): depth 0.03978 (x0.126 vs untrained) | q* payload spread 1.847 (x4.14) | n_live 16
+[watch/clu_store] step 2750 (trained): depth 0.04846 (x0.153 vs untrained) | q* payload spread 1.522 (x3.41) | n_live 16
+[watch/clu_store] step 2775 (trained): depth 0.03897 (x0.123 vs untrained) | q* payload spread 1.359 (x3.05) | n_live 16
+[watch/clu_store] step 2800 (trained): depth 0.06012 (x0.19 vs untrained) | q* payload spread 1.901 (x4.26) | n_live 16
+[watch/clu_store] step 2825 (trained): depth 0.08201 (x0.259 vs untrained) | q* payload spread 1.835 (x4.11) | n_live 16
+[watch/clu_store] step 2850 (trained): depth 0.07605 (x0.24 vs untrained) | q* payload spread 2.561 (x5.74) | n_live 16
+[watch/clu_store] step 2875 (trained): depth 0.04196 (x0.133 vs untrained) | q* payload spread 1.963 (x4.4) | n_live 16
+[watch/clu_store] step 2900 (trained): depth 0.06892 (x0.218 vs untrained) | q* payload spread 1.174 (x2.63) | n_live 16
+[watch/clu_store] step 2925 (trained): depth 0.1022 (x0.323 vs untrained) | q* payload spread 2.512 (x5.63) | n_live 16
+[watch/clu_store] step 2950 (trained): depth 0.09612 (x0.304 vs untrained) | q* payload spread 2.844 (x6.38) | n_live 16
+[watch/clu_store] step 2975 (trained): depth 0.09325 (x0.295 vs untrained) | q* payload spread 2.06 (x4.62) | n_live 16
+[watch/clu_store] step 3000 (trained): depth 0.06817 (x0.216 vs untrained) | q* payload spread 1.785 (x4) | n_live 16
+[watch/clu_store] step 3025 (trained): depth 0.07573 (x0.239 vs untrained) | q* payload spread 3.112 (x6.98) | n_live 16
+[watch/clu_store] step 3050 (trained): depth 0.06616 (x0.209 vs untrained) | q* payload spread 1.803 (x4.04) | n_live 16
+[watch/clu_store] step 3075 (trained): depth 0.09062 (x0.287 vs untrained) | q* payload spread 2.952 (x6.62) | n_live 16
+[watch/clu_store] step 3100 (trained): depth 0.1092 (x0.345 vs untrained) | q* payload spread 1.62 (x3.63) | n_live 16
+[watch/clu_store] step 3125 (trained): depth 0.06427 (x0.203 vs untrained) | q* payload spread 2.477 (x5.55) | n_live 16
+[watch/clu_store] step 3150 (trained): depth 0.0624 (x0.197 vs untrained) | q* payload spread 1.633 (x3.66) | n_live 16
+[watch/clu_store] step 3175 (trained): depth 0.06229 (x0.197 vs untrained) | q* payload spread 2.21 (x4.96) | n_live 16
+[watch/clu_store] step 3200 (trained): depth 0.1116 (x0.353 vs untrained) | q* payload spread 2.208 (x4.95) | n_live 16
+[watch/clu_store] step 3225 (trained): depth 0.09692 (x0.306 vs untrained) | q* payload spread 2.633 (x5.9) | n_live 16
+[watch/clu_store] step 3250 (trained): depth 0.05866 (x0.185 vs untrained) | q* payload spread 2.171 (x4.87) | n_live 16
+[watch/clu_store] step 3275 (trained): depth 0.1095 (x0.346 vs untrained) | q* payload spread 1.13 (x2.53) | n_live 16
+[watch/clu_store] step 3300 (trained): depth 0.06305 (x0.199 vs untrained) | q* payload spread 1.886 (x4.23) | n_live 16
+[watch/clu_store] step 3325 (trained): depth 0.0951 (x0.301 vs untrained) | q* payload spread 2.071 (x4.64) | n_live 16
+[watch/clu_store] step 3350 (trained): depth 0.1306 (x0.413 vs untrained) | q* payload spread 2.29 (x5.13) | n_live 16
+[watch/clu_store] step 3375 (trained): depth 0.0574 (x0.181 vs untrained) | q* payload spread 1.729 (x3.88) | n_live 16
+[watch/clu_store] step 3400 (trained): depth 0.1316 (x0.416 vs untrained) | q* payload spread 1.136 (x2.55) | n_live 16
+[watch/clu_store] step 3425 (trained): depth 0.1013 (x0.32 vs untrained) | q* payload spread 1.391 (x3.12) | n_live 16
+[watch/clu_store] step 3450 (trained): depth 0.05586 (x0.177 vs untrained) | q* payload spread 2.397 (x5.38) | n_live 16
+[watch/clu_store] step 3475 (trained): depth 0.1078 (x0.341 vs untrained) | q* payload spread 1.756 (x3.94) | n_live 16
+[watch/clu_store] step 3500 (trained): depth 0.07412 (x0.234 vs untrained) | q* payload spread 2.069 (x4.64) | n_live 16
+[watch/clu_store] step 3525 (trained): depth 0.03314 (x0.105 vs untrained) | q* payload spread 2.261 (x5.07) | n_live 16
+[watch/clu_store] step 3550 (trained): depth 0.164 (x0.519 vs untrained) | q* payload spread 1.458 (x3.27) | n_live 16
+[watch/clu_store] step 3575 (trained): depth 0.04037 (x0.128 vs untrained) | q* payload spread 2.545 (x5.71) | n_live 16
+[watch/clu_store] step 3600 (trained): depth 0.03349 (x0.106 vs untrained) | q* payload spread 1.165 (x2.61) | n_live 16
+[watch/clu_store] step 3625 (trained): depth 0.101 (x0.319 vs untrained) | q* payload spread 1.34 (x3) | n_live 16
+[watch/clu_store] step 3650 (trained): depth 0.06813 (x0.215 vs untrained) | q* payload spread 1.58 (x3.54) | n_live 16
+[watch/clu_store] step 3675 (trained): depth 0.06179 (x0.195 vs untrained) | q* payload spread 1.542 (x3.46) | n_live 16
+[watch/clu_store] step 3700 (trained): depth 0.0557 (x0.176 vs untrained) | q* payload spread 2.54 (x5.7) | n_live 16
+[watch/clu_store] step 3725 (trained): depth 0.07241 (x0.229 vs untrained) | q* payload spread 1.391 (x3.12) | n_live 16
+[watch/clu_store] step 3750 (trained): depth 0.08213 (x0.26 vs untrained) | q* payload spread 2.319 (x5.2) | n_live 16
+[watch/clu_store] step 3775 (trained): depth 0.09102 (x0.288 vs untrained) | q* payload spread 1.4 (x3.14) | n_live 16
+[watch/clu_store] step 3800 (trained): depth 0.1125 (x0.356 vs untrained) | q* payload spread 1.512 (x3.39) | n_live 16
+[watch/clu_store] step 3825 (trained): depth 0.1011 (x0.32 vs untrained) | q* payload spread 1.986 (x4.45) | n_live 16
+[watch/clu_store] step 3850 (trained): depth 0.0603 (x0.191 vs untrained) | q* payload spread 2.067 (x4.63) | n_live 16
+[watch/clu_store] step 3875 (trained): depth 0.1506 (x0.476 vs untrained) | q* payload spread 1.842 (x4.13) | n_live 16
+[watch/clu_store] step 3900 (trained): depth 0.08128 (x0.257 vs untrained) | q* payload spread 1.749 (x3.92) | n_live 16
+[watch/clu_store] step 3925 (trained): depth 0.09914 (x0.313 vs untrained) | q* payload spread 2.667 (x5.98) | n_live 16
+[watch/clu_store] step 3950 (trained): depth 0.1281 (x0.405 vs untrained) | q* payload spread 1.231 (x2.76) | n_live 16
+[watch/clu_store] step 3975 (trained): depth 0.08285 (x0.262 vs untrained) | q* payload spread 1.343 (x3.01) | n_live 16
+[watch/clu_store] step 3999 (trained): depth 0.1018 (x0.322 vs untrained) | q* payload spread 1.522 (x3.41) | n_live 16

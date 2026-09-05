@@ -1,0 +1,2023 @@
+{
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "items": [
+    "entry"
+  ],
+  "protocol": {
+    "scenario": "Class-IL (van de Ven & Tolias): new classes per task, task identity NOT given at test time",
+    "stream": "Split-CIFAR10: 5 tasks \u00d7 2 classes, from scratch",
+    "metrics": "GEM formulas (Lopez-Paz & Ranzato 2017): ACC, BWT, forgetting",
+    "phi": "task1_only = PRIMARY (frozen after task 1); generic_frozen = declared upper bound that LEAKS future tasks; phi_dim=256 (\u226516 binding, PREREG_CL_PHI \u00a77)",
+    "store": "designed Gaussian wells over \u03c6(x), payload = class label, MVC-0 controller (admission + placement + class-balanced eviction + scheduled decay). No exemplar is stored.",
+    "memory": "matched at 200 items for the store, ER, iCaRL, GDumb and the kNN-in-\u03c6 launders; float counts reported too",
+    "filing_rule": "CM-23(n) \u2014 best rehearsal-free is the claim; 'beats replay' is never claimed",
+    "known_null": "EWC/SI/LwF collapse to \u2248chance in Class-IL by construction (van de Ven & Tolias 2019); their collapse is NOT a CLU win",
+    "r1_naming": "scheduled per-item retention; forbidden: certified, unlearning, deletion by construction, exact deletion"
+  },
+  "config": {
+    "dataset": "cifar10",
+    "n_tasks": 5,
+    "classes_per_task": 2,
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "phi_regimes": [
+      "task1_only"
+    ],
+    "phi_arm": "randconv",
+    "phi_dim": 256,
+    "n_train_per_task": 1000,
+    "n_test_per_task": 500,
+    "n_fit_pool": 6000,
+    "n_fit_region": 25000,
+    "memory_items": 200,
+    "clu_s_frac": 0.2,
+    "d_safe_mult": 4.4,
+    "s_policy": "refit",
+    "s_init_items": 200,
+    "store_alpha": 0.001,
+    "clu_b": 1.0,
+    "clu_alpha": 0.001,
+    "clu_gamma": 0.1,
+    "clu_steps": 150,
+    "clu_dt": 0.0,
+    "clu_tail_frac": 0.1,
+    "clu_kinetic_mode": "newtonian_identity",
+    "rollout_chunk": 256,
+    "baselines": [
+      "none"
+    ],
+    "backbone": "cnn",
+    "mlp_width": 128,
+    "mlp_depth": 2,
+    "baseline_iters": 150,
+    "baseline_batch": 128,
+    "baseline_lr": 0.001,
+    "ewc_lambda": 5000.0,
+    "si_c": 1.0,
+    "si_xi": 0.1,
+    "lwf_alpha": 1.0,
+    "lwf_temp": 2.0,
+    "fisher_samples": 100,
+    "tune_baselines": false,
+    "retry_ladder": [
+      0,
+      1,
+      2,
+      4,
+      8
+    ],
+    "retry_tau": 0.99,
+    "retry_tau_grid": [
+      0.99,
+      0.999,
+      0.9999,
+      1.0
+    ],
+    "retry_boost": 1.5,
+    "retry_step_frac": 0.1,
+    "retry_mask_p": 0.5,
+    "retry_mask_levels": [
+      0.5,
+      0.8
+    ],
+    "ticks_per_task": 4,
+    "leak_slow": 0.0866,
+    "leak_fast": 0.3466,
+    "amp_floor": 0.05,
+    "permanent_per_task": 10,
+    "laundering_tie_band": 0.03,
+    "derpp_alpha": 0.5,
+    "derpp_beta": 0.5,
+    "frontier_budgets_floats": [
+      6280,
+      19625,
+      39250,
+      78500,
+      157000,
+      314000
+    ],
+    "frontier_methods": [
+      "er",
+      "derpp",
+      "icarl",
+      "gdumb"
+    ],
+    "frontier_fixed_methods": [
+      "finetune",
+      "ewc",
+      "si",
+      "lwf",
+      "joint"
+    ],
+    "frontier_seeds": [
+      0,
+      1,
+      2
+    ],
+    "frontier_n_test_per_task": 0,
+    "frontier_max_clu_items": 0,
+    "frontier_la_band": 0.1,
+    "count_controller_record_floats": true,
+    "bytes_per_float": 4,
+    "count_phi_param_floats": true,
+    "enc_steps": 8000,
+    "enc_head": "pca",
+    "enc_l2_normalize": true,
+    "enc_channels": [
+      32,
+      64,
+      128
+    ],
+    "enc_batch": 128,
+    "enc_lr": 0.001,
+    "enc_temperature": 0.5,
+    "enc_proj_dim": 64
+  },
+  "entry_runs": [
+    {
+      "regime": "task1_only",
+      "seed": 0,
+      "phi_provenance": {
+        "arm": "randconv",
+        "k": 256,
+        "h_dim": 512,
+        "objective": "none",
+        "steps": 0,
+        "loss_first": null,
+        "loss_final": null,
+        "n_fit": 4966,
+        "frozen": true,
+        "phi_param_floats": 225536,
+        "regime": "task1_only",
+        "role": "PRIMARY \u2014 every headline number",
+        "may_see": "task-1 classes only [0, 1]",
+        "n_fit_pool": 4966,
+        "frozen_from": "end of task 1 (never refit, never re-keyed)",
+        "phi_dim": 256
+      },
+      "decay_on": false,
+      "A_clu": [
+        [
+          0.684,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.436,
+          0.454,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.336,
+          0.258,
+          0.254,
+          0.0,
+          0.0
+        ],
+        [
+          0.314,
+          0.22,
+          0.19,
+          0.278,
+          0.0
+        ],
+        [
+          0.224,
+          0.176,
+          0.166,
+          0.272,
+          0.274
+        ]
+      ],
+      "A_knn_same_keys": [
+        [
+          0.682,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.434,
+          0.454,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.338,
+          0.26,
+          0.256,
+          0.0,
+          0.0
+        ],
+        [
+          0.314,
+          0.22,
+          0.192,
+          0.284,
+          0.0
+        ],
+        [
+          0.224,
+          0.178,
+          0.166,
+          0.276,
+          0.272
+        ]
+      ],
+      "A_knn_ringbuffer": [
+        [
+          0.702,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.466,
+          0.442,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.386,
+          0.278,
+          0.302,
+          0.0,
+          0.0
+        ],
+        [
+          0.328,
+          0.186,
+          0.208,
+          0.302,
+          0.0
+        ],
+        [
+          0.27,
+          0.162,
+          0.23,
+          0.292,
+          0.25
+        ]
+      ],
+      "metrics_clu": {
+        "ACC": 0.22240000000000001,
+        "BWT": -0.20800000000000002,
+        "forgetting": 0.20800000000000002,
+        "LA": 0.38880000000000003,
+        "final_per_task": [
+          0.224,
+          0.176,
+          0.166,
+          0.272,
+          0.274
+        ]
+      },
+      "metrics_knn_same_keys": {
+        "ACC": 0.2232,
+        "BWT": -0.20800000000000002,
+        "forgetting": 0.20800000000000002,
+        "LA": 0.38960000000000006,
+        "final_per_task": [
+          0.224,
+          0.178,
+          0.166,
+          0.276,
+          0.272
+        ]
+      },
+      "metrics_knn_ringbuffer": {
+        "ACC": 0.2408,
+        "BWT": -0.19849999999999998,
+        "forgetting": 0.19849999999999998,
+        "LA": 0.3996,
+        "final_per_task": [
+          0.27,
+          0.162,
+          0.23,
+          0.292,
+          0.25
+        ]
+      },
+      "per_task": [
+        {
+          "offered": 1000,
+          "admitted": 800,
+          "relocated": 0,
+          "refused_spacing": 200,
+          "refused_full": 0,
+          "evicted": 600,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 0,
+          "n_live": 200,
+          "well_width_s": 0.1631536855633119,
+          "d_safe": 0.7178762164785724,
+          "admitted_fraction": 0.8,
+          "intervention_rate": 0.19999999999999996
+        },
+        {
+          "offered": 1000,
+          "admitted": 631,
+          "relocated": 0,
+          "refused_spacing": 369,
+          "refused_full": 0,
+          "evicted": 632,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 1,
+          "n_live": 199,
+          "well_width_s": 0.17488664620248182,
+          "d_safe": 0.7695012432909201,
+          "admitted_fraction": 0.631,
+          "intervention_rate": 0.369
+        },
+        {
+          "offered": 1000,
+          "admitted": 547,
+          "relocated": 0,
+          "refused_spacing": 453,
+          "refused_full": 0,
+          "evicted": 546,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 2,
+          "n_live": 200,
+          "well_width_s": 0.17649771137291292,
+          "d_safe": 0.7765899300408169,
+          "admitted_fraction": 0.547,
+          "intervention_rate": 0.45299999999999996
+        },
+        {
+          "offered": 1000,
+          "admitted": 620,
+          "relocated": 0,
+          "refused_spacing": 380,
+          "refused_full": 0,
+          "evicted": 620,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 3,
+          "n_live": 200,
+          "well_width_s": 0.1715720476086332,
+          "d_safe": 0.7549170094779861,
+          "admitted_fraction": 0.62,
+          "intervention_rate": 0.38
+        },
+        {
+          "offered": 1000,
+          "admitted": 722,
+          "relocated": 0,
+          "refused_spacing": 278,
+          "refused_full": 0,
+          "evicted": 723,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 4,
+          "n_live": 199,
+          "well_width_s": 0.16984515335609263,
+          "d_safe": 0.7473186747668076,
+          "admitted_fraction": 0.722,
+          "intervention_rate": 0.278
+        }
+      ],
+      "geometry": {
+        "n_stored": 199,
+        "median_nn_addresses": 0.8515224672993739,
+        "well_width_s": 0.16984515335609263,
+        "sigma_q_norm": 0.8298864081792342,
+        "packing_slack_corrected": 0.3309906803671065,
+        "packing_slack_note": "slack = median_NN / (3.1\u00b7max(s, \u03c3_q)), \u03c3_q = RMS\u2016\u03c6(test query) \u2212 nearest address\u2016 (a NORM, per the w24 unit correction). slack < 1 \u21d2 the store runs past the packing bound \u2014 intrinsic to classification, and the source of the geometric ambiguity Item 3 measures."
+      },
+      "memory_items": 199,
+      "memory_floats": 52735,
+      "phi_param_floats": 225536,
+      "phi_arm": "randconv",
+      "ring_items": 200,
+      "budget_items": 200,
+      "ring_budget_items": 200,
+      "refused_full": 0,
+      "admitted_fraction_per_task": [
+        0.8,
+        0.631,
+        0.547,
+        0.62,
+        0.722
+      ],
+      "retention_rows": []
+    },
+    {
+      "regime": "task1_only",
+      "seed": 1,
+      "phi_provenance": {
+        "arm": "randconv",
+        "k": 256,
+        "h_dim": 512,
+        "objective": "none",
+        "steps": 0,
+        "loss_first": null,
+        "loss_final": null,
+        "n_fit": 4990,
+        "frozen": true,
+        "phi_param_floats": 225536,
+        "regime": "task1_only",
+        "role": "PRIMARY \u2014 every headline number",
+        "may_see": "task-1 classes only [0, 1]",
+        "n_fit_pool": 4990,
+        "frozen_from": "end of task 1 (never refit, never re-keyed)",
+        "phi_dim": 256
+      },
+      "decay_on": false,
+      "A_clu": [
+        [
+          0.714,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.434,
+          0.432,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.32,
+          0.256,
+          0.268,
+          0.0,
+          0.0
+        ],
+        [
+          0.324,
+          0.216,
+          0.204,
+          0.236,
+          0.0
+        ],
+        [
+          0.242,
+          0.188,
+          0.16,
+          0.19,
+          0.3
+        ]
+      ],
+      "A_knn_same_keys": [
+        [
+          0.714,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.436,
+          0.434,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.32,
+          0.252,
+          0.268,
+          0.0,
+          0.0
+        ],
+        [
+          0.324,
+          0.216,
+          0.206,
+          0.236,
+          0.0
+        ],
+        [
+          0.244,
+          0.188,
+          0.162,
+          0.19,
+          0.296
+        ]
+      ],
+      "A_knn_ringbuffer": [
+        [
+          0.7,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.458,
+          0.454,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.374,
+          0.248,
+          0.348,
+          0.0,
+          0.0
+        ],
+        [
+          0.324,
+          0.212,
+          0.24,
+          0.306,
+          0.0
+        ],
+        [
+          0.246,
+          0.212,
+          0.2,
+          0.284,
+          0.318
+        ]
+      ],
+      "metrics_clu": {
+        "ACC": 0.21600000000000003,
+        "BWT": -0.21749999999999997,
+        "forgetting": 0.21749999999999997,
+        "LA": 0.39,
+        "final_per_task": [
+          0.242,
+          0.188,
+          0.16,
+          0.19,
+          0.3
+        ]
+      },
+      "metrics_knn_same_keys": {
+        "ACC": 0.21600000000000003,
+        "BWT": -0.21699999999999997,
+        "forgetting": 0.21699999999999997,
+        "LA": 0.3896,
+        "final_per_task": [
+          0.244,
+          0.188,
+          0.162,
+          0.19,
+          0.296
+        ]
+      },
+      "metrics_knn_ringbuffer": {
+        "ACC": 0.252,
+        "BWT": -0.21649999999999997,
+        "forgetting": 0.21649999999999997,
+        "LA": 0.42519999999999997,
+        "final_per_task": [
+          0.246,
+          0.212,
+          0.2,
+          0.284,
+          0.318
+        ]
+      },
+      "per_task": [
+        {
+          "offered": 1000,
+          "admitted": 771,
+          "relocated": 0,
+          "refused_spacing": 229,
+          "refused_full": 0,
+          "evicted": 571,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 0,
+          "n_live": 200,
+          "well_width_s": 0.16108200274116932,
+          "d_safe": 0.708760812061145,
+          "admitted_fraction": 0.771,
+          "intervention_rate": 0.22899999999999998
+        },
+        {
+          "offered": 1000,
+          "admitted": 714,
+          "relocated": 0,
+          "refused_spacing": 286,
+          "refused_full": 0,
+          "evicted": 714,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 1,
+          "n_live": 200,
+          "well_width_s": 0.16916367885893868,
+          "d_safe": 0.7443201869793302,
+          "admitted_fraction": 0.714,
+          "intervention_rate": 0.28600000000000003
+        },
+        {
+          "offered": 1000,
+          "admitted": 673,
+          "relocated": 0,
+          "refused_spacing": 327,
+          "refused_full": 0,
+          "evicted": 673,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 2,
+          "n_live": 200,
+          "well_width_s": 0.16840813387865958,
+          "d_safe": 0.7409957890661022,
+          "admitted_fraction": 0.673,
+          "intervention_rate": 0.32699999999999996
+        },
+        {
+          "offered": 1000,
+          "admitted": 647,
+          "relocated": 0,
+          "refused_spacing": 353,
+          "refused_full": 0,
+          "evicted": 648,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 3,
+          "n_live": 199,
+          "well_width_s": 0.16906865940844296,
+          "d_safe": 0.7439021013971491,
+          "admitted_fraction": 0.647,
+          "intervention_rate": 0.353
+        },
+        {
+          "offered": 1000,
+          "admitted": 748,
+          "relocated": 0,
+          "refused_spacing": 252,
+          "refused_full": 0,
+          "evicted": 747,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 4,
+          "n_live": 200,
+          "well_width_s": 0.16800373353512152,
+          "d_safe": 0.7392164275545348,
+          "admitted_fraction": 0.748,
+          "intervention_rate": 0.252
+        }
+      ],
+      "geometry": {
+        "n_stored": 200,
+        "median_nn_addresses": 0.8455794510501351,
+        "well_width_s": 0.16800373353512152,
+        "sigma_q_norm": 0.8239470001741218,
+        "packing_slack_corrected": 0.3310498913123447,
+        "packing_slack_note": "slack = median_NN / (3.1\u00b7max(s, \u03c3_q)), \u03c3_q = RMS\u2016\u03c6(test query) \u2212 nearest address\u2016 (a NORM, per the w24 unit correction). slack < 1 \u21d2 the store runs past the packing bound \u2014 intrinsic to classification, and the source of the geometric ambiguity Item 3 measures."
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "phi_arm": "randconv",
+      "ring_items": 200,
+      "budget_items": 200,
+      "ring_budget_items": 200,
+      "refused_full": 0,
+      "admitted_fraction_per_task": [
+        0.771,
+        0.714,
+        0.673,
+        0.647,
+        0.748
+      ],
+      "retention_rows": []
+    },
+    {
+      "regime": "task1_only",
+      "seed": 2,
+      "phi_provenance": {
+        "arm": "randconv",
+        "k": 256,
+        "h_dim": 512,
+        "objective": "none",
+        "steps": 0,
+        "loss_first": null,
+        "loss_final": null,
+        "n_fit": 4971,
+        "frozen": true,
+        "phi_param_floats": 225536,
+        "regime": "task1_only",
+        "role": "PRIMARY \u2014 every headline number",
+        "may_see": "task-1 classes only [0, 1]",
+        "n_fit_pool": 4971,
+        "frozen_from": "end of task 1 (never refit, never re-keyed)",
+        "phi_dim": 256
+      },
+      "decay_on": false,
+      "A_clu": [
+        [
+          0.742,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.476,
+          0.438,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.39,
+          0.27,
+          0.29,
+          0.0,
+          0.0
+        ],
+        [
+          0.348,
+          0.17,
+          0.202,
+          0.298,
+          0.0
+        ],
+        [
+          0.206,
+          0.146,
+          0.164,
+          0.292,
+          0.338
+        ]
+      ],
+      "A_knn_same_keys": [
+        [
+          0.738,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.474,
+          0.438,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.388,
+          0.272,
+          0.29,
+          0.0,
+          0.0
+        ],
+        [
+          0.346,
+          0.17,
+          0.202,
+          0.294,
+          0.0
+        ],
+        [
+          0.206,
+          0.146,
+          0.166,
+          0.288,
+          0.338
+        ]
+      ],
+      "A_knn_ringbuffer": [
+        [
+          0.75,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.472,
+          0.398,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.356,
+          0.21,
+          0.362,
+          0.0,
+          0.0
+        ],
+        [
+          0.298,
+          0.172,
+          0.258,
+          0.312,
+          0.0
+        ],
+        [
+          0.206,
+          0.134,
+          0.23,
+          0.278,
+          0.266
+        ]
+      ],
+      "metrics_clu": {
+        "ACC": 0.22920000000000001,
+        "BWT": -0.24000000000000002,
+        "forgetting": 0.24000000000000002,
+        "LA": 0.42119999999999996,
+        "final_per_task": [
+          0.206,
+          0.146,
+          0.164,
+          0.292,
+          0.338
+        ]
+      },
+      "metrics_knn_same_keys": {
+        "ACC": 0.22880000000000003,
+        "BWT": -0.23850000000000002,
+        "forgetting": 0.23850000000000002,
+        "LA": 0.4196,
+        "final_per_task": [
+          0.206,
+          0.146,
+          0.166,
+          0.288,
+          0.338
+        ]
+      },
+      "metrics_knn_ringbuffer": {
+        "ACC": 0.22279999999999997,
+        "BWT": -0.2435,
+        "forgetting": 0.2435,
+        "LA": 0.4176,
+        "final_per_task": [
+          0.206,
+          0.134,
+          0.23,
+          0.278,
+          0.266
+        ]
+      },
+      "per_task": [
+        {
+          "offered": 1000,
+          "admitted": 814,
+          "relocated": 0,
+          "refused_spacing": 186,
+          "refused_full": 0,
+          "evicted": 614,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 0,
+          "n_live": 200,
+          "well_width_s": 0.1654152788341796,
+          "d_safe": 0.7278272268703904,
+          "admitted_fraction": 0.814,
+          "intervention_rate": 0.18600000000000005
+        },
+        {
+          "offered": 1000,
+          "admitted": 677,
+          "relocated": 0,
+          "refused_spacing": 323,
+          "refused_full": 0,
+          "evicted": 678,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 1,
+          "n_live": 199,
+          "well_width_s": 0.17636710882124915,
+          "d_safe": 0.7760152788134963,
+          "admitted_fraction": 0.677,
+          "intervention_rate": 0.32299999999999995
+        },
+        {
+          "offered": 1000,
+          "admitted": 637,
+          "relocated": 0,
+          "refused_spacing": 363,
+          "refused_full": 0,
+          "evicted": 636,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 2,
+          "n_live": 200,
+          "well_width_s": 0.1738284766388393,
+          "d_safe": 0.764845297210893,
+          "admitted_fraction": 0.637,
+          "intervention_rate": 0.363
+        },
+        {
+          "offered": 1000,
+          "admitted": 699,
+          "relocated": 0,
+          "refused_spacing": 301,
+          "refused_full": 0,
+          "evicted": 699,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 3,
+          "n_live": 200,
+          "well_width_s": 0.17414966881975194,
+          "d_safe": 0.7662585428069086,
+          "admitted_fraction": 0.699,
+          "intervention_rate": 0.30100000000000005
+        },
+        {
+          "offered": 1000,
+          "admitted": 786,
+          "relocated": 0,
+          "refused_spacing": 214,
+          "refused_full": 0,
+          "evicted": 786,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 4,
+          "n_live": 200,
+          "well_width_s": 0.17435522350354926,
+          "d_safe": 0.7671629834156168,
+          "admitted_fraction": 0.786,
+          "intervention_rate": 0.21399999999999997
+        }
+      ],
+      "geometry": {
+        "n_stored": 200,
+        "median_nn_addresses": 0.8718435614310379,
+        "well_width_s": 0.17435522350354926,
+        "sigma_q_norm": 0.8420326852334268,
+        "packing_slack_corrected": 0.3340011183153403,
+        "packing_slack_note": "slack = median_NN / (3.1\u00b7max(s, \u03c3_q)), \u03c3_q = RMS\u2016\u03c6(test query) \u2212 nearest address\u2016 (a NORM, per the w24 unit correction). slack < 1 \u21d2 the store runs past the packing bound \u2014 intrinsic to classification, and the source of the geometric ambiguity Item 3 measures."
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "phi_arm": "randconv",
+      "ring_items": 200,
+      "budget_items": 200,
+      "ring_budget_items": 200,
+      "refused_full": 0,
+      "admitted_fraction_per_task": [
+        0.814,
+        0.677,
+        0.637,
+        0.699,
+        0.786
+      ],
+      "retention_rows": []
+    },
+    {
+      "regime": "task1_only",
+      "seed": 3,
+      "phi_provenance": {
+        "arm": "randconv",
+        "k": 256,
+        "h_dim": 512,
+        "objective": "none",
+        "steps": 0,
+        "loss_first": null,
+        "loss_final": null,
+        "n_fit": 4949,
+        "frozen": true,
+        "phi_param_floats": 225536,
+        "regime": "task1_only",
+        "role": "PRIMARY \u2014 every headline number",
+        "may_see": "task-1 classes only [0, 1]",
+        "n_fit_pool": 4949,
+        "frozen_from": "end of task 1 (never refit, never re-keyed)",
+        "phi_dim": 256
+      },
+      "decay_on": false,
+      "A_clu": [
+        [
+          0.758,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.458,
+          0.368,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.382,
+          0.2,
+          0.296,
+          0.0,
+          0.0
+        ],
+        [
+          0.32,
+          0.138,
+          0.19,
+          0.268,
+          0.0
+        ],
+        [
+          0.236,
+          0.112,
+          0.19,
+          0.252,
+          0.22
+        ]
+      ],
+      "A_knn_same_keys": [
+        [
+          0.758,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.458,
+          0.368,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.382,
+          0.202,
+          0.296,
+          0.0,
+          0.0
+        ],
+        [
+          0.32,
+          0.138,
+          0.188,
+          0.266,
+          0.0
+        ],
+        [
+          0.238,
+          0.112,
+          0.188,
+          0.25,
+          0.218
+        ]
+      ],
+      "A_knn_ringbuffer": [
+        [
+          0.734,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.52,
+          0.404,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.406,
+          0.212,
+          0.336,
+          0.0,
+          0.0
+        ],
+        [
+          0.354,
+          0.142,
+          0.208,
+          0.284,
+          0.0
+        ],
+        [
+          0.264,
+          0.128,
+          0.158,
+          0.254,
+          0.334
+        ]
+      ],
+      "metrics_clu": {
+        "ACC": 0.202,
+        "BWT": -0.225,
+        "forgetting": 0.225,
+        "LA": 0.382,
+        "final_per_task": [
+          0.236,
+          0.112,
+          0.19,
+          0.252,
+          0.22
+        ]
+      },
+      "metrics_knn_same_keys": {
+        "ACC": 0.2012,
+        "BWT": -0.225,
+        "forgetting": 0.225,
+        "LA": 0.3812,
+        "final_per_task": [
+          0.238,
+          0.112,
+          0.188,
+          0.25,
+          0.218
+        ]
+      },
+      "metrics_knn_ringbuffer": {
+        "ACC": 0.22760000000000002,
+        "BWT": -0.2385,
+        "forgetting": 0.2385,
+        "LA": 0.4184,
+        "final_per_task": [
+          0.264,
+          0.128,
+          0.158,
+          0.254,
+          0.334
+        ]
+      },
+      "per_task": [
+        {
+          "offered": 1000,
+          "admitted": 790,
+          "relocated": 0,
+          "refused_spacing": 210,
+          "refused_full": 0,
+          "evicted": 590,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 0,
+          "n_live": 200,
+          "well_width_s": 0.15524014810168768,
+          "d_safe": 0.6830566516474258,
+          "admitted_fraction": 0.79,
+          "intervention_rate": 0.20999999999999996
+        },
+        {
+          "offered": 1000,
+          "admitted": 695,
+          "relocated": 0,
+          "refused_spacing": 305,
+          "refused_full": 0,
+          "evicted": 695,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 1,
+          "n_live": 200,
+          "well_width_s": 0.16556784684110748,
+          "d_safe": 0.728498526100873,
+          "admitted_fraction": 0.695,
+          "intervention_rate": 0.30500000000000005
+        },
+        {
+          "offered": 1000,
+          "admitted": 649,
+          "relocated": 0,
+          "refused_spacing": 351,
+          "refused_full": 0,
+          "evicted": 649,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 2,
+          "n_live": 200,
+          "well_width_s": 0.16972142366834453,
+          "d_safe": 0.746774264140716,
+          "admitted_fraction": 0.649,
+          "intervention_rate": 0.351
+        },
+        {
+          "offered": 1000,
+          "admitted": 614,
+          "relocated": 0,
+          "refused_spacing": 386,
+          "refused_full": 0,
+          "evicted": 614,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 3,
+          "n_live": 200,
+          "well_width_s": 0.172743798293147,
+          "d_safe": 0.7600727124898469,
+          "admitted_fraction": 0.614,
+          "intervention_rate": 0.386
+        },
+        {
+          "offered": 1000,
+          "admitted": 662,
+          "relocated": 0,
+          "refused_spacing": 338,
+          "refused_full": 0,
+          "evicted": 662,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 4,
+          "n_live": 200,
+          "well_width_s": 0.17154866704019547,
+          "d_safe": 0.7548141349768601,
+          "admitted_fraction": 0.662,
+          "intervention_rate": 0.33799999999999997
+        }
+      ],
+      "geometry": {
+        "n_stored": 200,
+        "median_nn_addresses": 0.8666583563632804,
+        "well_width_s": 0.17154866704019547,
+        "sigma_q_norm": 0.8183220875466779,
+        "packing_slack_corrected": 0.34163468881564735,
+        "packing_slack_note": "slack = median_NN / (3.1\u00b7max(s, \u03c3_q)), \u03c3_q = RMS\u2016\u03c6(test query) \u2212 nearest address\u2016 (a NORM, per the w24 unit correction). slack < 1 \u21d2 the store runs past the packing bound \u2014 intrinsic to classification, and the source of the geometric ambiguity Item 3 measures."
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "phi_arm": "randconv",
+      "ring_items": 200,
+      "budget_items": 200,
+      "ring_budget_items": 200,
+      "refused_full": 0,
+      "admitted_fraction_per_task": [
+        0.79,
+        0.695,
+        0.649,
+        0.614,
+        0.662
+      ],
+      "retention_rows": []
+    },
+    {
+      "regime": "task1_only",
+      "seed": 4,
+      "phi_provenance": {
+        "arm": "randconv",
+        "k": 256,
+        "h_dim": 512,
+        "objective": "none",
+        "steps": 0,
+        "loss_first": null,
+        "loss_final": null,
+        "n_fit": 5001,
+        "frozen": true,
+        "phi_param_floats": 225536,
+        "regime": "task1_only",
+        "role": "PRIMARY \u2014 every headline number",
+        "may_see": "task-1 classes only [0, 1]",
+        "n_fit_pool": 5001,
+        "frozen_from": "end of task 1 (never refit, never re-keyed)",
+        "phi_dim": 256
+      },
+      "decay_on": false,
+      "A_clu": [
+        [
+          0.718,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.406,
+          0.394,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.31,
+          0.246,
+          0.26,
+          0.0,
+          0.0
+        ],
+        [
+          0.256,
+          0.158,
+          0.226,
+          0.318,
+          0.0
+        ],
+        [
+          0.154,
+          0.138,
+          0.23,
+          0.298,
+          0.156
+        ]
+      ],
+      "A_knn_same_keys": [
+        [
+          0.718,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.406,
+          0.396,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.31,
+          0.25,
+          0.26,
+          0.0,
+          0.0
+        ],
+        [
+          0.256,
+          0.158,
+          0.224,
+          0.316,
+          0.0
+        ],
+        [
+          0.154,
+          0.138,
+          0.226,
+          0.296,
+          0.156
+        ]
+      ],
+      "A_knn_ringbuffer": [
+        [
+          0.708,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.418,
+          0.434,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.348,
+          0.26,
+          0.334,
+          0.0,
+          0.0
+        ],
+        [
+          0.292,
+          0.214,
+          0.21,
+          0.312,
+          0.0
+        ],
+        [
+          0.192,
+          0.196,
+          0.226,
+          0.274,
+          0.28
+        ]
+      ],
+      "metrics_clu": {
+        "ACC": 0.1952,
+        "BWT": -0.2175,
+        "forgetting": 0.2175,
+        "LA": 0.36920000000000003,
+        "final_per_task": [
+          0.154,
+          0.138,
+          0.23,
+          0.298,
+          0.156
+        ]
+      },
+      "metrics_knn_same_keys": {
+        "ACC": 0.194,
+        "BWT": -0.219,
+        "forgetting": 0.219,
+        "LA": 0.3692,
+        "final_per_task": [
+          0.154,
+          0.138,
+          0.226,
+          0.296,
+          0.156
+        ]
+      },
+      "metrics_knn_ringbuffer": {
+        "ACC": 0.23360000000000003,
+        "BWT": -0.22499999999999998,
+        "forgetting": 0.22499999999999998,
+        "LA": 0.4136,
+        "final_per_task": [
+          0.192,
+          0.196,
+          0.226,
+          0.274,
+          0.28
+        ]
+      },
+      "per_task": [
+        {
+          "offered": 1000,
+          "admitted": 804,
+          "relocated": 0,
+          "refused_spacing": 196,
+          "refused_full": 0,
+          "evicted": 604,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 0,
+          "n_live": 200,
+          "well_width_s": 0.16233258012469892,
+          "d_safe": 0.7142633525486753,
+          "admitted_fraction": 0.804,
+          "intervention_rate": 0.19599999999999995
+        },
+        {
+          "offered": 1000,
+          "admitted": 665,
+          "relocated": 0,
+          "refused_spacing": 335,
+          "refused_full": 0,
+          "evicted": 665,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 1,
+          "n_live": 200,
+          "well_width_s": 0.17038072853452885,
+          "d_safe": 0.749675205551927,
+          "admitted_fraction": 0.665,
+          "intervention_rate": 0.33499999999999996
+        },
+        {
+          "offered": 1000,
+          "admitted": 597,
+          "relocated": 0,
+          "refused_spacing": 403,
+          "refused_full": 0,
+          "evicted": 597,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 2,
+          "n_live": 200,
+          "well_width_s": 0.17229852835291237,
+          "d_safe": 0.7581135247528145,
+          "admitted_fraction": 0.597,
+          "intervention_rate": 0.403
+        },
+        {
+          "offered": 1000,
+          "admitted": 681,
+          "relocated": 0,
+          "refused_spacing": 319,
+          "refused_full": 0,
+          "evicted": 682,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 3,
+          "n_live": 199,
+          "well_width_s": 0.16941718401439135,
+          "d_safe": 0.745435609663322,
+          "admitted_fraction": 0.681,
+          "intervention_rate": 0.31899999999999995
+        },
+        {
+          "offered": 1000,
+          "admitted": 720,
+          "relocated": 0,
+          "refused_spacing": 280,
+          "refused_full": 0,
+          "evicted": 719,
+          "decayed_out": 0,
+          "deleted": 0,
+          "moves": 0,
+          "waitlisted": 0,
+          "reseated": 0,
+          "task": 4,
+          "n_live": 200,
+          "well_width_s": 0.17031294699804778,
+          "d_safe": 0.7493769667914103,
+          "admitted_fraction": 0.72,
+          "intervention_rate": 0.28
+        }
+      ],
+      "geometry": {
+        "n_stored": 200,
+        "median_nn_addresses": 0.8538360889399483,
+        "well_width_s": 0.17031294699804778,
+        "sigma_q_norm": 0.826680802501726,
+        "packing_slack_corrected": 0.33317695971482153,
+        "packing_slack_note": "slack = median_NN / (3.1\u00b7max(s, \u03c3_q)), \u03c3_q = RMS\u2016\u03c6(test query) \u2212 nearest address\u2016 (a NORM, per the w24 unit correction). slack < 1 \u21d2 the store runs past the packing bound \u2014 intrinsic to classification, and the source of the geometric ambiguity Item 3 measures."
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "phi_arm": "randconv",
+      "ring_items": 200,
+      "budget_items": 200,
+      "ring_budget_items": 200,
+      "refused_full": 0,
+      "admitted_fraction_per_task": [
+        0.804,
+        0.665,
+        0.597,
+        0.681,
+        0.72
+      ],
+      "retention_rows": []
+    }
+  ],
+  "baseline_tuning": [],
+  "rows": [
+    {
+      "method": "clu_entry_task1_only",
+      "class": "rehearsal-free",
+      "seed": 0,
+      "metrics": {
+        "ACC": 0.22240000000000001,
+        "BWT": -0.20800000000000002,
+        "forgetting": 0.20800000000000002,
+        "LA": 0.38880000000000003,
+        "final_per_task": [
+          0.224,
+          0.176,
+          0.166,
+          0.272,
+          0.274
+        ]
+      },
+      "memory_items": 199,
+      "memory_floats": 52735,
+      "phi_param_floats": 225536,
+      "total_floats": 278271
+    },
+    {
+      "method": "knn_phi_same_keys_task1_only",
+      "class": "launder",
+      "seed": 0,
+      "metrics": {
+        "ACC": 0.2232,
+        "BWT": -0.20800000000000002,
+        "forgetting": 0.20800000000000002,
+        "LA": 0.38960000000000006,
+        "final_per_task": [
+          0.224,
+          0.178,
+          0.166,
+          0.276,
+          0.272
+        ]
+      },
+      "memory_items": 199,
+      "memory_floats": 52735,
+      "phi_param_floats": 225536,
+      "total_floats": 278271
+    },
+    {
+      "method": "knn_phi_ringbuffer_task1_only",
+      "class": "launder",
+      "seed": 0,
+      "metrics": {
+        "ACC": 0.2408,
+        "BWT": -0.19849999999999998,
+        "forgetting": 0.19849999999999998,
+        "LA": 0.3996,
+        "final_per_task": [
+          0.27,
+          0.162,
+          0.23,
+          0.292,
+          0.25
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 51200,
+      "phi_param_floats": 225536,
+      "total_floats": 276736
+    },
+    {
+      "method": "clu_entry_task1_only",
+      "class": "rehearsal-free",
+      "seed": 1,
+      "metrics": {
+        "ACC": 0.21600000000000003,
+        "BWT": -0.21749999999999997,
+        "forgetting": 0.21749999999999997,
+        "LA": 0.39,
+        "final_per_task": [
+          0.242,
+          0.188,
+          0.16,
+          0.19,
+          0.3
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "total_floats": 278536
+    },
+    {
+      "method": "knn_phi_same_keys_task1_only",
+      "class": "launder",
+      "seed": 1,
+      "metrics": {
+        "ACC": 0.21600000000000003,
+        "BWT": -0.21699999999999997,
+        "forgetting": 0.21699999999999997,
+        "LA": 0.3896,
+        "final_per_task": [
+          0.244,
+          0.188,
+          0.162,
+          0.19,
+          0.296
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "total_floats": 278536
+    },
+    {
+      "method": "knn_phi_ringbuffer_task1_only",
+      "class": "launder",
+      "seed": 1,
+      "metrics": {
+        "ACC": 0.252,
+        "BWT": -0.21649999999999997,
+        "forgetting": 0.21649999999999997,
+        "LA": 0.42519999999999997,
+        "final_per_task": [
+          0.246,
+          0.212,
+          0.2,
+          0.284,
+          0.318
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 51200,
+      "phi_param_floats": 225536,
+      "total_floats": 276736
+    },
+    {
+      "method": "clu_entry_task1_only",
+      "class": "rehearsal-free",
+      "seed": 2,
+      "metrics": {
+        "ACC": 0.22920000000000001,
+        "BWT": -0.24000000000000002,
+        "forgetting": 0.24000000000000002,
+        "LA": 0.42119999999999996,
+        "final_per_task": [
+          0.206,
+          0.146,
+          0.164,
+          0.292,
+          0.338
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "total_floats": 278536
+    },
+    {
+      "method": "knn_phi_same_keys_task1_only",
+      "class": "launder",
+      "seed": 2,
+      "metrics": {
+        "ACC": 0.22880000000000003,
+        "BWT": -0.23850000000000002,
+        "forgetting": 0.23850000000000002,
+        "LA": 0.4196,
+        "final_per_task": [
+          0.206,
+          0.146,
+          0.166,
+          0.288,
+          0.338
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "total_floats": 278536
+    },
+    {
+      "method": "knn_phi_ringbuffer_task1_only",
+      "class": "launder",
+      "seed": 2,
+      "metrics": {
+        "ACC": 0.22279999999999997,
+        "BWT": -0.2435,
+        "forgetting": 0.2435,
+        "LA": 0.4176,
+        "final_per_task": [
+          0.206,
+          0.134,
+          0.23,
+          0.278,
+          0.266
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 51200,
+      "phi_param_floats": 225536,
+      "total_floats": 276736
+    },
+    {
+      "method": "clu_entry_task1_only",
+      "class": "rehearsal-free",
+      "seed": 3,
+      "metrics": {
+        "ACC": 0.202,
+        "BWT": -0.225,
+        "forgetting": 0.225,
+        "LA": 0.382,
+        "final_per_task": [
+          0.236,
+          0.112,
+          0.19,
+          0.252,
+          0.22
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "total_floats": 278536
+    },
+    {
+      "method": "knn_phi_same_keys_task1_only",
+      "class": "launder",
+      "seed": 3,
+      "metrics": {
+        "ACC": 0.2012,
+        "BWT": -0.225,
+        "forgetting": 0.225,
+        "LA": 0.3812,
+        "final_per_task": [
+          0.238,
+          0.112,
+          0.188,
+          0.25,
+          0.218
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "total_floats": 278536
+    },
+    {
+      "method": "knn_phi_ringbuffer_task1_only",
+      "class": "launder",
+      "seed": 3,
+      "metrics": {
+        "ACC": 0.22760000000000002,
+        "BWT": -0.2385,
+        "forgetting": 0.2385,
+        "LA": 0.4184,
+        "final_per_task": [
+          0.264,
+          0.128,
+          0.158,
+          0.254,
+          0.334
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 51200,
+      "phi_param_floats": 225536,
+      "total_floats": 276736
+    },
+    {
+      "method": "clu_entry_task1_only",
+      "class": "rehearsal-free",
+      "seed": 4,
+      "metrics": {
+        "ACC": 0.1952,
+        "BWT": -0.2175,
+        "forgetting": 0.2175,
+        "LA": 0.36920000000000003,
+        "final_per_task": [
+          0.154,
+          0.138,
+          0.23,
+          0.298,
+          0.156
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "total_floats": 278536
+    },
+    {
+      "method": "knn_phi_same_keys_task1_only",
+      "class": "launder",
+      "seed": 4,
+      "metrics": {
+        "ACC": 0.194,
+        "BWT": -0.219,
+        "forgetting": 0.219,
+        "LA": 0.3692,
+        "final_per_task": [
+          0.154,
+          0.138,
+          0.226,
+          0.296,
+          0.156
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 53000,
+      "phi_param_floats": 225536,
+      "total_floats": 278536
+    },
+    {
+      "method": "knn_phi_ringbuffer_task1_only",
+      "class": "launder",
+      "seed": 4,
+      "metrics": {
+        "ACC": 0.23360000000000003,
+        "BWT": -0.22499999999999998,
+        "forgetting": 0.22499999999999998,
+        "LA": 0.4136,
+        "final_per_task": [
+          0.192,
+          0.196,
+          0.226,
+          0.274,
+          0.28
+        ]
+      },
+      "memory_items": 200,
+      "memory_floats": 51200,
+      "phi_param_floats": 225536,
+      "total_floats": 276736
+    }
+  ],
+  "baseline_table": [
+    {
+      "method": "knn_phi_ringbuffer_task1_only",
+      "class": "launder",
+      "ACC": 0.23536,
+      "ACC_sd": 0.010271825543689887,
+      "BWT": -0.2244,
+      "BWT_sd": 0.01610714127336071,
+      "forgetting": 0.2244,
+      "forgetting_sd": 0.01610714127336071,
+      "memory_items": 200,
+      "memory_floats": 51200,
+      "phi_param_floats": 225536,
+      "fixed_state_floats": 0,
+      "total_floats": 276736,
+      "n_seeds": 5
+    },
+    {
+      "method": "clu_entry_task1_only",
+      "class": "rehearsal-free",
+      "ACC": 0.21295999999999998,
+      "ACC_sd": 0.012630376083078446,
+      "BWT": -0.22159999999999996,
+      "BWT_sd": 0.010664895686315928,
+      "forgetting": 0.22159999999999996,
+      "forgetting_sd": 0.010664895686315928,
+      "memory_items": 199,
+      "memory_floats": 52735,
+      "phi_param_floats": 225536,
+      "fixed_state_floats": 0,
+      "total_floats": 278271,
+      "n_seeds": 5
+    },
+    {
+      "method": "knn_phi_same_keys_task1_only",
+      "class": "launder",
+      "ACC": 0.21264,
+      "ACC_sd": 0.013132189459492285,
+      "BWT": -0.22149999999999997,
+      "BWT_sd": 0.010099504938362081,
+      "forgetting": 0.22149999999999997,
+      "forgetting_sd": 0.010099504938362081,
+      "memory_items": 199,
+      "memory_floats": 52735,
+      "phi_param_floats": 225536,
+      "fixed_state_floats": 0,
+      "total_floats": 278271,
+      "n_seeds": 5
+    }
+  ],
+  "verdict": {
+    "clu_ACC": 0.21295999999999998,
+    "best_rehearsal_free_baseline": null,
+    "margin_over_rehearsal_free_class": null,
+    "wins_rehearsal_free_class": false,
+    "best_replay_method": null,
+    "deficit_vs_replay": null,
+    "offline_upper_bound": null,
+    "best_launder": "knn_phi_ringbuffer_task1_only",
+    "clu_minus_launder": -0.02240000000000003,
+    "strict_phi_cost": null,
+    "laundered": true,
+    "filing_rule": "CM-23(n): winning the rehearsal-free class while sitting below replay IS a publishable success. 'Beats replay' is NEVER claimed.",
+    "laundering_rule": "N89/CM-22(i): if kNN-in-\u03c6 at matched memory ties or beats the entry, the win is \u03c6's and the buffer's, not the store's \u2014 and the report says so."
+  },
+  "retry_native": [],
+  "retention": {},
+  "frontier": {},
+  "figures": [
+    "results/cl_entry_table_cifar10.png"
+  ]
+}

@@ -1,0 +1,23 @@
+# Task: paid-access-theory — formalize intra-unit wormholes + Lorentz squeezing as ACCESS mechanisms (brainstorm Thread 8; Head-commissioned; V1-conditional)
+
+- **Agent:** `physics-theorist` · **Output:** `.claude/outputs/paid-access-theory.md` (HEP-legible standalone note, md, GitHub-clean equations) + numerical sanity checks.
+- **Read first:** protocol · `.claude/brainstorm_log.md` **Thread 8** (the frame: two forbidden cheats, paid escape hatches) + Thread 3 (squeeze history — what was parked and why) · F5 v1.1 (`formalism-note.md`): §7.4 (wormhole/gate energy bounds), §7.5 + check (c) (squeeze algebra, S^(M) mass-weighting), Cor-13 scope clause (friction can't erase coset content), Prop-1 (v_max,i = c/√M_i) · `.claude/outputs/v1-l0-gate.md` (the retry NULL — the claim we are NOT reviving) · `v1-wormhole-routing.md` (inter-unit wormhole design + measured certificates).
+- **Context:** Head decision 2026-07-07 — intra-unit wormholes + squeezing are **V1-conditional**: they join the V1 short if w7 experiments return substantial positives. This note is the theory that makes those experiments decisive. Repo read-only (numerical checks in `.claude/scratch/paid-access-theory/`).
+
+## Part 1 — Define "access" so it is falsifiable
+1. **Reachability formalism:** define the reachable set R_T(z₀) of a damped/governed CLU rollout in T steps. Derive the reach bound from the kinetic cap (per-mode: |Δq_i| ≤ T·ε·c/√M_i for relativistic; the Newtonian analogue via energy budget). State precisely when a target basin is *unreachable-in-T* — this is the quantity both mechanisms must provably expand. Distinguish **reach** (can get there) from **escape** (can leave the current basin: barrier height vs kinetic budget) — the two failure modes need separate predictions.
+
+## Part 2 — Intra-unit wormhole (new mechanism; [design hypothesis] → make it math)
+2. **Candidate constructions (analyze ≥2, recommend one):** (a) **gated jump channel** — a discrete symplectic map exchanging/mixing state between two latent loci (q_a-region ↔ q_b-region) when a gate opens (the inter-unit GatedCoupling's within-unit analogue: what replaces "read the archive's value" when both ends live in one phase space?); (b) **nonlocal kinetic/potential term** — a learned long-range coupling in V_θ or T(p) with compact gates. For each: symplecticity/volume accounting (exact det J through a gated jump), energy bookkeeping (bounded injection à la F5 §7.4 — the "price" must be explicit), and what happens to latched coset content on transit (Cor-13 interaction: does a jump erase, copy, or transport a latch?).
+3. **The wormhole reach theorem (target):** with K gated channels, how does the unreachable-in-T set shrink? Even a 2-basin toy solved exactly (double-well + one channel) beats generality here.
+
+## Part 3 — Squeeze as access (the NEW claim, not the dead one)
+4. **Reach expansion under S^(M):** a mass-weighted squeeze injects bounded energy e^{2|ζ|} into chosen modes → transient velocity toward a distant region. Derive: (a) the reach gain Δ|q| per unit injected energy vs ζ and M_i; (b) the **basin-hopping condition** — when does squeeze-then-relax provably land in a basin plain relaxation-in-T cannot (barrier height, distance, γ); (c) why the v1-l0-gate retry null does NOT test this (retries perturbed *within* a basin at kv-scale; access is about *crossing* — state the discriminating experiment).
+5. **Squeeze vs wormhole complementarity:** squeeze = continuous, direction-tunable, pays in energy; wormhole = discrete, locus-pinned, pays in gate cost + learned placement. Predict which wins where (near/far, known/unknown target loci, latch-preservation requirements).
+
+## Part 4 — Certificates & predictions
+6. **The paid-access certificate table:** per mechanism — energy injected (bound), volume preserved (exact), governor re-absorption time, latch impact (bounded/zero), BIBO survival. These become V1's "rented cheats with receipts" claims.
+7. **Falsifiable predictions + minimal testbed specs for w7** (each with expected effect size and the observable): the multi-basin reach task (design it: basins spaced beyond the T-step reach bound so plain CLU provably fails), the latch-transit test, the certificate verification. Flag prior-art contamination risks for the scout (attention-as-shortcut, MoE routing, basin-hopping/Monte-Carlo literature).
+8. **Numerical sanity checks (≥3):** the 2-basin wormhole toy; squeeze basin-hopping threshold vs prediction; latch-transit accounting. F5-App-N precision standards.
+
+**Acceptance:** the w7 experiment task can be written directly from §7's specs; every mechanism claim tagged [proven]/[verified]/[design hypothesis]; Def-2 nomenclature throughout.

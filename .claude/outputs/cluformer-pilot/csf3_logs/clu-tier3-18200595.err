@@ -1,0 +1,30 @@
+E0805 06:10:09.602643 3445775 slow_operation_alarm.cc:73] Constant folding an instruction is taking > 1s:
+
+  %convert_element_type.2 = f32[] convert(%constant.22), metadata={op_name="jit(_block_chunk_latents)/vmap(vmap(eqx.nn.LayerNorm))/jit(_var)/convert_element_type" stack_frame_id=23}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+E0805 06:10:09.740351 3445624 slow_operation_alarm.cc:140] The operation took 1.13783675s
+Constant folding an instruction is taking > 1s:
+
+  %convert_element_type.2 = f32[] convert(%constant.22), metadata={op_name="jit(_block_chunk_latents)/vmap(vmap(eqx.nn.LayerNorm))/jit(_var)/convert_element_type" stack_frame_id=23}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+E0805 06:10:12.435478 3445775 slow_operation_alarm.cc:73] Constant folding an instruction is taking > 2s:
+
+  %gt.2 = pred[] compare(%constant.31, %constant.5), direction=GT, metadata={op_name="jit(_block_chunk_latents)/vmap(vmap(eqx.nn.LayerNorm))/jit(_var)/gt" stack_frame_id=23}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+E0805 06:10:12.469651 3445624 slow_operation_alarm.cc:140] The operation took 2.729162384s
+Constant folding an instruction is taking > 2s:
+
+  %gt.2 = pred[] compare(%constant.31, %constant.5), direction=GT, metadata={op_name="jit(_block_chunk_latents)/vmap(vmap(eqx.nn.LayerNorm))/jit(_var)/gt" stack_frame_id=23}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.

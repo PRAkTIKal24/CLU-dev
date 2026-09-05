@@ -1,0 +1,82 @@
+[env.sh] repo=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/CHLU python=Python 3.11.12 venv=/net/scratch/x10719pj/CHLU/.venv
+[env.sh] MPLBACKEND=Agg JAX_COMPILATION_CACHE_DIR=/mnt/iusers01/fatpou01/phy01/x10719pj/scratch/.jax_cache
+=== node/GPU provenance ===
+node856.csf3.man.alces.network
+Wed Aug  5 05:47:41 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.71.05              Driver Version: 595.71.05      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:01:00.0 Off |                    0 |
+| N/A   32C    P0             59W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+SLURM_GPUS=1 CUDA_VISIBLE_DEVICES=0
+=== JAX GPU preflight (fail fast rather than burn 12 h on CPU) ===
+jax 0.9.0 backend: gpu devices: [CudaDevice(id=0)]
+=== enwik8 cache preflight (must already be staged by STAGE_ONLY=1) ===
+enwik8: /mnt/iusers01/fatpou01/phy01/x10719pj/.cache/chlu/datasets/enwik8/enwik8
+=== config overrides === MEM='atom_place_radius=0.3 write_inner_steps=40 remat_chunks=true' STORE='write_margin=0.6' SET='monitor_every=25 plan_workers=8 liveness_lanes=1' RESUME='1'
+=== tier-iii pilot: scale=pilot stage=s4 seeds=2 ===
+[resume] journal pilot_pilot_seed2_PARTIAL.json: arms complete [] | trained-not-evaluated []
+[rss] run_pilot/enter                    rss    2.50 GB | peak    2.50 GB | children   0.00 GB (n=0) | t 0s
+[resume] phase 'phi_gain': lifted from the journal
+[rss] monitors_init/enter                rss    3.05 GB | peak    3.05 GB | children   0.00 GB (n=0) | t 93s
+[rss] monitors_init/exit                 rss    4.03 GB | peak    4.03 GB | children   2.97 GB (n=8) | t 521s
+[rss] monitors_init/released             rss    4.02 GB | peak    4.03 GB | children   2.97 GB (n=8) | t 522s
+[rss] allocation_liveness_init/enter     rss    4.02 GB | peak    4.03 GB | children   2.97 GB (n=8) | t 523s
+[rss] allocation_liveness_init/exit      rss    6.83 GB | peak    6.83 GB | children   2.85 GB (n=8) | t 1023s
+[rss] allocation_liveness_init/released  rss    5.00 GB | peak    6.83 GB | children   2.85 GB (n=8) | t 1027s
+[rss] gradient_probe_init/enter          rss    5.00 GB | peak    6.83 GB | children   2.85 GB (n=8) | t 1027s
+[rss] gradient_probe_init/exit           rss   22.42 GB | peak   22.42 GB | children   2.89 GB (n=8) | t 3064s
+[rss] gradient_probe_init/released       rss   13.72 GB | peak   22.42 GB | children   2.89 GB (n=8) | t 3086s
+[rss] clu_store/train/enter              rss   13.72 GB | peak   22.42 GB | children   2.89 GB (n=8) | t 3089s
+[watch/clu_store] step 0 (untrained): depth 0.2363 (x1 vs untrained) | q* payload spread 0.05569 (x1) | n_live 2
+[train/clu_store] step 0/4000 | nll 5.7883 bpc 8.3507 | wall_s 633.7 (633.70 s/step) | plan_s 14.7 (2%)
+[watch/clu_store] step 25 (trained): depth 0.3139 (x1.33 vs untrained) | q* payload spread 0.1139 (x2.05) | n_live 3
+[train/clu_store] step 25/4000 | nll 3.6424 bpc 5.2549 | wall_s 1788.7 (68.80 s/step) | plan_s 99.7 (6%)
+[watch/clu_store] step 50 (trained): depth 0.2396 (x1.01 vs untrained) | q* payload spread 0.1524 (x2.74) | n_live 4
+[train/clu_store] step 50/4000 | nll 2.8405 bpc 4.0980 | wall_s 2126.8 (41.70 s/step) | plan_s 151.3 (7%)
+[watch/clu_store] step 75 (trained): depth 0.3084 (x1.31 vs untrained) | q* payload spread 0.2003 (x3.6) | n_live 3
+[train/clu_store] step 75/4000 | nll 2.6974 bpc 3.8915 | wall_s 2463.6 (32.42 s/step) | plan_s 202.5 (8%)
+[watch/clu_store] step 100 (trained): depth 0.2245 (x0.95 vs untrained) | q* payload spread 0.4037 (x7.25) | n_live 7
+[train/clu_store] step 100/4000 | nll 2.8033 bpc 4.0443 | wall_s 2802.6 (27.75 s/step) | plan_s 253.6 (9%)
+[watch/clu_store] step 125 (trained): depth 0.1516 (x0.642 vs untrained) | q* payload spread 0.6993 (x12.6) | n_live 12
+[train/clu_store] step 125/4000 | nll 2.6306 bpc 3.7952 | wall_s 3170.6 (25.16 s/step) | plan_s 306.2 (10%)
+[watch/clu_store] step 150 (trained): depth 0.1769 (x0.749 vs untrained) | q* payload spread 0.6849 (x12.3) | n_live 15
+[train/clu_store] step 150/4000 | nll 2.9532 bpc 4.2605 | wall_s 3514.2 (23.27 s/step) | plan_s 362.2 (10%)
+[watch/clu_store] step 175 (trained): depth 0.2472 (x1.05 vs untrained) | q* payload spread 0.6289 (x11.3) | n_live 15
+[train/clu_store] step 175/4000 | nll 2.7469 bpc 3.9629 | wall_s 4039.0 (22.95 s/step) | plan_s 435.0 (11%)
+[watch/clu_store] step 200 (trained): depth 0.3385 (x1.43 vs untrained) | q* payload spread 0.7474 (x13.4) | n_live 15
+[train/clu_store] step 200/4000 | nll 2.4210 bpc 3.4928 | wall_s 4417.5 (21.98 s/step) | plan_s 497.8 (11%)
+[watch/clu_store] step 225 (trained): depth 0.2935 (x1.24 vs untrained) | q* payload spread 0.6009 (x10.8) | n_live 15
+[train/clu_store] step 225/4000 | nll 2.4611 bpc 3.5506 | wall_s 4786.9 (21.18 s/step) | plan_s 555.5 (12%)
+[watch/clu_store] step 250 (trained): depth 0.2626 (x1.11 vs untrained) | q* payload spread 0.6805 (x12.2) | n_live 16
+[train/clu_store] step 250/4000 | nll 2.3441 bpc 3.3818 | wall_s 5137.9 (20.47 s/step) | plan_s 612.8 (12%)
+[watch/clu_store] step 275 (trained): depth 0.3174 (x1.34 vs untrained) | q* payload spread 0.8094 (x14.5) | n_live 16
+[train/clu_store] step 275/4000 | nll 2.3083 bpc 3.3301 | wall_s 5488.2 (19.88 s/step) | plan_s 670.3 (12%)
+[watch/clu_store] step 300 (trained): depth 0.29 (x1.23 vs untrained) | q* payload spread 0.458 (x8.22) | n_live 16
+[train/clu_store] step 300/4000 | nll 2.1477 bpc 3.0984 | wall_s 5840.9 (19.41 s/step) | plan_s 728.2 (12%)
+[watch/clu_store] step 325 (trained): depth 0.2418 (x1.02 vs untrained) | q* payload spread 0.7775 (x14) | n_live 16
+[train/clu_store] step 325/4000 | nll 2.1030 bpc 3.0339 | wall_s 6191.0 (18.99 s/step) | plan_s 786.7 (13%)
+[watch/clu_store] step 350 (trained): depth 0.2437 (x1.03 vs untrained) | q* payload spread 0.9782 (x17.6) | n_live 15
+[train/clu_store] step 350/4000 | nll 2.0018 bpc 2.8880 | wall_s 6542.5 (18.64 s/step) | plan_s 845.0 (13%)
+[watch/clu_store] step 375 (trained): depth 0.2946 (x1.25 vs untrained) | q* payload spread 0.7096 (x12.7) | n_live 16
+[train/clu_store] step 375/4000 | nll 2.0145 bpc 2.9064 | wall_s 6895.0 (18.34 s/step) | plan_s 903.2 (13%)
+[watch/clu_store] step 400 (trained): depth 0.2099 (x0.888 vs untrained) | q* payload spread 0.7465 (x13.4) | n_live 16
+[train/clu_store] step 400/4000 | nll 1.9337 bpc 2.7897 | wall_s 7253.2 (18.09 s/step) | plan_s 961.5 (13%)
+[watch/clu_store] step 425 (trained): depth 0.3061 (x1.3 vs untrained) | q* payload spread 0.7205 (x12.9) | n_live 16
+[train/clu_store] step 425/4000 | nll 1.9150 bpc 2.7628 | wall_s 7611.6 (17.87 s/step) | plan_s 1020.1 (13%)
+[watch/clu_store] step 450 (trained): depth 0.2383 (x1.01 vs untrained) | q* payload spread 0.6234 (x11.2) | n_live 16
+[train/clu_store] step 450/4000 | nll 2.0121 bpc 2.9028 | wall_s 7997.0 (17.73 s/step) | plan_s 1114.4 (14%)

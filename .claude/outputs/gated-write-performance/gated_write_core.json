@@ -1,0 +1,1554 @@
+{
+  "experiment": "gated_write",
+  "shared_slot": {
+    "d_model": 64,
+    "n_layers": 2,
+    "target_block_params": 40000,
+    "train_steps": 1200,
+    "tune_steps": 400,
+    "batch_size": 32,
+    "eval_batch": 256,
+    "lr_grid": [
+      0.0003,
+      0.001,
+      0.003
+    ],
+    "n_seeds": 3,
+    "clu_dt": 0.1,
+    "clu_hidden": 32,
+    "clu_kinetic_mode": "newtonian_learned",
+    "clu_potential_type": "mlp",
+    "clu_read_mode": "endpoint",
+    "shipped_clu_gamma": 0.05,
+    "mqar_gamma": 0.0
+  },
+  "results": [
+    {
+      "primitive": "mlp",
+      "family": "adding_T128",
+      "width": 155,
+      "block_params": 40118,
+      "total_params": 48823,
+      "param_err": 0.002950000000000008,
+      "best_lr": 0.0003,
+      "metric_name": "mse",
+      "metric_mean": 0.1825022796789805,
+      "metric_std": 0.000948933084247142,
+      "metric_per_seed": [
+        0.18119403719902039,
+        0.18341541290283203,
+        0.1828973889350891
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.009413624880835414,
+      "fwd_flops": 10827520.0,
+      "label": "mlp",
+      "overrides": {},
+      "rescue_probes": {
+        "0.001": 0.18212495744228363,
+        "0.003": 0.18152549862861633
+      },
+      "rescued": false,
+      "rescue_reverted_mean": 0.18315353989601135,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "gru",
+      "family": "adding_T128",
+      "width": 49,
+      "block_params": 40014,
+      "total_params": 48719,
+      "param_err": 0.0003500000000000725,
+      "best_lr": 0.003,
+      "metric_name": "mse",
+      "metric_mean": 0.0006747362785972655,
+      "metric_std": 0.0003069020869769801,
+      "metric_per_seed": [
+        0.00027545884950086474,
+        0.0007270098431035876,
+        0.001021740143187344
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.02234949986450374,
+      "fwd_flops": 1953298.0,
+      "label": "gru",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.0005295283626765013,
+        "0.003": 0.00027545884950086474
+      },
+      "rescued": true,
+      "pre_rescue_lr": 0.001,
+      "pre_rescue_metric_mean": 0.000768969242926687,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "ssm",
+      "family": "adding_T128",
+      "width": 101,
+      "block_params": 40052,
+      "total_params": 48757,
+      "param_err": 0.0013000000000000789,
+      "best_lr": 0.003,
+      "metric_name": "mse",
+      "metric_mean": 0.0007752028589796586,
+      "metric_std": 0.0009602862076514389,
+      "metric_per_seed": [
+        0.00014041070244275033,
+        5.288571264827624e-05,
+        0.002132312161847949
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.014476042008027434,
+      "fwd_flops": 10584642.0,
+      "label": "ssm",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.002137128496542573,
+        "0.001": 0.0005439405795186758
+      },
+      "rescued": false,
+      "rescue_reverted_mean": 0.0008717480814084411,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "attention",
+      "family": "adding_T128",
+      "width": 82,
+      "block_params": 40960,
+      "total_params": 49665,
+      "param_err": 0.02400000000000002,
+      "best_lr": 0.0003,
+      "metric_name": "mse",
+      "metric_mean": 9.24003470572643e-05,
+      "metric_std": 2.8883290229221587e-05,
+      "metric_per_seed": [
+        5.755505844717845e-05,
+        9.136435983236879e-05,
+        0.00012828162289224565
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.021309584146365523,
+      "fwd_flops": 22113280.0,
+      "label": "attention",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 5.755505844717845e-05,
+        "0.003": 0.00032258275314234197
+      },
+      "rescued": true,
+      "pre_rescue_lr": 0.001,
+      "pre_rescue_metric_mean": 0.00022126319769692296,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "adding_T128",
+      "width": 83,
+      "block_params": 39886,
+      "total_params": 48591,
+      "param_err": 0.002850000000000019,
+      "best_lr": 0.003,
+      "metric_name": "mse",
+      "metric_mean": 0.18245873848597208,
+      "metric_std": 0.0034474948633166306,
+      "metric_per_seed": [
+        0.17964902520179749,
+        0.1873142421245575,
+        0.18041294813156128
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.05714458297006786,
+      "fwd_flops": 8522520.0,
+      "label": "clu_linear",
+      "overrides": {
+        "clu_write_mode": "linear",
+        "clu_gamma": 0.05
+      },
+      "rescue_probes": {
+        "0.001": 0.17967656254768372,
+        "0.003": 0.17964902520179749
+      },
+      "rescued": true,
+      "pre_rescue_lr": 0.0003,
+      "pre_rescue_metric_mean": 0.1830703467130661,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "adding_T128",
+      "width": 65,
+      "block_params": 40200,
+      "total_params": 48905,
+      "param_err": 0.004999999999999893,
+      "best_lr": 0.001,
+      "metric_name": "mse",
+      "metric_mean": 0.0022861609856287637,
+      "metric_std": 0.0008717080138584375,
+      "metric_per_seed": [
+        0.0032146903686225414,
+        0.002524169161915779,
+        0.001119623426347971
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.05396462511271238,
+      "fwd_flops": 8951840.0,
+      "label": "clu_gated",
+      "overrides": {
+        "clu_write_mode": "gated",
+        "clu_gamma": 0.05
+      },
+      "rescue_probes": {
+        "0.001": 0.0032146903686225414,
+        "0.003": 0.18033288419246674
+      },
+      "rescued": true,
+      "pre_rescue_lr": 0.0003,
+      "pre_rescue_metric_mean": 0.015358527501424154,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "mlp",
+      "family": "parity_T64",
+      "width": 155,
+      "block_params": 40118,
+      "total_params": 44728,
+      "param_err": 0.002950000000000008,
+      "best_lr": 0.001,
+      "metric_name": "accuracy",
+      "metric_mean": 0.5109049479166666,
+      "metric_std": 0.004106274678236609,
+      "metric_per_seed": [
+        0.5166015625,
+        0.509033203125,
+        0.507080078125
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.010036417050287127,
+      "fwd_flops": 5381248.0,
+      "label": "mlp",
+      "overrides": {},
+      "rescue_probes": {
+        "0.001": 0.5166015625,
+        "0.003": 0.5166015625
+      },
+      "rescued": true,
+      "pre_rescue_lr": 0.0003,
+      "pre_rescue_metric_mean": 0.50732421875,
+      "item": "item1",
+      "seq_len": 64
+    },
+    {
+      "primitive": "gru",
+      "family": "parity_T64",
+      "width": 49,
+      "block_params": 40014,
+      "total_params": 44624,
+      "param_err": 0.0003500000000000725,
+      "best_lr": 0.0003,
+      "metric_name": "accuracy",
+      "metric_mean": 1.0,
+      "metric_std": 0.0,
+      "metric_per_seed": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.016213957918807864,
+      "fwd_flops": 990482.0,
+      "label": "gru",
+      "overrides": {},
+      "rescue_probes": {
+        "0.001": 1.0,
+        "0.003": 1.0
+      },
+      "rescued": false,
+      "item": "item1",
+      "seq_len": 64
+    },
+    {
+      "primitive": "ssm",
+      "family": "parity_T64",
+      "width": 101,
+      "block_params": 40052,
+      "total_params": 44662,
+      "param_err": 0.0013000000000000789,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.6378987630208334,
+      "metric_std": 0.013424250603551425,
+      "metric_per_seed": [
+        0.61907958984375,
+        0.6451416015625,
+        0.64947509765625
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.011117333080619574,
+      "fwd_flops": 5256322.0,
+      "label": "ssm",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.56158447265625,
+        "0.001": 0.61248779296875
+      },
+      "rescued": false,
+      "item": "item1",
+      "seq_len": 64
+    },
+    {
+      "primitive": "attention",
+      "family": "parity_T64",
+      "width": 82,
+      "block_params": 40960,
+      "total_params": 45570,
+      "param_err": 0.02400000000000002,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.5474446614583334,
+      "metric_std": 0.003343528415392926,
+      "metric_per_seed": [
+        0.550048828125,
+        0.542724609375,
+        0.549560546875
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.011745583964511752,
+      "fwd_flops": 8201984.0,
+      "label": "attention",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.5460205078125,
+        "0.001": 0.545166015625
+      },
+      "rescued": false,
+      "item": "item1",
+      "seq_len": 64
+    },
+    {
+      "primitive": "clu",
+      "family": "parity_T64",
+      "width": 83,
+      "block_params": 39886,
+      "total_params": 44496,
+      "param_err": 0.002850000000000019,
+      "best_lr": 0.001,
+      "metric_name": "accuracy",
+      "metric_mean": 0.53802490234375,
+      "metric_std": 0.005759554526555897,
+      "metric_per_seed": [
+        0.54608154296875,
+        0.5350341796875,
+        0.532958984375
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.02033954206854105,
+      "fwd_flops": 4276376.0,
+      "label": "clu_linear",
+      "overrides": {
+        "clu_write_mode": "linear",
+        "clu_gamma": 0.05
+      },
+      "rescue_probes": {
+        "0.001": 0.54608154296875,
+        "0.003": 0.5404052734375
+      },
+      "rescued": true,
+      "pre_rescue_lr": 0.0003,
+      "pre_rescue_metric_mean": 0.5233154296875,
+      "item": "item1",
+      "seq_len": 64
+    },
+    {
+      "primitive": "clu",
+      "family": "parity_T64",
+      "width": 65,
+      "block_params": 40200,
+      "total_params": 44810,
+      "param_err": 0.004999999999999893,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.577392578125,
+      "metric_std": 0.0071394611414602955,
+      "metric_per_seed": [
+        0.58642578125,
+        0.5689697265625,
+        0.5767822265625
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.024862458929419518,
+      "fwd_flops": 4486176.0,
+      "label": "clu_gated",
+      "overrides": {
+        "clu_write_mode": "gated",
+        "clu_gamma": 0.05
+      },
+      "rescue_probes": {
+        "0.0003": 0.52056884765625,
+        "0.001": 0.5438232421875
+      },
+      "rescued": false,
+      "item": "item1",
+      "seq_len": 64
+    },
+    {
+      "primitive": "mlp",
+      "family": "mqar_T128_kv4",
+      "width": 155,
+      "block_params": 40118,
+      "total_params": 81590,
+      "param_err": 0.002950000000000008,
+      "best_lr": 0.001,
+      "metric_name": "accuracy",
+      "metric_mean": 0.012369791666666666,
+      "metric_std": 0.004391516133864596,
+      "metric_per_seed": [
+        0.0087890625,
+        0.0185546875,
+        0.009765625
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.017710540909320116,
+      "fwd_flops": 14956544.0,
+      "label": "mlp",
+      "overrides": {},
+      "rescue_probes": {
+        "0.001": 0.0087890625,
+        "0.003": 0.0087890625
+      },
+      "rescued": true,
+      "pre_rescue_lr": 0.0003,
+      "pre_rescue_metric_mean": 0.0078125,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "gru",
+      "family": "mqar_T128_kv4",
+      "width": 49,
+      "block_params": 40014,
+      "total_params": 81486,
+      "param_err": 0.0003500000000000725,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.486328125,
+      "metric_std": 0.01905339925346601,
+      "metric_per_seed": [
+        0.4912109375,
+        0.4609375,
+        0.5068359375
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.03196395793929696,
+      "fwd_flops": 6106898.0,
+      "label": "gru",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.0068359375,
+        "0.001": 0.173828125
+      },
+      "rescued": false,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "ssm",
+      "family": "mqar_T128_kv4",
+      "width": 101,
+      "block_params": 40052,
+      "total_params": 81524,
+      "param_err": 0.0013000000000000789,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.012044270833333334,
+      "metric_std": 0.003933283194529484,
+      "metric_per_seed": [
+        0.0087890625,
+        0.017578125,
+        0.009765625
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.023623415967449546,
+      "fwd_flops": 14705474.0,
+      "label": "ssm",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.0078125,
+        "0.001": 0.0078125
+      },
+      "rescued": false,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "attention",
+      "family": "mqar_T128_kv4",
+      "width": 82,
+      "block_params": 40960,
+      "total_params": 82432,
+      "param_err": 0.02400000000000002,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.9944661458333334,
+      "metric_std": 0.0020066451832581305,
+      "metric_per_seed": [
+        0.9921875,
+        0.9970703125,
+        0.994140625
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.03168583405204117,
+      "fwd_flops": 26266880.0,
+      "label": "attention",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.2568359375,
+        "0.001": 0.5546875
+      },
+      "rescued": false,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "mqar_T128_kv4",
+      "width": 83,
+      "block_params": 39886,
+      "total_params": 81358,
+      "param_err": 0.002850000000000019,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.3863932291666667,
+      "metric_std": 0.0032224918413449434,
+      "metric_per_seed": [
+        0.390625,
+        0.3857421875,
+        0.3828125
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.04583049984648824,
+      "fwd_flops": 12684146.0,
+      "label": "clu_linear",
+      "overrides": {
+        "clu_write_mode": "linear",
+        "clu_gamma": 0.0
+      },
+      "rescue_probes": {
+        "0.0003": 0.193359375,
+        "0.001": 0.32421875
+      },
+      "rescued": false,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "mqar_T128_kv4",
+      "width": 65,
+      "block_params": 40200,
+      "total_params": 81672,
+      "param_err": 0.004999999999999893,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.4993489583333333,
+      "metric_std": 0.003595495122782312,
+      "metric_per_seed": [
+        0.50390625,
+        0.4951171875,
+        0.4990234375
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.04012737516313791,
+      "fwd_flops": 13113502.0,
+      "label": "clu_gated",
+      "overrides": {
+        "clu_write_mode": "gated",
+        "clu_gamma": 0.0
+      },
+      "rescue_probes": {
+        "0.0003": 0.216796875,
+        "0.001": 0.4638671875
+      },
+      "rescued": false,
+      "item": "item1",
+      "seq_len": 128
+    },
+    {
+      "primitive": "gru",
+      "family": "mqar_T128_kv2",
+      "width": 49,
+      "block_params": 40014,
+      "total_params": 81486,
+      "param_err": 0.0003500000000000725,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.9967447916666666,
+      "metric_std": 0.0033196741624953027,
+      "metric_per_seed": [
+        0.998046875,
+        1.0,
+        0.9921875
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.027658709092065692,
+      "fwd_flops": 6106898.0,
+      "label": "gru",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.005859375,
+        "0.001": 0.525390625
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 2,
+      "seq_len": 128
+    },
+    {
+      "primitive": "ssm",
+      "family": "mqar_T128_kv2",
+      "width": 101,
+      "block_params": 40052,
+      "total_params": 81524,
+      "param_err": 0.0013000000000000789,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.012369791666666666,
+      "metric_std": 0.007190990245564624,
+      "metric_per_seed": [
+        0.00390625,
+        0.021484375,
+        0.01171875
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.018891917075961828,
+      "fwd_flops": 14705474.0,
+      "label": "ssm",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.0078125,
+        "0.001": 0.001953125
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 2,
+      "seq_len": 128
+    },
+    {
+      "primitive": "attention",
+      "family": "mqar_T128_kv2",
+      "width": 82,
+      "block_params": 40960,
+      "total_params": 82432,
+      "param_err": 0.02400000000000002,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.8873697916666666,
+      "metric_std": 0.15237991468893672,
+      "metric_per_seed": [
+        0.99609375,
+        0.994140625,
+        0.671875
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.024918792070820928,
+      "fwd_flops": 26266880.0,
+      "label": "attention",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.48046875,
+        "0.001": 0.66015625
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 2,
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "mqar_T128_kv2",
+      "width": 83,
+      "block_params": 39886,
+      "total_params": 81358,
+      "param_err": 0.002850000000000019,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.572265625,
+      "metric_std": 0.012039871099548781,
+      "metric_per_seed": [
+        0.57421875,
+        0.5859375,
+        0.556640625
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.04251633398234844,
+      "fwd_flops": 12684146.0,
+      "label": "clu_linear_g0",
+      "overrides": {
+        "clu_write_mode": "linear",
+        "clu_gamma": 0.0
+      },
+      "rescue_probes": {
+        "0.0003": 0.294921875,
+        "0.001": 0.5390625
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 2,
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "mqar_T128_kv2",
+      "width": 65,
+      "block_params": 40200,
+      "total_params": 81672,
+      "param_err": 0.004999999999999893,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.7018229166666666,
+      "metric_std": 0.010127831501369821,
+      "metric_per_seed": [
+        0.708984375,
+        0.708984375,
+        0.6875
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.04142629192210734,
+      "fwd_flops": 13113502.0,
+      "label": "clu_gated_g0",
+      "overrides": {
+        "clu_write_mode": "gated",
+        "clu_gamma": 0.0
+      },
+      "rescue_probes": {
+        "0.0003": 0.314453125,
+        "0.001": 0.70703125
+      },
+      "rescued": false,
+      "rescue_reverted_mean": 0.6868489583333334,
+      "item": "item3b_capacity",
+      "kv": 2,
+      "seq_len": 128
+    },
+    {
+      "primitive": "gru",
+      "family": "mqar_T128_kv4",
+      "width": 49,
+      "block_params": 40014,
+      "total_params": 81486,
+      "param_err": 0.0003500000000000725,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.486328125,
+      "metric_std": 0.01905339925346601,
+      "metric_per_seed": [
+        0.4912109375,
+        0.4609375,
+        0.5068359375
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.028223166009411216,
+      "fwd_flops": 6106898.0,
+      "label": "gru",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.0068359375,
+        "0.001": 0.173828125
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 4,
+      "seq_len": 128
+    },
+    {
+      "primitive": "ssm",
+      "family": "mqar_T128_kv4",
+      "width": 101,
+      "block_params": 40052,
+      "total_params": 81524,
+      "param_err": 0.0013000000000000789,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.012044270833333334,
+      "metric_std": 0.003933283194529484,
+      "metric_per_seed": [
+        0.0087890625,
+        0.017578125,
+        0.009765625
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.020050583174452186,
+      "fwd_flops": 14705474.0,
+      "label": "ssm",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.0078125,
+        "0.001": 0.0078125
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 4,
+      "seq_len": 128
+    },
+    {
+      "primitive": "attention",
+      "family": "mqar_T128_kv4",
+      "width": 82,
+      "block_params": 40960,
+      "total_params": 82432,
+      "param_err": 0.02400000000000002,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.9944661458333334,
+      "metric_std": 0.0020066451832581305,
+      "metric_per_seed": [
+        0.9921875,
+        0.9970703125,
+        0.994140625
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.026123249903321266,
+      "fwd_flops": 26266880.0,
+      "label": "attention",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.2568359375,
+        "0.001": 0.5546875
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 4,
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "mqar_T128_kv4",
+      "width": 83,
+      "block_params": 39886,
+      "total_params": 81358,
+      "param_err": 0.002850000000000019,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.3863932291666667,
+      "metric_std": 0.0032224918413449434,
+      "metric_per_seed": [
+        0.390625,
+        0.3857421875,
+        0.3828125
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.04194416687823832,
+      "fwd_flops": 12684146.0,
+      "label": "clu_linear_g0",
+      "overrides": {
+        "clu_write_mode": "linear",
+        "clu_gamma": 0.0
+      },
+      "rescue_probes": {
+        "0.0003": 0.193359375,
+        "0.001": 0.32421875
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 4,
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "mqar_T128_kv4",
+      "width": 65,
+      "block_params": 40200,
+      "total_params": 81672,
+      "param_err": 0.004999999999999893,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.4993489583333333,
+      "metric_std": 0.003595495122782312,
+      "metric_per_seed": [
+        0.50390625,
+        0.4951171875,
+        0.4990234375
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.041052083019167185,
+      "fwd_flops": 13113502.0,
+      "label": "clu_gated_g0",
+      "overrides": {
+        "clu_write_mode": "gated",
+        "clu_gamma": 0.0
+      },
+      "rescue_probes": {
+        "0.0003": 0.216796875,
+        "0.001": 0.4638671875
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 4,
+      "seq_len": 128
+    },
+    {
+      "primitive": "gru",
+      "family": "mqar_T128_kv8",
+      "width": 49,
+      "block_params": 40014,
+      "total_params": 81486,
+      "param_err": 0.0003500000000000725,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.17724609375,
+      "metric_std": 0.009134905729428568,
+      "metric_per_seed": [
+        0.1748046875,
+        0.16748046875,
+        0.189453125
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.028399917064234614,
+      "fwd_flops": 6106898.0,
+      "label": "gru",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.00830078125,
+        "0.001": 0.044921875
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 8,
+      "seq_len": 128
+    },
+    {
+      "primitive": "ssm",
+      "family": "mqar_T128_kv8",
+      "width": 101,
+      "block_params": 40052,
+      "total_params": 81524,
+      "param_err": 0.0013000000000000789,
+      "best_lr": 0.0003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.0087890625,
+      "metric_std": 0.0007973599423122325,
+      "metric_per_seed": [
+        0.0087890625,
+        0.0078125,
+        0.009765625
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.019992209039628506,
+      "fwd_flops": 14705474.0,
+      "label": "ssm",
+      "overrides": {},
+      "rescue_probes": {
+        "0.001": 0.0048828125,
+        "0.003": 0.00634765625
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 8,
+      "seq_len": 128
+    },
+    {
+      "primitive": "attention",
+      "family": "mqar_T128_kv8",
+      "width": 82,
+      "block_params": 40960,
+      "total_params": 82432,
+      "param_err": 0.02400000000000002,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.9381510416666666,
+      "metric_std": 0.08197827116926723,
+      "metric_per_seed": [
+        0.822265625,
+        0.9931640625,
+        0.9990234375
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.02584091597236693,
+      "fwd_flops": 26266880.0,
+      "label": "attention",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.12451171875,
+        "0.001": 0.38525390625
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 8,
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "mqar_T128_kv8",
+      "width": 83,
+      "block_params": 39886,
+      "total_params": 81358,
+      "param_err": 0.002850000000000019,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.23860677083333334,
+      "metric_std": 0.0024359748611809512,
+      "metric_per_seed": [
+        0.2353515625,
+        0.2392578125,
+        0.2412109375
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.04166858410462737,
+      "fwd_flops": 12684146.0,
+      "label": "clu_linear_g0",
+      "overrides": {
+        "clu_write_mode": "linear",
+        "clu_gamma": 0.0
+      },
+      "rescue_probes": {
+        "0.0003": 0.15869140625,
+        "0.001": 0.2373046875
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 8,
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "mqar_T128_kv8",
+      "width": 65,
+      "block_params": 40200,
+      "total_params": 81672,
+      "param_err": 0.004999999999999893,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.3033854166666667,
+      "metric_std": 0.006089937152952379,
+      "metric_per_seed": [
+        0.3115234375,
+        0.296875,
+        0.3017578125
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.04089641594327986,
+      "fwd_flops": 13113502.0,
+      "label": "clu_gated_g0",
+      "overrides": {
+        "clu_write_mode": "gated",
+        "clu_gamma": 0.0
+      },
+      "rescue_probes": {
+        "0.0003": 0.17724609375,
+        "0.001": 0.29296875
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 8,
+      "seq_len": 128
+    },
+    {
+      "primitive": "gru",
+      "family": "mqar_T128_kv16",
+      "width": 49,
+      "block_params": 40014,
+      "total_params": 81486,
+      "param_err": 0.0003500000000000725,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.08504231770833333,
+      "metric_std": 0.017511689656657246,
+      "metric_per_seed": [
+        0.096435546875,
+        0.060302734375,
+        0.098388671875
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.02842454193159938,
+      "fwd_flops": 6106898.0,
+      "label": "gru",
+      "overrides": {},
+      "rescue_probes": {
+        "0.001": 0.005859375,
+        "0.003": 0.096435546875
+      },
+      "rescued": true,
+      "pre_rescue_lr": 0.0003,
+      "pre_rescue_metric_mean": 0.007649739583333333,
+      "item": "item3b_capacity",
+      "kv": 16,
+      "seq_len": 128
+    },
+    {
+      "primitive": "ssm",
+      "family": "mqar_T128_kv16",
+      "width": 101,
+      "block_params": 40052,
+      "total_params": 81524,
+      "param_err": 0.0013000000000000789,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.021158854166666668,
+      "metric_std": 0.01801170338347106,
+      "metric_per_seed": [
+        0.046630859375,
+        0.008544921875,
+        0.00830078125
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.020104082999750972,
+      "fwd_flops": 14705474.0,
+      "label": "ssm",
+      "overrides": {},
+      "rescue_probes": {
+        "0.001": 0.008056640625,
+        "0.003": 0.046630859375
+      },
+      "rescued": true,
+      "pre_rescue_lr": 0.0003,
+      "pre_rescue_metric_mean": 0.009602864583333334,
+      "item": "item3b_capacity",
+      "kv": 16,
+      "seq_len": 128
+    },
+    {
+      "primitive": "attention",
+      "family": "mqar_T128_kv16",
+      "width": 82,
+      "block_params": 40960,
+      "total_params": 82432,
+      "param_err": 0.02400000000000002,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.8561197916666666,
+      "metric_std": 0.17007758751097332,
+      "metric_per_seed": [
+        0.964599609375,
+        0.98779296875,
+        0.615966796875
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.0258887920062989,
+      "fwd_flops": 26266880.0,
+      "label": "attention",
+      "overrides": {},
+      "rescue_probes": {
+        "0.0003": 0.061279296875,
+        "0.001": 0.202392578125
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 16,
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "mqar_T128_kv16",
+      "width": 83,
+      "block_params": 39886,
+      "total_params": 81358,
+      "param_err": 0.002850000000000019,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.14754231770833334,
+      "metric_std": 0.002524098701053194,
+      "metric_per_seed": [
+        0.144775390625,
+        0.15087890625,
+        0.14697265625
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.04195300000719726,
+      "fwd_flops": 12684146.0,
+      "label": "clu_linear_g0",
+      "overrides": {
+        "clu_write_mode": "linear",
+        "clu_gamma": 0.0
+      },
+      "rescue_probes": {
+        "0.0003": 0.109619140625,
+        "0.001": 0.135498046875
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 16,
+      "seq_len": 128
+    },
+    {
+      "primitive": "clu",
+      "family": "mqar_T128_kv16",
+      "width": 65,
+      "block_params": 40200,
+      "total_params": 81672,
+      "param_err": 0.004999999999999893,
+      "best_lr": 0.003,
+      "metric_name": "accuracy",
+      "metric_mean": 0.17952473958333334,
+      "metric_std": 0.0008299185406238257,
+      "metric_per_seed": [
+        0.1806640625,
+        0.17919921875,
+        0.1787109375
+      ],
+      "n_diverged": 0,
+      "all_diverged": false,
+      "tuning_runs": 3,
+      "tuning_grid": [
+        0.0003,
+        0.001,
+        0.003
+      ],
+      "wallclock_s_per_step": 0.041260791942477226,
+      "fwd_flops": 13113502.0,
+      "label": "clu_gated_g0",
+      "overrides": {
+        "clu_write_mode": "gated",
+        "clu_gamma": 0.0
+      },
+      "rescue_probes": {
+        "0.0003": 0.1220703125,
+        "0.001": 0.16845703125
+      },
+      "rescued": false,
+      "item": "item3b_capacity",
+      "kv": 16,
+      "seq_len": 128
+    }
+  ],
+  "cost": {
+    "linear": {
+      "gru": {
+        "width": 49,
+        "block_params": 40014,
+        "total_params": 81486,
+        "param_err": 0.0003500000000000725,
+        "ms_per_step_median": 27.1138499956578,
+        "ms_per_step_min": 26.962696677073836,
+        "ms_per_step_iqr": 0.5846200417727216,
+        "fwd_flops": 6057746.0,
+        "wallclock_x_gru": 1.0,
+        "flops_x_gru": 1.0
+      },
+      "ssm": {
+        "width": 101,
+        "block_params": 40052,
+        "total_params": 81524,
+        "param_err": 0.0013000000000000789,
+        "ms_per_step_median": 19.168565003201365,
+        "ms_per_step_min": 18.969856640323997,
+        "ms_per_step_iqr": 0.0519299972802402,
+        "fwd_flops": 14614082.0,
+        "wallclock_x_gru": 0.7069658129063615,
+        "flops_x_gru": 2.412461994940032
+      },
+      "attention": {
+        "width": 82,
+        "block_params": 40960,
+        "total_params": 82432,
+        "param_err": 0.02400000000000002,
+        "ms_per_step_median": 24.997020000591874,
+        "ms_per_step_min": 24.874246679246426,
+        "ms_per_step_iqr": 0.10121832601726194,
+        "fwd_flops": 26217728.0,
+        "wallclock_x_gru": 0.9219280922700047,
+        "flops_x_gru": 4.327967531157628
+      },
+      "clu": {
+        "width": 83,
+        "block_params": 39886,
+        "total_params": 81358,
+        "param_err": 0.002850000000000019,
+        "ms_per_step_median": 41.26993000507355,
+        "ms_per_step_min": 40.812411680817604,
+        "ms_per_step_iqr": 1.3789949938654913,
+        "fwd_flops": 12635160.0,
+        "wallclock_x_gru": 1.5220977475232325,
+        "flops_x_gru": 2.085785703131165
+      }
+    },
+    "gated_clu": {
+      "width": 65,
+      "block_params": 40200,
+      "total_params": 81672,
+      "param_err": 0.004999999999999893,
+      "ms_per_step_median": 40.1960866432637,
+      "ms_per_step_min": 39.78396000340581,
+      "ms_per_step_iqr": 0.13236332684755936,
+      "fwd_flops": 13064350.0,
+      "wallclock_x_gru": 1.4820926475483396,
+      "flops_x_gru": 2.1566354878530727
+    },
+    "gru_ref": {
+      "width": 49,
+      "block_params": 40014,
+      "total_params": 81486,
+      "param_err": 0.0003500000000000725,
+      "ms_per_step_median": 27.12116999551654,
+      "ms_per_step_min": 27.009076634421945,
+      "ms_per_step_iqr": 0.1853133644908675,
+      "fwd_flops": 6057746.0,
+      "wallclock_x_gru": 1.0,
+      "flops_x_gru": 1.0
+    }
+  }
+}

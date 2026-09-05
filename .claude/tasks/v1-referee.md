@@ -1,0 +1,15 @@
+# Task: v1-referee — adversarial review of the V1 short (ML4PS position/theory paper) (w10)
+
+- **Agent:** `paper-referee` · **Output:** `.claude/outputs/v1-referee.md`
+- **Read first (standing docs per your def):** protocol · Positioning Charter C-1…C-10 (C-1 REVERSED — no audit ¶) · `.claude/claims_matrix.md` v1.4 (V1 rows: CM-2, CM-3 [forbidden], CM-7, CM-8 SETTLED, CM-12 ADOPTED, CM-14) · `.claude/critique_register.md` · then the draft: `.claude/papers/v1-short/draft.md` (+ .pdf, 3 figs embedded).
+- **Simulated venue:** ML4PS composite, **position/theory paper** (4–5 pp) — judge it as such: a principled account of test-time compute with a certificate stack, NOT a benchmark paper. The physics-forward, verification-grade lead is intentional (Head-decided posture); do not attack it for "not beating baselines" — attack whether the *position* is honestly earned and internally consistent.
+
+## Specific attack surface (beyond your standard passes)
+1. **The lead is verification-grade (designed testbed, oracle placement).** Is the position "certified mechanisms, not benchmark-topping" earned, or does leading with oracle-placement paid-access overclaim? Check §5's learned-entrance-steering-is-future-work honesty is loud enough that a reviewer can't call the headline a bait-and-switch.
+2. **The noise wall (§4.3 / N37) is the paper's sharpest self-inflicted wound made into a feature.** Verify it is stated as a first-class negative in MAIN text (not buried), and that "the gate rations clean retrieval; noise-robustness is Hopfield's" reads as honest boundary-mapping, not spin. A reviewer WILL test whether the paper hides that Hopfield wins cost AND noise.
+3. **CM-3 discipline under pressure:** the paper reports router-beats-gate (CM-7) and energy≈margin (CM-3) as findings. Hunt any place the certificate framing slides into implied energy-signal superiority.
+4. **§5 Thread-9 kernel paragraph:** it makes a strong theoretical claim (certified MCMC kernel) with NO trained-model runs. Verify the "theory-complete on toy EBMs; experiments future work; no runs on CLU checkpoints claimed" fine print is next to the claim (C-6), and that the latch-erosion "receipt" is presented as a *limitation the theory surfaces*, not hidden.
+5. Certificate fine print (C-6): e^{2ζ}=matched-quadratic-H only; det J=1 frozen-gate only; BIBO needs coercive exits; LTT exchangeability + ECE≈0.10. All must sit next to their claims.
+6. Figure budget: 3 figures in a 4–5pp short — flag if Fig 3 (frontier) should move to appendix at pruning.
+
+**Report:** verdict (accept/weak/borderline/reject + meta-review) + MUST/SHOULD/NICE + the three sentences a hostile reviewer quotes + missing-experiment list (should be ≈empty — everything traces to `.claude/outputs/`; the noise-wall diagnosis and the MH experiment are legitimately future work, not gaps). Note: the Head has CONFIRMED the "Hopfield owns the noise axis" stance is intended — do not flag it as a decision needed, only as a framing to stress-test.

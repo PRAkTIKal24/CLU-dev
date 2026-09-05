@@ -1,0 +1,21 @@
+# Task: v2-revision-4 — the deep-dive consolidating pass: taxonomy overlay + modulus/Mo + GMOR-proper + App-C fix (STAGED for w13)
+
+> ✅ **UNBLOCKED (w12 review): `f5-corrigendum` and `f1-gmor-condensate` have BOTH landed.** Ready to spawn.
+
+- **Agent:** `paper-writer` · **Output:** report to `.claude/outputs/v2-revision-4.md`; edit `.claude/papers/v2-short/` in place (CHANGELOG v0.5).
+- **Read first:** protocol · **`.claude/outputs/v2-symmetry-deepdive.md`** (the whole note — §1 two-axis, §2 GMOR, §3 taxonomy-overlay recommendation + its 4 obligations, §4.1 modulus/Mo S5) · `.claude/outputs/f5-corrigendum.md` (what F5 now says — esp. the blindness theorem + any V2-draft references it flags to reconcile) · `.claude/outputs/f1-gmor-condensate.md` (the GMOR-proper appendix data) · claims matrix (updated) · Positioning Charter (C-2/C-5 discipline).
+
+## Items (all Head-approved; the theorist recommends adopt-as-overlay, NOT restructure §3)
+1. **Symmetry-realization taxonomy as a FRAMING OVERLAY** (§1/§2 + one short subsection; keep the mode-mass budget as the quantitative spine): *symmetry realization sets μ² (axis 1); the map's (ε,γ,T) sets what μ² buys (axis 2).* Meet the 4 obligations the theorist named: (i) one paragraph defining SSB for a finite-dim deterministic system (classical/tree-level Goldstone theorem only — minimiser not G-invariant ⇒ zero Hessian eigenvalue); (ii) state Coleman/Mermin-Wagner honestly — the latch is ∞ at T=0, diffusive at T>0 (now an ASSET, we have the law); (iii) NO loop-level ChPT (§2.5 of the note — no chiral logs / anomalies / WZW); (iv) the erosion relabel (item 3).
+2. **Relabel §3.5 erosion as a SYMMETRY-RESTORATION / condensate-melting transition** — r* is *literally* the order parameter; sleep-CD erosion restores the G-symmetric vacuum; the V(data)-anchor holds the condensate up. Names a result the draft currently calls a "training pathology"; free narrative arc (SSB → training destroys it → anchor restores it).
+3. **S5 modulus/Mo differentiator into related work / the Mo contrast:** the latch is a MODULUS (needs only V-flatness + γ>0, not full-H symmetry) ⇒ **equivariance is sufficient but NOT necessary for neutral memory** — and V2's own broken-iso battery is an already-measured counterexample to the necessity direction of Mo's hypothesis. Free, sharp, strengthens the headline Mo contrast.
+4. **GMOR-proper appendix** from `f1-gmor-condensate`: μ²F²=δΣ exact with a measured condensate Σ=r* + the resonance-saturated NLO coefficient. Keep the angular-tilt main-text result as the clean power-law *verification* (C-2); the appendix resolves the condensate. Adopt the corrected nomenclature: decay constant **F=√(M_ch)·r*** (not r*).
+5. **App-C fix + the corrigendum's THREE flagged draft sites** (`f5-corrigendum.md` §"Downstream references to reconcile" — read it, it names the lines):
+   - `draft.md:107` "Noether-charge **drift** scales linearly with the split" → **"bounded oscillation"** (amplitude √(2E)r*(√M_max−√M_min) *on the vacuum orbit*; off-orbit only boundedness holds). The measured 5.4/1.6/0.082e-2 are **amplitudes**; note A/‖[M,X]‖ is NOT constant. **Do NOT quote the retracted "2.6"** (non-reproducible chaotic-orbit excursion, window-dependent).
+   - `draft.md:141,155` "the kinetic-isotropy (Schur) condition as the price of an **equivariant channel**" → "…the price of an equivariant **write current**" (not false, but invites the retracted reading).
+   - Corrected design rule: **an anisotropic channel still latches with infinite half-life** — tie the masses for a clean θ-independent write current (and, at dim(G/H)≥2, a degenerate pNG multiplet), **NOT to save the register**. To detect kinetic symmetry breaking, measure the **charge law** — the Hessian and the latch are provably blind to it (Prop-17).
+6. **GMOR appendix numbers** from `f1-gmor-condensate` (CM-15 verbatim): μ²F²=δΣ to 1.33e-15 abs on 8 trained checkpoints × 10 δ; LEC ratio 0.99999607; the "the angular tilt cannot see Σ" contrast. Adopt **F=√(M_ch)·r*** as the decay constant, **r*=Σ** the condensate.
+7. Rebuild both PDFs.
+
+## Discipline
+Charter C-2 (verification vs evidence labels), C-5 (scale qualifiers), C-8 (hermetic — F5 cited third-person). The theorist warns: **do NOT half-adopt the taxonomy** (all-or-nothing with its obligations). → `v2-referee-3` (clean pass) after.

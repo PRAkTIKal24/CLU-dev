@@ -1,0 +1,256 @@
+[cl-entry] overrides: {'phi_arm': 'pca', 'phi_dim': 32, 'phi_regimes': ['task1_only'], 'n_fit_region': 25000, 'n_fit_pool': 6000, 'seeds': [0, 1, 2]}
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+{
+  "baseline_table": [
+    {
+      "method": "joint",
+      "class": "upper-bound",
+      "ACC": 0.47386666666666666,
+      "ACC_sd": 0.014541282229875389,
+      "BWT": -0.09266666666666667,
+      "BWT_sd": 0.02000971986033009,
+      "forgetting": 0.14416666666666667,
+      "forgetting_sd": 0.025368396787253916,
+      "memory_items": 0,
+      "memory_floats": 0,
+      "phi_param_floats": 0,
+      "fixed_state_floats": 81290,
+      "total_floats": 81290,
+      "n_seeds": 3
+    },
+    {
+      "method": "icarl",
+      "class": "replay",
+      "ACC": 0.41880000000000006,
+      "ACC_sd": 0.011597700921590732,
+      "BWT": -0.2305,
+      "BWT_sd": 0.020619569992283218,
+      "forgetting": 0.2305,
+      "forgetting_sd": 0.020619569992283218,
+      "memory_items": 200,
+      "memory_floats": 614600,
+      "phi_param_floats": 0,
+      "fixed_state_floats": 81290,
+      "total_floats": 695890,
+      "n_seeds": 3
+    },
+    {
+      "method": "er",
+      "class": "replay",
+      "ACC": 0.3665333333333334,
+      "ACC_sd": 0.0028158282775924194,
+      "BWT": -0.4523333333333333,
+      "BWT_sd": 0.0194264996561112,
+      "forgetting": 0.4523333333333333,
+      "forgetting_sd": 0.0194264996561112,
+      "memory_items": 200,
+      "memory_floats": 614600,
+      "phi_param_floats": 0,
+      "fixed_state_floats": 81290,
+      "total_floats": 695890,
+      "n_seeds": 3
+    },
+    {
+      "method": "derpp",
+      "class": "replay",
+      "ACC": 0.3665333333333333,
+      "ACC_sd": 0.00883830049022747,
+      "BWT": -0.5013333333333333,
+      "BWT_sd": 0.003299831645537225,
+      "forgetting": 0.5013333333333333,
+      "forgetting_sd": 0.003299831645537225,
+      "memory_items": 200,
+      "memory_floats": 616600,
+      "phi_param_floats": 0,
+      "fixed_state_floats": 81290,
+      "total_floats": 697890,
+      "n_seeds": 3
+    },
+    {
+      "method": "gdumb",
+      "class": "replay",
+      "ACC": 0.3176,
+      "ACC_sd": 0.029444637315930132,
+      "BWT": -0.21999999999999997,
+      "BWT_sd": 0.012695143428361352,
+      "forgetting": 0.23433333333333337,
+      "forgetting_sd": 0.009454569735788539,
+      "memory_items": 200,
+      "memory_floats": 614600,
+      "phi_param_floats": 0,
+      "fixed_state_floats": 81290,
+      "total_floats": 695890,
+      "n_seeds": 3
+    },
+    {
+      "method": "knn_phi_ringbuffer_task1_only",
+      "class": "launder",
+      "ACC": 0.22613333333333333,
+      "ACC_sd": 0.00667199786837161,
+      "BWT": -0.23266666666666666,
+      "BWT_sd": 0.008468897343941663,
+      "forgetting": 0.23399999999999999,
+      "forgetting_sd": 0.008953584012375528,
+      "memory_items": 200,
+      "memory_floats": 6400,
+      "phi_param_floats": 101376,
+      "fixed_state_floats": 0,
+      "total_floats": 107776,
+      "n_seeds": 3
+    },
+    {
+      "method": "knn_phi_same_keys_task1_only",
+      "class": "launder",
+      "ACC": 0.2088,
+      "ACC_sd": 0.012084149397730358,
+      "BWT": -0.19783333333333333,
+      "BWT_sd": 0.013123346456686363,
+      "forgetting": 0.19783333333333333,
+      "forgetting_sd": 0.013123346456686363,
+      "memory_items": 200,
+      "memory_floats": 8200,
+      "phi_param_floats": 101376,
+      "fixed_state_floats": 0,
+      "total_floats": 109576,
+      "n_seeds": 3
+    },
+    {
+      "method": "clu_entry_task1_only",
+      "class": "rehearsal-free",
+      "ACC": 0.16080000000000003,
+      "ACC_sd": 0.0053962950252927945,
+      "BWT": -0.14383333333333337,
+      "BWT_sd": 0.0037932688922470144,
+      "forgetting": 0.1506666666666667,
+      "forgetting_sd": 0.006536223850375853,
+      "memory_items": 200,
+      "memory_floats": 8200,
+      "phi_param_floats": 101376,
+      "fixed_state_floats": 0,
+      "total_floats": 109576,
+      "n_seeds": 3
+    },
+    {
+      "method": "finetune",
+      "class": "rehearsal-free",
+      "ACC": 0.16,
+      "ACC_sd": 0.000864098759787718,
+      "BWT": -0.7763333333333334,
+      "BWT_sd": 0.012344589458094113,
+      "forgetting": 0.7763333333333334,
+      "forgetting_sd": 0.012344589458094113,
+      "memory_items": 0,
+      "memory_floats": 0,
+      "phi_param_floats": 0,
+      "fixed_state_floats": 81290,
+      "total_floats": 81290,
+      "n_seeds": 3
+    },
+    {
+      "method": "lwf",
+      "class": "rehearsal-free",
+      "ACC": 0.15946666666666667,
+      "ACC_sd": 0.0019955506062794455,
+      "BWT": -0.7726666666666667,
+      "BWT_sd": 0.025672077351775697,
+      "forgetting": 0.7726666666666667,
+      "forgetting_sd": 0.025672077351775697,
+      "memory_items": 0,
+      "memory_floats": 0,
+      "phi_param_floats": 0,
+      "fixed_state_floats": 162580,
+      "total_floats": 162580,
+      "n_seeds": 3
+    },
+    {
+      "method": "si",
+      "class": "rehearsal-free",
+      "ACC": 0.15733333333333333,
+      "ACC_sd": 0.001543444920372027,
+      "BWT": -0.7633333333333333,
+      "BWT_sd": 0.01681434572685542,
+      "forgetting": 0.7633333333333333,
+      "forgetting_sd": 0.01681434572685542,
+      "memory_items": 0,
+      "memory_floats": 0,
+      "phi_param_floats": 0,
+      "fixed_state_floats": 243870,
+      "total_floats": 243870,
+      "n_seeds": 3
+    },
+    {
+      "method": "ewc",
+      "class": "rehearsal-free",
+      "ACC": 0.15613333333333332,
+      "ACC_sd": 0.000498887651569851,
+      "BWT": -0.6823333333333332,
+      "BWT_sd": 0.011152976682881064,
+      "forgetting": 0.6823333333333332,
+      "forgetting_sd": 0.011152976682881064,
+      "memory_items": 0,
+      "memory_floats": 0,
+      "phi_param_floats": 0,
+      "fixed_state_floats": 243870,
+      "total_floats": 243870,
+      "n_seeds": 3
+    }
+  ],
+  "verdict": {
+    "clu_ACC": 0.16080000000000003,
+    "best_rehearsal_free_baseline": "finetune",
+    "margin_over_rehearsal_free_class": 0.0008000000000000229,
+    "wins_rehearsal_free_class": true,
+    "best_replay_method": "icarl",
+    "deficit_vs_replay": -0.258,
+    "offline_upper_bound": 0.47386666666666666,
+    "best_launder": "knn_phi_ringbuffer_task1_only",
+    "clu_minus_launder": -0.0653333333333333,
+    "strict_phi_cost": null,
+    "laundered": true,
+    "filing_rule": "CM-23(n): winning the rehearsal-free class while sitting below replay IS a publishable success. 'Beats replay' is NEVER claimed.",
+    "laundering_rule": "N89/CM-22(i): if kNN-in-\u03c6 at matched memory ties or beats the entry, the win is \u03c6's and the buffer's, not the store's \u2014 and the report says so."
+  },
+  "frontier_verdict": {},
+  "metrics_path": "/Users/user/Desktop/CHLU/.claude/scratch/c2w8-cifar-strong-phi/pca/results/exp_cl_entry_cifar10_metrics.json"
+}

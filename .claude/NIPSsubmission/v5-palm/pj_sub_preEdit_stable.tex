@@ -1,0 +1,426 @@
+\documentclass{article}
+
+\usepackage{neurips_2025_ml4ps}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+
+% Venue-neutral anonymous build: the style file's workshop notice box is
+% suppressed so that no venue string appears anywhere in the artifact.
+\makeatletter
+\renewcommand{\@notice}{}
+\makeatother
+
+% Metadata scrub for the double-blind build.
+\hypersetup{pdftitle={},pdfauthor={},pdfsubject={},pdfkeywords={},pdfcreator={},pdfproducer={}}
+
+\title{Retention You Can Predict, Scope and Delete:\\ a $(\mu,\gamma,T)$ Law and a Structural Deletion Guarantee\\ for a Physics-Structured Memory Store}
+
+\author{}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+% [AND - The Setup/Context]
+Existing memory systems enforce retention via explicit bookkeeping policies, such as decay factors, expiry timestamps, or learned forget gates, which dictate when a specific entry expires.
+% [BUT - The Conflict/Gap]
+However, these programmatic rules do not specify the physical rate of value degradation, the continuous dynamical effect of tuning retention parameters, or the exact residual state of the network following an item's removal.
+% [THEREFORE - The Resolution/Action]
+In this work, we resolve these ambiguities by formalizing forgetting as a dynamical property of a physics-structured memory store---specifically, a damped symplectic step of a learned Hamiltonian. Our retention policy is defined by a computable physical budget parameterized by three variables: the stored direction's spectral mass $\mu$, the damping $\gamma$, and the temperature $T$.
+
+We demonstrate three core properties of this architecture. First, the retention dial possesses a computable optimum: retention half-life is non-monotone in friction, forming a V-curve minimized at $\gamma_{\rm crit}=2\varepsilon\mu$. This curve spans approximately 11 orders of magnitude in $\mu^2$ and holds across both designed and emergent (learned-MLP) units. Second, retention is rigorously scopeable: at $T>0$, friction preserves memory while temperature erases it. A localized friction hole thus acts as a memory vault, demonstrating a $107.77\pm4.78\times$ retention factor on designed architectures. Finally, removal is purely structural: under canonical Blelloch \& Golovin (2007) placement, store-level deletion is exact. Post-deletion, the store is byte-identical to a state that never held the item, governed by explicitly defined operational conditions, on a designed, non-learned 3-dimensional datastore at capacities 8--64.
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+
+To contextualize the operational constraints of modern memory systems, we begin with deployed retention policies. Every deployed memory store currently operates under a distinct retention mechanism: a decay factor, an invalidation timestamp, a learned forget gate, or an explicit \texttt{DELETE} call. Despite these mechanisms, forgetting remains a critical failure mode that standard benchmarks often fail to adequately measure (Yang, 2026; Uddin et al., 2026). A programmatic policy is not a fundamental physical law. For instance, one cannot intrinsically read the half-life of a stored value off a trained LSTM, identify the exact mechanism that tunes this half-life, or verify the latent mathematical residue once a value is removed.
+
+This gap in fundamental understanding is widest at the point of data removal. Contemporary agent-memory research supplies robust mechanisms for writing, consolidating, and retrieving data. However, for deletion, the standard approach relies on superficial bookkeeping---such as a timestamp or a dropped row (Rasmussen et al., 2025; Chhikara et al., 2025)---which leaves measurable residue within the network architecture after the fact (Chakraborttii et al., 2026; Wang \& Zhang, 2026). As the 2026 evaluation wave increasingly demands rigorous update-and-deletion tests (Yang, 2026; Uddin et al., 2026), these benchmarks require fundamentally sound mechanisms to exercise.
+
+Therefore, in this work, we propose and analyze a memory framework where forgetting is an intrinsic dynamical property of the store itself, rather than an external bookkeeping rule. By modeling the store as a physical system, we provide computable answers to three core operational questions:
+\begin{enumerate}
+    \item What is the exact retention policy, and where does its optimum lie? (Sec.~\ref{sec:vcurve})
+    \item Can retention be specifically scoped to a single localized item? (Sec.~\ref{sec:vault})
+    \item Is structural deletion truly absolute, and what information mathematically leaks? (Sec.~\ref{sec:deletion})
+\end{enumerate}
+
+\paragraph{Methodological Foundations.}
+The memory store is constructed as a physical system. The state space $(q,p)$ advances via a damped symplectic step of a learnable Hamiltonian, defined as $H=T(p)+V_\theta(q)$. The damping mechanism, defined as $p\mapsto(1-\gamma)p$, inherently supplies the forgetting function, while Langevin noise introduces the temperature $T$. Memory items can optionally be written as \emph{atoms}---localized energy wells superposed into a singular energy function that is subsequently read by dynamical relaxation. Our reference architecture is the Causal Learning Unit (CLU), introduced as CHLU by Jawahar \& Pierini (2026). The core of this unit is exactly solvable: when diagonalized within the mass-whitened Hessian, a single damped step acts on each normal mode as a $2\times2$ matrix entirely fixed by $(\varepsilon\mu,\gamma)$. The spectral radius of this matrix dictates that specific mode's retention capacity (Anonymous, 2026).
+
+\paragraph{Scope and Assumptions.}
+To clarify the boundaries of our empirical claims, we define the following operational assumptions and constraints:
+\begin{itemize}
+    \item \textbf{Scale:} All evidence relies on a precisely designed store measured at a laptop-scale compute budget. This is not a deployed, large-scale LLM agent memory, nor a generalized system benchmark.
+    \item \textbf{Claim Classification:} We report a fundamental mechanism bounded by measured physical laws, not an end-to-end system performance result.
+    \item \textbf{Nomenclature:}
+    \begin{itemize}
+        \item \emph{Inertial mass ($M_i$):} The learned diagonal of the kinetic term, where larger values result in slower dynamics.
+        \item \emph{Spectral mass ($\mu_k^2$):} Defined as $\lambda_k(M^{-1/2}\nabla^2V_\theta M^{-1/2})$, where larger values indicate shorter memory retention. Retention claims always utilize $\mu$.
+        \item \emph{Stored direction:} A written value occupies a near-flat coset direction.
+        \item \emph{Integration step ($\varepsilon$):} Fixed at $0.05$. It is never utilized as a tilt.
+    \end{itemize}
+    \item \textbf{Evaluation Metrics:} Half-lives ($n_{1/2}$) are operationally meaningless without defining a specific read tolerance ($\Delta$) and the thermal persistence length ($\ell_\theta$). Therefore, no half-life is quoted without its corresponding $\Delta$ and the ratio $\ell_\theta/\Delta$.
+    \item \textbf{Thermodynamic Consistency:} Every claim regarding $T>0$ strictly requires the fluctuation--dissipation-consistent noise scale $\sigma^\star_i=\sqrt{M_iT\gamma(2-\gamma)}$ utilized alongside a Newtonian kinetic mode.
+\end{itemize}
+
+\section{Related Work}\label{sec:related}
+
+\paragraph{Retention Policies in Deployed Memory Systems.}
+Agent memories operate as external data stores that a model actively writes to, retrieves from, and dynamically edits (e.g., MemGPT, Packer et al., 2023; Mem0, Chhikara et al., 2025). Alternatively, bounded compressive states exist internal to the network (e.g., Infini-attention, Munkhdalai et al., 2024). The retention policies governing these systems rely on scores and gates. Examples include a $0.995$ recency decay factor in ranking heuristics (Park et al., 2023), Ebbinghaus decay functions applied to memory strength (Zhong et al., 2024), learned per-memory expiration spans (Sukhbaatar et al., 2021), and dynamic forget gates $\alpha_t$ optimized during test time (Behrouz et al., 2025). While the learned gate in Titans (Behrouz et al., 2025) is structurally similar to the retention dial discussed in Sec.~\ref{sec:vcurve}, none of these prior works establish physical retention laws, state explicit half-lives, define read tolerances, or mathematically price the information loss.
+
+\paragraph{Deletion Mechanisms: Deployed and Formal.}
+Current deployment architectures handle deletion via invalidation. For example, Zep invalidates contradicted edges with timestamps while preserving the latent record (Rasmussen et al., 2025), and Mem0 simply drops rows from its active context. Conversely, exact byte-identity is crucial for security, as soft-deleted vectors in graph ANN databases remain reconstructible from raw index files (Chakraborttii et al., 2026). Recent benchmarking highlights that real-world deployment failures are predominantly forgetting failures (Yang, 2026), with outdated retention driving significant recommendation errors (Uddin et al., 2026). Formally, \emph{certified} removal is Guo et al.'s (2020) Sec.~2, Eq.~(1), an $\varepsilon$ condition with an unnumbered $(\varepsilon,\delta)$ relaxation immediately after; exact methods delete by isolation, with cost and capacity formalisms in place (Bourtoule et al., 2021; Ginart et al., 2019; Sekhari et al., 2021). We sit functionally between these approaches: we offer a store-level, bit-exact structural guarantee based on canonical geometric placement (Blelloch \& Golovin, 2007), rather than a stochastic system-level unlearning heuristic.
+
+\paragraph{Physical and Learned Forgetting Laws.}
+While learned recurrent models like LSTMs (Hochreiter \& Schmidhuber, 1997) lack stateable physical forgetting laws, biological and artificial representational drift has been observed to reorganize internal unit representations over time (Aitken et al., 2022). Our work differs by tracking a specific coset coordinate under strictly defined physical dynamics. In theoretical physics, dissipation transitions type-A Nambu--Goldstone modes from propagating to diffusive states (Minami \& Hidaka, 2018). Furthermore, strictly equivariant flows possess Lyapunov neutral modes (arXiv:2605.03338) that provide kinematic protection, a gap complementary to our established physical budget ($\mu^2$).
+
+\section{Results}\label{sec:results}
+
+\subsection{The Retention Dial Possesses a Computable Optimum}\label{sec:vcurve}
+
+To understand the macro-dynamics of memory decay, we first analyze damping as a retention dial. The logical intuition suggests tuning friction continuously, often defaulting to the lowest possible threshold. However, we demonstrate that retention half-life is non-monotone in relation to friction. The turning point is fundamentally fixed by the stored direction's spectral mass, meaning the optimal setting can be analytically predicted rather than empirically tuned.
+
+The integration step is defined as conformally symplectic: $\det J=(1-\gamma)^d$, and scales to $(1-\gamma\phi(q'))^d$ when position-gated. Our evaluation utilizes checkpoints comprising a dimension of 4, a hidden size of 64, $\varepsilon=0.05$, spanning 150 epochs. We assess both \textbf{designed units} (featuring an $SO(2)$-invariant $V_\theta$, across 5 distinct seeds) and \textbf{emergent units} (utilizing an MLP $V_\theta$ trained on identical symmetric data, across 3 seeds).
+
+On a fully trained, designed $SO(2)$ vacuum, the massive radial mode's half-life $n_{1/2}(\gamma)$ forms a distinct V-curve, minimized at $\gamma_{\rm crit}=2\varepsilon\mu_{\rm rad}$. The overdamped branch tracks the $\mu^{-2}$ law precisely until $\varepsilon\mu\approx\gamma/2$, after which it saturates at a mass-independent floor. This yields log-slopes of $-1.006$ and between $+1.23$ and $+1.27$ across the 5 validation seeds (Appendix~\ref{app:budget}). The flat coset (characterized by a Hessian $\mu^2\approx10^{-15}$) maps to the exact same curve at the limit $\mu\to0$, where $\gamma_{\rm crit}\to0$. Therefore, the latch, the overdamped register, and the underdamped working memory represent three specific operational regimes of a singular unified curve evaluated at two disparate values of $\mu$.
+
+This fundamental law transfers directly to emergent units. Evaluating three distinct emergent MLP checkpoints, the coset-tracked $T=0$ half-life traces the identical V-curve framework: an argmin of $0.902\pm0.003\times\gamma_{\rm crit}$, and respective log-slopes of $-1.0020\pm0.0003$ and $+1.116\pm0.011$ across all 3 seeds. Spanning both architecture families, this curve holds consistently across $\mu^2\in[1.7\times10^{-12},\,7\times10^{-2}]$. That low endpoint is the ring-profile probe's resolution on a checkpoint whose Hessian $\mu^2$ is machine zero rather than a spectral mass, so eleven orders is one curve on one instrument.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figs/fig1_damping_optimum.png}
+  \caption{\emph{The retention dial and its optimum, collapsed (headline).} Eight measured curves collapse onto one: five designed radial modes (circles, verification, $\mu^2_{\rm rad}=0.670$--$1.348$) and three emergent learned-MLP coset modes (squares, evidence, $\mu^2_{\rm soft}=2.0$--$5.4\times10^{-2}$, 3/3 seeds), against the $\mp1$ asymptotes; the designed flat coset is the $\mu\to0$ corner of the same curve. \emph{(One-step Jacobian; dim 4, hidden 64, $\varepsilon=0.05$, laptop-CPU; \texttt{langevin\_noise="fdt"}, Newtonian kinetic mode.)}}
+  \label{fig:collapse}
+\end{figure}
+
+\textbf{Cross-Instrument Verification.} Because the primary measurements rely on one-step Jacobians, we re-measured the entire curve utilizing direct nonlinear rollout, extracting $n_{1/2}$ directly from the decay envelope's structural rate. The underlying shape reproduced flawlessly: the argmin measured at $0.9001\pm0.0052$ compared to the Jacobian's $0.9032\pm0.0027$ in units of $\gamma_{\rm crit}$ (a variance of $0.35\%$). This establishes that the gap between instruments dictates the level, not the fundamental law.
+
+\subsection{Scoping Retention: Friction Preserves, Temperature Erases}\label{sec:vault}
+
+At the macro level, isolating a retention policy to a singular entry requires manipulating the physical dial locally. However, the sign of the dial's effect on a stored value contradicts standard intuition. At absolute zero ($T=0$), a designed coset latches indefinitely across any friction threshold (drift $\le4.9\times10^{-12}$ rad over $200$k steps, spanning all $\gamma\in[0.002,0.5]$). Conversely, at $T>0$, the coset degrades via diffusion, and introducing friction physically decelerates this decay.
+
+We establish that the diffusion coefficient of the stored coordinate is modeled as $D_\theta=\varepsilon T(2-\gamma)/(2F^2\gamma)$, which we successfully verified to a tolerance of $1.0068\pm0.0219$ across 25 $(\gamma,T)$ experimental cells. Consequently, $n_{1/2}\propto\gamma^{+1}$. This sign flip ($\partial n_{1/2}/\partial\gamma>0$) holds universally across all evaluated seed and temperature combinations. Only temperature exhibits an inverse erasure effect ($\partial n_{1/2}/\partial T<0$).
+
+\textbf{The Memory Vault Mechanism.} We propose the memory vault: a position-gated friction field that is explicitly absorb-only. A localized spatial hole within this field functions concurrently as a brake and a refrigerator ($T_{\rm local}=1.26\times10^{-4}$ versus $10^{-3}$ externally). This mechanism generates a remarkable retention vault factor of $(\gamma_{\rm eff}/\gamma)^2$, yielding $107.77\pm4.78\times$ on designed architecture, compared to a baseline of $13.28\pm0.12\times$ utilizing a uniform scalar friction. The direct first-passage vault reads $86.97\pm2.94\times$ and is boundary-layer biased on the outside arm ($\ell_\theta/\Delta=0.079$), so $107.77\times$ is the quoted number and travels with its estimator's name. Crucially, this localized field mathematically confines the register: the state fraction outside the boundary ($|\theta|>1$ rad) drops definitively to $0.0000$ within the hole.
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\linewidth]{figs/fig2_vault.png}
+\caption{The friction hole as a memory vault, on the designed arm. (a) The hole is a refrigerator: the momentum variance follows the absorb-only curve and rejects the coupled-bath prediction, giving $T_{\rm local}=1.26\times10^{-4}$ inside against $10^{-3}$ outside. (b) At the same $\gamma_{\rm eff}$ the diffusion constant differs by $8\times$ between a friction field and a scalar friction, which is the mechanism statement in one panel. (c) The vault factor: $107.77\pm4.78\times$ from the $\hat D_\theta$ estimator, the quoted number; the per-seed bars beneath it are raw first-passage ratios, boundary-layer biased on the outside arm, which is why the pooled first-passage reading of $86.97\pm2.94\times$ is not quoted as the vault. The inset states the $T=0$ control: the hole erases nothing. \emph{Designed $SO(2)$ with an analytic field, 3 seeds, $T=10^{-3}$, $\Delta=0.5$ rad, \texttt{langevin\_noise="fdt"}, Newtonian kinetic mode, laptop-CPU: verification.}}
+\label{fig:vault}
+\end{figure}
+
+\subsection{Structural Deletion: Absolute Guarantees and Leakage Pricing}\label{sec:deletion}
+
+In standard architectures, deleting an item from memory relies on stochastic, best-effort heuristics, such as dropping active rows or writing system tombstones. We evaluate whether the store's intrinsic physical state can be explicitly reduced to a pure function of its live set alone. When data points are continuously superposed into a singular energy function, standard placement becomes inherently path-dependent.
+
+To resolve this, we map memory placement canonically, ensuring it remains an exclusive function of the live records and the predefined geometry. Utilizing Blelloch \& Golovin's (2007) stable-matching table rules, we establish exact store-level deletion. Our measurements confirm that with the waitlist engaged, store-level deletion remains exact across all evaluated loads ($0.29\times$ to $1.71\times$ of standard lattice capacity). Under explicit conditions (a budget sufficient for the cell count, zero baseline leakage, and priority/attribute-based eviction; recency-based eviction remains intrinsically history-dependent and is excluded), the physical layout of the store remains byte-identical to a temporal state that theoretically never encountered the deleted item. This is a store-level guarantee only --- the frozen encoder and any residue of past writes in a learned landscape are separate channels, and we claim no certified $(\varepsilon,\delta)$ unlearning.
+
+\textbf{Pricing Lifetimes and Residual Leakage.} We formally price memory lifetimes according to a strict trilemma: exact value fidelity, amplitude-independent address hold, and amplitude-independent read latency. A system may only optimize two. We find that physical decay provides architectural retrieval geometry rather than robust cryptographic privacy. Against an exact adversary, the Boolean TTL flag remains within a $0.017$ AUC margin of pure physical decay ($0.983$ versus $1.000$), demonstrating that a physically decaying store intrinsically stops answering external queries significantly before the actual structural data stops leaking.
+
+\section{Limitations and Future Work}\label{sec:limits}
+
+To rigidly define the scope and bounds of our empirical evidence, we identify the following limitations and subsequent future pathways:
+\begin{itemize}
+    \item \textbf{Scale and Architecture Scope:} This research is strictly constrained to a dimension of 4, a hidden size of 64, and execution on a laptop-scale CPU across 5 designed and 3 emergent seeds. No larger-scale LLM performance should be inferred.
+    \item \textbf{The Designed-Symmetry Precondition:} The exact $T=0$ retention latch requires precise continuous coset geometries that must be explicitly designed into the architecture.
+    \item \textbf{Mandatory Thermodynamic Scope:} The raw $T/\gamma$-exponents cannot distinguish between designed and emergent units intrinsically. Evaluating any state where $T>0$ requires the strict combination of \texttt{fdt} noise and Newtonian kinetic modes.
+    \item \textbf{Deletion Scope:} The exact deletion guarantee applies strictly at the isolated store-level beneath set-function eviction models. Furthermore, recency-based eviction intrinsically breaks history independence and is thus excluded.
+    \item \textbf{No Task-Level Payoff:} Stated once: external benchmarks won on their own headline metric = ZERO.
+    \item \textbf{Future Work Directions:} We intend to evaluate wider emergent collapses in $\mu^2$, remeasure the memory vault contrast arm where bounds remain strictly contained, formally assess the amortized per-delete execution cost against flat datastore architectures, and construct explicitly localized temperature fields.
+\end{itemize}
+
+\clearpage
+\appendix
+
+\section*{References}
+\begin{itemize}
+\item Aitken, K., Garrett, M., Olsen, S., \& Mihalas, S. (2022). The geometry of representational drift in natural and artificial neural networks. \emph{PLOS Computational Biology} 18(11):e1010716.
+\item Andersson, A., \& Ottmann, T. (1995). New tight bounds on uniquely represented dictionaries. \emph{SIAM Journal on Computing} 24(5):1091--1103.
+\item Anonymous (2026). \emph{The theory note} (exactly-solvable damped-symplectic retention theory). Anonymized for double-blind review.
+\item Behrouz, A., Zhong, P., \& Mirrokni, V. (2025). Titans: Learning to memorize at test time. \emph{NeurIPS 2025}. arXiv:2501.00663.
+\item Blelloch, G. E., \& Golovin, D. (2007). Strongly history-independent hashing with applications. \emph{48th IEEE Symposium on Foundations of Computer Science (FOCS)}, 272--282.
+\item Blelloch, G. E., Golovin, D., \& Vassilevska, V. (2008). Uniquely represented data structures for computational geometry. \emph{11th Scandinavian Workshop on Algorithm Theory (SWAT)}, LNCS 5124:17--28.
+\item Bourtoule, L., Chandrasekaran, V., Choquette-Choo, C. A., Jia, H., Travers, A., Zhang, B., Lie, D., \& Papernot, N. (2021). Machine unlearning. \emph{42nd IEEE Symposium on Security and Privacy}. arXiv:1912.03817.
+\item Buchbinder, N., \& Petrank, E. (2003). Lower and upper bounds on obtaining history independence. \emph{CRYPTO 2003}, LNCS 2729:445--462.
+\item Chakraborttii, C., Garc\'ia Alvarado, J., Abdulofizova, S., \& Dwivedi, S. (2026). Ghost vectors: Soft-deleted embeddings remain reconstructible in HNSW vector databases. arXiv:2606.18497 (preprint).
+\item Chhikara, P., Khant, D., Aryan, S., Singh, T., \& Yadav, D. (2025). Mem0: Building production-ready AI agents with scalable long-term memory. arXiv:2504.19413 (preprint).
+\item Ginart, A., Guan, M. Y., Valiant, G., \& Zou, J. (2019). Making AI forget you: Data deletion in machine learning. \emph{NeurIPS 2019}. arXiv:1907.05012.
+\item Guo, C., Goldstein, T., Hannun, A., \& van der Maaten, L. (2020). Certified data removal from machine learning models. \emph{ICML}, PMLR 119:3832--3842. arXiv:1911.03030.
+\item Hochreiter, S., \& Schmidhuber, J. (1997). Long short-term memory. \emph{Neural Computation} 9(8):1735--1780.
+\item Jawahar, P., \& Pierini, M. (2026). CHLU: The causal Hamiltonian learning unit as a symplectic primitive for deep learning. arXiv:2603.01768 (short paper, ICLR 2026 AI \& PDE workshop).
+\item Jude, J., Perich, M. G., Miller, L. E., \& Hennig, M. H. (2023). Capturing cross-session neural population variability through self-supervised identification of consistent neuron ensembles. \emph{PMLR} 197:234--257.
+\item Micciancio, D. (1997). Oblivious data structures: Applications to cryptography. \emph{29th ACM Symposium on Theory of Computing (STOC)}, 456--464.
+\item Minami, Y., \& Hidaka, Y. (2018). Spontaneous symmetry breaking and Nambu--Goldstone modes in dissipative systems. \emph{Physical Review E} 97(1):012130.
+\item Mo, H. H. (2026). Symmetry-protected Lyapunov neutral modes in equivariant recurrent networks. arXiv:2605.03338 (preprint; single author).
+\item Munkhdalai, T., Faruqui, M., \& Gopal, S. (2024). Leave no context behind: Efficient infinite context transformers with Infini-attention. arXiv:2404.07143 (preprint).
+\item Naor, M., \& Teague, V. (2001). Anti-persistence: History independent data structures. \emph{33rd ACM Symposium on Theory of Computing (STOC)}, 492--501.
+\item Packer, C., Wooders, S., Lin, K., Fang, V., Patil, S. G., Stoica, I., \& Gonzalez, J. E. (2023). MemGPT: Towards LLMs as operating systems. arXiv:2310.08560 (preprint).
+\item Park, J. S., O'Brien, J. C., Cai, C. J., Morris, M. R., Liang, P., \& Bernstein, M. S. (2023). Generative agents: Interactive simulacra of human behavior. \emph{UIST 2023}. arXiv:2304.03442.
+\item Rasmussen, P., Paliychuk, P., Beauvais, T., Ryan, J., \& Chalef, D. (2025). Zep: A temporal knowledge graph architecture for agent memory. arXiv:2501.13956 (preprint).
+\item Rusch, T. K., Mishra, S., Erichson, N. B., \& Mahoney, M. W. (2022). Long expressive memory for sequence modeling. \emph{ICLR 2022}. arXiv:2110.04744.
+\item Sekhari, A., Acharya, J., Kamath, G., \& Suresh, A. T. (2021). Remember what you want to forget: Algorithms for machine unlearning. \emph{NeurIPS 2021}, 18075--18086.
+\item Snyder, L. (1977). On uniquely representable data structures. \emph{18th IEEE Symposium on Foundations of Computer Science (FOCS)}, 142--146.
+\item Sukhbaatar, S., Ju, D., Poff, S., Roller, S., Szlam, A., Weston, J., \& Fan, A. (2021). Not all memories are created equal: Learning to forget by expiring. \emph{ICML 2021}. arXiv:2105.06548.
+\item Uddin, M. N., Shubham, K., Blanco, E., Baral, C., \& Wang, G. (2026). From recall to forgetting: Benchmarking long-term memory for personalized agents. arXiv:2604.20006 (preprint).
+\item Wang, B., Wang, F., Wang, P., Cong, J., Yu, Y., Yin, Y., Han, Z., \& Wei, B. (2026). Agentic unlearning: When LLM agent meets machine unlearning. arXiv:2602.17692 (preprint).
+\item Wang, K., \& Zhang, C. (2026). MemLeak: Diagnosing information leaks in multimodal agent memory. arXiv:2606.29788 (preprint).
+\item Yang, D. (2026). Control-plane placement shapes forgetting: An architectural study of agent memory across thirteen system configurations. arXiv:2606.15903 (preprint).
+\item Zhong, W., Guo, L., Gao, Q., Ye, H., \& Wang, Y. (2024). MemoryBank: Enhancing large language models with long-term memory. \emph{AAAI 2024}. arXiv:2305.10250.
+\end{itemize}
+
+\section{The $(\mu,\gamma,T)$ Budget: The Diffusion Law and the Sign Flip}\label{app:budget}
+
+To ensure complete rigor, all metrics detailed here derive from the designed $SO(2)$ testbed, providing strict verification. Furthermore, all $T>0$ cells mandate the explicit use of \texttt{langevin\_noise="fdt"} operating within a Newtonian kinetic mode. The legacy reference default structure fundamentally violates these thermodynamic laws. Every reported half-life $n_{1/2}$ is paired unconditionally with its specific read tolerance $\Delta=0.5$ rad and its ratio $\ell_\theta/\Delta$.
+
+\paragraph{Diffusion Law Diagnostics (25 Cells).} We evaluate a discrete $5\gamma\times5T$ grid utilizing seed 44. The ratio $\hat D_\theta/D_\theta^{\rm pred}$ yields $1.0068\pm0.0219$, bounded between a minimum of $0.9644$ and a maximum of $1.0484$. The gradient $d\log D/d\log T$ records values of $+0.998,+0.997,+0.992,+1.010,+1.006$. Simultaneously, the gradient $d\log D/d\log\gamma$ evaluates to $-1.014,-0.980,-0.999,-1.001,-0.982$ following the mathematical isolation of the discrete $(2-\gamma)$ factor.
+
+\paragraph{Sign Flip Verification.} We observe $d\log n_{1/2}/d\log\gamma=+0.9552\pm0.0422$ at a baseline temperature of $T=10^{-3}$ across all 5 testing seeds, presenting positively in all 10/10 examined conditions. The measured effect size for the transition $\gamma:0.05\to0.2$ results in a precise $3.77\pm0.23\times$ increase ($\ell_\theta/\Delta<0.05$; seed-specific values: $3.55,3.64,3.61,3.89,4.15$). The inverse thermal driver measures at $d\log n_{1/2}/d\log T=-0.956$ to $-0.979$ within the deep-diffusive operational bounds.
+
+\paragraph{Designed $T=0$ Latch Properties.} Evaluating absolute zero, the metric $\big||\lambda_{\rm flat}|-1\big|\le1.7\times10^{-14}$ across 22 specific $\gamma$ values on 5 independent seeds. Consequently, the observed drift is restricted to $\le4.9\times10^{-12}$ rad per 200k integration steps across 30/30 evaluated cells. This strongly contrasts with the $\gamma=0$ baseline control, which incurs a massive $142.7$ rad drift over a significantly shorter 20k steps.
+
+\paragraph{Designed V-Curve Minimization.} The optimal minimum argmin lies between $0.076$ and $0.096$, against the computationally predicted bounds of $0.082$--$0.116$ (utilizing per-seed specific values $\mu^2_{\rm rad}=0.670,0.771,1.190,1.093,1.348$). The resulting asymptotic log-slopes measure $-1.006$ and between $+1.23$ and $+1.27$, enforcing a mass-independent floor of exactly $27.03$ steps measured at $\gamma=0.05$.
+
+\begin{table}[!htb]\centering\small
+\caption{The $T>0$ face of the budget, all four entries continuously measured on the designated designed testbed.}
+\begin{tabular}{p{0.19\linewidth}p{0.40\linewidth}p{0.31\linewidth}}
+\toprule
+Stored Direction & $\partial n_{1/2}/\partial\gamma$ (Increased Friction) & $\partial n_{1/2}/\partial T$ (Increased Heat)\\
+\midrule
+Coset / flat (designed) & $>0$, friction \emph{preserves} ($+0.955\pm0.042$; $3.77\times$ at $\gamma:0.05\to0.2$) & $<0$, temperature \emph{erases} ($-0.956$ to $-0.979$)\\
+\addlinespace
+Massive (underdamped) & $<0$, friction shortens (slope $-1.006$) & $\approx0$; $T$ sets only the fluctuation floor (max/min $\le1.013$)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figs/figB_dlaw.png}
+  \caption{The coset diffusion law, detailed systematically panel by panel. (a) $D_\theta\propto T$ measured precisely at five independent frictions; (b) $D_\theta\propto(2-\gamma)/\gamma$ evaluated at five specific temperatures; (c) the absolute ratio $\hat D_\theta/D_\theta^{\rm pred}$ compiled over all $25$ structural cells, reading exactly $1.0068\pm0.0219$ alongside the respective drawn band. \emph{Multi-seed status: evaluated utilizing one fully trained designed-$SO(2)$ checkpoint (seed 44).} \texttt{langevin\_noise="fdt"}, Newtonian kinetic mode, $\Delta=0.5$ rad. \emph{Designed testbed: validation of verification.}}
+  \label{fig:dlaw}
+\end{figure}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\linewidth]{figs/figB_signflip.png}
+\caption{The sign flip, and the lever that does erase. (a) The flat coset's half-life \emph{rises} with friction at every temperature, while the underdamped massive mode's falls --- the two stored directions respond to the dial with opposite sign, with $\gamma_{\rm crit}=2\varepsilon\mu$ marked. (b) Temperature is the forgetting lever, $n_{1/2}\propto1/T$ at every friction. \emph{Multi-seed status: one trained designed-$SO(2)$ checkpoint (seed 44); the $10/10$ seed $\times$ temperature statement and the $+0.9552\pm0.0422$ slope are this appendix's five-seed numbers, not this figure's.} \texttt{langevin\_noise="fdt"}, Newtonian kinetic mode, $\Delta=0.5$ rad. \emph{Designed testbed: verification.}}
+\label{fig:signflip}
+\end{figure}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\linewidth]{figs/figB_massive_vs_flat.png}
+\caption{The two regimes, read off the exact one-step Jacobian at the vacuum. (a) The massive radial mode is non-monotone in $\gamma$, each seed's minimum sitting at its own $\gamma_{\rm crit}=2\varepsilon\mu$ (dotted), against the dashed underdamped envelope $2\ln2/\gamma$ drawn on the same axes. (b) The flat mode holds $|\lambda|=1$ at every $\gamma$ to the float64 floor: friction cannot erase the latch. \emph{Five trained designed seeds, $T=0$, dim 4, hidden 64, $\varepsilon=0.05$, laptop-CPU: verification.}}
+\label{fig:massiveflat}
+\end{figure}
+
+\section{The Emergent Arm, and the V-Curve on a Second Instrument}\label{app:emergent}
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\linewidth]{figs/figA1_damping_optimum_full.png}
+\caption{\emph{The damping optimum, collapsed --- the full-size version of Figure~\ref{fig:collapse}.} The same eight measured curves and the same $\mp1$ asymptotes, carrying the annotations the main-text version omits: the two-family legend, the $\gamma=\gamma_{\rm crit}=2\varepsilon\mu$ marker, the $\mu\to0$ flat-coset callout, and the crimson probe-floor tick on the $\mu^2$ colourbar ($1.7\times10^{-12}$). No plotted value differs from Figure~\ref{fig:collapse}. \emph{(One-step Jacobian; dim 4, hidden 64, $\varepsilon=0.05$, laptop-CPU; \texttt{langevin\_noise="fdt"}, Newtonian kinetic mode.)}}
+\label{fig:collapse-full}
+\end{figure}
+
+We evaluate the emergent MLP checkpoints utilizing 3 unique seeds alongside a precisely matched designed control. All predictions detailed below were structurally filed and pre-registered prior to the execution of any test harness, establishing rigorous evidence parameters.
+
+We deploy four specific measurement instruments over identical fit windows (defined as $\gamma<\gamma_{\rm crit}/2.5$ and $\gamma>2.5\gamma_{\rm crit}$):
+1.  \emph{I-J}: The exact one-step Jacobian, where $n_{1/2}=\ln2/(-\ln|\lambda_{\rm ret}|)$.
+2.  \emph{I-R1}: The rollout first crossing threshold of $|\theta|\le\delta/2$.
+3.  \emph{I-R2}: The rollout last crossing threshold.
+4.  \emph{I-R3} (Primary): The rollout envelope-rate fit evaluated specifically over the late window, guaranteeing $R^2\ge0.9955$ (median $0.9996$) across every evaluated cell.
+
+\begin{table}[!htb]\centering\small
+\caption{The foundational shape claims evaluated on all four designated instruments ($\delta=0.05$ rad, exactly 48 $\gamma$ values, utilizing 3 emergent seeds). The rollout rate instrument reproduces the Jacobian; both threshold instruments fail below $\gamma_{\rm crit}$, so no rollout $n_{1/2}$ is ever quoted from a threshold there. Rows are stacked by quantity so that no column is truncated; no value differs from the per-instrument reading.}
+\begin{tabular}{llcccc}
+\toprule
+Quantity & Instrument & Seed 42 & Seed 43 & Seed 44 & Mean $\pm$ sd\\
+\midrule
+$\gamma_{\rm crit}$ & --- & $0.02334$ & $0.01424$ & $0.02265$ & ---\\
+\midrule
+\multirow{4}{*}{Argmin$/\gamma_{\rm crit}$} & I-J & $0.8994$ & $0.9046$ & $0.9055$ & $0.9032\pm0.0027$\\
+ & I-R1 & $0.0857$ & $0.1404$ & $0.0883$ & $0.1048\pm0.0252$\\
+ & I-R2 & $0.2068$ & $0.1404$ & $0.3031$ & $0.2168\pm0.0668$\\
+ & I-R3 & $0.8928$ & $0.9047$ & $0.9028$ & $0.9001\pm0.0052$\\
+\midrule
+\multirow{4}{*}{Slope Below} & I-J & $-1.0023$ & $-1.0016$ & $-1.0022$ & $-1.0020\pm0.0003$\\
+ & I-R1 & $+0.0725$ & $+0.0688$ & $+0.0455$ & $+0.0623\pm0.0120$\\
+ & I-R2 & $-1.0556$ & $+0.0688$ & $-0.8854$ & $-0.6240\pm0.4948$\\
+ & I-R3 & $-0.9651$ & $-0.9977$ & $-0.9854$ & $-0.9827\pm0.0134$\\
+\midrule
+\multirow{4}{*}{Slope Above} & I-J & $+1.1262$ & $+1.1031$ & $+1.1254$ & $+1.1182\pm0.0107$\\
+ & I-R1 & $+1.1027$ & $+1.0889$ & $+1.0977$ & $+1.0964\pm0.0057$\\
+ & I-R2 & $+1.1027$ & $+1.0889$ & $+1.0977$ & $+1.0964\pm0.0057$\\
+ & I-R3 & $+1.1255$ & $+1.1030$ & $+1.1231$ & $+1.1172\pm0.0101$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Instrument Level Disparities.} On the strictly overdamped branch ($\gamma\ge2\gamma_{\rm crit}$), the physical decay \emph{rates} match perfectly, whereas the \emph{threshold} instrument is consistently offset by an exact per-checkpoint constant flat in relation to $\gamma$. The full-window value for Seed 44 measures $0.9216\pm0.0027$, sitting precisely $0.0004$ beneath its pre-registered bounds due to the residual presence of a secondary faster mode within the window. The primary cause of this threshold offset is confirmed: the ring write mechanism consistently deposits only a specific limited fraction of its absolute amplitude directly into the designated slow branch (envelope-fit intercept over $\delta$ measuring $0.638/0.644/0.327$).
+
+\begin{table}[!htb]\centering\small
+\caption{The instrument gap is a level, not a rate: on the overdamped branch ($\gamma\ge2\gamma_{\rm crit}$) the decay \emph{rates} agree while the \emph{threshold} instrument is offset by a per-checkpoint constant flat in $\gamma$. Seed 44's full-window value ($0.9216\pm0.0027$) sits $0.0004$ below its pre-registered band because that window still contains a second, faster mode (early-window ratio $0.539$); the window-split diagnostic converges monotonically to $1$ into the asymptote. Cause of the threshold offset, measured: the ring write deposits only a fraction of its amplitude in the slow branch (envelope-fit intercept over $\delta$ = $0.638/0.644/0.327$).}
+\begin{tabular}{p{0.06\linewidth}p{0.25\linewidth}p{0.22\linewidth}p{0.30\linewidth}}
+\toprule
+seed & $\Gamma_{\rm jac}/\Gamma_{\rm R3}$ (asymptotic window) & $n_{\rm jac}/n_{\rm R1}$ (threshold) & CV of $n_{\rm jac}/n_{\rm R1}$ over the grid\\
+\midrule
+42 & $0.9935$ & $1.3307$ & \multirow{3}{*}{$2.2$--$3.7\%$ over 21--25 $\gamma$-points}\\
+43 & $1.0000$ & $1.7981$ & \\
+44 & $0.9948$ & $1.8204$ & \\
+\midrule
+mean & $0.995\pm0.003$ & per seed, at $\delta=0.05$ rad & $|d\log(\text{ratio})/d\log\gamma|\le0.0034$ (threshold $0.10$)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Finite Write Amplitudes.} At the specific values $\delta=0.05/0.2/0.5$ rad, the designated I-R3 argmin logs at $0.8928/0.9007/0.8968$ (seed 42), $0.9047/0.9045/0.9174$ (seed 43), and $0.9028/0.9037/0.9070$ (seed 44). This variance accounts for a maximum shift of $+1.4\%$ across a complete order of magnitude ($10\times$ range), with identical slope variances constrained strictly beneath $1.9\%$. Every iteration at $\delta=0.5$ relaxed identically to absolute baseline ($|\theta_{\rm final}|\le6.5\times10^{-10}$), preventing any seed's write function from clearing its designated washboard barrier.
+
+\paragraph{Left Branch Exclusions.} For conditions where $\gamma<\gamma_{\rm crit}$, the respective coset eigenpair fundamentally becomes complex with $|\lambda|^2=1-\gamma$. This forces $n_{1/2}=\ln2/(-\tfrac12\ln(1-\gamma))$ to operate entirely independent of both $\mu^2$ and the specific architectural checkpoint. For instance, at exactly $\gamma=0.002$, emergent seeds 42 ($\mu^2=5.449\times10^{-2}$) and 43 ($\mu^2=2.029\times10^{-2}$) return identical metrics: $\lambda_{\rm ret}=0.998999499$ alongside an $n_{1/2}$ of $692.5$, aligning tightly against the calculated $2\ln2/0.002=693.1$.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figs/figC_lambda_coset.png}
+  \caption{The exact emergent V-curve depicted un-collapsed, outlining the distinct negative baseline parameters beside it. (a) Displays the precise $T=0$ half-life charted against friction for each separate emergent seed compiled from the one-step Jacobian. (b) Tracks $\big||\lambda_{\rm coset}|-1\big|$, revealing exact floor alignment for the strictly designed symmetry but falling short by precisely $\sim10^{-3}$ on all emergent seeds. \emph{Evaluated using three emergent MLP seeds against one rigidly matched designed control.}}
+  \label{fig:lambdacoset}
+\end{figure}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\linewidth]{figs/figC_register_capacity.png}
+\caption{The emergent unit has no continuous coset register. A written coset value $\delta$ is held for $20\,000$ steps at $T=0$, $\gamma=0.05$: on every emergent seed the value relaxes to the washboard minimum and nothing is retained, where the designed checkpoint returns $\delta$ exactly. \emph{Three emergent MLP seeds plus a matched designed control: evidence.} This is the figure behind the capacity statement of $\approx1$--$1.6$ bits.}
+\label{fig:registercapacity}
+\end{figure}
+
+\begin{figure}[htbp]\centering
+\includegraphics[width=\linewidth]{figs/figC_Tstar.png}
+\caption{The crossover $T^\star$, and why the raw curve cannot be read directly. (a) The raw excess over the exact-Goldstone law is the same on the matched designed control as on the emergent seeds, so the excess is estimator bias rather than physics. (b) Bias-corrected, the emergent coset joins the exact-Goldstone law above $T^\star\approx3\times10^{-3}$, the shaded band being the confinement-protected cells below it. \emph{Multi-seed status, stated plainly: two emergent seeds and one matched designed control, an $n<3$ cell.} $\Delta=0.5$ rad, $\ell_\theta/\Delta<0.06$, \texttt{langevin\_noise="fdt"}, Newtonian kinetic mode: evidence.}
+\label{fig:tstar}
+\end{figure}
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\linewidth]{figs/fig2_two_instruments.png}
+\caption{The V-curve measured a second way. (a) $T=0$ $n_{1/2}(\gamma)$ per emergent seed on the one-step Jacobian (I-J, lines), the rollout envelope-rate instrument (I-R3, circles) and the rollout first-crossing threshold (I-R1, dotted), at $\delta=0.05$ rad. (b) The per-$\gamma$ instrument ratio: the rate ratio sits on $1$, the threshold ratio is offset and flat in $\gamma$ above $\gamma_{\rm crit}$. (c) The same data in collapsed variables. \emph{(Emergent MLP, 3 seeds, dim 4, hidden 64, $\varepsilon=0.05$, float64, $T=0$, pre-registered $\Rightarrow$ evidence.)}}
+\end{figure}
+
+\section{The Friction-Hole Vault, on Both Arms}\label{app:vault}
+
+This mechanism dictates that the shipped field remains strictly absorb-only, following $p\leftarrow(1-\gamma_\phi)(1-\gamma)p+\sigma(\gamma)\xi$ with $\sigma^2=MT\gamma(2-\gamma)$. This is dictated strictly by the \emph{scalar} $\gamma$, yielding parameters $\gamma_{\rm eff}=1-(1-\gamma)(1-\gamma_\phi)$, $T_{\rm local}=T\gamma(2-\gamma)/[\gamma_{\rm eff}(2-\gamma_{\rm eff})]$ and importantly $D_\theta=\varepsilon T\gamma(2-\gamma)/(2F^2\gamma_{\rm eff}^2)$. The resulting vault effectively computes to $(\gamma_{\rm eff}/\gamma)^2$. Conversely, a coupled bath alternative would dictate $D_\theta\propto\gamma_{\rm eff}^{-1}$ returning a vault of $13.88\times$ exactly at $\gamma=0.05$, $\gamma_\phi=0.5$. These competing hypotheses scale apart by a factor of $7.942\times$; experimental results comprehensively refute the coupled-bath prediction.
+
+\paragraph{Designed Arm Assessment.} We observe $\mathrm{Var}(p_i)/(M_iT)=0.9986$ at baseline ($\gamma_\phi=0$), scaling to $0.36171\pm0.00129$ at ($0.1$), $0.23044$ at ($0.2$), $0.17513$ at ($0.3$), and definitively hitting $0.12600\pm0.00031$ at ($0.5$). This closely mirrors the pure absorb prediction of $0.12591$. Consequently, $T_{\rm local}$ drops precisely to $1.26\times10^{-4}$, equating to a $7.94\times$ functioning refrigerator effect. The comprehensive $D_\theta$-based structural vault records exponential factors of $8.42\times$, $22.39\times$, $44.31\times$, and finally $107.77\pm4.78\times$ specifically at $\gamma_\phi=0.1/0.2/0.3/0.5$ (matching the absorb baseline prediction of $110.25$). Conversely, the scalar control isolated at identical $\gamma_{\rm eff}$ reads merely $13.28\pm0.12\times$. At true absolute zero ($T=0$), the hole functionally erases absolutely nothing, logging drift boundaries of strictly $\le1.75\times10^{-12}$ rad per 200k continuous execution steps inside and out.
+
+\paragraph{Emergent Arm Translation.} Since the structural coset here is definitionally bounded ($\mu^2_{\rm adiab}=2.77\times10^{-2}$ to $8.93\times10^{-2}$), the baseline designed block estimator is biased artificially low by nearly $55\%$. It is therefore systematically replaced by a rigorously cross-validated, window-free Ornstein--Uhlenbeck fit parameter measuring $\mathrm{MSD}(n)=A(1-e^{-n/\tau})$ and $\hat D=A/(2\varepsilon\tau)$. On the strictly bounded evaluation cells, the law-referenced absolute vault computes successfully to $106.1\pm5.0\times$ against the fundamental prediction of $110.25\times$. The contrast metric, however, remains uniquely native to the designed architecture: the measured field-to-scalar control variance computes to $23.39\pm10.06$ against a pre-registered bounds parameter of $[6.5,9.5]$, triggering the designated falsifier constraint strictly because the control arm intrinsically delocalizes while the main field functionally adheres to the absorb limit.
+
+\begin{table}[!htb]\centering
+\caption{The refrigerator law transfers exactly to an emergent register: $\mathrm{Var}(p_i)/(M_iT)$ against the absorb-only prediction, 2048 walkers $\times$ 40 samples, 3 emergent seeds; over all 24 field cells observed/absorb $=0.9998\pm0.0019$, and at $\gamma_\phi=0.5$ $T_{\rm local}/T=0.12570$, a $7.955\times$ refrigerator against $7.942$ predicted. The coupled bath predicts $1.0$ everywhere and is measured at $0.2235$.}
+\begin{tabular}{lcccccc}
+\toprule
+$T$ & $\gamma_\phi$ & $\gamma_{\rm eff}$ & absorb pred. & coupled pred. & measured & obs/absorb\\
+\midrule
+$4\times10^{-3}$ & $0.0$ & $0.050$ & $1.00000$ & $1.0$ & $0.99815\pm0.00257$ & $0.9981$\\
+$4\times10^{-3}$ & $0.1$ & $0.145$ & $0.36249$ & $1.0$ & $0.36326\pm0.00067$ & $1.0021$\\
+$4\times10^{-3}$ & $0.2$ & $0.240$ & $0.23082$ & $1.0$ & $0.23062\pm0.00080$ & $0.9991$\\
+$4\times10^{-3}$ & $0.3$ & $0.335$ & $0.17480$ & $1.0$ & $0.17473\pm0.00046$ & $0.9996$\\
+$4\times10^{-3}$ & $0.5$ & $0.525$ & $0.12591$ & $1.0$ & $0.12592\pm0.00055$ & $1.0001$\\
+$8\times10^{-3}$ & $0.5$ & $0.525$ & $0.12591$ & $1.0$ & $0.12548\pm0.00032$ & $0.9966$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!htb]\centering\small
+\caption{The hole confines an emergent register, and the laundering control shows friction alone does not. $T=4\times10^{-3}$, 1024 walkers, burn-in $20\,000$--$80\,000$ steps, spread by interquartile range; ``hop'' means $|\theta|>1$ rad. The pre-registered stationary-spread comparison is \emph{void} here and no in/out spread ratio may be quoted from these checkpoints: the control that must return exactly $1.000$ returns $0.4586\pm0.1181$.}
+\begin{tabular}{llccccc}
+\toprule
+seed & arm & $\gamma_{\rm eff}$ & $\sigma_\theta$ (IQR) & hop fraction & Boltzmann at $T_{\rm local}$ & obs/pred\\
+\midrule
+42 & no hole, $\gamma=0.05$ & $0.050$ & $0.40795$ & $5.50\%$ & $0.24073$ & $1.6946$\\
+42 & scalar $0.525$ (control) & $0.525$ & $0.20034$ & $0.73\%$ & $0.24073$ & $0.8322$\\
+42 & $\gamma_\phi$ hole & $0.525$ & $0.06442$ & $0.0000$ & $0.08542$ & $0.7542$\\
+43 & no hole & $0.050$ & $1.17601$ & $42.97\%$ & $0.46059$ & $2.5533$\\
+43 & scalar $0.525$ & $0.525$ & $0.35335$ & $10.20\%$ & $0.46059$ & $0.7672$\\
+43 & $\gamma_\phi$ hole & $0.525$ & $0.08628$ & $0.0000$ & $0.16343$ & $0.5279$\\
+44 & no hole & $0.050$ & $0.36922$ & $2.36\%$ & $0.24034$ & $1.5363$\\
+44 & scalar $0.525$ & $0.525$ & $0.21574$ & $0.26\%$ & $0.24034$ & $0.8977$\\
+44 & $\gamma_\phi$ hole & $0.525$ & $0.07279$ & $0.0000$ & $0.08528$ & $0.8535$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\linewidth]{figs/figC2_vault_emergent.png}
+\caption{The vault on an emergent register; panels are labelled by the pre-registered prediction each tests. (a) The refrigerator law, $\mathrm{Var}(p_i)/(M_iT)$ against $\gamma_{\rm eff}$ for 3 seeds $\times$ 2 temperatures, on the absorb-only curve with the coupled-bath prediction (dashed) rejected. (b) The $\gamma_{\rm eff}^{-2}$ diffusion law: bounded cells as circles and squares, delocalised cells as crosses, the designed cross-check overlaid. (c) Confinement: stationary spread and hop fraction for no hole, the scalar control and the hole. (d) Same-site first passage; hatched bars are censored lower bounds. \emph{(Emergent MLP, 3 seeds, $T\in\{4,8\}\times10^{-3}$, both above $T^\star$, $\Delta=0.5$ rad $\Rightarrow$ evidence.)}}
+\end{figure}
+
+\section{Exact Store-Level Deletion: Prior Art and Measured Tables}\label{app:deletion}
+
+\paragraph{Prior Art, in Full.} Uniquely represented (canonical) data structures date to Snyder (1977) and Andersson \& Ottmann (1995); \emph{obliviousness}, a distributional condition on the memory representation which explicitly does not require canonical representation, is Micciancio's (1997); the weak and strong history-independence notions used here are Naor \& Teague's (2001); the open-addressed realisation is Blelloch \& Golovin's (2007), whose table is a stable matching between keys and slots under a global key priority, and it is that priority-greedy rule and that delete-time fix-up cascade we use; Blelloch, Golovin \& Vassilevska (2008) had already taken unique representation into computational geometry. We claim no priority over order-independent placement and no novelty for the displacement rule or its delete-time repair. New is the composition: slots that are a lattice packing, so the canonical representation carries a minimum-separation certificate; content that is a continuously decaying amplitude whose decay commutes with deletion; a canonical object that is an energy function a dynamical read relaxes into; and a price that is negative where strong history independence is known to cost as much as an exponential slowdown relative to the weak notion for comparison-based structures (Buchbinder \& Petrank, 2003). ``Fix-up cascade'' is our name for the \texttt{NEXT}-chain delete-time repair of their Figure 1; the algorithm is theirs either way.
+
+\paragraph{Structural Exactness at Zero Tolerance.} The architectural implementation dictates 24 exhaustive structural orders explicitly measured at $n=4$, mapped alongside 200 independently randomized sequence orders strictly at $n\in\{8,16,40,64\}$. Furthermore, we implement 100 dedicated write/delete functional interleavings and absolute mid-decay continuous deletes. Across every evaluation parameter, the resulting structural spacing enforces an exact boundary of $1.540000$. On the subsequently shipped operational store architecture, the structural centers, exact payloads, physical amplitudes, and the defining active logic mask are unconditionally byte-equal, with the energy profile $V(q)$ proving purely byte-equal across 64 heavily randomized direct queries.
+
+\paragraph{The Negative Packing Price Constraint.} Evaluated precisely at the defined ceiling $K=64$, the purely canonical stable-matching rule structurally admits exactly $61/64$ actively offered sequential keys deterministically ($\sigma=0$, per-offered index of $0.9531$). This ratio actively climbs to absolute capacity ($64/64$) once physical lattice sizing is symmetrically inflated by an exactly specified coefficient of $\times1.05$. By contrast, the stochastic refuse-and-relocate allocator architecture solely manages to admit exactly $43/64$ operating on those perfectly identical geometric seeds (per-offered logic ceiling of $0.6719$). It must be firmly stated that at peak physical overflow limit, operating totally independently without the waitlist active, structural exactness completely and predictably collapses: analyzing exactly 7 baseline cells receiving 8 strict capacity offers, $\mathrm{AUC}(n_{\rm live})$ returns $1.00000\pm0.0000$ and the functional byte-equal architectural fraction plummets directly to $0.0000$.
+
+\begin{table}[!htb]\centering\small
+\caption{The laundering control validation execution. Executed explicitly on the designed store featuring the shipped two-phase read geometry; evaluating 8 active targets against 3 separate seeds, mapping exactly 128 paired environments per target across 18 separate continuous amplitude limits.}
+\begin{tabular}{p{0.34\linewidth}p{0.15\linewidth}p{0.19\linewidth}p{0.16\linewidth}}
+\toprule
+Evaluated Adversary Model & Physical Decay & TTL Flag Limit (Same Store) & Resolution Separation\\
+\midrule
+White-box architecture, fully exact & $1.000$ & $1.000$ & $0.000$\\
+Query-level membership depth, fully exact & $0.983$ & $1.000$ & $0.017$\\
+Query-level membership depth, $\sigma_{\rm obs}=0.1$ & $0.559$ & $0.996$ & $0.437$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Trilemma Parameters and Cost Evaluation.} The physically shipped final store structure completely abandons amplitude-independent baseline address limits, generating a strict operational lifetime correlation factor computed at exactly $r=-0.85$ scaling with $a_i^2$. We rigorously refute both standard previously proposed baseline repair variants: directly multiplying absolute payloads exponentially by their matched amplitudes completely corrupts the core value index criterion measured strictly at $A=1-\text{tol}/|a_i|$ (generating hard death physical amplitudes of exactly $0.90/0.80/0.70/0.30$). \emph{Retrieval geometry:} $R_{50}$ contracts $1.146/1.083/0.979/0.874/0.752$ as $A:1\to0.5\to0.2\to0.1\to0.06$, a $1.52\times$ contraction from $1.146\to0.752$, matching the pre-registered saddle prediction at all five points ($\pm0.20$), where a TTL vector store's lookup radius is a constant hard step at $0.75$--$0.77$, independent of age. Consequently, operating beneath the rigid barrier of its internal logic flag, the designated gated execution channel actively contracts the geometric value $R_{50}$ from $1.135\to0.771$. Note crucially that we define no explicit deletion-cost execution statement because the core canonical synchronisation mandates a complete and structural $O(n)$ rebuild evaluated entirely per operation.
+
+\section{Prominent Negatives}\label{app:negatives}
+
+To ensure complete transparency regarding the empirical limitations of our findings, every negative result observed during evaluation is documented below. Each negative firmly anchors future research directives.
+
+\begin{center}
+\begin{tabular}{p{0.28\linewidth}p{0.66\linewidth}}
+\toprule
+Claim Tested & Empirical Result\\
+\midrule
+A continuous coset register emerges purely from training & \textbf{No:} An MLP potential executed on symmetric baseline data yields a completely mid-spectrum massive core mode (measuring exactly $1.7$--$4.9\times$ softer than the peak stiffest point), dropping capacity limit heavily to $\approx1$--$1.6$ structural bits, driving absolute and complete relaxation of any actively written state value. The hard $T=0$ baseline latch geometry is unconditionally designed-only.\\
+Raw fundamental $T/\gamma$-exponents explicitly discriminate designed from strict emergent architecture & \textbf{No:} A completely and rigidly matched designed hardware control reliably reproduces perfectly identical shallow execution slopes; purely $\ell_\theta/\Delta$-controlled environmental cells alongside $|\lambda_{\rm coset}|$ successfully discriminate. We quote no $n_{1/2}$ value missing $\Delta$ and $\ell_\theta/\Delta$.\\
+The localized friction physical hole safely thermalizes locally & \textbf{Rejected:} Refuted firmly by a rigid pre-registered execution measurement, computing exactly off by a factor of $8.11$. The designated field fundamentally operates entirely absorb-only, and the baseline vault execution computes at $107.77\pm4.78\times$, compared against $13.28\pm0.12\times$ logged for the independent scalar control.\\
+Our own explicit sign-flip execution prediction & \textbf{Falsified (in part):} A physical memory register formally written tightly at the established washboard baseline minimum geometrically cannot physically flip back. Both defining operational signs fundamentally coexist successfully on one isolated hardware checkpoint across independent parameters.\\
+A friction field can \emph{forget} a coset & No: at $T>0$ it \emph{lengthens} coset memory. Erasing latched content needs a temperature or tilt field --- which explains the observed failure of a learned friction field to recover fit on a stationary vacuum.\\
+Amplitude decay reduces an exact adversary's distinguishability & No, at any point in an item's life: white-box AUC $1.000$ at all 18 amplitude levels; what decays is the effect size. The graded curve exists only relative to a stated adversary resolution, our own modelling choice.\\
+Canonical placement is exact at overflow without the waitlist & No: $\mathrm{AUC}(n_{\rm live})=1.000$, byte-equal fraction $0.0000$. Every deletion sentence carries its scope clause; recency eviction is permanently excluded.\\
+The placement algorithm is ours & No: Blelloch \& Golovin (2007) own it outright, and unique representation in a geometric setting is also taken (2008). Our claim is the composition only.\\
+A per-deletion cost claim can be made & No: the shipped synchronisation is an $O(n)$ rebuild per operation, so the amortized-cost formalism cannot be instantiated on our own code until that experiment runs.\\
+The payload-lifetime coupling has a repair & Both proposed repairs are refuted, and the registered payload-independence statistic fails as a correlation while passing as an effect size. At zero read friction the gated channel is oscillatory, not relaxational.\\
+A specific localized pseudo-Goldstone hardware tilt fundamentally sets the primary soft execution scale & \textbf{No:} Local structural geometric confinement completely forces the soft physical baseline eigenvalue explicitly at a limit of $2\alpha$, rigidly capping memory lifespan rigidly at $\tau_{\max}=\Gamma/2\alpha$. The registered physical damped-mode architectural floor is completely confirmed.\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{p{0.28\linewidth}p{0.66\linewidth}}
+\toprule
+Claim Tested & Empirical Result\\
+\midrule
+A pseudo-Goldstone tilt is a lifetime dial on a learned store & Refuted \emph{in sign}: a tilt monotonically \emph{reduces} the smallest eigenvalue on two independent implementations and every family, because a written site is not a common vacuum of its own atoms. The relation survives only in the single-atom geometry it was specified in.\\
+The lifecycle's protected-fraction leg is exercised & No: 0 refusals on the stream at the measured operating point. Reported as \emph{unexercised} --- not working and not broken.\\
+A task-level payoff is claimed & No: forgetting here is shown predictable, controllable, removable and schedulable, not shown to improve a downstream metric. External benchmarks won on their own headline metric = ZERO.\\
+The field/scalar vault contrast transfers to an emergent register & No: $23.39\pm10.06$ against $8.03\pm0.80$ from the identical estimator on designed; the pre-registered falsifier fired. The cause is the laundering control itself, off its own law by $1.18$--$5.23\times$. The number is designed-only; its direction transfers.\\
+The emergent stationary-spread diagnostic is measurable above $T^\star$ & No: its own control, which must return $1.000$, returns $0.4586\pm0.1181$ --- the no-hole arm is a hopping rotor, so no in/out spread ratio may be quoted. The confinement statement replaces it.\\
+A $\theta=\pi$ baseline is valid for emergent first passage & No: $|\nabla V|=0.042$--$0.105$ there against $0.0000$ at $\theta=0$, and one seed's scalar control reads $0.27\times$, i.e.\ more friction apparently speeding escape. Same-site baselines are required; the designed arm is protected by symmetry but was never checked, and that check is owed.\\
+Threshold instruments are usable below $\gamma_{\rm crit}$ & No: a first-crossing $n_{1/2}$ puts its argmin at the grid edge with a below-slope of $+0.0623\pm0.0120$ where the law says $-1$, and last-crossing carries an additive half-period bias. Only the envelope-rate instrument is quotable there.\\
+Our microscopic explanation of the instrument offset & Wrong, though the offset itself is real, constant and quotable: the pre-registered single-slow-mode projection fails (amplitude fraction $0.638/0.644/0.327$ does not order like the angular overlaps) and the early-window ratio $0.52$--$0.85$ is amplitude-independent --- multi-mode transient, not anharmonicity.\\
+The emergent first-passage vault is measured & Only bounded: $>1379\times$ and $>1290\times$ at $86.7\%$/$93.4\%$ censoring, and $35.5\times$ on the geometrically atypical seed. Three seeds cannot say which is typical.\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{document}

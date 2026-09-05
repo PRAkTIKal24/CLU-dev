@@ -1,0 +1,2366 @@
+{
+  "scale": "toy",
+  "seed": 0,
+  "stage_requested": "s3",
+  "flags": {
+    "pilot": {
+      "d_model": 32,
+      "n_layers": 2,
+      "seq_len": 256,
+      "batch": 2,
+      "addr_dim": 2,
+      "payload_dim": 1,
+      "capacity": 8,
+      "atoms_per_item": 128,
+      "steps": 3,
+      "warmup": 1,
+      "eval_batches": 2,
+      "dyneval_batches": 2,
+      "data_bytes": 600000,
+      "slice_min_n": 5,
+      "slice_batches": 2,
+      "arms": [
+        "mamba2",
+        "clu_store"
+      ],
+      "memory": {
+        "chunk": 32,
+        "address_steps": 4,
+        "read_steps": 4,
+        "traj_stride": 2,
+        "psi_hidden": 16,
+        "write_inner_steps": 1,
+        "write_n_perturb": 4,
+        "retry_rounds": 1,
+        "conv_kernel": 4,
+        "mlp_mult": 4
+      },
+      "monitor_every": 1
+    },
+    "memory": {
+      "chunk": 32,
+      "address_steps": 4,
+      "read_steps": 4,
+      "traj_stride": 2,
+      "read_mode": "trajectory",
+      "write_inner_steps": 1,
+      "write_lr": 0.05,
+      "write_n_perturb": 4,
+      "write_sign": true,
+      "psi_hidden": 16,
+      "phi_gain": 6.363021901548892,
+      "retry_rounds": 1,
+      "trainable_gamma": true,
+      "trainable_mass": true,
+      "conv_kernel": 4,
+      "mlp_mult": 4,
+      "atom_local_radius": 0.0,
+      "atom_group_centers": null,
+      "atom_place_radius": 0.0,
+      "write_lambda_traj": 0.0,
+      "write_traj_steps": 0,
+      "write_traj_n_launch": 2,
+      "psi_payload_residual": false,
+      "psi_residual_source": "q_star",
+      "psi_residual_gain": 1.0,
+      "psi_residual_trainable": true,
+      "erosion_partition": false,
+      "refresh_monotonic": false,
+      "refresh_max_gain": 4.0,
+      "refresh_amp_ceiling": 0.0,
+      "remat_chunks": false,
+      "remat_read_segments": 0
+    },
+    "store": {
+      "addr_dim": 2,
+      "atoms_per_item": 128,
+      "budget": 6,
+      "leak": 0.02,
+      "retry_max_rounds": 1,
+      "stage_lifetimes": true,
+      "stage_admission": true,
+      "stage_capacity_pressure": true,
+      "stage_deletion": true,
+      "stage_basin_interaction": true,
+      "stage_retry": true,
+      "stage_trajectory_read": true,
+      "soft_certificate": true
+    },
+    "store_dim": 3,
+    "store_n_atoms": 1024,
+    "jax_version": "0.9.0",
+    "jax_backend": "cpu"
+  },
+  "stages_reached": [
+    "S1",
+    "S2",
+    "S3"
+  ],
+  "not_run": [
+    "S4 (26-47 M on CSF3): NOT RUN at this scale. See report."
+  ],
+  "data": {
+    "train_B": 540000,
+    "valid_B": 30000,
+    "test_B": 30000,
+    "n_bytes_staged": 600000
+  },
+  "phi_gain_calibrated": 6.363021901548892,
+  "swap_ledger": {
+    "clu_store": {
+      "params": 6104,
+      "state_floats": 5144,
+      "state_bytes": 20576,
+      "v_theta_floats": 5120,
+      "n_atoms": 1024,
+      "params_vs_clu": 1.0,
+      "params_matched_pct": 0.0,
+      "state_vs_clu": 1.0,
+      "clu_state_over_arm": 1.0
+    },
+    "gru_matched": {
+      "params": 6018,
+      "state_floats": 42,
+      "state_bytes": 168,
+      "params_vs_clu": 0.9859108781127129,
+      "params_matched_pct": -1.4089121887287024,
+      "state_vs_clu": 0.008164852255054433,
+      "clu_state_over_arm": 122.47619047619048
+    },
+    "ttt_matched": {
+      "params": 6101,
+      "state_floats": 5152,
+      "state_bytes": 20608,
+      "params_vs_clu": 0.9995085190039319,
+      "params_matched_pct": -0.0491480996068152,
+      "state_vs_clu": 1.0015552099533438,
+      "clu_state_over_arm": 0.9984472049689441
+    },
+    "none": {
+      "params": 0,
+      "state_floats": 0,
+      "state_bytes": 0,
+      "params_vs_clu": 0.0,
+      "params_matched_pct": -100.0,
+      "state_vs_clu": 0.0,
+      "clu_state_over_arm": Infinity
+    },
+    "echo": {
+      "params": 0,
+      "state_floats": 0,
+      "state_bytes": 0,
+      "params_vs_clu": 0.0,
+      "params_matched_pct": -100.0,
+      "state_vs_clu": 0.0,
+      "clu_state_over_arm": Infinity
+    },
+    "mamba2": {
+      "params": 59322,
+      "state_floats": 43242,
+      "state_bytes": 86484,
+      "dtype_bytes": 2,
+      "state_breakdown": {
+        "ssm_state": 39936,
+        "conv_state": 3306
+      },
+      "state_convention": "nheads*headdim*d_state + (d_inner + 2*ngroups*d_state)*(d_conv-1) \u2014 the official implementation's own two-tensor inference cache (mamba_ssm/modules/mamba2.py: allocate_inference_cache). dtype = bf16 AS DEPLOYED (no dtype normalisation).",
+      "rival_spec": "mamba2",
+      "rival_config": {
+        "d_model": 512,
+        "n_layers": 24,
+        "d_state": 39,
+        "d_conv": 4,
+        "expand": 2,
+        "headdim": 64,
+        "ngroups": 1,
+        "dtype_bytes": 2,
+        "conv_bias": true,
+        "proj_bias": false,
+        "rmsnorm": true,
+        "use_D": true
+      },
+      "provenance": {
+        "d_model": "OFFICIAL IMPLEMENTATION: the rival's own reference width for the 26-47 M recurrent class (c3-benchmark-scout \u00a71.5: 24 L x d_model 512, ~6 d_model^2 params/layer => 37.75 M). \u26d4 NOT inherited from the shell's d_model: the arm's internal geometry is Mamba-2's, the seam is the shell's.",
+        "n_layers": "OFFICIAL IMPLEMENTATION: 24 layers is the scout \u00a71.5 recurrent-class reference this arm's pinned byte count is quoted at. \u26a0 The DEPLOYED layer count is the shell's (PilotConfig.n_layers) and is ledgered separately \u2014 see reference_row().",
+        "d_state": "OFFICIAL IMPLEMENTATION: state-spaces/mamba, mamba_ssm/modules/mamba2.py default d_state=128; allocate_inference_cache allocates (batch, nheads, headdim, d_state). \u2b50 SHRUNK to fit the ruled 2 MiB ceiling by chlu.eval.byte_ledger.shrink_to_budget('mamba2') (128 -> 39); \u26d4 solved, never hand-chosen.",
+        "d_conv": "OFFICIAL IMPLEMENTATION: mamba2.py default d_conv=4 (the causal depthwise conv width). conv_state holds the d_conv-1 PAST taps; the current input is not state.",
+        "expand": "OFFICIAL IMPLEMENTATION: mamba2.py default expand=2 => d_inner = 2*d_model.",
+        "headdim": "OFFICIAL IMPLEMENTATION: mamba2.py default headdim=64 => nheads = d_inner/64.",
+        "ngroups": "OFFICIAL IMPLEMENTATION: mamba2.py default ngroups=1 (one shared (B,C) group) => conv_dim = d_inner + 2*ngroups*d_state.",
+        "dtype_bytes": "OFFICIAL IMPLEMENTATION: the inference cache is allocated in the model dtype (bf16 in the released models), and c3-benchmark-scout \u00a71.5 quotes the rival table at bf16 = 2 B/element. \u26d4 Convention (Head+Advisor): TOTAL state bytes AS DEPLOYED, no dtype normalisation \u2014 our store's float32 vs the rival's bf16 is a real asymmetry in the RIVAL's favour and it stays.",
+        "conv_bias": "OFFICIAL IMPLEMENTATION: mamba2.py default conv_bias=True.",
+        "proj_bias": "OFFICIAL IMPLEMENTATION: mamba2.py default bias=False on in_proj/out_proj.",
+        "rmsnorm": "OFFICIAL IMPLEMENTATION: mamba2.py default rmsnorm=True \u2014 RMSNormGated(d_inner, norm_before_gate=False, group_size=d_inner//ngroups).",
+        "use_D": "OFFICIAL IMPLEMENTATION: mamba2.py allocates D (nheads,) with D_has_hdim=False.",
+        "learnable_init_state": "OFFICIAL IMPLEMENTATION: Mamba-2's published h_0 is the zero state; it is a learnable PARAMETER here exactly as the GRU control's h0, the TTT arm's W0 and the CLU store's V0 are (PREREG-Bprime \u00a74.1: an initialisation is PARAMETERS, only the per-stream deviation is STATE)."
+      },
+      "learned_init_is_params": true,
+      "params_vs_clu": 9.718545216251638,
+      "params_matched_pct": 871.8545216251638,
+      "state_vs_clu": 8.406298600311041,
+      "clu_state_over_arm": 0.11895842005457657,
+      "deployed": {
+        "rival": "mamba2",
+        "deployed_n_layers": 2,
+        "state_bytes_per_layer": 86484,
+        "total_state_bytes": 172968,
+        "budget_bytes": 2097152,
+        "occupancy": 0.08247756958007812,
+        "within_budget": true,
+        "reference_n_layers": 24,
+        "reference_total_state_bytes": 2075616
+      }
+    },
+    "gru_matched_state_ARITHMETIC_ONLY": {
+      "hidden": 5144,
+      "params": 79469668,
+      "state_floats": 5144,
+      "state_bytes": 20576,
+      "note": "NOT CONSTRUCTED - see report; this is the two-sided-match impossibility for a GRU cell, stated as arithmetic."
+    },
+    "_byte_law_per_item": 214.0,
+    "_table_rows_at_matched_state": 1714,
+    "_store_items": 8
+  },
+  "byte_ledger": {
+    "budget_bytes": 2097152,
+    "budget_provenance": "RULED Advisor+Head 2026-08-13 as '\u22482 MB'; implemented as the 2 MiB ceiling 2,097,152 B on the Hub's recommendation (CLU d=12 1,966,080 B = 0.94x; TTT-Linear 1,597,440 B = 0.76x). Last-digit confirmation was OUTSTANDING at build time \u2014 see chlu/eval/byte_ledger.py MATCHED_STATE_BYTE_BUDGET.",
+    "enforced": true,
+    "arms": {
+      "clu_store": {
+        "arm": "clu_store",
+        "n_layers": 2,
+        "dtype_bytes": 4,
+        "cell_params": 6104,
+        "cell_state_bytes_per_layer": 20576,
+        "phi_params_bytes_per_layer": 3404,
+        "phi_params_bytes_total": 6808,
+        "phi_state_bytes_per_layer": 0,
+        "phi_state_bytes_total": 0,
+        "phi_accounted": true,
+        "total_state_bytes": 41152,
+        "budget_bytes": 2097152,
+        "occupancy": 0.019622802734375,
+        "within_budget": true,
+        "arithmetic": "total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) = 2 * (20576 + 0) = 41152 B; phi_params_bytes = 2 * 3404 = 6808 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+        "state_floats_per_layer": 5144
+      },
+      "echo": {
+        "arm": "echo",
+        "n_layers": 2,
+        "dtype_bytes": 4,
+        "cell_params": 0,
+        "cell_state_bytes_per_layer": 0,
+        "phi_params_bytes_per_layer": 3404,
+        "phi_params_bytes_total": 6808,
+        "phi_state_bytes_per_layer": 0,
+        "phi_state_bytes_total": 0,
+        "phi_accounted": true,
+        "total_state_bytes": 0,
+        "budget_bytes": 2097152,
+        "occupancy": 0.0,
+        "within_budget": true,
+        "arithmetic": "total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) = 2 * (0 + 0) = 0 B; phi_params_bytes = 2 * 3404 = 6808 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+        "state_floats_per_layer": 0
+      },
+      "gru_matched": {
+        "arm": "gru_matched",
+        "n_layers": 2,
+        "dtype_bytes": 4,
+        "cell_params": 6018,
+        "cell_state_bytes_per_layer": 168,
+        "phi_params_bytes_per_layer": 3404,
+        "phi_params_bytes_total": 6808,
+        "phi_state_bytes_per_layer": 0,
+        "phi_state_bytes_total": 0,
+        "phi_accounted": true,
+        "total_state_bytes": 336,
+        "budget_bytes": 2097152,
+        "occupancy": 0.00016021728515625,
+        "within_budget": true,
+        "arithmetic": "total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) = 2 * (168 + 0) = 336 B; phi_params_bytes = 2 * 3404 = 6808 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+        "state_floats_per_layer": 42
+      },
+      "mamba2": {
+        "arm": "mamba2",
+        "n_layers": 2,
+        "dtype_bytes": 4,
+        "cell_params": 59322,
+        "cell_state_bytes_per_layer": 86484,
+        "phi_params_bytes_per_layer": 3404,
+        "phi_params_bytes_total": 6808,
+        "phi_state_bytes_per_layer": 0,
+        "phi_state_bytes_total": 0,
+        "phi_accounted": true,
+        "total_state_bytes": 172968,
+        "budget_bytes": 2097152,
+        "occupancy": 0.08247756958007812,
+        "within_budget": true,
+        "arithmetic": "total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) = 2 * (86484 + 0) = 172968 B; phi_params_bytes = 2 * 3404 = 6808 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+        "state_floats_per_layer": 43242
+      },
+      "none": {
+        "arm": "none",
+        "n_layers": 2,
+        "dtype_bytes": 4,
+        "cell_params": 0,
+        "cell_state_bytes_per_layer": 0,
+        "phi_params_bytes_per_layer": 3404,
+        "phi_params_bytes_total": 6808,
+        "phi_state_bytes_per_layer": 0,
+        "phi_state_bytes_total": 0,
+        "phi_accounted": true,
+        "total_state_bytes": 0,
+        "budget_bytes": 2097152,
+        "occupancy": 0.0,
+        "within_budget": true,
+        "arithmetic": "total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) = 2 * (0 + 0) = 0 B; phi_params_bytes = 2 * 3404 = 6808 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+        "state_floats_per_layer": 0
+      },
+      "ttt_matched": {
+        "arm": "ttt_matched",
+        "n_layers": 2,
+        "dtype_bytes": 4,
+        "cell_params": 6101,
+        "cell_state_bytes_per_layer": 20608,
+        "phi_params_bytes_per_layer": 3404,
+        "phi_params_bytes_total": 6808,
+        "phi_state_bytes_per_layer": 0,
+        "phi_state_bytes_total": 0,
+        "phi_accounted": true,
+        "total_state_bytes": 41216,
+        "budget_bytes": 2097152,
+        "occupancy": 0.0196533203125,
+        "within_budget": true,
+        "arithmetic": "total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) = 2 * (20608 + 0) = 41216 B; phi_params_bytes = 2 * 3404 = 6808 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).",
+        "state_floats_per_layer": 5152
+      }
+    },
+    "over_budget": [],
+    "phi_accounted_on_every_arm": true,
+    "rival_reference": {
+      "budget_bytes": 2097152,
+      "budget_provenance": "RULED Advisor+Head 2026-08-13 as '\u22482 MB'; implemented as the 2 MiB ceiling 2,097,152 B on the Hub's recommendation (CLU d=12 1,966,080 B = 0.94x; TTT-Linear 1,597,440 B = 0.76x). Last-digit confirmation was OUTSTANDING at build time \u2014 see chlu/eval/byte_ledger.py MATCHED_STATE_BYTE_BUDGET.",
+      "rivals": {
+        "ttt_linear": {
+          "state_bytes": 1597440,
+          "elements": 798720,
+          "dtype_bytes": 2,
+          "n_layers": 24,
+          "d_model": 512,
+          "formula": "n_L * (H*d_h^2 + H*d_h)",
+          "pinned_params": {
+            "n_heads": 8,
+            "head_dim": 64
+          },
+          "provenance": "OFFICIAL IMPLEMENTATION: test-time-training/ttt-lm-pytorch/ttt.py \u2014 W1 (H,d_h,d_h), b1 (H,1,d_h); head_dim=width//n_heads. arXiv:2407.04620 publishes no enwik8/WT-103/PG-19 cell.",
+          "occupancy": 0.76171875,
+          "within_budget": true
+        },
+        "ttt_mlp": {
+          "state_bytes": 12705792,
+          "elements": 6352896,
+          "dtype_bytes": 2,
+          "n_layers": 24,
+          "d_model": 512,
+          "formula": "n_L * H * (8*d_h^2 + 5*d_h)",
+          "pinned_params": {
+            "n_heads": 8,
+            "head_dim": 64
+          },
+          "provenance": "OFFICIAL IMPLEMENTATION: ttt-lm-pytorch/ttt.py (W2 at 4x width + b2, W1 symmetric).",
+          "occupancy": 6.05859375,
+          "within_budget": false,
+          "shrink_to_match": {
+            "rival": "ttt_mlp",
+            "knob": "head_dim",
+            "published_value": 64,
+            "shrunk_value": 25,
+            "state_bytes_published": 12705792,
+            "state_bytes_shrunk": 1968000,
+            "budget_bytes": 2097152,
+            "occupancy_published": 6.05859375,
+            "occupancy_shrunk": 0.93841552734375,
+            "shrink_factor": 6.45619512195122,
+            "formula": "n_L * H * (8*d_h^2 + 5*d_h)",
+            "provenance": "OFFICIAL IMPLEMENTATION: ttt-lm-pytorch/ttt.py (W2 at 4x width + b2, W1 symmetric).",
+            "dtype_bytes": 2
+          }
+        },
+        "gated_deltanet2": {
+          "state_bytes": 3145728,
+          "elements": 1572864,
+          "dtype_bytes": 2,
+          "n_layers": 24,
+          "d_model": 512,
+          "formula": "n_L * d_model^2 / H",
+          "pinned_params": {
+            "n_heads": 4,
+            "d_k": 128,
+            "d_v": 128
+          },
+          "provenance": "PAPER: arXiv:2605.22791 (Hatamizadeh, Choi, Kautz, NVIDIA, 2026-05-21) states H=16, d_k=d_v=128, d_model=2048 and '262,144 floats per batch element' per layer => state/layer = d_model^2/H. Scaled to d_model 512 at H=4 to hold d_k=d_v=128. \u26d4 NOT the flash-linear-attention default (head_dim=256, num_heads=6, expand_v=2), which is 3x the paper's state \u2014 TRAP 2.",
+          "occupancy": 1.5,
+          "within_budget": false,
+          "shrink_to_match": {
+            "rival": "gated_deltanet2",
+            "knob": "n_heads",
+            "published_value": 4,
+            "shrunk_value": 6,
+            "state_bytes_published": 3145728,
+            "state_bytes_shrunk": 2097152,
+            "budget_bytes": 2097152,
+            "occupancy_published": 1.5,
+            "occupancy_shrunk": 1.0,
+            "shrink_factor": 1.5,
+            "formula": "n_L * d_model^2 / H",
+            "provenance": "PAPER: arXiv:2605.22791 (Hatamizadeh, Choi, Kautz, NVIDIA, 2026-05-21) states H=16, d_k=d_v=128, d_model=2048 and '262,144 floats per batch element' per layer => state/layer = d_model^2/H. Scaled to d_model 512 at H=4 to hold d_k=d_v=128. \u26d4 NOT the flash-linear-attention default (head_dim=256, num_heads=6, expand_v=2), which is 3x the paper's state \u2014 TRAP 2.",
+            "dtype_bytes": 2
+          }
+        },
+        "mamba2": {
+          "state_bytes": 6475776,
+          "elements": 3237888,
+          "dtype_bytes": 2,
+          "n_layers": 24,
+          "d_model": 512,
+          "formula": "n_L * (n_heads*headdim*d_state + (d_inner + 2*ngroups*d_state)*(d_conv-1))",
+          "pinned_params": {
+            "d_state": 128,
+            "d_conv": 4,
+            "expand": 2,
+            "headdim": 64,
+            "ngroups": 1
+          },
+          "provenance": "OFFICIAL IMPLEMENTATION: state-spaces/mamba, mamba_ssm/modules/mamba2.py defaults; allocate_inference_cache allocates (batch, nheads, headdim, d_state). \u26a0 The paper's per-size appendix table was NOT OBTAINED (arXiv:2405.21060) \u2014 this row's provenance is CODE, not a paper table.",
+          "occupancy": 3.087890625,
+          "within_budget": false,
+          "shrink_to_match": {
+            "rival": "mamba2",
+            "knob": "d_state",
+            "published_value": 128,
+            "shrunk_value": 39,
+            "state_bytes_published": 6475776,
+            "state_bytes_shrunk": 2075616,
+            "budget_bytes": 2097152,
+            "occupancy_published": 3.087890625,
+            "occupancy_shrunk": 0.9897308349609375,
+            "shrink_factor": 3.119929697978817,
+            "formula": "n_L * (n_heads*headdim*d_state + (d_inner + 2*ngroups*d_state)*(d_conv-1))",
+            "provenance": "OFFICIAL IMPLEMENTATION: state-spaces/mamba, mamba_ssm/modules/mamba2.py defaults; allocate_inference_cache allocates (batch, nheads, headdim, d_state). \u26a0 The paper's per-size appendix table was NOT OBTAINED (arXiv:2405.21060) \u2014 this row's provenance is CODE, not a paper table.",
+            "dtype_bytes": 2
+          }
+        },
+        "transformer_xl": {
+          "state_bytes": 6291456,
+          "elements": 3145728,
+          "dtype_bytes": 2,
+          "n_layers": 12,
+          "d_model": 512,
+          "formula": "n_L * mem_len * d_model",
+          "pinned_params": {
+            "mem_len": 512
+          },
+          "provenance": "PAPER: arXiv:1901.02860 Table 2 + \u00a73 (segment 784, eval attention length 3800). Caches hidden states, not K/V.",
+          "occupancy": 3.0,
+          "within_budget": false,
+          "shrink_to_match": {
+            "rival": "transformer_xl",
+            "knob": "mem_len",
+            "published_value": 512,
+            "shrunk_value": 170,
+            "state_bytes_published": 6291456,
+            "state_bytes_shrunk": 2088960,
+            "budget_bytes": 2097152,
+            "occupancy_published": 3.0,
+            "occupancy_shrunk": 0.99609375,
+            "shrink_factor": 3.011764705882353,
+            "formula": "n_L * mem_len * d_model",
+            "provenance": "PAPER: arXiv:1901.02860 Table 2 + \u00a73 (segment 784, eval attention length 3800). Caches hidden states, not K/V.",
+            "dtype_bytes": 2
+          }
+        },
+        "sliding_window": {
+          "state_bytes": 12582912,
+          "elements": 6291456,
+          "dtype_bytes": 2,
+          "n_layers": 12,
+          "d_model": 512,
+          "formula": "2 * n_L * window * d_model",
+          "pinned_params": {
+            "window": 512
+          },
+          "provenance": "PAPER: arXiv:2004.05150 (Longformer small, 41 M => 1.00 bpc); per-layer windows 32->512 staged. Caches K AND V.",
+          "occupancy": 6.0,
+          "within_budget": false,
+          "shrink_to_match": {
+            "rival": "sliding_window",
+            "knob": "window",
+            "published_value": 512,
+            "shrunk_value": 85,
+            "state_bytes_published": 12582912,
+            "state_bytes_shrunk": 2088960,
+            "budget_bytes": 2097152,
+            "occupancy_published": 6.0,
+            "occupancy_shrunk": 0.99609375,
+            "shrink_factor": 6.023529411764706,
+            "formula": "2 * n_L * window * d_model",
+            "provenance": "PAPER: arXiv:2004.05150 (Longformer small, 41 M => 1.00 bpc); per-layer windows 32->512 staged. Caches K AND V.",
+            "dtype_bytes": 2
+          }
+        }
+      }
+    }
+  },
+  "slice_controls": {
+    "non_degeneracy": {
+      "median_distance_token_unit": 456.0,
+      "median_distance_byte_unit": 14.0,
+      "ratio": 32.57142857142857,
+      "min_ratio_required": 10.0,
+      "min_median_required": 64.0,
+      "token_counts": {
+        "[1,8)": 2,
+        "[8,32)": 318,
+        "[32,128)": 1404,
+        "[128,512)": 2163,
+        "[512,2048)": 2010,
+        "[2048,8192)": 1410,
+        "[8192,inf)": 144,
+        "never": 18266
+      },
+      "byte_counts": {
+        "[1,8)": 8853,
+        "[8,32)": 12860,
+        "[32,128)": 5814,
+        "[128,512)": 1627,
+        "[512,2048)": 405,
+        "[2048,8192)": 142,
+        "[8192,inf)": 11,
+        "never": 288
+      },
+      "n_bytes_sampled": 30000,
+      "passed": true
+    },
+    "shuffled_position": {
+      "counts_ordered": {
+        "[1,8)": 2,
+        "[8,32)": 318,
+        "[32,128)": 1404,
+        "[128,512)": 2163,
+        "[512,2048)": 2010,
+        "[2048,8192)": 1410,
+        "[8192,inf)": 144,
+        "never": 18266
+      },
+      "counts_shuffled": {
+        "[1,8)": 84,
+        "[8,32)": 262,
+        "[32,128)": 874,
+        "[128,512)": 1598,
+        "[512,2048)": 2038,
+        "[2048,8192)": 1568,
+        "[8192,inf)": 142,
+        "never": 19151
+      },
+      "median_distance_ordered": 456.0,
+      "median_distance_shuffled": 683.5,
+      "total_variation_distance": 0.04483415639460276,
+      "seed": 0,
+      "n_bytes_sampled": 30000,
+      "slice_moved": true
+    },
+    "content_relabel": {
+      "counts_original": {
+        "[1,8)": 2,
+        "[8,32)": 318,
+        "[32,128)": 1404,
+        "[128,512)": 2163,
+        "[512,2048)": 2010,
+        "[2048,8192)": 1410,
+        "[8192,inf)": 144,
+        "never": 18266
+      },
+      "counts_relabelled": {
+        "[1,8)": 2,
+        "[8,32)": 318,
+        "[32,128)": 1404,
+        "[128,512)": 2163,
+        "[512,2048)": 2010,
+        "[2048,8192)": 1410,
+        "[8192,inf)": 144,
+        "never": 18266
+      },
+      "n_distinct_tokens": 1956,
+      "n_structural_tokens_kept": 89,
+      "relabelling_injective": true,
+      "n_documents_original": 3,
+      "n_documents_relabelled": 3,
+      "n_bytes_sampled": 30000,
+      "slice_invariant": true
+    }
+  },
+  "shell": {
+    "shared_shell_params": 47110,
+    "shared_shell_bytes": 188440
+  },
+  "total_params": {
+    "mamba2": 165754,
+    "clu_store": 59318
+  },
+  "monitors_init": {
+    "applicable": true,
+    "readings": [
+      {
+        "name": "overdamping",
+        "mode": 1,
+        "value": 0.9930257728208259,
+        "band": "rho_conv <= 1e-06 and delta >= 0.02 (doctrine S2b)",
+        "tripped": true,
+        "applicable": true,
+        "severity_class": "III",
+        "cost_ms": 0.0952,
+        "lever": "gamma/steps",
+        "verb": "anneal|retry|stop",
+        "stage": "stream",
+        "detail": {
+          "rho_conv": 0.9930257728208259,
+          "delta": 0.025444797911021555,
+          "corr_q0_qstar": 0.9999999934609833,
+          "grad_norm_q0_med": 0.24278978258371353,
+          "grad_norm_qstar_med": 0.24109651148319244,
+          "false_trip_mode": "flat minima => tiny |grad V(q0)| => rho_conv is noise (denominator floored)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "settle_argmin",
+        "mode": 2,
+        "value": null,
+        "band": "rho_ex >= 0.1; D <= U by Prop D1; INAPPLICABLE if U < 0.01",
+        "tripped": false,
+        "applicable": false,
+        "severity_class": "IV",
+        "cost_ms": 0.0353,
+        "lever": "",
+        "verb": "ESCALATE (no verb by design)",
+        "stage": "stream",
+        "detail": {
+          "why": "U=0.0000 < u_floor => rho_ex is 0/0",
+          "D": 0.0,
+          "U": 0.0,
+          "prop_D1_holds": 1,
+          "false_trip_mode": "a genuinely tight query law puts all mass inside the balls => U -> 0 => 0/0",
+          "note": "no restoring verb: this monitor ESCALATES, never acts"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "vacuous_gate",
+        "mode": 3,
+        "value": 0.5,
+        "band": "fire-rate f in (0,1) strictly; C3 calibration rho_C3 in [1/3,3] and P[Delta>3B] <= 0.10 (C2W3 D3; the corr leg is RETIRED to a diagnostic); n_live/N_pack <= 0.95 (N74/N91); SC-3 deficit_rel <= B when the soft certificate is on",
+        "tripped": false,
+        "applicable": true,
+        "severity_class": "II",
+        "cost_ms": 0.0758,
+        "lever": "d_safe / address-space volume",
+        "verb": "admit|expand|stop",
+        "stage": "stream",
+        "detail": {
+          "fire_rate": 0.5,
+          "n_offers": 16,
+          "n_refused": 8,
+          "validity_corr_RETIRED_DIAGNOSTIC": null,
+          "validity_corr_domain": "valid only for d/s >~ 4; the gym runs at d/s ~ 1.9-2",
+          "c3_calibration_leg": {
+            "n_pairs": 0,
+            "n_qualifying": 0,
+            "lambda_floor": 0.0,
+            "delta_num": 1e-06,
+            "kappa": 3.0,
+            "eta": 0.1,
+            "rho_band": [
+              0.3333333333333333,
+              3.0
+            ],
+            "leg": "c3_first_order_calibration (D3: replaces corr(margin, drift))",
+            "applicable": 0,
+            "tripped": 0,
+            "rho_c3": null,
+            "violation_rate": null,
+            "why": "fewer than 3 qualifying pairs (lambda_min <= floor => the site is not a minimum => #8-N3's trip, not this one's)"
+          },
+          "soft_certificate_budget": null,
+          "utilisation": 0.375,
+          "false_trip_mode": "genuinely well-separated proposals give f=0 legitimately (leg ii must agree)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "blank",
+        "mode": 4,
+        "value": 0.3333333333333333,
+        "band": "acc_blank < chance + 3*se, chance = empirical marginal (N68/N110)",
+        "tripped": false,
+        "applicable": true,
+        "severity_class": "I",
+        "cost_ms": 0.0056,
+        "lever": "read-out / instrument",
+        "verb": "stop",
+        "stage": "stream",
+        "detail": {
+          "score": 0.3333333333333333,
+          "chance": 0.3333333333333333,
+          "se": 0.2721655269759087,
+          "bar": 1.1498299142610593,
+          "metric": "self-probe decode (nearest stored payload)",
+          "representation": "trajectory psi",
+          "false_trip_mode": "a skewed marginal label distribution makes 1/K the wrong bar (chance is empirical)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "addressing",
+        "mode": 5,
+        "value": 0.3333333333333333,
+        "band": "acq >= 0.9 (chance 1/K); w19 violation 0.042",
+        "tripped": true,
+        "applicable": true,
+        "severity_class": "III",
+        "cost_ms": 0.0043,
+        "lever": "addressing / read schedule",
+        "verb": "anneal|route|place",
+        "stage": "stream",
+        "detail": {
+          "acq_basin": 0.3333333333333333,
+          "acq_strict": 0.0,
+          "chance": 0.3333333333333333,
+          "n_probed": 3,
+          "false_trip_mode": "an item deliberately decayed below the amp floor self-probes badly (excluded)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "objective_divergence",
+        "mode": 6,
+        "value": null,
+        "band": "sign agreement over 3 windows (w25/w26 violation), dead-band eps = 1e-09 * max|loss| (gym R2), eps_acq = 1e-09 * max|acq| (fb4 R4)",
+        "tripped": false,
+        "applicable": false,
+        "severity_class": "III",
+        "cost_ms": 0.009,
+        "lever": "",
+        "verb": "stop|consolidate",
+        "stage": "stream",
+        "detail": {
+          "why": "no (loss, acq) pair"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "mass_gauge",
+        "mode": 7,
+        "value": null,
+        "band": "pytest gauge: trajectory-wise invariance, Newtonian exact; relativistic breaks as O(1/c^2) (SCOPE, not a pass)",
+        "tripped": false,
+        "applicable": false,
+        "severity_class": "I",
+        "cost_ms": 0.0062,
+        "lever": "",
+        "verb": "",
+        "stage": "stream",
+        "detail": {
+          "why": "gauge test runs in pytest (test_monitors.py), not in the stream",
+          "kinetic_mode": "newtonian_learned",
+          "false_trip_mode": "endpoint-only comparison passes vacuously once both runs settle (compare trajectories)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "certificates",
+        "mode": 8,
+        "value": 4.605174462000529,
+        "band": "N1 injective; N2 sep/sigma_q >= 5.15; N3 lambda_min > 0; N4 gap/(2*delta_read) >= 1 (doctrine R1)",
+        "tripped": true,
+        "applicable": true,
+        "severity_class": "II",
+        "cost_ms": 0.0066,
+        "lever": "write operator / placement",
+        "verb": "place|admit|evict (stop under a global-support write)",
+        "stage": "stream",
+        "detail": {
+          "failed": [
+            "N2"
+          ],
+          "N1_injective": 1,
+          "N2_sep_over_sigma_q": 4.605174462000529,
+          "N3_lambda_min": 0.0833723321557045,
+          "N4_ratio": 3.393481283854284,
+          "payload_gap": 0.11929214000701904,
+          "delta_read": 0.017576660960912704,
+          "erf_accuracy_at_margin": null,
+          "false_trip_mode": "a declared register/coset shares a site by design => N1 fires (exempt declared cosets)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "lifetimes",
+        "mode": 9,
+        "value": 4.948230074071683e-05,
+        "band": "Delta_ret <= 0.1 (effect size, doctrine R4); corr reported as direction only",
+        "tripped": false,
+        "applicable": true,
+        "severity_class": "IV",
+        "cost_ms": 0.1582,
+        "lever": "payload excursion / decay law",
+        "verb": "decay (uncleanable at large excursion)",
+        "stage": "stream",
+        "detail": {
+          "delta_retention": 4.948230074071683e-05,
+          "corr_direction_only": -0.5004616745480897,
+          "n_items": 3,
+          "known_uncleanable": "at large excursion the fix is C1W27 gated stiffness",
+          "false_trip_mode": "items with deliberately different leak_i show intended spread (group within a leak cohort)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "dead_axis",
+        "mode": 10,
+        "value": null,
+        "band": "every DECLARED knob is read at least once; each swept knob moves an observable",
+        "tripped": false,
+        "applicable": false,
+        "severity_class": "I",
+        "cost_ms": 0.0025,
+        "lever": "",
+        "verb": "stop",
+        "stage": "stream",
+        "detail": {
+          "why": "no config access counts"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "reach",
+        "mode": 11,
+        "value": Infinity,
+        "band": "a_U - |a_i| > 0 for every live item (saddle criterion, 0 free params)",
+        "tripped": false,
+        "applicable": true,
+        "severity_class": "II",
+        "cost_ms": 0.0139,
+        "lever": "payload excursion / |c| / width",
+        "verb": "place|anneal|route|admit",
+        "stage": "stream",
+        "detail": {
+          "worst_margin": Infinity,
+          "n_unreachable": 0,
+          "n_items": 3,
+          "unreachable_ids": [],
+          "a_U": [
+            Infinity,
+            Infinity,
+            Infinity
+          ],
+          "false_trip_mode": "single-well criterion: no neighbour term => mis-flags crowded cells (pair with #12 above 80% utilisation)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "starvation",
+        "mode": 12,
+        "value": 0.0,
+        "band": "fairness >= 0.5; C3 ratio <= 2x the first-order bound; oldest-item retention drop <= 0.1",
+        "tripped": true,
+        "applicable": true,
+        "severity_class": "II",
+        "cost_ms": 0.0035,
+        "lever": "write operator / allocation",
+        "verb": "admit|place|expand|evict",
+        "stage": "stream",
+        "detail": {
+          "fairness": 0.0,
+          "c3_ratio": null,
+          "oldest_retention_drop": 0.3162982591146307,
+          "false_trip_mode": "an intentional update of an already-live item looks like starvation (exempt same-id writes)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "maturity",
+        "mode": 13,
+        "value": 1.0,
+        "band": "write_steps >= 40 to PROMOTE a reading (N94)",
+        "tripped": false,
+        "applicable": true,
+        "severity_class": "I",
+        "cost_ms": 0.0098,
+        "lever": "",
+        "verb": "",
+        "stage": "stream",
+        "detail": {
+          "promotable": 0,
+          "false_trip_mode": "n/a \u2014 not a trip"
+        },
+        "provenance": {
+          "write_steps": 1,
+          "epochs": null,
+          "wall_clock_s": 0.0,
+          "note": "readings below the maturity threshold may be logged, never promoted to a band statement"
+        }
+      },
+      {
+        "name": "guard_liveness",
+        "mode": 14,
+        "value": 12.0,
+        "band": "every designed guard fires >= once on the canary stream",
+        "tripped": true,
+        "applicable": true,
+        "severity_class": "I",
+        "cost_ms": 0.0152,
+        "lever": "controller policy / guard calibration",
+        "verb": "stop",
+        "stage": "stream",
+        "detail": {
+          "never_fired": [
+            "admit.budget",
+            "admit.priority",
+            "admit.reach",
+            "anneal.return",
+            "evict.class_i",
+            "evict.persistence",
+            "evict.set_function",
+            "expand.monotone",
+            "place.injective",
+            "place.lambda_min",
+            "retry.budget",
+            "route.signal"
+          ],
+          "counts": {
+            "admit.priority": 0,
+            "admit.reach": 0,
+            "admit.merge": 8,
+            "admit.budget": 0,
+            "place.lambda_min": 0,
+            "place.injective": 0,
+            "evict.persistence": 0,
+            "evict.class_i": 0,
+            "evict.set_function": 0,
+            "decay.permanent": 16,
+            "route.signal": 0,
+            "retry.budget": 0,
+            "anneal.return": 0,
+            "expand.monotone": 0
+          },
+          "false_trip_mode": "a guard that the canary stream does not exercise (canary must be constructed to require each)"
+        },
+        "provenance": {}
+      },
+      {
+        "name": "launch_collapse",
+        "mode": 15,
+        "value": null,
+        "band": "S_marg = exp(H(p_bar)) >= 0.5 * N_a (marginal well usage across the batch)",
+        "tripped": false,
+        "applicable": false,
+        "severity_class": "I",
+        "cost_ms": 0.0054,
+        "lever": "",
+        "verb": "regularize|place",
+        "stage": "stream",
+        "detail": {
+          "why": "no launch-usage pass"
+        },
+        "provenance": {}
+      }
+    ],
+    "n_monitors": 15,
+    "n_applicable": 10,
+    "n_tripped": 5,
+    "tripped": [
+      "overdamping",
+      "addressing",
+      "certificates",
+      "starvation",
+      "guard_liveness"
+    ],
+    "inapplicable": [
+      "settle_argmin",
+      "objective_divergence",
+      "mass_gauge",
+      "dead_axis",
+      "launch_collapse"
+    ],
+    "self_probe": {
+      "acq": 0.3333333333333333,
+      "strict": 0.0,
+      "chance": 0.3333333333333333,
+      "n_probed": 3,
+      "retention": [
+        0.00045519422959229507,
+        0.0006657789535577821,
+        0.0006099688923157554
+      ],
+      "payload_abs": [
+        1.2154383659362793,
+        0.8837690353393555,
+        1.3347305059432983
+      ]
+    },
+    "blank_probe_acq": 0.3333333333333333,
+    "certificates": {
+      "injective": true,
+      "sep_over_sigma_q": 4.605174462000529,
+      "lambda_min": 0.0833723321557045,
+      "payload_gap": 0.11929214000701904,
+      "delta_read_basin_conditioned": 0.017576660960912704
+    },
+    "read_residual_median": 0.24109651148319244,
+    "read_rho_conv_median": 0.9928068220615387,
+    "sep": 0.6907761693000793,
+    "plan": {
+      "offers": 16,
+      "refused": 8,
+      "evicted": 0,
+      "n_live_end": 8,
+      "lane_mode": "serial",
+      "guards": {
+        "admit.priority": 0,
+        "admit.reach": 0,
+        "admit.merge": 8,
+        "admit.budget": 0,
+        "place.lambda_min": 0,
+        "place.injective": 0,
+        "evict.persistence": 0,
+        "evict.class_i": 0,
+        "evict.set_function": 0,
+        "decay.permanent": 16,
+        "route.signal": 0,
+        "retry.budget": 0,
+        "anneal.return": 0,
+        "expand.monotone": 0
+      }
+    },
+    "maturity_write_steps": 1,
+    "maturity_floor": 40,
+    "maturity_trips_by_arithmetic": true,
+    "wall_s": 11.863574028015137
+  },
+  "allocation_liveness_init": {
+    "grad_phi_addr_head": 0.010803748372421079,
+    "n_lanes": 2,
+    "policy_logits": null,
+    "policy_logits_note": "the C2W1 controller's policy is RULE-BASED, not logit-parameterised: there are no policy logits. phi's address head is the learned allocator.",
+    "slot_entropy_normalised_per_layer": [
+      0.75,
+      0.8501135698487963
+    ],
+    "slot_occupancy_per_layer": [
+      0.625,
+      0.75
+    ]
+  },
+  "gradient_probe_init": {
+    "n_lanes": 2,
+    "trajectory": {
+      "loss": 5.741523742675781,
+      "grad_phi": 0.010803748372421079,
+      "grad_psi": 0.0699728254933809,
+      "grad_store": 3.75238931627732e-05,
+      "grad_gamma": 3.4563518564934203e-06,
+      "grad_mass": 4.486605833179005e-06,
+      "grad_embed": 0.05768599281248454,
+      "wall_s": 9.05642318725586
+    },
+    "settled_point": {
+      "loss": 5.7421979904174805,
+      "grad_phi": 0.0,
+      "grad_psi": 0.06946140414340912,
+      "grad_store": 0.001289452924292886,
+      "grad_gamma": 0.0,
+      "grad_mass": 0.0,
+      "grad_embed": 0.05764611778679087,
+      "wall_s": 4.025617837905884
+    },
+    "plain_sgd_write": {
+      "trajectory": {
+        "grad_phi": 0.01079111838436798,
+        "grad_store": 1.6640944922355605e-05
+      },
+      "settled_point": {
+        "grad_phi": 2.0358032835291942e-06,
+        "grad_store": 0.0004747143893400571
+      },
+      "ratio_traj_over_point": 5300.668523169337
+    },
+    "ratio_traj_over_point": Infinity,
+    "wall_ratio_traj_over_point": 2.2496976990659867,
+    "wall_s_total": 28.489594221115112
+  },
+  "train_log": [
+    {
+      "arm": "mamba2",
+      "step": 0,
+      "nll": 5.657331466674805,
+      "bpc": 8.161804051636826,
+      "wall_s": 2.851053237915039,
+      "plan_s": 0.6703767776489258
+    },
+    {
+      "arm": "mamba2",
+      "step": 2,
+      "nll": 5.65876579284668,
+      "bpc": 8.163873346892009,
+      "wall_s": 2.937835216522217,
+      "plan_s": 0.7381589412689209
+    },
+    {
+      "arm": "clu_store",
+      "step": 0,
+      "nll": 5.655943870544434,
+      "bpc": 8.159802173580784,
+      "wall_s": 9.809757947921753,
+      "plan_s": 1.064523696899414
+    },
+    {
+      "arm": "clu_store",
+      "step": 2,
+      "nll": 5.704729080200195,
+      "bpc": 8.23018435361988,
+      "wall_s": 31.685225009918213,
+      "plan_s": 2.277916431427002
+    }
+  ],
+  "arms": {
+    "mamba2": {
+      "train": {
+        "loss_history": [
+          5.657331466674805,
+          5.700273036956787,
+          5.65876579284668
+        ],
+        "wall_s": 2.9378621578216553,
+        "plan_pass_s": 0.7381589412689209,
+        "plan_pass_frac": 0.2512571732828492,
+        "store_health": [],
+        "probe_series": []
+      },
+      "static": {
+        "nll": 5.609209775924683,
+        "bpc": 8.092379127032434,
+        "n_batches": 2
+      },
+      "dyneval": {
+        "bpc": 8.086490441066891,
+        "nll": 5.605128049850464,
+        "best_lr": 0.01,
+        "per_lr": {
+          "0.0001": 8.092320308965839,
+          "0.001": 8.091790946366483,
+          "0.01": 8.086490441066891
+        },
+        "n_batches": 2
+      },
+      "slices": {
+        "static": {
+          "unit": "token",
+          "edges": [
+            1,
+            8,
+            32,
+            128,
+            512,
+            2048,
+            8192
+          ],
+          "labels": [
+            "[1,8)",
+            "[8,32)",
+            "[32,128)",
+            "[128,512)",
+            "[512,2048)",
+            "[2048,8192)",
+            "[8192,inf)",
+            "never"
+          ],
+          "n_documents": 3,
+          "bins": {
+            "[1,8)": {
+              "n": 0,
+              "bpc": null,
+              "nll_nats": null,
+              "sufficient": false
+            },
+            "[8,32)": {
+              "n": 15,
+              "bpc": 8.065036155716239,
+              "nll_nats": 5.590257072448731,
+              "sufficient": true
+            },
+            "[32,128)": {
+              "n": 36,
+              "bpc": 8.107056852606036,
+              "nll_nats": 5.619383600023058,
+              "sufficient": true
+            },
+            "[128,512)": {
+              "n": 65,
+              "bpc": 8.36401635233871,
+              "nll_nats": 5.797494352780856,
+              "sufficient": true
+            },
+            "[512,2048)": {
+              "n": 2,
+              "bpc": null,
+              "nll_nats": null,
+              "sufficient": false
+            },
+            "[2048,8192)": {
+              "n": 63,
+              "bpc": 8.203470861736863,
+              "nll_nats": 5.686212698618571,
+              "sufficient": true
+            },
+            "[8192,inf)": {
+              "n": 21,
+              "bpc": 8.006777776356685,
+              "nll_nats": 5.549875441051665,
+              "sufficient": true
+            },
+            "never": {
+              "n": 682,
+              "bpc": 8.224854350017404,
+              "nll_nats": 5.701034603230765,
+              "sufficient": true
+            }
+          },
+          "n_scored": 884,
+          "bpc_all_binned": 8.221439605467399,
+          "min_n": 5,
+          "corpus": "enwik8",
+          "split": "test"
+        },
+        "dyneval": {
+          "unit": "token",
+          "edges": [
+            1,
+            8,
+            32,
+            128,
+            512,
+            2048,
+            8192
+          ],
+          "labels": [
+            "[1,8)",
+            "[8,32)",
+            "[32,128)",
+            "[128,512)",
+            "[512,2048)",
+            "[2048,8192)",
+            "[8192,inf)",
+            "never"
+          ],
+          "n_documents": 3,
+          "bins": {
+            "[1,8)": {
+              "n": 0,
+              "bpc": null,
+              "nll_nats": null,
+              "sufficient": false
+            },
+            "[8,32)": {
+              "n": 15,
+              "bpc": 8.065194563203193,
+              "nll_nats": 5.590366872151693,
+              "sufficient": true
+            },
+            "[32,128)": {
+              "n": 36,
+              "bpc": 8.10492679014755,
+              "nll_nats": 5.617907153235541,
+              "sufficient": true
+            },
+            "[128,512)": {
+              "n": 65,
+              "bpc": 8.360070414147959,
+              "nll_nats": 5.794759236849272,
+              "sufficient": true
+            },
+            "[512,2048)": {
+              "n": 2,
+              "bpc": null,
+              "nll_nats": null,
+              "sufficient": false
+            },
+            "[2048,8192)": {
+              "n": 63,
+              "bpc": 8.197644024008431,
+              "nll_nats": 5.682173842475528,
+              "sufficient": true
+            },
+            "[8192,inf)": {
+              "n": 21,
+              "bpc": 8.00445650194904,
+              "nll_nats": 5.548266456240699,
+              "sufficient": true
+            },
+            "never": {
+              "n": 682,
+              "bpc": 8.22229599460753,
+              "nll_nats": 5.699261286391541,
+              "sufficient": true
+            }
+          },
+          "n_scored": 884,
+          "bpc_all_binned": 8.218553521023956,
+          "min_n": 5,
+          "corpus": "enwik8",
+          "split": "test",
+          "dyneval_lr": 0.01
+        },
+        "dyneval_minus_static": {
+          "[1,8)": {
+            "gap_bpc": null,
+            "n_a": 0,
+            "n_b": 0
+          },
+          "[8,32)": {
+            "gap_bpc": 0.00015840748695339357,
+            "n_a": 15,
+            "n_b": 15
+          },
+          "[32,128)": {
+            "gap_bpc": -0.002130062458485682,
+            "n_a": 36,
+            "n_b": 36
+          },
+          "[128,512)": {
+            "gap_bpc": -0.003945938190751619,
+            "n_a": 65,
+            "n_b": 65
+          },
+          "[512,2048)": {
+            "gap_bpc": null,
+            "n_a": 2,
+            "n_b": 2
+          },
+          "[2048,8192)": {
+            "gap_bpc": -0.0058268377284314,
+            "n_a": 63,
+            "n_b": 63
+          },
+          "[8192,inf)": {
+            "gap_bpc": -0.0023212744076452907,
+            "n_a": 21,
+            "n_b": 21
+          },
+          "never": {
+            "gap_bpc": -0.00255835540987448,
+            "n_a": 682,
+            "n_b": 682
+          }
+        }
+      },
+      "wall_s": 26.9030659198761
+    },
+    "clu_store": {
+      "train": {
+        "loss_history": [
+          5.655943870544434,
+          5.705587863922119,
+          5.704729080200195
+        ],
+        "wall_s": 31.685232162475586,
+        "plan_pass_s": 2.277916431427002,
+        "plan_pass_frac": 0.07189205430928511,
+        "store_health": [
+          {
+            "applicable": true,
+            "n_live": 3,
+            "depth_median": 0.0006099688923157554,
+            "depth_min": 0.00045519422959229507,
+            "depth_max": 0.0006657789535577821,
+            "depth_per_item": [
+              0.00045519422959229507,
+              0.0006657789535577821,
+              0.0006099688923157554
+            ],
+            "qstar_payload": [
+              2.442492223053705e-05,
+              3.6548779462464154e-05,
+              -0.0002411217865301296
+            ],
+            "qstar_payload_spread": 0.00027767056599259377,
+            "payload_true": [
+              -1.2154383659362793,
+              -0.8837690353393555,
+              -1.3347305059432983
+            ],
+            "payload_true_spread": 0.45096147060394287,
+            "wall_s": 3.4407448768615723,
+            "at_step": 0,
+            "tag": "untrained",
+            "untrained_depth_median": 0.0006099688923157554,
+            "depth_ratio_vs_untrained": 1.0,
+            "untrained_qstar_payload_spread": 0.00027767056599259377,
+            "spread_ratio_vs_untrained": 1.0
+          },
+          {
+            "applicable": true,
+            "n_live": 3,
+            "depth_median": 0.0005988484209673456,
+            "depth_min": 0.00028545141433781085,
+            "depth_max": 0.0006205844820549299,
+            "depth_per_item": [
+              0.0005988484209673456,
+              0.00028545141433781085,
+              0.0006205844820549299
+            ],
+            "qstar_payload": [
+              4.643528882297687e-05,
+              0.00011259560415055603,
+              -0.00020122982095927
+            ],
+            "qstar_payload_spread": 0.00031382542510982603,
+            "payload_true": [
+              -1.2259501218795776,
+              -0.9013162851333618,
+              -1.3401106595993042
+            ],
+            "payload_true_spread": 0.4387943744659424,
+            "wall_s": 2.0921459197998047,
+            "at_step": 1,
+            "tag": "trained",
+            "untrained_depth_median": 0.0006099688923157554,
+            "depth_ratio_vs_untrained": 0.9817687893784375,
+            "untrained_qstar_payload_spread": 0.00027767056599259377,
+            "spread_ratio_vs_untrained": 1.1302077481204709
+          },
+          {
+            "applicable": true,
+            "n_live": 3,
+            "depth_median": 0.0004672197384709224,
+            "depth_min": 0.0001592982634614852,
+            "depth_max": 0.0006664295510027376,
+            "depth_per_item": [
+              0.0004672197384709224,
+              0.0001592982634614852,
+              0.0006664295510027376
+            ],
+            "qstar_payload": [
+              3.295049464213662e-05,
+              9.728726581670344e-05,
+              -0.00016990728909149766
+            ],
+            "qstar_payload_spread": 0.0002671945549082011,
+            "payload_true": [
+              -1.2318190336227417,
+              -0.9097213745117188,
+              -1.3435132503509521
+            ],
+            "payload_true_spread": 0.4337918758392334,
+            "wall_s": 0.5394299030303955,
+            "at_step": 2,
+            "tag": "trained",
+            "untrained_depth_median": 0.0006099688923157554,
+            "depth_ratio_vs_untrained": 0.7659730592114561,
+            "untrained_qstar_payload_spread": 0.00027767056599259377,
+            "spread_ratio_vs_untrained": 0.9622717984279541
+          }
+        ],
+        "probe_series": []
+      },
+      "static": {
+        "nll": 5.6749725341796875,
+        "bpc": 8.187254732242108,
+        "n_batches": 2
+      },
+      "dyneval": {
+        "bpc": 8.185285186924428,
+        "nll": 5.673607349395752,
+        "best_lr": 0.01,
+        "per_lr": {
+          "0.0001": 8.187234782254608,
+          "0.001": 8.187057296158919,
+          "0.01": 8.185285186924428
+        },
+        "n_batches": 2
+      },
+      "slices": {
+        "static": {
+          "unit": "token",
+          "edges": [
+            1,
+            8,
+            32,
+            128,
+            512,
+            2048,
+            8192
+          ],
+          "labels": [
+            "[1,8)",
+            "[8,32)",
+            "[32,128)",
+            "[128,512)",
+            "[512,2048)",
+            "[2048,8192)",
+            "[8192,inf)",
+            "never"
+          ],
+          "n_documents": 3,
+          "bins": {
+            "[1,8)": {
+              "n": 0,
+              "bpc": null,
+              "nll_nats": null,
+              "sufficient": false
+            },
+            "[8,32)": {
+              "n": 15,
+              "bpc": 8.006201808096876,
+              "nll_nats": 5.549476210276286,
+              "sufficient": true
+            },
+            "[32,128)": {
+              "n": 36,
+              "bpc": 8.215218327795881,
+              "nll_nats": 5.694355421596104,
+              "sufficient": true
+            },
+            "[128,512)": {
+              "n": 65,
+              "bpc": 8.382118134896016,
+              "nll_nats": 5.810041552323561,
+              "sufficient": true
+            },
+            "[512,2048)": {
+              "n": 2,
+              "bpc": null,
+              "nll_nats": null,
+              "sufficient": false
+            },
+            "[2048,8192)": {
+              "n": 63,
+              "bpc": 8.253656196384568,
+              "nll_nats": 5.720998521835085,
+              "sufficient": true
+            },
+            "[8192,inf)": {
+              "n": 21,
+              "bpc": 8.035002946602887,
+              "nll_nats": 5.569439638228643,
+              "sufficient": true
+            },
+            "never": {
+              "n": 682,
+              "bpc": 8.239981572787205,
+              "nll_nats": 5.711519995043354,
+              "sufficient": true
+            }
+          },
+          "n_scored": 884,
+          "bpc_all_binned": 8.243101218004812,
+          "min_n": 5,
+          "corpus": "enwik8",
+          "split": "test"
+        },
+        "dyneval": {
+          "unit": "token",
+          "edges": [
+            1,
+            8,
+            32,
+            128,
+            512,
+            2048,
+            8192
+          ],
+          "labels": [
+            "[1,8)",
+            "[8,32)",
+            "[32,128)",
+            "[128,512)",
+            "[512,2048)",
+            "[2048,8192)",
+            "[8192,inf)",
+            "never"
+          ],
+          "n_documents": 3,
+          "bins": {
+            "[1,8)": {
+              "n": 0,
+              "bpc": null,
+              "nll_nats": null,
+              "sufficient": false
+            },
+            "[8,32)": {
+              "n": 15,
+              "bpc": 8.004645342175547,
+              "nll_nats": 5.548397350311279,
+              "sufficient": true
+            },
+            "[32,128)": {
+              "n": 36,
+              "bpc": 8.213786056279496,
+              "nll_nats": 5.693362646632725,
+              "sufficient": true
+            },
+            "[128,512)": {
+              "n": 65,
+              "bpc": 8.380054999265624,
+              "nll_nats": 5.8086114956782415,
+              "sufficient": true
+            },
+            "[512,2048)": {
+              "n": 2,
+              "bpc": null,
+              "nll_nats": null,
+              "sufficient": false
+            },
+            "[2048,8192)": {
+              "n": 63,
+              "bpc": 8.251136241066925,
+              "nll_nats": 5.7192518219115245,
+              "sufficient": true
+            },
+            "[8192,inf)": {
+              "n": 21,
+              "bpc": 8.032461305091935,
+              "nll_nats": 5.567677906581333,
+              "sufficient": true
+            },
+            "never": {
+              "n": 682,
+              "bpc": 8.23851286717493,
+              "nll_nats": 5.710501965889134,
+              "sufficient": true
+            }
+          },
+          "n_scored": 884,
+          "bpc_all_binned": 8.241477521237794,
+          "min_n": 5,
+          "corpus": "enwik8",
+          "split": "test",
+          "dyneval_lr": 0.01
+        },
+        "dyneval_minus_static": {
+          "[1,8)": {
+            "gap_bpc": null,
+            "n_a": 0,
+            "n_b": 0
+          },
+          "[8,32)": {
+            "gap_bpc": -0.0015564659213289644,
+            "n_a": 15,
+            "n_b": 15
+          },
+          "[32,128)": {
+            "gap_bpc": -0.001432271516385697,
+            "n_a": 36,
+            "n_b": 36
+          },
+          "[128,512)": {
+            "gap_bpc": -0.0020631356303919546,
+            "n_a": 65,
+            "n_b": 65
+          },
+          "[512,2048)": {
+            "gap_bpc": null,
+            "n_a": 2,
+            "n_b": 2
+          },
+          "[2048,8192)": {
+            "gap_bpc": -0.002519955317643152,
+            "n_a": 63,
+            "n_b": 63
+          },
+          "[8192,inf)": {
+            "gap_bpc": -0.0025416415109518198,
+            "n_a": 21,
+            "n_b": 21
+          },
+          "never": {
+            "gap_bpc": -0.0014687056122753006,
+            "n_a": 682,
+            "n_b": 682
+          }
+        }
+      },
+      "blank_store": {
+        "nll": 5.674972295761108,
+        "bpc": 8.187254388276807,
+        "n_batches": 2
+      },
+      "monitors_during": [
+        {
+          "applicable": true,
+          "n_monitors": 15,
+          "n_applicable": 10,
+          "n_tripped": 5,
+          "tripped": [
+            "overdamping",
+            "addressing",
+            "certificates",
+            "starvation",
+            "guard_liveness"
+          ],
+          "inapplicable": [
+            "settle_argmin",
+            "objective_divergence",
+            "mass_gauge",
+            "dead_axis",
+            "launch_collapse"
+          ],
+          "self_probe": {
+            "acq": 0.3333333333333333,
+            "strict": 0.0,
+            "chance": 0.3333333333333333,
+            "n_probed": 3,
+            "retention": [
+              0.0005988484209673456,
+              0.00028545141433781085,
+              0.0006205844820549299
+            ],
+            "payload_abs": [
+              1.2259501218795776,
+              0.9013162851333618,
+              1.3401106595993042
+            ],
+            "write_loss": 5.705587863922119
+          },
+          "blank_probe_acq": 0.3333333333333333,
+          "certificates": {
+            "injective": true,
+            "sep_over_sigma_q": 4.422293106714885,
+            "lambda_min": 0.07794467359781265,
+            "payload_gap": 0.11416053771972656,
+            "delta_read_basin_conditioned": 0.01913219690322876
+          },
+          "read_residual_median": 0.2625260502099991,
+          "read_rho_conv_median": 0.9926060140132904,
+          "sep": 0.6633439660072327,
+          "plan": {
+            "offers": 16,
+            "refused": 8,
+            "evicted": 0,
+            "n_live_end": 8,
+            "lane_mode": "serial",
+            "guards": {
+              "admit.priority": 0,
+              "admit.reach": 0,
+              "admit.merge": 8,
+              "admit.budget": 0,
+              "place.lambda_min": 0,
+              "place.injective": 0,
+              "evict.persistence": 0,
+              "evict.class_i": 0,
+              "evict.set_function": 0,
+              "decay.permanent": 16,
+              "route.signal": 0,
+              "retry.budget": 0,
+              "anneal.return": 0,
+              "expand.monotone": 0
+            }
+          },
+          "maturity_write_steps": 1,
+          "maturity_floor": 40,
+          "maturity_trips_by_arithmetic": true,
+          "at_step": 1
+        },
+        {
+          "applicable": true,
+          "n_monitors": 15,
+          "n_applicable": 10,
+          "n_tripped": 5,
+          "tripped": [
+            "overdamping",
+            "addressing",
+            "certificates",
+            "starvation",
+            "guard_liveness"
+          ],
+          "inapplicable": [
+            "settle_argmin",
+            "objective_divergence",
+            "mass_gauge",
+            "dead_axis",
+            "launch_collapse"
+          ],
+          "self_probe": {
+            "acq": 0.3333333333333333,
+            "strict": 0.0,
+            "chance": 0.3333333333333333,
+            "n_probed": 3,
+            "retention": [
+              0.0004672197384709224,
+              0.0001592982634614852,
+              0.0006664295510027376
+            ],
+            "payload_abs": [
+              1.2318190336227417,
+              0.9097213745117188,
+              1.3435132503509521
+            ],
+            "write_loss": 5.704729080200195
+          },
+          "blank_probe_acq": 0.3333333333333333,
+          "certificates": {
+            "injective": true,
+            "sep_over_sigma_q": 4.340488115946452,
+            "lambda_min": 0.08571930229663849,
+            "payload_gap": 0.11169421672821045,
+            "delta_read_basin_conditioned": 0.019996771588921547
+          },
+          "read_residual_median": 0.2745194286108017,
+          "read_rho_conv_median": 0.9929291009902954,
+          "sep": 0.6510732173919678,
+          "plan": {
+            "offers": 16,
+            "refused": 8,
+            "evicted": 0,
+            "n_live_end": 8,
+            "lane_mode": "serial",
+            "guards": {
+              "admit.priority": 0,
+              "admit.reach": 0,
+              "admit.merge": 8,
+              "admit.budget": 0,
+              "place.lambda_min": 0,
+              "place.injective": 0,
+              "evict.persistence": 0,
+              "evict.class_i": 0,
+              "evict.set_function": 0,
+              "decay.permanent": 16,
+              "route.signal": 0,
+              "retry.budget": 0,
+              "anneal.return": 0,
+              "expand.monotone": 0
+            }
+          },
+          "maturity_write_steps": 1,
+          "maturity_floor": 40,
+          "maturity_trips_by_arithmetic": true,
+          "at_step": 2
+        }
+      ],
+      "monitors_final": {
+        "applicable": true,
+        "readings": [
+          {
+            "name": "overdamping",
+            "mode": 1,
+            "value": 0.99272388868996,
+            "band": "rho_conv <= 1e-06 and delta >= 0.02 (doctrine S2b)",
+            "tripped": true,
+            "applicable": true,
+            "severity_class": "III",
+            "cost_ms": 0.1263,
+            "lever": "gamma/steps",
+            "verb": "anneal|retry|stop",
+            "stage": "stream",
+            "detail": {
+              "rho_conv": 0.99272388868996,
+              "delta": 0.03071355272303088,
+              "corr_q0_qstar": 0.9999999977735774,
+              "grad_norm_q0_med": 0.27653150260448456,
+              "grad_norm_qstar_med": 0.2745194286108017,
+              "false_trip_mode": "flat minima => tiny |grad V(q0)| => rho_conv is noise (denominator floored)"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "settle_argmin",
+            "mode": 2,
+            "value": null,
+            "band": "rho_ex >= 0.1; D <= U by Prop D1; INAPPLICABLE if U < 0.01",
+            "tripped": false,
+            "applicable": false,
+            "severity_class": "IV",
+            "cost_ms": 0.0322,
+            "lever": "",
+            "verb": "ESCALATE (no verb by design)",
+            "stage": "stream",
+            "detail": {
+              "why": "U=0.0000 < u_floor => rho_ex is 0/0",
+              "D": 0.0,
+              "U": 0.0,
+              "prop_D1_holds": 1,
+              "false_trip_mode": "a genuinely tight query law puts all mass inside the balls => U -> 0 => 0/0",
+              "note": "no restoring verb: this monitor ESCALATES, never acts"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "vacuous_gate",
+            "mode": 3,
+            "value": 0.5,
+            "band": "fire-rate f in (0,1) strictly; C3 calibration rho_C3 in [1/3,3] and P[Delta>3B] <= 0.10 (C2W3 D3; the corr leg is RETIRED to a diagnostic); n_live/N_pack <= 0.95 (N74/N91); SC-3 deficit_rel <= B when the soft certificate is on",
+            "tripped": false,
+            "applicable": true,
+            "severity_class": "II",
+            "cost_ms": 0.0393,
+            "lever": "d_safe / address-space volume",
+            "verb": "admit|expand|stop",
+            "stage": "stream",
+            "detail": {
+              "fire_rate": 0.5,
+              "n_offers": 16,
+              "n_refused": 8,
+              "validity_corr_RETIRED_DIAGNOSTIC": null,
+              "validity_corr_domain": "valid only for d/s >~ 4; the gym runs at d/s ~ 1.9-2",
+              "c3_calibration_leg": {
+                "n_pairs": 0,
+                "n_qualifying": 0,
+                "lambda_floor": 0.0,
+                "delta_num": 1e-06,
+                "kappa": 3.0,
+                "eta": 0.1,
+                "rho_band": [
+                  0.3333333333333333,
+                  3.0
+                ],
+                "leg": "c3_first_order_calibration (D3: replaces corr(margin, drift))",
+                "applicable": 0,
+                "tripped": 0,
+                "rho_c3": null,
+                "violation_rate": null,
+                "why": "fewer than 3 qualifying pairs (lambda_min <= floor => the site is not a minimum => #8-N3's trip, not this one's)"
+              },
+              "soft_certificate_budget": null,
+              "utilisation": 0.375,
+              "false_trip_mode": "genuinely well-separated proposals give f=0 legitimately (leg ii must agree)"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "blank",
+            "mode": 4,
+            "value": 0.3333333333333333,
+            "band": "acc_blank < chance + 3*se, chance = empirical marginal (N68/N110)",
+            "tripped": false,
+            "applicable": true,
+            "severity_class": "I",
+            "cost_ms": 0.0054,
+            "lever": "read-out / instrument",
+            "verb": "stop",
+            "stage": "stream",
+            "detail": {
+              "score": 0.3333333333333333,
+              "chance": 0.3333333333333333,
+              "se": 0.2721655269759087,
+              "bar": 1.1498299142610593,
+              "metric": "self-probe decode (nearest stored payload)",
+              "representation": "trajectory psi",
+              "false_trip_mode": "a skewed marginal label distribution makes 1/K the wrong bar (chance is empirical)"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "addressing",
+            "mode": 5,
+            "value": 0.3333333333333333,
+            "band": "acq >= 0.9 (chance 1/K); w19 violation 0.042",
+            "tripped": true,
+            "applicable": true,
+            "severity_class": "III",
+            "cost_ms": 0.0054,
+            "lever": "addressing / read schedule",
+            "verb": "anneal|route|place",
+            "stage": "stream",
+            "detail": {
+              "acq_basin": 0.3333333333333333,
+              "acq_strict": 0.0,
+              "chance": 0.3333333333333333,
+              "n_probed": 3,
+              "false_trip_mode": "an item deliberately decayed below the amp floor self-probes badly (excluded)"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "objective_divergence",
+            "mode": 6,
+            "value": null,
+            "band": "sign agreement over 3 windows (w25/w26 violation), dead-band eps = 1e-09 * max|loss| (gym R2), eps_acq = 1e-09 * max|acq| (fb4 R4)",
+            "tripped": false,
+            "applicable": false,
+            "severity_class": "III",
+            "cost_ms": 0.0124,
+            "lever": "",
+            "verb": "stop|consolidate",
+            "stage": "stream",
+            "detail": {
+              "why": "history 3/4"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "mass_gauge",
+            "mode": 7,
+            "value": null,
+            "band": "pytest gauge: trajectory-wise invariance, Newtonian exact; relativistic breaks as O(1/c^2) (SCOPE, not a pass)",
+            "tripped": false,
+            "applicable": false,
+            "severity_class": "I",
+            "cost_ms": 0.006,
+            "lever": "",
+            "verb": "",
+            "stage": "stream",
+            "detail": {
+              "why": "gauge test runs in pytest (test_monitors.py), not in the stream",
+              "kinetic_mode": "newtonian_learned",
+              "false_trip_mode": "endpoint-only comparison passes vacuously once both runs settle (compare trajectories)"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "certificates",
+            "mode": 8,
+            "value": 4.340488115946452,
+            "band": "N1 injective; N2 sep/sigma_q >= 5.15; N3 lambda_min > 0; N4 gap/(2*delta_read) >= 1 (doctrine R1)",
+            "tripped": true,
+            "applicable": true,
+            "severity_class": "II",
+            "cost_ms": 0.0076,
+            "lever": "write operator / placement",
+            "verb": "place|admit|evict (stop under a global-support write)",
+            "stage": "stream",
+            "detail": {
+              "failed": [
+                "N2"
+              ],
+              "N1_injective": 1,
+              "N2_sep_over_sigma_q": 4.340488115946452,
+              "N3_lambda_min": 0.08571930229663849,
+              "N4_ratio": 2.7928062345346385,
+              "payload_gap": 0.11169421672821045,
+              "delta_read": 0.019996771588921547,
+              "erf_accuracy_at_margin": null,
+              "false_trip_mode": "a declared register/coset shares a site by design => N1 fires (exempt declared cosets)"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "lifetimes",
+            "mode": 9,
+            "value": 0.0003531705500365339,
+            "band": "Delta_ret <= 0.1 (effect size, doctrine R4); corr reported as direction only",
+            "tripped": false,
+            "applicable": true,
+            "severity_class": "IV",
+            "cost_ms": 0.1339,
+            "lever": "payload excursion / decay law",
+            "verb": "decay (uncleanable at large excursion)",
+            "stage": "stream",
+            "detail": {
+              "delta_retention": 0.0003531705500365339,
+              "corr_direction_only": 0.9887856865477336,
+              "n_items": 3,
+              "known_uncleanable": "at large excursion the fix is C1W27 gated stiffness",
+              "false_trip_mode": "items with deliberately different leak_i show intended spread (group within a leak cohort)"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "dead_axis",
+            "mode": 10,
+            "value": null,
+            "band": "every DECLARED knob is read at least once; each swept knob moves an observable",
+            "tripped": false,
+            "applicable": false,
+            "severity_class": "I",
+            "cost_ms": 0.0031,
+            "lever": "",
+            "verb": "stop",
+            "stage": "stream",
+            "detail": {
+              "why": "no config access counts"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "reach",
+            "mode": 11,
+            "value": Infinity,
+            "band": "a_U - |a_i| > 0 for every live item (saddle criterion, 0 free params)",
+            "tripped": false,
+            "applicable": true,
+            "severity_class": "II",
+            "cost_ms": 0.0167,
+            "lever": "payload excursion / |c| / width",
+            "verb": "place|anneal|route|admit",
+            "stage": "stream",
+            "detail": {
+              "worst_margin": Infinity,
+              "n_unreachable": 0,
+              "n_items": 3,
+              "unreachable_ids": [],
+              "a_U": [
+                Infinity,
+                Infinity,
+                Infinity
+              ],
+              "false_trip_mode": "single-well criterion: no neighbour term => mis-flags crowded cells (pair with #12 above 80% utilisation)"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "starvation",
+            "mode": 12,
+            "value": 0.0,
+            "band": "fairness >= 0.5; C3 ratio <= 2x the first-order bound; oldest-item retention drop <= 0.1",
+            "tripped": true,
+            "applicable": true,
+            "severity_class": "II",
+            "cost_ms": 0.0043,
+            "lever": "write operator / allocation",
+            "verb": "admit|place|expand|evict",
+            "stage": "stream",
+            "detail": {
+              "fairness": 0.0,
+              "c3_ratio": null,
+              "oldest_retention_drop": 0.7609675873139203,
+              "false_trip_mode": "an intentional update of an already-live item looks like starvation (exempt same-id writes)"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "maturity",
+            "mode": 13,
+            "value": 1.0,
+            "band": "write_steps >= 40 to PROMOTE a reading (N94)",
+            "tripped": false,
+            "applicable": true,
+            "severity_class": "I",
+            "cost_ms": 0.008,
+            "lever": "",
+            "verb": "",
+            "stage": "stream",
+            "detail": {
+              "promotable": 0,
+              "false_trip_mode": "n/a \u2014 not a trip"
+            },
+            "provenance": {
+              "write_steps": 1,
+              "epochs": null,
+              "wall_clock_s": 0.0,
+              "note": "readings below the maturity threshold may be logged, never promoted to a band statement"
+            }
+          },
+          {
+            "name": "guard_liveness",
+            "mode": 14,
+            "value": 12.0,
+            "band": "every designed guard fires >= once on the canary stream",
+            "tripped": true,
+            "applicable": true,
+            "severity_class": "I",
+            "cost_ms": 0.0092,
+            "lever": "controller policy / guard calibration",
+            "verb": "stop",
+            "stage": "stream",
+            "detail": {
+              "never_fired": [
+                "admit.budget",
+                "admit.priority",
+                "admit.reach",
+                "anneal.return",
+                "evict.class_i",
+                "evict.persistence",
+                "evict.set_function",
+                "expand.monotone",
+                "place.injective",
+                "place.lambda_min",
+                "retry.budget",
+                "route.signal"
+              ],
+              "counts": {
+                "admit.priority": 0,
+                "admit.reach": 0,
+                "admit.merge": 8,
+                "admit.budget": 0,
+                "place.lambda_min": 0,
+                "place.injective": 0,
+                "evict.persistence": 0,
+                "evict.class_i": 0,
+                "evict.set_function": 0,
+                "decay.permanent": 16,
+                "route.signal": 0,
+                "retry.budget": 0,
+                "anneal.return": 0,
+                "expand.monotone": 0
+              },
+              "false_trip_mode": "a guard that the canary stream does not exercise (canary must be constructed to require each)"
+            },
+            "provenance": {}
+          },
+          {
+            "name": "launch_collapse",
+            "mode": 15,
+            "value": null,
+            "band": "S_marg = exp(H(p_bar)) >= 0.5 * N_a (marginal well usage across the batch)",
+            "tripped": false,
+            "applicable": false,
+            "severity_class": "I",
+            "cost_ms": 0.0027,
+            "lever": "",
+            "verb": "regularize|place",
+            "stage": "stream",
+            "detail": {
+              "why": "no launch-usage pass"
+            },
+            "provenance": {}
+          }
+        ],
+        "n_monitors": 15,
+        "n_applicable": 10,
+        "n_tripped": 5,
+        "tripped": [
+          "overdamping",
+          "addressing",
+          "certificates",
+          "starvation",
+          "guard_liveness"
+        ],
+        "inapplicable": [
+          "settle_argmin",
+          "objective_divergence",
+          "mass_gauge",
+          "dead_axis",
+          "launch_collapse"
+        ],
+        "self_probe": {
+          "acq": 0.3333333333333333,
+          "strict": 0.0,
+          "chance": 0.3333333333333333,
+          "n_probed": 3,
+          "retention": [
+            0.0004672197384709224,
+            0.0001592982634614852,
+            0.0006664295510027376
+          ],
+          "payload_abs": [
+            1.2318190336227417,
+            0.9097213745117188,
+            1.3435132503509521
+          ],
+          "write_loss": 5.704729080200195
+        },
+        "blank_probe_acq": 0.3333333333333333,
+        "certificates": {
+          "injective": true,
+          "sep_over_sigma_q": 4.340488115946452,
+          "lambda_min": 0.08571930229663849,
+          "payload_gap": 0.11169421672821045,
+          "delta_read_basin_conditioned": 0.019996771588921547
+        },
+        "read_residual_median": 0.2745194286108017,
+        "read_rho_conv_median": 0.9929291009902954,
+        "sep": 0.6510732173919678,
+        "plan": {
+          "offers": 16,
+          "refused": 8,
+          "evicted": 0,
+          "n_live_end": 8,
+          "lane_mode": "serial",
+          "guards": {
+            "admit.priority": 0,
+            "admit.reach": 0,
+            "admit.merge": 8,
+            "admit.budget": 0,
+            "place.lambda_min": 0,
+            "place.injective": 0,
+            "evict.persistence": 0,
+            "evict.class_i": 0,
+            "evict.set_function": 0,
+            "decay.permanent": 16,
+            "route.signal": 0,
+            "retry.budget": 0,
+            "anneal.return": 0,
+            "expand.monotone": 0
+          }
+        },
+        "maturity_write_steps": 1,
+        "maturity_floor": 40,
+        "maturity_trips_by_arithmetic": true
+      },
+      "gradient_probe_final": {
+        "n_lanes": 2,
+        "trajectory": {
+          "loss": 5.694564342498779,
+          "grad_phi": 0.013296872292397668,
+          "grad_psi": 0.07279927146765935,
+          "grad_store": 2.2386263212548293e-05,
+          "grad_gamma": 2.9184449494870454e-06,
+          "grad_mass": 6.1985055917293035e-06,
+          "grad_embed": 0.057429127981184463,
+          "wall_s": 9.28722095489502
+        },
+        "settled_point": {
+          "loss": 5.6952900886535645,
+          "grad_phi": 0.0,
+          "grad_psi": 0.07242739843752975,
+          "grad_store": 0.0007315892531818025,
+          "grad_gamma": 0.0,
+          "grad_mass": 0.0,
+          "grad_embed": 0.05740625759461113,
+          "wall_s": 4.5704920291900635
+        },
+        "plain_sgd_write": {
+          "trajectory": {
+            "grad_phi": 0.013302262369269307,
+            "grad_store": 1.1245165453053734e-05
+          },
+          "settled_point": {
+            "grad_phi": 1.208554378277673e-06,
+            "grad_store": 0.0004407648934762664
+          },
+          "ratio_traj_over_point": 11006.75535032734
+        },
+        "ratio_traj_over_point": Infinity,
+        "wall_ratio_traj_over_point": 2.031995876063437
+      },
+      "selectors_final": {
+        "gamma_address": [
+          0.05007539689540863,
+          0.050068244338035583
+        ],
+        "gamma_read": [
+          0.020030032843351364,
+          0.02002444677054882
+        ],
+        "mean_mass": [
+          1.000382900238037,
+          0.9998577833175659
+        ]
+      },
+      "wall_s": 127.34533905982971
+    }
+  },
+  "swap_table": {
+    "mamba2": {
+      "bpc_static": 8.092379127032434,
+      "bpc_dyneval": 8.086490441066891,
+      "params_total": 165754,
+      "cell_params": 59322,
+      "cell_state_bytes": 86484,
+      "wall_s": 26.9030659198761,
+      "margin_vs_clu_static": 0.09487560520967442,
+      "margin_vs_clu_dyneval": 0.09879474585753734
+    },
+    "clu_store": {
+      "bpc_static": 8.187254732242108,
+      "bpc_dyneval": 8.185285186924428,
+      "params_total": 59318,
+      "cell_params": 6104,
+      "cell_state_bytes": 20576,
+      "wall_s": 127.34533905982971,
+      "margin_vs_clu_static": 0.0,
+      "margin_vs_clu_dyneval": 0.0
+    }
+  },
+  "wall_s_total": 44.53393507003784
+}

@@ -1,0 +1,696 @@
+{
+  "budgets_floats": [
+    6280
+  ],
+  "bytes_per_float": 4,
+  "seeds": [
+    2
+  ],
+  "byte_accounting": {
+    "floats_per_stored_item": {
+      "clu_entry": 41,
+      "knn_phi_same_keys": 41,
+      "knn_phi_ringbuffer": 34,
+      "er": 785,
+      "derpp": 795,
+      "gdumb": 785,
+      "icarl": 785,
+      "finetune": 0,
+      "ewc": 0,
+      "si": 0,
+      "lwf": 0,
+      "joint": 0
+    },
+    "fixed_state_floats": {
+      "finetune": 478410,
+      "ewc": 1435230,
+      "si": 1435230,
+      "lwf": 956820,
+      "er": 478410,
+      "derpp": 478410,
+      "icarl": 478410,
+      "gdumb": 478410,
+      "joint": 478410,
+      "clu_entry": 25872,
+      "knn_phi_same_keys": 25872,
+      "knn_phi_ringbuffer": 25872
+    },
+    "note": "per-item floats are the frontier's x-axis (the field's 'buffer size'); fixed state is reported and carried into the secondary all-fixed-charged frontier. The CLU entry runs ZERO gradient steps: it has no backbone, so charging its \u03c6 while not charging the baselines' backbone would be a double standard."
+  },
+  "phi_provenance": {
+    "arm": "pca",
+    "k": 32,
+    "frozen": true,
+    "regime": "task1_only",
+    "role": "PRIMARY \u2014 every headline number",
+    "may_see": "task-1 classes only [0, 1]",
+    "n_fit_pool": 2087,
+    "frozen_from": "end of task 1 (never refit, never re-keyed)",
+    "phi_dim": 32
+  },
+  "rows": [
+    {
+      "method": "finetune",
+      "class": "rehearsal-free",
+      "seed": 2,
+      "budget_floats": null,
+      "metrics": {
+        "ACC": 0.1964,
+        "BWT": -0.99275,
+        "forgetting": 0.99275,
+        "LA": 0.9906,
+        "final_per_task": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.982
+        ]
+      },
+      "memory_items": 0,
+      "memory_floats": 0,
+      "floats_per_item": 0,
+      "fixed_state_floats": 478410,
+      "budget_independent": true
+    },
+    {
+      "method": "ewc",
+      "class": "rehearsal-free",
+      "seed": 2,
+      "budget_floats": null,
+      "metrics": {
+        "ACC": 0.1964,
+        "BWT": -0.9924999999999999,
+        "forgetting": 0.9924999999999999,
+        "LA": 0.9904,
+        "final_per_task": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.982
+        ]
+      },
+      "memory_items": 0,
+      "memory_floats": 0,
+      "floats_per_item": 0,
+      "fixed_state_floats": 1435230,
+      "budget_independent": true
+    },
+    {
+      "method": "si",
+      "class": "rehearsal-free",
+      "seed": 2,
+      "budget_floats": null,
+      "metrics": {
+        "ACC": 0.19519999999999998,
+        "BWT": -0.99,
+        "forgetting": 0.99,
+        "LA": 0.9872,
+        "final_per_task": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.976
+        ]
+      },
+      "memory_items": 0,
+      "memory_floats": 0,
+      "floats_per_item": 0,
+      "fixed_state_floats": 1435230,
+      "budget_independent": true
+    },
+    {
+      "method": "lwf",
+      "class": "rehearsal-free",
+      "seed": 2,
+      "budget_floats": null,
+      "metrics": {
+        "ACC": 0.19619999999999999,
+        "BWT": -0.993,
+        "forgetting": 0.993,
+        "LA": 0.9906,
+        "final_per_task": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.981
+        ]
+      },
+      "memory_items": 0,
+      "memory_floats": 0,
+      "floats_per_item": 0,
+      "fixed_state_floats": 956820,
+      "budget_independent": true
+    },
+    {
+      "method": "joint",
+      "class": "upper-bound",
+      "seed": 2,
+      "budget_floats": null,
+      "metrics": {
+        "ACC": 0.9433999999999999,
+        "BWT": -0.030999999999999972,
+        "forgetting": 0.030999999999999972,
+        "LA": 0.9681999999999998,
+        "final_per_task": [
+          0.977,
+          0.944,
+          0.928,
+          0.932,
+          0.936
+        ]
+      },
+      "memory_items": 0,
+      "memory_floats": 0,
+      "floats_per_item": 0,
+      "fixed_state_floats": 478410,
+      "budget_independent": true
+    },
+    {
+      "method": "constant_predictor",
+      "class": "degenerate-control",
+      "seed": 2,
+      "budget_floats": null,
+      "metrics": {
+        "ACC": 0.11040000000000001,
+        "BWT": 0.0,
+        "forgetting": 0.0,
+        "LA": 0.11040000000000001,
+        "final_per_task": [
+          0.552,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "memory_items": 1,
+      "memory_floats": 1,
+      "floats_per_item": 1,
+      "fixed_state_floats": 0,
+      "budget_independent": true
+    },
+    {
+      "method": "clu_entry",
+      "class": "clu",
+      "seed": 2,
+      "budget_floats": 6280,
+      "metrics": {
+        "ACC": 0.6646000000000001,
+        "BWT": -0.186,
+        "forgetting": 0.186,
+        "LA": 0.8134,
+        "final_per_task": [
+          0.791,
+          0.709,
+          0.556,
+          0.74,
+          0.527
+        ]
+      },
+      "memory_items": 153,
+      "memory_floats": 6273,
+      "floats_per_item": 41,
+      "fixed_state_floats": 25872,
+      "budget_independent": false
+    },
+    {
+      "method": "knn_phi_same_keys",
+      "class": "launder",
+      "seed": 2,
+      "budget_floats": 6280,
+      "metrics": {
+        "ACC": 0.692,
+        "BWT": -0.17175,
+        "forgetting": 0.17175,
+        "LA": 0.8294,
+        "final_per_task": [
+          0.831,
+          0.712,
+          0.573,
+          0.776,
+          0.568
+        ]
+      },
+      "memory_items": 153,
+      "memory_floats": 6273,
+      "floats_per_item": 41,
+      "fixed_state_floats": 25872,
+      "budget_independent": false
+    },
+    {
+      "method": "knn_phi_ringbuffer",
+      "class": "launder",
+      "seed": 2,
+      "budget_floats": 6280,
+      "metrics": {
+        "ACC": 0.737,
+        "BWT": -0.139,
+        "forgetting": 0.139,
+        "LA": 0.8482000000000001,
+        "final_per_task": [
+          0.872,
+          0.746,
+          0.693,
+          0.786,
+          0.588
+        ]
+      },
+      "memory_items": 184,
+      "memory_floats": 6256,
+      "floats_per_item": 34,
+      "fixed_state_floats": 25872,
+      "budget_independent": false
+    },
+    {
+      "method": "er",
+      "class": "replay",
+      "seed": 2,
+      "budget_floats": 6280,
+      "metrics": {
+        "ACC": 0.271,
+        "BWT": -0.899,
+        "forgetting": 0.899,
+        "LA": 0.9902,
+        "final_per_task": [
+          0.236,
+          0.011,
+          0.001,
+          0.125,
+          0.982
+        ]
+      },
+      "memory_items": 8,
+      "memory_floats": 6280,
+      "floats_per_item": 785,
+      "fixed_state_floats": 478410,
+      "budget_independent": false
+    },
+    {
+      "method": "derpp",
+      "class": "replay",
+      "seed": 2,
+      "budget_floats": 6280,
+      "metrics": {
+        "ACC": 0.3092,
+        "BWT": -0.85,
+        "forgetting": 0.85,
+        "LA": 0.9892,
+        "final_per_task": [
+          0.291,
+          0.0,
+          0.006,
+          0.268,
+          0.981
+        ]
+      },
+      "memory_items": 7,
+      "memory_floats": 5565,
+      "floats_per_item": 795,
+      "fixed_state_floats": 478410,
+      "budget_independent": false
+    },
+    {
+      "method": "icarl",
+      "class": "replay",
+      "seed": 2,
+      "budget_floats": 6280,
+      "metrics": {
+        "ACC": 0.6244,
+        "BWT": -0.18775,
+        "forgetting": 0.18775,
+        "LA": 0.7746000000000001,
+        "final_per_task": [
+          0.917,
+          0.868,
+          0.617,
+          0.72,
+          0.0
+        ]
+      },
+      "memory_items": 8,
+      "memory_floats": 6280,
+      "floats_per_item": 785,
+      "fixed_state_floats": 478410,
+      "budget_independent": false
+    },
+    {
+      "method": "gdumb",
+      "class": "replay",
+      "seed": 2,
+      "budget_floats": 6280,
+      "metrics": {
+        "ACC": 0.4120000000000001,
+        "BWT": -0.10275,
+        "forgetting": 0.10575,
+        "LA": 0.49420000000000003,
+        "final_per_task": [
+          0.741,
+          0.403,
+          0.237,
+          0.679,
+          0.0
+        ]
+      },
+      "memory_items": 8,
+      "memory_floats": 6280,
+      "floats_per_item": 785,
+      "fixed_state_floats": 478410,
+      "budget_independent": false
+    }
+  ],
+  "table": [
+    {
+      "budget_floats": null,
+      "method": "constant_predictor",
+      "class": "degenerate-control",
+      "n_seeds": 1,
+      "memory_items": 1.0,
+      "memory_floats": 1.0,
+      "fixed_state_floats": 0,
+      "budget_independent": true,
+      "ACC": 0.11040000000000001,
+      "ACC_sd": 0.0,
+      "BWT": 0.0,
+      "BWT_sd": 0.0,
+      "forgetting": 0.0,
+      "forgetting_sd": 0.0,
+      "LA": 0.11040000000000001,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": null,
+      "method": "ewc",
+      "class": "rehearsal-free",
+      "n_seeds": 1,
+      "memory_items": 0.0,
+      "memory_floats": 0.0,
+      "fixed_state_floats": 1435230,
+      "budget_independent": true,
+      "ACC": 0.1964,
+      "ACC_sd": 0.0,
+      "BWT": -0.9924999999999999,
+      "BWT_sd": 0.0,
+      "forgetting": 0.9924999999999999,
+      "forgetting_sd": 0.0,
+      "LA": 0.9904,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": null,
+      "method": "finetune",
+      "class": "rehearsal-free",
+      "n_seeds": 1,
+      "memory_items": 0.0,
+      "memory_floats": 0.0,
+      "fixed_state_floats": 478410,
+      "budget_independent": true,
+      "ACC": 0.1964,
+      "ACC_sd": 0.0,
+      "BWT": -0.99275,
+      "BWT_sd": 0.0,
+      "forgetting": 0.99275,
+      "forgetting_sd": 0.0,
+      "LA": 0.9906,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": null,
+      "method": "joint",
+      "class": "upper-bound",
+      "n_seeds": 1,
+      "memory_items": 0.0,
+      "memory_floats": 0.0,
+      "fixed_state_floats": 478410,
+      "budget_independent": true,
+      "ACC": 0.9433999999999999,
+      "ACC_sd": 0.0,
+      "BWT": -0.030999999999999972,
+      "BWT_sd": 0.0,
+      "forgetting": 0.030999999999999972,
+      "forgetting_sd": 0.0,
+      "LA": 0.9681999999999998,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": null,
+      "method": "lwf",
+      "class": "rehearsal-free",
+      "n_seeds": 1,
+      "memory_items": 0.0,
+      "memory_floats": 0.0,
+      "fixed_state_floats": 956820,
+      "budget_independent": true,
+      "ACC": 0.19619999999999999,
+      "ACC_sd": 0.0,
+      "BWT": -0.993,
+      "BWT_sd": 0.0,
+      "forgetting": 0.993,
+      "forgetting_sd": 0.0,
+      "LA": 0.9906,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": null,
+      "method": "si",
+      "class": "rehearsal-free",
+      "n_seeds": 1,
+      "memory_items": 0.0,
+      "memory_floats": 0.0,
+      "fixed_state_floats": 1435230,
+      "budget_independent": true,
+      "ACC": 0.19519999999999998,
+      "ACC_sd": 0.0,
+      "BWT": -0.99,
+      "BWT_sd": 0.0,
+      "forgetting": 0.99,
+      "forgetting_sd": 0.0,
+      "LA": 0.9872,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 6280,
+      "method": "clu_entry",
+      "class": "clu",
+      "n_seeds": 1,
+      "memory_items": 153.0,
+      "memory_floats": 6273.0,
+      "fixed_state_floats": 25872,
+      "budget_independent": false,
+      "ACC": 0.6646000000000001,
+      "ACC_sd": 0.0,
+      "BWT": -0.186,
+      "BWT_sd": 0.0,
+      "forgetting": 0.186,
+      "forgetting_sd": 0.0,
+      "LA": 0.8134,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 6280,
+      "method": "derpp",
+      "class": "replay",
+      "n_seeds": 1,
+      "memory_items": 7.0,
+      "memory_floats": 5565.0,
+      "fixed_state_floats": 478410,
+      "budget_independent": false,
+      "ACC": 0.3092,
+      "ACC_sd": 0.0,
+      "BWT": -0.85,
+      "BWT_sd": 0.0,
+      "forgetting": 0.85,
+      "forgetting_sd": 0.0,
+      "LA": 0.9892,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 6280,
+      "method": "er",
+      "class": "replay",
+      "n_seeds": 1,
+      "memory_items": 8.0,
+      "memory_floats": 6280.0,
+      "fixed_state_floats": 478410,
+      "budget_independent": false,
+      "ACC": 0.271,
+      "ACC_sd": 0.0,
+      "BWT": -0.899,
+      "BWT_sd": 0.0,
+      "forgetting": 0.899,
+      "forgetting_sd": 0.0,
+      "LA": 0.9902,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 6280,
+      "method": "gdumb",
+      "class": "replay",
+      "n_seeds": 1,
+      "memory_items": 8.0,
+      "memory_floats": 6280.0,
+      "fixed_state_floats": 478410,
+      "budget_independent": false,
+      "ACC": 0.4120000000000001,
+      "ACC_sd": 0.0,
+      "BWT": -0.10275,
+      "BWT_sd": 0.0,
+      "forgetting": 0.10575,
+      "forgetting_sd": 0.0,
+      "LA": 0.49420000000000003,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 6280,
+      "method": "icarl",
+      "class": "replay",
+      "n_seeds": 1,
+      "memory_items": 8.0,
+      "memory_floats": 6280.0,
+      "fixed_state_floats": 478410,
+      "budget_independent": false,
+      "ACC": 0.6244,
+      "ACC_sd": 0.0,
+      "BWT": -0.18775,
+      "BWT_sd": 0.0,
+      "forgetting": 0.18775,
+      "forgetting_sd": 0.0,
+      "LA": 0.7746000000000001,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 6280,
+      "method": "knn_phi_ringbuffer",
+      "class": "launder",
+      "n_seeds": 1,
+      "memory_items": 184.0,
+      "memory_floats": 6256.0,
+      "fixed_state_floats": 25872,
+      "budget_independent": false,
+      "ACC": 0.737,
+      "ACC_sd": 0.0,
+      "BWT": -0.139,
+      "BWT_sd": 0.0,
+      "forgetting": 0.139,
+      "forgetting_sd": 0.0,
+      "LA": 0.8482000000000001,
+      "LA_sd": 0.0
+    },
+    {
+      "budget_floats": 6280,
+      "method": "knn_phi_same_keys",
+      "class": "launder",
+      "n_seeds": 1,
+      "memory_items": 153.0,
+      "memory_floats": 6273.0,
+      "fixed_state_floats": 25872,
+      "budget_independent": false,
+      "ACC": 0.692,
+      "ACC_sd": 0.0,
+      "BWT": -0.17175,
+      "BWT_sd": 0.0,
+      "forgetting": 0.17175,
+      "forgetting_sd": 0.0,
+      "LA": 0.8294,
+      "LA_sd": 0.0
+    }
+  ],
+  "store_saturation": [
+    {
+      "seed": 2,
+      "budget_floats": 6280,
+      "budget_items": 153,
+      "n_live_end": 153,
+      "ring_items": 184,
+      "ring_budget_items": 184,
+      "admitted_fraction_per_task": [
+        0.6725,
+        0.9485,
+        0.701,
+        0.545,
+        0.5795
+      ],
+      "refused_spacing_per_task": [
+        655,
+        103,
+        598,
+        910,
+        841
+      ],
+      "refused_full": 0,
+      "fill_fraction": 1.0,
+      "saturated": false,
+      "geometry": {
+        "n_stored": 153,
+        "median_nn_addresses": 4.464637083255337,
+        "well_width_s": 0.8666103792009073,
+        "sigma_q_norm": 4.209350703793861,
+        "packing_slack_corrected": 0.34214433818245876,
+        "packing_slack_note": "slack = median_NN / (3.1\u00b7max(s, \u03c3_q)), \u03c3_q = RMS\u2016\u03c6(test query) \u2212 nearest address\u2016 (a NORM, per the w24 unit correction). slack < 1 \u21d2 the store runs past the packing bound \u2014 intrinsic to classification, and the source of the geometric ambiguity Item 3 measures."
+      }
+    }
+  ],
+  "baseline_tuning": [],
+  "verdict": {
+    "per_budget": {
+      "6280": {
+        "clu_forgetting": 0.186,
+        "clu_forgetting_sd": 0.0,
+        "clu_ACC": 0.6646000000000001,
+        "clu_LA": 0.8134,
+        "best_LA_here": 0.9902,
+        "vs_replay": {
+          "best_method": "gdumb",
+          "best_forgetting": 0.10575,
+          "best_forgetting_sd": 0.0,
+          "clu_minus_best": 0.08025,
+          "clu_lower": false,
+          "separated_by_sd": false
+        },
+        "vs_launder": {
+          "best_method": "knn_phi_ringbuffer",
+          "best_forgetting": 0.139,
+          "best_forgetting_sd": 0.0,
+          "clu_minus_best": 0.046999999999999986,
+          "clu_lower": false,
+          "separated_by_sd": false
+        },
+        "vs_all_memory_methods": {
+          "best_method": "gdumb",
+          "best_forgetting": 0.10575,
+          "best_forgetting_sd": 0.0,
+          "clu_minus_best": 0.08025,
+          "clu_lower": false,
+          "separated_by_sd": false
+        },
+        "la_within_band": false,
+        "dominates": false,
+        "dominates_with_sd_separation": false
+      }
+    },
+    "dominates_at_budgets": [],
+    "beats_replay_only_at_budgets": [],
+    "launder_never_beaten": true,
+    "reading": "CLAIM DEAD on this axis \u2014 CLU dominates no region of the forgetting-vs-bytes frontier.",
+    "rules": "PREREG \u00a75. Dominance = strictly lowest forgetting among ALL byte-matched methods, separated by \u22651 sd, with LA within 0.1 of the best LA at that budget (the anti-degeneracy clause: a method that never learned never forgets)."
+  },
+  "wall_clock_s": 200.13768219947815,
+  "tuned_hypers": {
+    "ewc": {
+      "ewc_lambda": 100.0
+    },
+    "si": {
+      "si_c": 0.1
+    },
+    "lwf": {
+      "lwf_alpha": 0.5
+    },
+    "derpp": {
+      "derpp_alpha": 0.2,
+      "derpp_beta": 0.5
+    }
+  }
+}

@@ -1,0 +1,21 @@
+======================================================================
+w22 GATED-WRITE PERFORMANCE TEST — CLU vs MLP/GRU/SSM/attention
+======================================================================
+items=['3a', '3c'] families=['adding', 'mqar', 'parity'] train_steps=1200 tune_steps=400 seeds=3 lr_grid=[0.0003, 0.001, 0.003] budget=40000
+
+=== Item 3a: extrapolation adding train_T=64 eval_Ts=[64, 128, 256] ===
+    clu_gated    lr=0.001 T=64:0.0020 T=128:2.0143 T=256:2.9571
+    gru          lr=0.001 T=64:0.0002 T=128:0.0239 T=256:0.1030
+    ssm          lr=0.003 T=64:0.0007 T=128:0.0141 T=256:0.0174
+
+=== Item 3a: extrapolation parity train_T=64 eval_Ts=[64, 128, 256] ===
+    clu_gated    lr=0.003 T=64:0.5590 T=128:0.5282 T=256:0.5153
+    gru          lr=0.0003 T=64:1.0000 T=128:1.0000 T=256:1.0000
+    ssm          lr=0.003 T=64:0.6328 T=128:0.5658 T=256:0.5323
+
+=== Item 3c: robustness (adding T=128) noise_grid=[0.0, 0.05, 0.1, 0.2, 0.4] ===
+    clu_gated    lr=0.0003 σ=0.0:0.0151 σ=0.05:0.0189 σ=0.1:0.0308 σ=0.2:0.0862 σ=0.4:0.4213
+    gru          lr=0.001 σ=0.0:0.0008 σ=0.05:0.0061 σ=0.1:0.0213 σ=0.2:0.0760 σ=0.4:0.2432
+    ssm          lr=0.003 σ=0.0:0.0008 σ=0.05:0.0058 σ=0.1:0.0212 σ=0.2:0.0813 σ=0.4:0.2832
+
+Wrote results/../results/gated_write_edges.json

@@ -1,0 +1,533 @@
+[overload/load1x_shipped@s0] metric=decode full=1.0 launder=1.0 sub=1.0 (settle_deleted) attn=1.0 blank=0.16666666666666666 ratio=478.2x (24s)
+[overload/load1x_shipped@s1] metric=decode full=0.9583333333333334 launder=1.0 sub=1.0 (settle_deleted) attn=1.0 blank=0.16666666666666666 ratio=478.2x (13s)
+[overload/load1x_shipped@s2] metric=decode full=0.9583333333333334 launder=1.0 sub=1.0 (settle_deleted) attn=1.0 blank=0.16666666666666666 ratio=478.2x (13s)
+[aggregate/base@s0] metric=neg_mae full=-0.6826079419590398 launder=-0.4962609164502307 sub=-0.21495899497080173 (knn2_mean_+0B) attn=-0.27109571497902907 blank=-0.4389060366704468 ratio=54.56x (16s)
+[aggregate/base@s1] metric=neg_mae full=-0.3846925288903795 launder=-0.41310311933048044 sub=-0.1925666698420529 (knn2_idw_+0B) attn=-0.2529006115177934 blank=-0.40420145154125486 ratio=54.56x (9s)
+[aggregate/base@s2] metric=neg_mae full=-0.5110319980812578 launder=-0.4322550148126372 sub=-0.21690252112040673 (knn2_idw_+0B) attn=-0.22386259422999266 blank=-0.4230789980543735 ratio=54.56x (8s)
+[recency/base@s0] metric=acc full=0.5555555555555556 launder=0.5138888888888888 sub=1.0 (order_aware_pair_+0B) attn=0.5138888888888888 blank=0.6388888888888888 ratio=54.56x (9s)
+[recency/base@s1] metric=acc full=0.3375 launder=0.4625 sub=1.0 (order_aware_pair_+0B) attn=0.475 blank=0.3125 ratio=54.56x (8s)
+[recency/base@s2] metric=acc full=0.5375 launder=0.4625 sub=1.0 (order_aware_pair_+0B) attn=0.4375 blank=0.6875 ratio=54.56x (8s)
+[manifold/base@s0] metric=r2 full=0.00011045919435337392 launder=0.0 sub=1.0 (echo_+0B) attn=0.0 blank=-8.487869024897954e-05 ratio=52.0x (16s)
+[manifold/base@s1] metric=r2 full=-0.019171322474564656 launder=0.0 sub=1.0 (echo_+0B) attn=0.0 blank=-8.472077382015719e-05 ratio=52.0x (7s)
+[manifold/base@s2] metric=r2 full=-0.5216174941215586 launder=0.0 sub=1.0 (echo_+0B) attn=0.0 blank=-8.485866788321417e-05 ratio=52.0x (7s)
+
+⭐ FB4 VERDICT: PARTIAL = {manifold, overload, recency}
+   surviving families: aggregate
+{
+  "verdict": "PARTIAL = {manifold, overload, recency}",
+  "saturated": [
+    "manifold",
+    "overload",
+    "recency"
+  ],
+  "surviving_families": [
+    "aggregate"
+  ],
+  "families_measured": [
+    "overload",
+    "aggregate",
+    "recency",
+    "manifold"
+  ],
+  "rule": "S(f) = (sub - blank)/(M - blank); saturated iff S >= 0.95 AND sub >= attn - 2 SE (paired, 3 seeds, ddof=1). FIRES iff ALL FOUR saturate.",
+  "note": "\u25d0 each saturated family is STRUCK from B\u2032's cross-family audit as protocol-invalid; the wave proceeds on the survivors. Unexpectedly saturated (beyond the predicted `manifold`): overload, recency.",
+  "rows": [
+    {
+      "family": "overload",
+      "metric": "decode",
+      "metric_max": 1.0,
+      "blank": 0.16666666666666666,
+      "sub": 1.0,
+      "attn": 1.0,
+      "S": 1.0,
+      "se_paired": 0.0,
+      "saturated": true,
+      "sub_name": "settle_deleted",
+      "n_seeds": 3,
+      "detail": {
+        "arm": "load1x_shipped",
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "full_seeds": [
+          1.0,
+          0.9583333333333334,
+          0.9583333333333334
+        ],
+        "launder_seeds": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "byte_ratio_seeds": [
+          478.2,
+          478.2,
+          478.2
+        ],
+        "attention_tau": [
+          0.01,
+          0.01,
+          0.01
+        ],
+        "attention_tau_degenerate": [
+          false,
+          false,
+          false
+        ],
+        "sub_excl_launder_seeds": [
+          0.9166666666666666,
+          0.5833333333333334,
+          0.625
+        ],
+        "sub_excl_launder_name": "knn2_idw_+0B",
+        "sub_seeds": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "attn_seeds": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "blank_seeds": [
+          0.16666666666666666,
+          0.16666666666666666,
+          0.16666666666666666
+        ],
+        "S_per_seed": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "se_sub": 0.0,
+        "se_attn": 0.0,
+        "se_paired_diff": 0.0,
+        "leg_ceiling(S>=0.95)": true,
+        "leg_attention(sub>=attn-2SE)": true,
+        "threshold": 0.95
+      }
+    },
+    {
+      "family": "aggregate",
+      "metric": "neg_mae",
+      "metric_max": 0.0,
+      "blank": -0.42206216208869174,
+      "sub": -0.20814272864442043,
+      "attn": -0.24928630690893838,
+      "S": 0.5068434289054286,
+      "se_paired": 0.017134645078898943,
+      "saturated": false,
+      "sub_name": "knn2_idw_+0B/knn2_mean_+0B",
+      "n_seeds": 3,
+      "detail": {
+        "arm": "base",
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "full_seeds": [
+          -0.6826079419590398,
+          -0.3846925288903795,
+          -0.5110319980812578
+        ],
+        "launder_seeds": [
+          -0.4962609164502307,
+          -0.41310311933048044,
+          -0.4322550148126372
+        ],
+        "byte_ratio_seeds": [
+          54.56,
+          54.56,
+          54.56
+        ],
+        "attention_tau": [
+          0.12589254117941676,
+          0.15848931924611143,
+          0.1
+        ],
+        "attention_tau_degenerate": [
+          false,
+          false,
+          false
+        ],
+        "sub_excl_launder_seeds": [
+          -0.21495899497080173,
+          -0.1925666698420529,
+          -0.21690252112040673
+        ],
+        "sub_excl_launder_name": "knn2_mean_+0B",
+        "sub_seeds": [
+          -0.21495899497080173,
+          -0.1925666698420529,
+          -0.21690252112040673
+        ],
+        "attn_seeds": [
+          -0.27109571497902907,
+          -0.2529006115177934,
+          -0.22386259422999266
+        ],
+        "blank_seeds": [
+          -0.4389060366704468,
+          -0.40420145154125486,
+          -0.4230789980543735
+        ],
+        "S_per_seed": [
+          0.5102391468536488,
+          0.5235873866662784,
+          0.4873238281316655
+        ],
+        "se_sub": 0.007808212115771841,
+        "se_attn": 0.013754263851347533,
+        "se_paired_diff": 0.017134645078898943,
+        "leg_ceiling(S>=0.95)": false,
+        "leg_attention(sub>=attn-2SE)": true,
+        "threshold": 0.95
+      }
+    },
+    {
+      "family": "recency",
+      "metric": "acc",
+      "metric_max": 1.0,
+      "blank": 0.5462962962962963,
+      "sub": 1.0,
+      "attn": 0.475462962962963,
+      "S": 1.0,
+      "se_paired": 0.022052787710767678,
+      "saturated": true,
+      "sub_name": "order_aware_pair_+0B",
+      "n_seeds": 3,
+      "detail": {
+        "arm": "base",
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "full_seeds": [
+          0.5555555555555556,
+          0.3375,
+          0.5375
+        ],
+        "launder_seeds": [
+          0.5138888888888888,
+          0.4625,
+          0.4625
+        ],
+        "byte_ratio_seeds": [
+          54.56,
+          54.56,
+          54.56
+        ],
+        "attention_tau": [
+          0.01,
+          0.01,
+          0.01
+        ],
+        "attention_tau_degenerate": [
+          true,
+          true,
+          true
+        ],
+        "sub_excl_launder_seeds": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "sub_excl_launder_name": "order_aware_pair_+0B",
+        "sub_seeds": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "attn_seeds": [
+          0.5138888888888888,
+          0.475,
+          0.4375
+        ],
+        "blank_seeds": [
+          0.6388888888888888,
+          0.3125,
+          0.6875
+        ],
+        "S_per_seed": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "se_sub": 0.0,
+        "se_attn": 0.022052787710767678,
+        "se_paired_diff": 0.022052787710767678,
+        "leg_ceiling(S>=0.95)": true,
+        "leg_attention(sub>=attn-2SE)": true,
+        "threshold": 0.95
+      }
+    },
+    {
+      "family": "manifold",
+      "metric": "r2",
+      "metric_max": 1.0,
+      "blank": -8.48193773174503e-05,
+      "sub": 1.0,
+      "attn": 0.0,
+      "S": 1.0,
+      "se_paired": 0.0,
+      "saturated": true,
+      "sub_name": "echo_+0B",
+      "n_seeds": 3,
+      "detail": {
+        "arm": "base",
+        "seeds": [
+          0,
+          1,
+          2
+        ],
+        "full_seeds": [
+          0.00011045919435337392,
+          -0.019171322474564656,
+          -0.5216174941215586
+        ],
+        "launder_seeds": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "byte_ratio_seeds": [
+          52.0,
+          52.0,
+          52.0
+        ],
+        "attention_tau": [
+          0.01,
+          0.01,
+          0.01
+        ],
+        "attention_tau_degenerate": [
+          true,
+          true,
+          true
+        ],
+        "sub_excl_launder_seeds": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "sub_excl_launder_name": "echo_+0B",
+        "sub_seeds": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "attn_seeds": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "blank_seeds": [
+          -8.487869024897954e-05,
+          -8.472077382015719e-05,
+          -8.485866788321417e-05
+        ],
+        "S_per_seed": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "se_sub": 0.0,
+        "se_attn": 0.0,
+        "se_paired_diff": 0.0,
+        "leg_ceiling(S>=0.95)": true,
+        "leg_attention(sub>=attn-2SE)": true,
+        "threshold": 0.95
+      }
+    }
+  ],
+  "secondary_excl_launder": {
+    "verdict": "PARTIAL = {manifold, recency}",
+    "saturated": [
+      "manifold",
+      "recency"
+    ],
+    "surviving_families": [
+      "aggregate",
+      "overload"
+    ],
+    "families_measured": [
+      "overload",
+      "aggregate",
+      "recency",
+      "manifold"
+    ],
+    "rule": "S(f) = (sub - blank)/(M - blank); saturated iff S >= 0.95 AND sub >= attn - 2 SE (paired, 3 seeds, ddof=1). FIRES iff ALL FOUR saturate.",
+    "note": "\u25d0 each saturated family is STRUCK from B\u2032's cross-family audit as protocol-invalid; the wave proceeds on the survivors. Unexpectedly saturated (beyond the predicted `manifold`): recency.",
+    "rows": [
+      {
+        "family": "overload",
+        "metric": "decode",
+        "metric_max": 1.0,
+        "blank": 0.16666666666666666,
+        "sub": 0.7083333333333334,
+        "attn": 1.0,
+        "S": 0.65,
+        "se_paired": 0.10485881160098262,
+        "saturated": false,
+        "sub_name": "knn2_idw_+0B",
+        "n_seeds": 3,
+        "detail": {
+          "sub_seeds": [
+            0.9166666666666666,
+            0.5833333333333334,
+            0.625
+          ],
+          "attn_seeds": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "blank_seeds": [
+            0.16666666666666666,
+            0.16666666666666666,
+            0.16666666666666666
+          ],
+          "S_per_seed": [
+            0.8999999999999999,
+            0.5000000000000001,
+            0.55
+          ],
+          "se_sub": 0.10485881160098262,
+          "se_attn": 0.0,
+          "se_paired_diff": 0.10485881160098262,
+          "leg_ceiling(S>=0.95)": false,
+          "leg_attention(sub>=attn-2SE)": false,
+          "threshold": 0.95
+        }
+      },
+      {
+        "family": "aggregate",
+        "metric": "neg_mae",
+        "metric_max": 0.0,
+        "blank": -0.42206216208869174,
+        "sub": -0.20814272864442043,
+        "attn": -0.24928630690893838,
+        "S": 0.5068434289054286,
+        "se_paired": 0.017134645078898943,
+        "saturated": false,
+        "sub_name": "knn2_mean_+0B",
+        "n_seeds": 3,
+        "detail": {
+          "sub_seeds": [
+            -0.21495899497080173,
+            -0.1925666698420529,
+            -0.21690252112040673
+          ],
+          "attn_seeds": [
+            -0.27109571497902907,
+            -0.2529006115177934,
+            -0.22386259422999266
+          ],
+          "blank_seeds": [
+            -0.4389060366704468,
+            -0.40420145154125486,
+            -0.4230789980543735
+          ],
+          "S_per_seed": [
+            0.5102391468536488,
+            0.5235873866662784,
+            0.4873238281316655
+          ],
+          "se_sub": 0.007808212115771841,
+          "se_attn": 0.013754263851347533,
+          "se_paired_diff": 0.017134645078898943,
+          "leg_ceiling(S>=0.95)": false,
+          "leg_attention(sub>=attn-2SE)": true,
+          "threshold": 0.95
+        }
+      },
+      {
+        "family": "recency",
+        "metric": "acc",
+        "metric_max": 1.0,
+        "blank": 0.5462962962962963,
+        "sub": 1.0,
+        "attn": 0.475462962962963,
+        "S": 1.0,
+        "se_paired": 0.022052787710767678,
+        "saturated": true,
+        "sub_name": "order_aware_pair_+0B",
+        "n_seeds": 3,
+        "detail": {
+          "sub_seeds": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "attn_seeds": [
+            0.5138888888888888,
+            0.475,
+            0.4375
+          ],
+          "blank_seeds": [
+            0.6388888888888888,
+            0.3125,
+            0.6875
+          ],
+          "S_per_seed": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "se_sub": 0.0,
+          "se_attn": 0.022052787710767678,
+          "se_paired_diff": 0.022052787710767678,
+          "leg_ceiling(S>=0.95)": true,
+          "leg_attention(sub>=attn-2SE)": true,
+          "threshold": 0.95
+        }
+      },
+      {
+        "family": "manifold",
+        "metric": "r2",
+        "metric_max": 1.0,
+        "blank": -8.48193773174503e-05,
+        "sub": 1.0,
+        "attn": 0.0,
+        "S": 1.0,
+        "se_paired": 0.0,
+        "saturated": true,
+        "sub_name": "echo_+0B",
+        "n_seeds": 3,
+        "detail": {
+          "sub_seeds": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "attn_seeds": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "blank_seeds": [
+            -8.487869024897954e-05,
+            -8.472077382015719e-05,
+            -8.485866788321417e-05
+          ],
+          "S_per_seed": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "se_sub": 0.0,
+          "se_attn": 0.0,
+          "se_paired_diff": 0.0,
+          "leg_ceiling(S>=0.95)": true,
+          "leg_attention(sub>=attn-2SE)": true,
+          "threshold": 0.95
+        }
+      }
+    ]
+  }
+}

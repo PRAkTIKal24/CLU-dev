@@ -1,0 +1,82 @@
+phase                                      rss GB  peak GB    d rss   d peak    t s
+run_pilot/enter                             0.312    0.312   +0.000   +0.000      0
+phi_gain/enter                              0.351    0.351   +0.039   +0.039      0
+phi_gain/exit                               0.475    0.475   +0.124   +0.124      2
+phi_gain/released                           0.467    0.476   -0.008   +0.000      3
+monitors_init/enter                         0.730    0.730   +0.263   +0.255     12
+monitors_init/exit                          1.226    1.249   +0.496   +0.518     28
+monitors_init/released                      1.323    1.338   +0.097   +0.089     28
+allocation_liveness_init/enter              1.323    1.338   +0.000   +0.000     28
+allocation_liveness_init/exit               2.092    2.373   +0.769   +1.036     42
+allocation_liveness_init/released           1.268    2.373   -0.824   +0.000     42
+gradient_probe_init/enter                   1.268    2.373   +0.000   +0.000     42
+gradient_probe_init/exit                    2.918    3.655   +1.650   +1.282     99
+gradient_probe_init/released                2.406    3.655   -0.512   +0.000    100
+clu_store/train/enter                       2.407    3.655   +0.001   +0.000    100
+clu_store/train/exit                        3.319    3.655   +0.912   +0.000    140
+clu_store/train/released                    3.317    3.655   -0.002   +0.000    140
+clu_store/static/enter                      3.317    3.655   +0.000   +0.000    140
+clu_store/static/exit                       3.283    3.655   -0.035   +0.000    145
+clu_store/static/released                   3.273    3.655   -0.009   +0.000    145
+clu_store/dyneval/enter                     3.273    3.655   +0.000   +0.000    145
+clu_store/dyneval/exit                      2.304    3.655   -0.969   +0.000    190
+clu_store/dyneval/released                  2.271    3.655   -0.033   +0.000    190
+clu_store/blank_store/enter                 2.271    3.655   +0.000   +0.000    190
+clu_store/blank_store/exit                  2.234    3.655   -0.037   +0.000    194
+clu_store/blank_store/released              2.224    3.655   -0.010   +0.000    194
+clu_store/anytime_curve/enter               2.224    3.655   +0.000   +0.000    194
+clu_store/anytime_curve/exit                2.013    3.655   -0.211   +0.000    216
+clu_store/anytime_curve/released            2.013    3.655   +0.000   +0.000    216
+clu_store/gradient_probe_final/enter        2.013    3.655   +0.000   +0.000    216
+clu_store/gradient_probe_final/exit         2.939    3.655   +0.926   +0.000    273
+clu_store/gradient_probe_final/released     3.144    3.655   +0.205   +0.000    274
+clu_store/selectors_final/enter             3.144    3.655   +0.000   +0.000    274
+clu_store/selectors_final/exit              3.140    3.655   -0.004   +0.000    274
+clu_store/selectors_final/released          3.140    3.655   -0.000   +0.000    274
+clu_store/done/released                     3.140    3.655   +0.000   +0.000    274
+gru_matched/train/enter                     3.140    3.655   +0.000   +0.000    274
+gru_matched/train/exit                      3.165    3.655   +0.024   +0.000    277
+gru_matched/train/released                  3.154    3.655   -0.010   +0.000    278
+gru_matched/static/enter                    3.154    3.655   +0.000   +0.000    278
+gru_matched/static/exit                     3.156    3.655   +0.002   +0.000    278
+gru_matched/static/released                 3.154    3.655   -0.003   +0.000    278
+gru_matched/dyneval/enter                   3.154    3.655   +0.000   +0.000    279
+gru_matched/dyneval/exit                    2.923    3.655   -0.231   +0.000    287
+gru_matched/dyneval/released                2.901    3.655   -0.022   +0.000    287
+gru_matched/done/released                   2.901    3.655   +0.000   +0.000    287
+run_pilot/finish                            2.901    3.655   +0.000   +0.000    287
+
+--- peak growth attributed to the phase that caused it (enter->exit) ---
+  gradient_probe_init                    peak + 1.282 GB   rss + 1.650 GB
+  allocation_liveness_init               peak + 1.036 GB   rss + 0.769 GB
+  monitors_init                          peak + 0.518 GB   rss + 0.496 GB
+  phi_gain                               peak + 0.124 GB   rss + 0.124 GB
+  clu_store/train                        peak + 0.000 GB   rss + 0.912 GB
+  clu_store/static                       peak + 0.000 GB   rss +-0.035 GB
+  clu_store/dyneval                      peak + 0.000 GB   rss +-0.969 GB
+  clu_store/blank_store                  peak + 0.000 GB   rss +-0.037 GB
+  clu_store/anytime_curve                peak + 0.000 GB   rss +-0.211 GB
+  clu_store/gradient_probe_final         peak + 0.000 GB   rss + 0.926 GB
+  clu_store/selectors_final              peak + 0.000 GB   rss +-0.004 GB
+  gru_matched/train                      peak + 0.000 GB   rss + 0.024 GB
+  gru_matched/static                     peak + 0.000 GB   rss + 0.002 GB
+  gru_matched/dyneval                    peak + 0.000 GB   rss +-0.231 GB
+
+--- what `release_host_memory()` gave back (exit -> released) ---
+  phi_gain                                +0.008 GB
+  monitors_init                           -0.097 GB
+  allocation_liveness_init                +0.824 GB
+  gradient_probe_init                     +0.512 GB
+  clu_store/train                         +0.002 GB
+  clu_store/static                        +0.009 GB
+  clu_store/dyneval                       +0.033 GB
+  clu_store/blank_store                   +0.010 GB
+  clu_store/anytime_curve                 +0.000 GB
+  clu_store/gradient_probe_final          -0.205 GB
+  clu_store/selectors_final               +0.000 GB
+  gru_matched/train                       +0.010 GB
+  gru_matched/static                      +0.003 GB
+  gru_matched/dyneval                     +0.022 GB
+  TOTAL reclaimed                         +1.433 GB
+
+run peak host RSS (toy, this process) = 3.655 GB
