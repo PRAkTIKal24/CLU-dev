@@ -220,3 +220,102 @@ outputs above — those calibrate the wallclock defaults in the templates.
 - `MPLBACKEND=Agg` + `import chlu.utils.plotting` + savefig: works headless.
 - `SCIKIT_LEARN_DATA` env var redirects `sklearn.datasets.get_data_home()`.
 - JAX persistent compilation cache: second process gets a cache hit.
+
+---
+
+## 7. Generative pivot — `job_gpu_gen.sh` (added 2026-09-09)
+
+The generative pivot has **one** launch script, `job_gpu_gen.sh`, and it writes
+into a **fresh tree that no earlier campaign has touched**. Everything above
+(env.sh, `module purge`, the venv, the array `%N` throttle, rsync push/pull)
+is reused unchanged — there is deliberately no second way of talking to CSF3.
+
+### 7.1 Axes
+
+| Var | Values | Default | Notes |
+|---|---|---|---|
+| `DATASET` | `shapes3d` \| `dsprites` | **none — fails loudly** | |
+| `PRETEXT` | `recon` \| `cls` | **none — fails loudly** | `recon` is primary, `cls` a diagnostic; the script privileges neither |
+| `STAGE` | `encoder` \| `decoder` \| `store` \| `cell` | **none — fails loudly** | submitted independently, in that dependency order |
+| `ARMS` | subset of `clu store_removed lace knn` | all four | a *narrowed* list is always explicit and is recorded in the manifest |
+| `SEEDS` | space-separated ints | `0 1 2` | |
+| `CONCURRENCY` | 1–4 | `2` | the array `%N` throttle (CSF3 free tier caps you at 4 GPUs) |
+
+The array is sized **arms × seeds**, index `= arm_idx * n_seeds + seed_idx`.
+A `-a` range that does not cover the whole grid is **refused** (cells would be
+silently missing) unless `PARTIAL=1` marks it as a deliberate re-run.
+
+Other knobs: `EXTRA_ARGS`, `PAYLOAD_MODULE` (override the stage entry point),
+`SMOKE=1` (trivial payload — plumbing only), `GEN_ROOT`, `GEN_LOCAL=1` (skip
+module/env.sh/GPU preflight for a laptop dry run), `ALLOW_MISSING_UPSTREAM=1`,
+`SKIP_GPU_PREFLIGHT=1`.
+
+### 7.2 The fresh folder tree
+
+```
+$SCRATCH/CHLU-gen/workspaces/<dataset>_<pretext>/<stage>/<arm>_s<seed>/
+    logs/              stage.log + a copy of this task's slurm .out/.err
+    artifacts/         everything the stage produces
+    run_manifest.json  provenance: git commit, resolved jax/jaxlib/equinox/
+                       optax/chlu versions, EVERY non-default flag in effect,
+                       the axes, the slurm job/array ids, start/finish, status
+```
+
+The script **refuses to run** if its target is not under a `CHLU-gen`
+workspace, and it never touches `projects/`. It also refuses to run if it
+cannot resolve a git commit — `push_repo.sh` excludes `.git/`, so the cluster
+cannot work it out itself:
+
+```bash
+export GEN_GIT_COMMIT=$(git rev-parse HEAD)   # on the LAPTOP, before submitting
+```
+
+Each stage checks its upstream stage's `run_manifest.json` for
+`status == "ok"` **for the same arm and seed** before doing any work, so a
+half-finished upstream fails loudly instead of producing a quietly wrong run.
+
+### 7.3 Submitting
+
+```bash
+cd ~/scratch/CHLU && mkdir -p logs
+
+# 0. print the plan: the exact -a range and the path of every task
+DATASET=shapes3d PRETEXT=recon STAGE=encoder PLAN=1 bash scripts/csf3/job_gpu_gen.sh
+
+# 1. the stage itself (12 tasks = 4 arms x 3 seeds, <=2 concurrent)
+sbatch --export=ALL,DATASET=shapes3d,PRETEXT=recon,STAGE=encoder,GEN_GIT_COMMIT=$GEN_GIT_COMMIT \
+       -a 0-11%2 -t 12:00:00 scripts/csf3/job_gpu_gen.sh
+
+# 2. the next stage, gated on the previous array
+sbatch --dependency=afterok:<jobid> --export=ALL,...,STAGE=decoder -a 0-11%2 -t 12:00:00 \
+       scripts/csf3/job_gpu_gen.sh
+
+# plumbing-only smoke (cheap, no science, proves paths + manifest):
+sbatch --export=ALL,DATASET=shapes3d,PRETEXT=recon,STAGE=encoder,SEEDS=0,ARMS=clu,SMOKE=1,\
+SKIP_GPU_PREFLIGHT=1,GEN_GIT_COMMIT=$GEN_GIT_COMMIT -p serial -a 0-0 -t 0:20:00 \
+       scripts/csf3/job_gpu_gen.sh
+```
+
+### 7.4 Pulling artifacts back
+
+`sync_project.sh` moves `projects/<name>/`, which the gen pivot never uses.
+Pull the run tree straight into **the consuming spoke's own output dir** —
+never a shared one; the script prints the exact line at the end of every run:
+
+```bash
+rsync -av csf3:~/scratch/CHLU-gen/workspaces/shapes3d_recon/encoder/ \
+      ./.claude/outputs/<your-slug>/shapes3d_recon/encoder/
+```
+
+### 7.5 Verification status
+
+- **[LOCAL, 2026-09-09]** `bash -n` clean; `shellcheck 0.11.0 -s bash` clean
+  (zero warnings); `tests/test_gen_launcher.py` — 24 tests, ~4 s, covering the
+  unset/invalid-axis aborts, the grid/path construction, the array-size guard,
+  the provenance guard and the full encoder→decoder→store→cell chain via
+  `GEN_LOCAL=1 SMOKE=1`. A dry run produces a populated `run_manifest.json`
+  (`jax 0.9.0`, `chlu 0.2.4`, commit, non-default flags, slurm ids).
+- **[UNTESTED-ON-CLUSTER]** the CSF3 smoke of §7.3 has **not** been submitted:
+  `csf3.itservices.manchester.ac.uk` does not resolve from the laptop without
+  GlobalProtect, which the authoring agent cannot establish. The `-p serial`
+  smoke line above is the exact command to run first.
