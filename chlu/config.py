@@ -3259,6 +3259,38 @@ class DataConfig:
 
 
 @dataclass
+class GenDataConfig:
+    """Generative-benchmark datasets (Shapes3D / dSprites) + the Montero splits.
+
+    Backs ``chlu data shapes3d`` / ``chlu data dsprites`` and
+    ``chlu.data.{shapes3d,dsprites,gen_splits}``.  The split itself carries no
+    seed (it is a deterministic boolean mask over the exhaustive factor grid);
+    ``project.seed`` is threaded only into the ``--quick`` train subsample and
+    the C-set builder.
+    """
+
+    #: Dataset root; ``None`` -> ``$CHLU_GEN_DATA_ROOT`` else ``<repo>/.claude/data/gen``.
+    data_root: Optional[str] = None
+    condition: str = "recomb2element"
+    variant: str = "leave1out"
+    #: Verify the pinned sha256 on download (never disable in a reported run).
+    verify_checksum: bool = True
+    #: Run the hold-out assertion over the full train split at load time.
+    holdout_assert: bool = True
+    #: Assert the realised held-out counts (Shapes3D 72; dSprites 6292 — the
+    #: float-boundary-realised value, NOT the nominal 5808). ``False`` reports
+    #: without asserting; a disagreement is a finding, never a silent fix.
+    assert_expected_counts: bool = True
+    #: Train rows kept by ``--quick`` (the assertion still runs over all rows).
+    quick_rows: int = 4096
+    #: Also fetch the dSprites hdf5 mirror (lazy per-row image access).
+    dsprites_with_images: bool = True
+    #: C set (structurally invalid factor requests) size per kind, and its seed.
+    c_invalid_n_per_kind: int = 16
+    c_invalid_seed: int = 0
+
+
+@dataclass
 class ProjectConfig:
     """Project-level configuration."""
 
@@ -3366,6 +3398,7 @@ class CHLUConfig:
         default_factory=ExperimentCaptureArmBConfig
     )
     data: DataConfig = field(default_factory=DataConfig)
+    gen_data: GenDataConfig = field(default_factory=GenDataConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -3590,6 +3623,9 @@ def load_config(path: Path) -> CHLUConfig:
             )
         ),
         data=DataConfig(**filter_valid_fields(DataConfig, data.get("data", {}))),
+        gen_data=GenDataConfig(
+            **filter_valid_fields(GenDataConfig, data.get("gen_data", {}))
+        ),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -3648,6 +3684,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_capture_arm_a": asdict(config.experiment_capture_arm_a),
         "experiment_capture_armb": asdict(config.experiment_capture_armb),
         "data": asdict(config.data),
+        "gen_data": asdict(config.gen_data),
         "project": asdict(config.project),
     }
 
