@@ -160,6 +160,7 @@ def test_encoder_feat_shape_is_measured_not_assumed():
     """A kernel/stride that does not halve exactly must still report the true D."""
     enc = GenEncoder((1, 28, 28), [4, 8], 4, 2, 2, jax.random.PRNGKey(0))
     out = enc(jnp.zeros((1, 28, 28)))
+    assert out.dtype == enc.param_dtype  # ⚠ §7.23: dtype comes from the module
     assert tuple(out.shape) == enc.feat_shape
     assert enc.feature_dim == int(np.prod(out.shape))
 
@@ -574,3 +575,26 @@ def test_decoder_stage_finds_the_encoder_in_the_launcher_layout(tmp_path):
     assert _default_encoder_dir(dec, "clu", 2) == dec  # no encoder.pkl yet -> self
     (enc / "encoder.pkl").write_bytes(b"x")
     assert _default_encoder_dir(dec, "clu", 2) == enc
+
+
+@pytest.mark.parametrize("x64", [False, True])
+def test_every_module_reads_a_float32_input_under_x64(x64):
+    """⚠ §7.23 regression guard. A module-scoped ``jax_enable_x64`` fixture
+    elsewhere in the suite makes eqx build float64 weights; before the fix these
+    modules crashed on a float32 image with 'lhs and rhs must have the same
+    element type'. The failure only appeared in a full-suite run, never in
+    isolation, which is exactly why it is pinned here."""
+    prev = jax.config.jax_enable_x64
+    try:
+        jax.config.update("jax_enable_x64", x64)
+        enc = GenEncoder((1, 16, 16), [4, 8], 4, 2, 2, jax.random.PRNGKey(0))
+        dec = GenDecoder(enc.feat_shape, (1, 16, 16), [8, 4], 2, jax.random.PRNGKey(1))
+        probe = FactorProbe((1, 16, 16), [4], 2, (3,), jax.random.PRNGKey(2))
+        x32 = np.zeros((1, 16, 16), np.float32)
+        z = enc(x32)
+        assert z.shape == enc.feat_shape
+        assert dec(np.asarray(z, np.float32)).shape == (1, 16, 16)
+        assert probe(x32)[0].shape == (3,)
+        assert (z.dtype == jnp.float64) == x64
+    finally:
+        jax.config.update("jax_enable_x64", prev)

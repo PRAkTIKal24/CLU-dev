@@ -258,11 +258,19 @@ class GenEncoder(eqx.Module):
         self.feat_shape = tuple(
             int(x)
             for x in jax.eval_shape(
-                self.__call__, jax.ShapeDtypeStruct(self.in_shape, jnp.float32)
+                self.__call__, jax.ShapeDtypeStruct(self.in_shape, self.param_dtype)
             ).shape
         )
 
+    @property
+    def param_dtype(self):
+        """⚠ §7.23: a module-scoped ``jax_enable_x64`` fixture elsewhere in the
+        suite makes eqx build float64 weights; a float32 input then crashes the
+        conv. Every module here casts its input rather than assuming float32."""
+        return self.convs[0].weight.dtype
+
     def __call__(self, x):
+        x = jnp.asarray(x, self.convs[0].weight.dtype)
         for conv, norm in zip(self.convs, self.norms, strict=True):
             x = conv(x)
             if norm is not None:
@@ -321,7 +329,7 @@ class GenDecoder(eqx.Module):
         self.out_shape = tuple(out_shape)
 
     def __call__(self, z):
-        x = z
+        x = jnp.asarray(z, self.convs[0].weight.dtype)
         n_up = len(self.convs) - 1
         for i, (conv, norm) in enumerate(zip(self.convs, self.norms, strict=True)):
             if i < n_up:
@@ -349,7 +357,7 @@ class FactorHeads(eqx.Module):
         ]
 
     def __call__(self, z):
-        flat = z.reshape(-1)
+        flat = jnp.asarray(z, self.linears[0].weight.dtype).reshape(-1)
         return [lin(flat) for lin in self.linears]
 
 
@@ -385,6 +393,7 @@ class FactorProbe(eqx.Module):
         self.heads = FactorHeads(int(c_in * h * w), cardinalities, keys[-1])
 
     def __call__(self, x):
+        x = jnp.asarray(x, self.convs[0].weight.dtype)
         for conv, norm in zip(self.convs, self.norms, strict=True):
             x = conv(x)
             if norm is not None:
