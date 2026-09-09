@@ -53,6 +53,7 @@ from chlu.eval.gen_probe import (
     summarize_seeds,
 )
 from chlu.experiments.exp_gen_bridge import (
+    _default_encoder_dir,
     apply_quick,
     build_arg_parser,
     cache_rows_for,
@@ -559,3 +560,17 @@ def test_cli_refuses_the_stages_that_belong_to_other_spokes(tmp_path):
              "--arm", "clu", "--seed", "0", "--out", str(tmp_path)]
         )
         assert rc == 2  # ⛔ refuses to no-op rather than reporting success
+
+
+def test_decoder_stage_finds_the_encoder_in_the_launcher_layout(tmp_path):
+    """job_gpu_gen.sh writes <ws>/<stage>/<arm>_s<seed>/artifacts — the decoder
+    stage must resolve its sibling encoder dir, or it silently trains a SECOND
+    decoder against a re-initialised encoder."""
+    ws = tmp_path / "shapes3d_recon"
+    enc = ws / "encoder" / "clu_s2" / "artifacts"
+    dec = ws / "decoder" / "clu_s2" / "artifacts"
+    enc.mkdir(parents=True)
+    dec.mkdir(parents=True)
+    assert _default_encoder_dir(dec, "clu", 2) == dec  # no encoder.pkl yet -> self
+    (enc / "encoder.pkl").write_bytes(b"x")
+    assert _default_encoder_dir(dec, "clu", 2) == enc
