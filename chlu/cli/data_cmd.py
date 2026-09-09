@@ -230,9 +230,13 @@ def _build_gen_artifacts(mod, split, cfg, out_dir):
 
     out_dir.mkdir(parents=True, exist_ok=True)
     index_path, index_sha = save_index(split, out_dir / 'factor_index.npz')
+    n_per_kind = cfg.c_invalid_n_per_kind
+    if n_per_kind is None:
+        # |C| ~= |B|: two kinds, so ceil(n_test / 2) of each.
+        n_per_kind = max(1, -(-split.n_test // 2))
     c_set = build_c_invalid(
         split.grid,
-        n_per_kind=cfg.c_invalid_n_per_kind,
+        n_per_kind=n_per_kind,
         seed=cfg.c_invalid_seed,
     )
     n_c = validate_c_invalid(c_set, split.grid)

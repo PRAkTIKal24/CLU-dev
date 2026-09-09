@@ -3286,7 +3286,10 @@ class GenDataConfig:
     #: Also fetch the dSprites hdf5 mirror (lazy per-row image access).
     dsprites_with_images: bool = True
     #: C set (structurally invalid factor requests) size per kind, and its seed.
-    c_invalid_n_per_kind: int = 16
+    #: ``None`` (default) derives it from the split so that ``|C| ~= |B|`` -- the
+    #: Head ruling of 2026-09-09: the primary refusal metric is AUROC(B vs C), and a
+    #: C set much larger or smaller than B distorts it. Set an int to override.
+    c_invalid_n_per_kind: Optional[int] = None
     c_invalid_seed: int = 0
 
 
