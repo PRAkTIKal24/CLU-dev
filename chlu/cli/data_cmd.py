@@ -50,6 +50,28 @@ def setup_data_parser(subparsers):
     mnist_parser.add_argument('--output-dir', type=Path, help='Output directory')
     mnist_parser.set_defaults(func=cmd_data_mnist)
 
+    # data shapes3d
+    shapes3d_parser = data_subparsers.add_parser(
+        'shapes3d',
+        help='Fetch Shapes3D + build the Montero recomb-to-element split index'
+    )
+    shapes3d_parser.add_argument('--data-root', type=Path, help='Dataset directory')
+    shapes3d_parser.add_argument('--download', action='store_true', help='Fetch if missing')
+    shapes3d_parser.add_argument('--quick', action='store_true', help='Subsample train rows')
+    shapes3d_parser.add_argument('--no-verify', action='store_true', help='Skip checksum check')
+    shapes3d_parser.set_defaults(func=cmd_data_shapes3d)
+
+    # data dsprites
+    dsprites_parser = data_subparsers.add_parser(
+        'dsprites',
+        help='Fetch dSprites + build the Montero recomb-to-element split index'
+    )
+    dsprites_parser.add_argument('--data-root', type=Path, help='Dataset directory')
+    dsprites_parser.add_argument('--download', action='store_true', help='Fetch if missing')
+    dsprites_parser.add_argument('--quick', action='store_true', help='Subsample train rows')
+    dsprites_parser.add_argument('--no-verify', action='store_true', help='Skip checksum check')
+    dsprites_parser.set_defaults(func=cmd_data_dsprites)
+
 
 def cmd_data_figure8(args):
     """Generate figure-8 data."""
@@ -171,4 +193,123 @@ def cmd_data_mnist(args):
         console.print(f"✗ Error: {e}", style="bold red")
         return 1
     
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Generative-benchmark datasets (Shapes3D / dSprites) + the Montero splits.
+# Both commands: fetch -> verify checksum -> build the exhaustive factor-grid
+# index -> assert the held-out set is non-empty and of the realised size ->
+# assert no train row satisfies the held-out predicate -> emit c_invalid.json.
+# ---------------------------------------------------------------------------
+
+
+def _report_gen_split(split, n_checked, extra=None):
+    """Shared console report for the two generative-dataset commands."""
+    console.print(f"  Factors: {list(split.grid.names)}")
+    console.print(f"  Cardinalities: {list(split.grid.cardinalities)}")
+    console.print(
+        f"  n_total={split.n_total}  n_train={split.n_train}  n_test={split.n_test}"
+    )
+    console.print(
+        f"✓ hold-out assertion passed over {n_checked} train combinations",
+        style="green",
+    )
+    for line in extra or []:
+        console.print(f"  {line}")
+
+
+def _build_gen_artifacts(mod, split, cfg, out_dir):
+    """Persist the factor-grid index and the C set; return their checksums."""
+    from ..data.gen_splits import (
+        build_c_invalid,
+        save_index,
+        validate_c_invalid,
+        write_json_with_checksum,
+    )
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    index_path, index_sha = save_index(split, out_dir / 'factor_index.npz')
+    c_set = build_c_invalid(
+        split.grid,
+        n_per_kind=cfg.c_invalid_n_per_kind,
+        seed=cfg.c_invalid_seed,
+    )
+    n_c = validate_c_invalid(c_set, split.grid)
+    c_path, c_sha = write_json_with_checksum(c_set, out_dir / 'c_invalid.json')
+    return [
+        f"index:     {index_path}  sha256={index_sha}",
+        f"c_invalid: {c_path}  sha256={c_sha}  ({n_c} records)",
+    ]
+
+
+def cmd_data_shapes3d(args):
+    """Fetch Shapes3D and build the Montero recombination-to-element split."""
+    from ..config import get_default_config
+    from ..data import shapes3d as s3d
+
+    cfg = get_default_config().gen_data
+    root = args.data_root if args.data_root else (
+        Path(cfg.data_root) if cfg.data_root else s3d.shapes3d_root()
+    )
+    verify = cfg.verify_checksum and not args.no_verify
+
+    console.print("[bold cyan]Preparing Shapes3D (Montero recomb-to-element)[/bold cyan]")
+    console.print(f"  Root: {root}")
+    try:
+        if args.download:
+            prov = s3d.download_shapes3d(root, verify=verify)
+            for name, rec in prov.items():
+                console.print(f"  {name}: {rec['bytes']} bytes sha256={rec['sha256']}")
+        result = s3d.load_shapes3d(
+            root,
+            quick=args.quick,
+            quick_rows=cfg.quick_rows,
+            seed=get_default_config().project.seed,
+            holdout_assert=cfg.holdout_assert,
+        )
+        split = result['split']
+        extra = _build_gen_artifacts(s3d, split, cfg, Path(root))
+        _report_gen_split(split, result['n_checked'], extra)
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    return 0
+
+
+def cmd_data_dsprites(args):
+    """Fetch dSprites and build the Montero recombination-to-element split."""
+    from ..config import get_default_config
+    from ..data import dsprites as dsp
+
+    cfg = get_default_config().gen_data
+    root = args.data_root if args.data_root else (
+        Path(cfg.data_root) if cfg.data_root else dsp.dsprites_root()
+    )
+    verify = cfg.verify_checksum and not args.no_verify
+
+    console.print("[bold cyan]Preparing dSprites (Montero recomb-to-element)[/bold cyan]")
+    console.print(f"  Root: {root}")
+    try:
+        if args.download:
+            prov = dsp.download_dsprites(
+                root, with_images=cfg.dsprites_with_images, verify=verify
+            )
+            for name, rec in prov.items():
+                console.print(f"  {name}: {rec['bytes']} bytes sha256={rec['sha256']}")
+        result = dsp.load_dsprites(
+            root,
+            quick=args.quick,
+            quick_rows=cfg.quick_rows,
+            seed=get_default_config().project.seed,
+            holdout_assert=cfg.holdout_assert,
+        )
+        split = result['split']
+        extra = _build_gen_artifacts(dsp, split, cfg, Path(root))
+        _report_gen_split(split, result['n_checked'], extra)
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
     return 0
