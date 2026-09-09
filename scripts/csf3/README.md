@@ -310,10 +310,10 @@ rsync -av csf3:~/scratch/CHLU-gen/workspaces/shapes3d_recon/encoder/ \
 ### 7.5 Verification status
 
 - **[LOCAL, 2026-09-09]** `bash -n` clean; `shellcheck 0.11.0 -s bash` clean
-  (zero warnings); `tests/test_gen_launcher.py` — 24 tests, ~4 s, covering the
+  (zero warnings); `tests/test_gen_launcher.py` — 25 tests, ~4 s, covering the
   unset/invalid-axis aborts, the grid/path construction, the array-size guard,
-  the provenance guard and the full encoder→decoder→store→cell chain via
-  `GEN_LOCAL=1 SMOKE=1`. A dry run produces a populated `run_manifest.json`
+  the provenance guard, the slurm-stream capture and the full
+  encoder→decoder→store→cell chain via `GEN_LOCAL=1 SMOKE=1`. A dry run produces a populated `run_manifest.json`
   (`jax 0.9.0`, `chlu 0.2.4`, commit, non-default flags, slurm ids).
 - **[UNTESTED-ON-CLUSTER]** the CSF3 smoke of §7.3 has **not** been submitted:
   `csf3.itservices.manchester.ac.uk` does not resolve from the laptop without
