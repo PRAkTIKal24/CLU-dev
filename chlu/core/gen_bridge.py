@@ -196,6 +196,17 @@ def whitening_feasibility(d: int, n: int) -> dict:
         "limit": WHITENING_D_LIMIT,
         "full_whitening_feasible": bool(d <= WHITENING_D_LIMIT),
         "shrinkage_mandatory": bool(d > n),
+        # ⭐ Head ruling (2026-09-09): our architecture choices never weaken a
+        # competitor. Either pick a width LACE can whiten NATIVELY (option 1) or
+        # keep a wider encoder and hand LACE a DECLARED PCA projection, reported
+        # both ways (option 2). ⛔ Channel-only whitening is never silent.
+        "lace_option": (
+            "1 — feature width chosen so LACE whitens natively (full D x D "
+            "shrinkage covariance over the cached train features)"
+            if d <= WHITENING_D_LIMIT
+            else "2 — wider encoder kept; LACE gets a DECLARED PCA projection and "
+            "the arm is reported both ways"
+        ),
         "note": (
             f"D={d} <= {WHITENING_D_LIMIT}: a full D x D eigendecomposition is "
             "feasible, so the LACE arm runs in fully whitened coordinates and is "

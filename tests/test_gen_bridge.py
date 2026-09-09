@@ -142,6 +142,8 @@ def test_default_encoder_D_is_under_the_lace_whitening_limit():
     assert verdict["full_whitening_feasible"] is True
     assert verdict["D"] <= WHITENING_D_LIMIT
     assert verdict["shrinkage_mandatory"] is False
+    # ⭐ Head ruling: our choices never weaken a competitor — option 1 is recorded
+    assert verdict["lace_option"].startswith("1 —")
 
 
 def test_whitening_flags_shrinkage_when_D_exceeds_N():
@@ -149,6 +151,7 @@ def test_whitening_flags_shrinkage_when_D_exceeds_N():
     assert v["shrinkage_mandatory"] is True
     big = whitening_feasibility(WHITENING_D_LIMIT + 1, 10**6)
     assert big["full_whitening_feasible"] is False
+    assert big["lace_option"].startswith("2 —")
     assert "HEAD CALL" in big["note"]
 
 
