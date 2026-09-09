@@ -356,3 +356,41 @@ def test_encoder_has_no_upstream_requirement(tmp_path):
     # tmp_path itself contains "upstream" for this test.)
     assert "upstream ok:" not in proc.stdout
     assert "has no manifest" not in proc.stdout + proc.stderr
+
+
+def test_slurm_streams_are_captured_into_the_run_logs(tmp_path):
+    """Slurm writes -o/-e into $CLU_REPO/logs/; the run keeps its own copy.
+
+    ``#SBATCH -o`` is resolved at *submit* time, so it cannot name the per-run
+    directory (which depends on the array task id). The exit trap copies the
+    streams next to the artifacts they belong to — the only cluster-only
+    behaviour in the script, simulated here.
+    """
+    repo = tmp_path / "repo"
+    (repo / "logs").mkdir(parents=True)
+    (repo / "logs" / "clu-gen-777000_2.out").write_text("stdout stream\n")
+    (repo / "logs" / "clu-gen-777000_2.err").write_text("stderr stream\n")
+    run_launcher(
+        smoke_env(
+            tmp_path,
+            CLU_REPO=str(repo),
+            GEN_TASK_ID=None,
+            SLURM_JOB_NAME="clu-gen",
+            SLURM_ARRAY_JOB_ID="777000",
+            SLURM_ARRAY_TASK_ID="2",
+            SLURM_ARRAY_TASK_COUNT="12",
+        ),
+        expect_ok=True,
+    )
+    logs = (
+        tmp_path
+        / "CHLU-gen"
+        / "workspaces"
+        / "shapes3d_recon"
+        / "encoder"
+        / "clu_s2"
+        / "logs"
+    )
+    assert (logs / "clu-gen-777000_2.out").read_text() == "stdout stream\n"
+    assert (logs / "clu-gen-777000_2.err").read_text() == "stderr stream\n"
+    assert (logs / "stage.log").is_file()
