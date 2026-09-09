@@ -51,6 +51,14 @@ cafe = [
 # On macOS this extra is a no-op (marker), so `uv sync --extra cuda` is safe everywhere.
 # jax[cuda12] pulls jax-cuda12-plugin[with-cuda] (bundled CUDA/cuDNN libs);
 # the target node only needs an NVIDIA driver >= 525.60.13 (CSF3 A100 nodes: 580.126.09).
+# Generative pivot (chlu/data/shapes3d.py): install via
+#   uv sync --extra gen
+# Shapes3D ships as a single HDF5 file, so h5py is unavoidable. Kept as an extra
+# rather than a core dep so the base install stays lean; without it the 8 real-data
+# tests in tests/test_gen_data_splits.py importorskip and silently pass as SKIPS --
+# nothing goes red, so the gap is invisible unless you read the skip count.
+gen = ["h5py>=3.0"]
+
 cuda = ["jax[cuda12]; sys_platform == 'linux'"]
 
 [project.scripts]
