@@ -27,10 +27,11 @@
 #   DATASET=shapes3d PRETEXT=recon STAGE=encoder PLAN=1 \
 #       bash scripts/csf3/job_gpu_gen.sh
 #
-#   # 1. submit the stage (the -a range MUST match ARMS x SEEDS; PLAN prints it)
-#   sbatch --export=ALL,DATASET=shapes3d,PRETEXT=recon,STAGE=encoder,\
-#SEEDS="0 1 2",ARMS="clu store_removed lace knn",GEN_GIT_COMMIT=$GEN_GIT_COMMIT \
-#          -a 0-11%2 -t 12:00:00 scripts/csf3/job_gpu_gen.sh
+#   # 1. submit the stage (the -a range MUST match ARMS x SEEDS; PLAN prints it).
+#   #    SEEDS/ARMS may be omitted -> "0 1 2" and all four arms.
+#   EXP='DATASET=shapes3d,PRETEXT=recon,STAGE=encoder'
+#   sbatch --export="ALL,$EXP,GEN_GIT_COMMIT=$GEN_GIT_COMMIT" -a 0-11%2 -t 12:00:00 \
+#          scripts/csf3/job_gpu_gen.sh
 #
 #   # 2. the next stage, gated on the previous one (per-arm manifests are checked
 #   #    in-job as well, so a half-finished upstream fails loudly, not silently):
