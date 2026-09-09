@@ -172,6 +172,10 @@ def test_plan_enumerates_arms_x_seeds_grid(tmp_path):
         expect_ok=True,
     )
     assert "-a 0-3%3" in proc.stdout
+    # sbatch --export splits on COMMAS only, so space-containing values are fine
+    # provided the whole argument is one shell word: the printed line quotes it.
+    assert '--export="ALL,DATASET=dsprites,PRETEXT=recon,STAGE=store,' in proc.stdout
+    assert 'ARMS=clu knn,SEEDS=0 1,GEN_GIT_COMMIT=$GEN_GIT_COMMIT"' in proc.stdout
     root = tmp_path / "CHLU-gen" / "workspaces" / "dsprites_recon" / "store"
     expected = [
         (0, "clu", 0),

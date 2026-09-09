@@ -150,7 +150,9 @@ if [ "${PLAN:-0}" = "1" ]; then
     echo "arms  (${N_ARMS}): ${ARM_ARR[*]}"
     echo "seeds (${N_SEEDS}): ${SEED_ARR[*]}"
     echo "tasks: ${N_TASKS}   throttle: %${CONCURRENCY}"
-    echo "sbatch --export=ALL,DATASET=${DATASET},PRETEXT=${PRETEXT},STAGE=${STAGE},ARMS=\"${ARM_ARR[*]}\",SEEDS=\"${SEED_ARR[*]}\",GEN_GIT_COMMIT=\$(git rev-parse HEAD) -a 0-$((N_TASKS - 1))%${CONCURRENCY} -t <WALLCLOCK> scripts/csf3/job_gpu_gen.sh"
+    # NOTE: sbatch --export splits on COMMAS only, so a value may contain spaces
+    # provided the whole --export argument stays ONE shell word -> quote it all.
+    echo "sbatch --export=\"ALL,DATASET=${DATASET},PRETEXT=${PRETEXT},STAGE=${STAGE},ARMS=${ARM_ARR[*]},SEEDS=${SEED_ARR[*]},GEN_GIT_COMMIT=\$GEN_GIT_COMMIT\" -a 0-$((N_TASKS - 1))%${CONCURRENCY} -t <WALLCLOCK> scripts/csf3/job_gpu_gen.sh"
     i=0
     while [ "$i" -lt "$N_TASKS" ]; do
         echo "task ${i}: arm=${ARM_ARR[$((i / N_SEEDS))]} seed=${SEED_ARR[$((i % N_SEEDS))]} -> $(run_dir_for "${ARM_ARR[$((i / N_SEEDS))]}" "${SEED_ARR[$((i % N_SEEDS))]}")"
