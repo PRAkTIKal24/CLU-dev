@@ -597,8 +597,14 @@ class DecoderRecipe:
 #: bit-identically (asserted in ``tests/test_gen_decoder_lift.py``).
 DECODER_RECIPES: dict = {
     "baseline": {},
-    # V1 — capacity + schedule.  The null control: is the renderer merely too
-    # small / undertrained?  Loss unchanged.
+    # ⭐ V1 — capacity + schedule.  Filed as the *null control* ("is the renderer
+    # merely too small / undertrained?") and it WON: on Shapes3D/recon, 3 seeds,
+    # against the frozen encoder and the untouched feature cache, held-out
+    # `shape` goes 0.5926 -> 0.9398 and the R16 ratio goes 0.653 -> 0.966
+    # (random-A) / 0.698 -> 0.996 (matched-seen), clearing the 0.8 floor on
+    # every seed and both normalisers.  Decode MSE 0.0030 -> 0.0011.
+    # ⛔ The shipped decoder was under-resourced, not compositionally blocked.
+    # Cost: 1,516,227 params (6.05x) and ~16x the baseline CPU training time.
     "v1_capacity_schedule": {
         "dec_width_mult": 2.0,
         "dec_blocks_per_stage": 2,
@@ -610,8 +616,12 @@ DECODER_RECIPES: dict = {
         "dec_lr_schedule": "cosine",
         "dec_warmup_frac": 0.05,
     },
-    # V2 — the objective.  Architecture and schedule identical to the shipped
-    # baseline so the comparison isolates the loss.
+    # ⛔ V2 — the objective.  Architecture and schedule identical to the shipped
+    # baseline so the comparison isolates the loss.  It LOST: it renders the
+    # silhouettes it has SEEN much better (matched-seen `shape` 0.849 -> 0.974)
+    # and turns the held-out one into a coin flip (0.139 / 0.847 / 0.583 across
+    # seeds, mean 0.523 vs the baseline's 0.593).  Kept, reported, and ⛔ NOT
+    # recommended; a sharper silhouette objective buys confidence, not identity.
     "v2_object_weighted": {
         "dec_loss": "object_weighted",
         "dec_edge_weight": 8.0,

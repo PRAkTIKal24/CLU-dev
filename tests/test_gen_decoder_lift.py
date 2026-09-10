@@ -247,6 +247,7 @@ def test_the_two_declared_variants_are_the_ones_that_shipped():
     assert v1.loss == "mse"  # V1 changes capacity + schedule ONLY
     assert v1.blocks_per_stage == 2 and v1.lr_schedule == "cosine"
     assert list(v1.channels) == [256, 128, 64]
+    assert v1.steps == 1800  # ⭐ the winning recipe's constants are pinned here
     v2 = resolve_decoder_cfg(GenBridgeConfig(), "v2_object_weighted")
     assert v2.loss == "object_weighted"
     # V2 changes the LOSS ONLY, so the comparison isolates the objective
