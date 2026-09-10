@@ -3435,6 +3435,10 @@ class GenStoreConfig:
 
     # --- evaluation ---
     eval_batch: int = 256
+    #: Rows per on-the-fly encoding chunk when the bridge cache does not cover a
+    #: row.  ⚠ ``gen-feature-bridge`` wrote seed 0 at ``cache_scope="full"`` but
+    #: seeds 1/2 at ``"used"`` (9,288 rows), so coverage IS extended in practice.
+    encode_chunk: int = 16384
     #: Deletion modes measured against the intact store (``zero`` is the headline).
     delete_modes: List[str] = field(default_factory=lambda: ["zero", "mean", "scramble"])
     #: Top-1 well share above which a C record's conflict counts as intra-well.

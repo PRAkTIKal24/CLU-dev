@@ -59,8 +59,11 @@ from ..core.gen_bridge import (  # noqa: E402
     assert_decoder_hash,
     assert_no_holdout_leak,
     dataset_module,
+    encode_images,
     features_for_rows,
     load_feature_cache,
+    param_hash,
+    stream_images,
 )
 from ..core.gen_store import (  # noqa: E402
     GROUPINGS,
@@ -204,6 +207,92 @@ def matched_seen_rows(dataset: str, split, values: np.ndarray, exclude: np.ndarr
 # ---------------------------------------------------------------------------
 # One (grouping, seed) arm
 # ---------------------------------------------------------------------------
+
+
+
+def gather_features(
+    dataset: str,
+    config: CHLUConfig,
+    encoder,
+    cache_rows: np.ndarray,
+    features,
+    cman: dict,
+    rows: np.ndarray,
+    log: Callable = print,
+) -> np.ndarray:
+    """Cached features for ``rows``, **extending coverage through the FROZEN encoder**
+    for rows the cache does not hold.
+
+    ⚠ Measured constraint, not a choice: ``gen-feature-bridge`` wrote seed 0 at
+    ``cache_scope="full"`` (480,000 rows) but seeds 1 and 2 at ``"used"`` (9,288
+    rows = its own train + eval_A + eval_B).  This spoke needs more train rows than
+    that, and it needs the matched-seen control rows, which are in **no** ``used``
+    cache.
+
+    ⛔ This is **not** rebuilding the bridge.  The encoder is loaded from the
+    bridge's own checkpoint and its parameter hash is asserted against the cache
+    manifest, so an on-the-fly row is produced by *the same frozen map* that wrote
+    the cache.  Newly encoded rows are quantised to the cache's own dtype so a
+    cached row and an encoded row are numerically indistinguishable — and that is
+    **verified**, not asserted: :func:`_assert_cache_reencodes` re-encodes a sample
+    of genuinely cached rows and requires bit-identity.
+    """
+    rows = np.asarray(rows, np.int64)
+    d = int(cman["D"])
+    out = np.zeros((rows.size, d), np.float32)
+    pos = np.searchsorted(cache_rows, rows)
+    safe = np.minimum(pos, cache_rows.size - 1)
+    hit = (pos < cache_rows.size) & (cache_rows[safe] == rows)
+    if hit.any():
+        out[hit] = features_for_rows(cache_rows, features, rows[hit]).reshape((-1, d))
+    n_miss = int((~hit).sum())
+    if n_miss:
+        log(f"    extending cache coverage: {n_miss} row(s) encoded through the frozen encoder")
+        missing = rows[~hit]
+        slot = np.flatnonzero(~hit)
+        # ⚠ chunked: 32k Shapes3D images as float32 is ~1.6 GB resident, and the
+        # h5 block scan is re-walked per chunk, so this trades a second pass for
+        # not holding the whole split in RAM.
+        chunk = int(config.gen_store.encode_chunk)
+        for i in range(0, missing.size, chunk):
+            sel = slice(i, min(i + chunk, missing.size))
+            imgs = stream_images(
+                dataset, missing[sel], config.gen_data.data_root,
+                int(config.gen_bridge.cache_block),
+            )
+            f = encode_images(encoder, imgs, int(config.gen_bridge.eval_batch))
+            out[slot[sel]] = (
+                f.astype(np.dtype(cman["dtype"])).astype(np.float32).reshape((-1, d))
+            )
+            del imgs, f
+    return out
+
+
+def _assert_cache_reencodes(dataset, config, encoder, cache_rows, features, cman, n=64, log=print):
+    """⭐ Verify that re-encoding CACHED rows reproduces the cache bit-for-bit.
+
+    Without this, "extending the cache through the frozen encoder" is a claim.  With
+    it, it is a measurement.  Any mismatch means the loaded encoder is not the one
+    that wrote the cache and the run must stop.
+    """
+    take = np.asarray(cache_rows[: int(n)], np.int64)
+    cached = features_for_rows(cache_rows, features, take).reshape((take.size, -1))
+    imgs = stream_images(dataset, take, config.gen_data.data_root, int(config.gen_bridge.cache_block))
+    fresh = (
+        encode_images(encoder, imgs, int(config.gen_bridge.eval_batch))
+        .astype(np.dtype(cman["dtype"]))
+        .astype(np.float32)
+        .reshape((take.size, -1))
+    )
+    max_abs = float(np.max(np.abs(cached - fresh)))
+    if max_abs != 0.0:
+        raise AssertionError(
+            f"re-encoding {take.size} cached rows through the loaded encoder did not "
+            f"reproduce the cache (max |delta| = {max_abs}) — this is NOT the encoder "
+            "that wrote the cache"
+        )
+    log(f"  ⭐ cache re-encode check: {take.size} rows bit-identical through the frozen encoder")
+    return {"n_checked": int(take.size), "max_abs_delta": max_abs}
 
 
 def _decoded_probe(decoder, probe, feats, labels, names, batch) -> dict:
@@ -431,12 +520,22 @@ def run_seed(
 
     with open(bdir / "bridge_manifest.json") as fh:
         bman = json.load(fh)
+    encoder = load_model(bdir / "encoder.pkl")
     decoder = load_model(bdir / "decoder.pkl")
     probe = load_model(bdir / "probe.pkl")
     assert_decoder_hash(decoder, bman["decoder_param_hash"])  # ⛔ THE shared decoder
+    enc_hash = param_hash(encoder)
+    if enc_hash != bman["encoder_param_hash"]:
+        raise AssertionError("encoder checkpoint does not match the bridge manifest hash")
     crows, feats, cman = load_feature_cache(bdir, verify=bool(cfg.verify_cache_checksum))
     feat_shape = tuple(int(x) for x in cman["feat_shape"])
-    log(f"  feature cache verified: {cman['n_rows']} rows, D={cman['D']}, {cman['dtype']}")
+    if cman["encoder_param_hash"] != enc_hash:
+        raise AssertionError("the feature cache was written by a different encoder")
+    log(
+        f"  feature cache verified: {cman['n_rows']} rows (scope={cman['scope']}), "
+        f"D={cman['D']}, {cman['dtype']}"
+    )
+    reenc = _assert_cache_reencodes(dataset, config, encoder, crows, feats, cman, log=log)
 
     ms_rows = matched_seen_rows(dataset, split, values, rows["store_train"])
     probe_rows = rows["store_train"][: int(cfg.n_probe_train)]
@@ -448,7 +547,7 @@ def run_seed(
     )
 
     def gather(r):
-        return features_for_rows(crows, feats, r).reshape((len(r), -1))
+        return gather_features(dataset, config, encoder, crows, feats, cman, r, log=log)
 
     ctx = {
         "names": names,
@@ -515,6 +614,9 @@ def run_seed(
         "probe_param_hash": bman["probe_param_hash"],
         "encoder_param_hash": bman["encoder_param_hash"],
         "feature_cache_sha256": cman["features_sha256"],
+        "feature_cache_scope": cman["scope"],
+        "feature_cache_n_rows": int(cman["n_rows"]),
+        "cache_reencode_check": reenc,
         "K": int(k),
         "k_choice": kinfo,
         "n_modes": int(cfg.n_modes),
