@@ -353,6 +353,12 @@ def build_wide_cells(
 
     rng = np.random.default_rng(seed)
     cells: list[FactorCell] = [ref] if include_montero else []
+    # ⭐ Montero's rows are excluded from the ADDITIONAL cells either way, so the
+    # additional cells are bit-identical whichever way ``include_montero`` is
+    # set: the flag only decides whether Montero's own cell is carried, never
+    # where the other cells land, and the extra cells are always "beyond
+    # Montero's 72" as the task requires.
+    reserved = set(ref.rows(grid).tolist())
     n_rejected = 0
 
     for j in range(n_cells):
@@ -360,7 +366,7 @@ def build_wide_cells(
         shape_j = float(shapes[j % shapes.size])
         scale_side = "high" if (j // 2) % 2 == 0 else "low"
         rot_side = "high" if (j // 3) % 2 == 0 else "low"
-        taken = {row for c in cells for row in c.rows(grid).tolist()}
+        taken = reserved | {row for c in cells for row in c.rows(grid).tolist()}
 
         for attempt in range(WIDE_MAX_DRAWS):
             f_j = int(rng.integers(hues.size))

@@ -244,8 +244,14 @@ def test_wide_split_is_deterministic_and_seed_sensitive():
     assert a.n_test == b.n_test == c.n_test == 7 * 72
 
 
-def test_wide_without_montero_excludes_monteros_rows():
-    """``include_montero=False`` yields a hold-out that is disjoint from Montero's."""
+def test_the_additional_cells_are_always_beyond_monteros_72(wide):
+    """``include_montero`` moves NO cell — it only carries Montero's own.
+
+    Montero's rows are reserved before the draws either way, so the additional
+    cells are bit-identical between the two settings and are always disjoint
+    from Montero's 72.
+    """
+    with_m_split, with_m_cells = wide
     labels = _synthetic_shapes3d_labels()
     split, _, cells = s3d.build_wide_split(
         labels=labels, n_cells=12, seed=0, include_montero=False
@@ -254,6 +260,10 @@ def test_wide_without_montero_excludes_monteros_rows():
     assert split.n_test == 864
     montero_rows = np.flatnonzero(s3d.montero_test_mask(labels))
     assert np.intersect1d(split.test_rows, montero_rows).size == 0
+    assert np.array_equal(
+        split.test_rows, np.setdiff1d(with_m_split.test_rows, montero_rows)
+    )
+    assert [c.values for c in cells] == [c.values for c in with_m_cells[1:]]
 
 
 def test_wide_metadata_records_the_rule_verbatim(wide):
