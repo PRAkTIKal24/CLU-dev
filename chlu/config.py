@@ -3369,6 +3369,91 @@ class GenBridgeConfig:
     quick_seeds: List[int] = field(default_factory=lambda: [0])
 
 
+
+@dataclass
+class GenStoreConfig:
+    """⭐ R0 of the factorisation ladder: channel grouping, per-well modes, and the
+    store-only read.
+
+    Backs ``chlu exp-gen-store`` and ``chlu.experiments.exp_gen_store``.  The store
+    is fit on the **frozen** feature cache written by ``gen-feature-bridge``; the
+    decoder and probe are loaded frozen and never trained here (R18: the store is
+    upstream of the decoder, so a decoder fix cannot invalidate it).
+
+    ⛔ ``K`` is chosen by the pre-registered eigengap rule on TRAIN activations
+    only and is then **pinned into** ``store_plan.json``; every later ladder rung
+    loads that plan verbatim, because the ladder's whole logic is that only the
+    grouping changes.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    #: Where ``gen-feature-bridge`` wrote ``<dataset>_<pretext>/seed_<seed>/``.
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+
+    # --- grouping ---
+    #: ``None`` -> choose by the eigengap rule over ``[k_min, k_max]``; an int pins it.
+    k_wells: Optional[int] = None
+    k_min: int = 4
+    k_max: int = 16
+    #: Seed whose cached activations the ``K`` choice is read from; ``K`` is then
+    #: pinned for every seed and BOTH groupings (⛔ never re-derived per arm).
+    k_choice_seed: int = 0
+    #: ``auto`` walks ``GROUPING_ORDER`` ("average" first, the pre-registered
+    #: default) and takes the first method whose smallest well clears
+    #: ``min_well_frac`` of an equal share.  ⚠ On the shipped Shapes3D/``recon``
+    #: cache plain average linkage CHAINS (one well of ~1976 + singletons), so the
+    #: fallback is load-bearing, not cosmetic.  ⛔ The trigger is a property of the
+    #: train activations alone; no held-out quantity and no arm outcome enters it.
+    grouping_method: str = "auto"
+    #: A well holding less than this fraction of an equal share is degenerate.
+    min_well_frac: float = 0.10
+    #: Rows used for the channel-correlation matrix (train split only).
+    n_corr: int = 16384
+    #: ⭐ Always both: ``random`` is the laundering control, a full arm, never a footnote.
+    groupings: List[str] = field(default_factory=lambda: ["correlation", "random"])
+
+    # --- the store ---
+    #: Modes per well.  ``store_bytes = n_modes * D * 4`` independently of K.
+    n_modes: int = 64
+    #: Train rows the modes are fit on (⛔ never a held-out row, never an eval_A row).
+    n_store_train: int = 32768
+    train_steps: int = 1200
+    train_batch: int = 128
+    train_lr: float = 3e-3
+    commitment_beta: float = 0.25
+    #: Soft-assignment temperature, annealed geometrically start -> end.
+    tau_start: float = 1.0
+    tau_end: float = 0.1
+
+    # --- the per-well leakage probes (the ladder x-axis; measurement only) ---
+    n_probe_train: int = 8192
+    probe_steps: int = 400
+    probe_batch: int = 512
+    probe_lr: float = 3e-3
+
+    # --- evaluation ---
+    eval_batch: int = 256
+    #: Deletion modes measured against the intact store (``zero`` is the headline).
+    delete_modes: List[str] = field(default_factory=lambda: ["zero", "mean", "scramble"])
+    #: Top-1 well share above which a C record's conflict counts as intra-well.
+    c_top_share: float = 0.5
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    make_plots: bool = True
+    verify_cache_checksum: bool = True
+
+    # --- quick mode (plumbing smoke only; ⛔ never a reported number) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_corr: int = 1024
+    quick_n_store_train: int = 2048
+    quick_train_steps: int = 30
+    quick_n_probe_train: int = 1024
+    quick_probe_steps: int = 30
+    quick_n_modes: int = 8
+    quick_k_max: int = 6
+
+
 @dataclass
 class ProjectConfig:
     """Project-level configuration."""
@@ -3479,6 +3564,7 @@ class CHLUConfig:
     data: DataConfig = field(default_factory=DataConfig)
     gen_data: GenDataConfig = field(default_factory=GenDataConfig)
     gen_bridge: GenBridgeConfig = field(default_factory=GenBridgeConfig)
+    gen_store: GenStoreConfig = field(default_factory=GenStoreConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -3709,6 +3795,9 @@ def load_config(path: Path) -> CHLUConfig:
         gen_bridge=GenBridgeConfig(
             **filter_valid_fields(GenBridgeConfig, data.get("gen_bridge", {}))
         ),
+        gen_store=GenStoreConfig(
+            **filter_valid_fields(GenStoreConfig, data.get("gen_store", {}))
+        ),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -3769,6 +3858,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "data": asdict(config.data),
         "gen_data": asdict(config.gen_data),
         "gen_bridge": asdict(config.gen_bridge),
+        "gen_store": asdict(config.gen_store),
         "project": asdict(config.project),
     }
 
