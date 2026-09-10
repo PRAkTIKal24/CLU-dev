@@ -3294,6 +3294,82 @@ class GenDataConfig:
 
 
 @dataclass
+class GenBridgeConfig:
+    """The frozen encoder / feature cache / ONE shared frozen decoder bridge.
+
+    Backs ``chlu exp-gen-bridge`` and ``chlu.experiments.exp_gen_bridge``.  The
+    bridge is arm-independent by construction: every random draw is threaded
+    from ``seed`` alone, so the decoder frozen at a given seed is bit-identical
+    whichever arm asks for it — which is what "ONE decoder, shared by every arm,
+    forever" has to mean operationally.
+
+    ⭐ ``D = prod(encoder.feat_shape)`` is a *design constraint*, not a free
+    choice: the LACE baseline is only valid in whitened coordinates and needs a
+    ``D x D`` eigendecomposition, feasible only up to ``D ~ 2e4``.  The default
+    ``enc_channels``/``enc_stride`` give ``128 x 4 x 4 = 2048``.
+    """
+
+    #: Default dataset/pretext; the CLI ``--dataset``/``--pretext`` override these.
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+
+    # --- encoder (train split only; frozen after fitting) ---
+    enc_channels: List[int] = field(default_factory=lambda: [32, 64, 128, 128])
+    enc_kernel: int = 4
+    enc_stride: int = 2
+    #: GroupNorm groups (0 disables). GroupNorm, not BatchNorm: stateless, so a
+    #: frozen encoder reads identically at fit and eval time.
+    enc_groups: int = 8
+    enc_steps: int = 1500
+    enc_batch: int = 128
+    enc_lr: float = 1e-3
+
+    # --- THE shared decoder (fit against the FROZEN encoder) ---
+    dec_channels: List[int] = field(default_factory=lambda: [128, 64, 32])
+    dec_groups: int = 8
+    dec_steps: int = 1200
+    dec_batch: int = 128
+    dec_lr: float = 1e-3
+
+    # --- the probe: the measurement instrument for the whole phase ---
+    probe_channels: List[int] = field(default_factory=lambda: [32, 64, 128])
+    probe_groups: int = 8
+    probe_steps: int = 1500
+    probe_batch: int = 128
+    probe_lr: float = 1e-3
+
+    #: Train-split rows used to fit encoder/decoder/probe (⛔ never a held-out row).
+    n_train: int = 8192
+    #: A-split rows held back from every fitting stage — the ceiling_A eval set.
+    n_eval_a: int = 1024
+    eval_batch: int = 256
+
+    #: ``"full"`` caches every row the factor grid indexes; ``"used"`` caches only
+    #: the rows this run touches (train + eval_A + all held-out).
+    cache_scope: str = "full"
+    cache_dtype: str = "float16"
+    #: Contiguous rows per HDF5 read. The files are chunked (15000, 4, 4, 1) and
+    #: gzipped, so scattered fancy indexing is ~40x slower than a block scan.
+    cache_block: int = 8192
+
+    #: R3.1 gate: PROCEED iff ``ceiling_B >= ceiling_floor * ceiling_A``.
+    ceiling_floor: float = 0.8
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    make_plots: bool = True
+    #: Verify the feature-cache sha256 on load (never disable in a reported run).
+    verify_cache_checksum: bool = True
+
+    # --- quick mode (plumbing smoke only; ⛔ never a reported ceiling) ---
+    quick_enc_steps: int = 30
+    quick_dec_steps: int = 30
+    quick_probe_steps: int = 30
+    quick_n_train: int = 256
+    quick_n_eval_a: int = 64
+    quick_cache_scope: str = "used"
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+
+
+@dataclass
 class ProjectConfig:
     """Project-level configuration."""
 
@@ -3402,6 +3478,7 @@ class CHLUConfig:
     )
     data: DataConfig = field(default_factory=DataConfig)
     gen_data: GenDataConfig = field(default_factory=GenDataConfig)
+    gen_bridge: GenBridgeConfig = field(default_factory=GenBridgeConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -3629,6 +3706,9 @@ def load_config(path: Path) -> CHLUConfig:
         gen_data=GenDataConfig(
             **filter_valid_fields(GenDataConfig, data.get("gen_data", {}))
         ),
+        gen_bridge=GenBridgeConfig(
+            **filter_valid_fields(GenBridgeConfig, data.get("gen_bridge", {}))
+        ),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -3688,6 +3768,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "experiment_capture_armb": asdict(config.experiment_capture_armb),
         "data": asdict(config.data),
         "gen_data": asdict(config.gen_data),
+        "gen_bridge": asdict(config.gen_bridge),
         "project": asdict(config.project),
     }
 

@@ -890,6 +890,27 @@ def setup_experiment_parsers(subparsers):
                                help='Skip the one bounded write-budget escalation')
     exp_r3_parser.set_defaults(func=cmd_exp_route3_attribution)
 
+    # exp-gen-bridge (generative pivot phase 1: the instrument + the R3.1 gate)
+    exp_gb_parser = subparsers.add_parser(
+        'exp-gen-bridge',
+        help='Generative phase 1: the frozen encoder, the feature cache, THE one '
+             'shared frozen decoder, the factor probe, and the ceiling GATE '
+             '(PROCEED iff ceiling_B >= 0.8 x ceiling_A). A STOP is a result.'
+    )
+    exp_gb_parser.add_argument('--project', help='Project name to use')
+    exp_gb_parser.add_argument('--seed', type=int, help='Single seed (default: config seeds)')
+    exp_gb_parser.add_argument('--quick', action='store_true',
+                               help='Plumbing smoke only — NEVER a reported ceiling')
+    exp_gb_parser.add_argument('--dataset', choices=['shapes3d', 'dsprites'],
+                               help='Dataset (default: gen_bridge.dataset)')
+    exp_gb_parser.add_argument('--pretext', choices=['recon', 'cls'],
+                               help="recon = the mandatory primary (R1); cls = the "
+                                    "diagnostic arm, never a headline row")
+    exp_gb_parser.add_argument('--cache-scope', choices=['full', 'used'],
+                               help='full = every row the factor grid indexes')
+    exp_gb_parser.add_argument('--out', help='Output directory')
+    exp_gb_parser.set_defaults(func=cmd_exp_gen_bridge)
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -2585,4 +2606,43 @@ def cmd_all_experiments(args):
             return result
     
     console.print("\n✓ All experiments completed successfully!", style="bold green")
+    return 0
+
+
+def cmd_exp_gen_bridge(args):
+    """Run the generative-phase-1 bridge + the decoder-ceiling gate."""
+    console.print("[bold cyan]Generative phase 1: bridge + ceiling gate[/bold cyan]")
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    from ..experiments.exp_gen_bridge import run_experiment_gen_bridge
+
+    if getattr(args, 'cache_scope', None):
+        config.gen_bridge.cache_scope = args.cache_scope
+    seeds = [args.seed] if getattr(args, 'seed', None) is not None else None
+    out_dir = args.out or str(Path(paths['results']) / 'gen_bridge')
+
+    try:
+        agg = run_experiment_gen_bridge(
+            config=config,
+            dataset=getattr(args, 'dataset', None),
+            pretext=getattr(args, 'pretext', None),
+            out_dir=out_dir,
+            seeds=seeds,
+            quick=bool(getattr(args, 'quick', False)),
+            log=console.print,
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    gate = agg['gate']
+    style = 'bold green' if gate['verdict'] == 'PROCEED' else 'bold red'
+    console.print(
+        f"⭐ GATE: ceiling_A={gate['ceiling_A']:.4f} ceiling_B={gate['ceiling_B']:.4f} "
+        f"ratio={gate['ratio']:.4f} (floor {gate['floor']}) -> {gate['verdict']}",
+        style=style,
+    )
+    console.print(f"✓ gen-bridge completed -> {out_dir}", style="bold green")
     return 0
