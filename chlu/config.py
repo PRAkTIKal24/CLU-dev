@@ -3331,6 +3331,38 @@ class GenBridgeConfig:
     dec_batch: int = 128
     dec_lr: float = 1e-3
 
+    # --- the decoder RECIPE (gen-decoder-lift) ---
+    # ⭐ Whatever wins the lift is a RECIPE — architecture + schedule + loss,
+    # refit per feature space — NOT one fitted .pkl that every rung reuses. A
+    # later factorisation rung retrains the encoder, so its features differ and
+    # its decoder must be refit; ``chlu.core.gen_bridge.DECODER_RECIPES`` names
+    # the presets and ``resolve_decoder_cfg`` turns one into these knobs.
+    # ⛔ Nothing here is a function of the feature width ``D``: ``dec_width_mult``
+    # scales the existing channel list and the number of upsampling stages is
+    # derived from ``feat_shape`` at construction.
+    #: Named preset applied on top of the knobs below ("baseline" = no override,
+    #: i.e. the shipped decoder, bit-identical).
+    dec_recipe: str = "baseline"
+    #: Multiplies every entry of ``dec_channels`` (capacity, width-agnostic).
+    dec_width_mult: float = 1.0
+    #: 3x3 conv+GroupNorm+ReLU blocks per upsampling stage (skip-free; 1 = shipped).
+    dec_blocks_per_stage: int = 1
+    #: ``"mse"`` (uniform pixel MSE, shipped) | ``"object_weighted"``.
+    #: ⚠ Uniform pixel MSE is never asked to preserve *silhouette identity*: the
+    #: object is a small pixel fraction, so a wrong-but-right-sized blob is
+    #: almost free. ``object_weighted`` reweights by an image-derived edge map
+    #: and adds a gradient-matching term. ⛔ No factor label enters it (R1).
+    dec_loss: str = "mse"
+    #: ``object_weighted`` only: w = 1 + alpha * s, s = per-image mean-1 edge map.
+    dec_edge_weight: float = 8.0
+    #: ``object_weighted`` only: box-blur width used to dilate the edge map.
+    dec_edge_blur: int = 5
+    #: ``object_weighted`` only: weight of the gradient-matching term.
+    dec_grad_weight: float = 1.0
+    #: ``"constant"`` (shipped) | ``"cosine"`` (warmup then cosine decay to 0).
+    dec_lr_schedule: str = "constant"
+    dec_warmup_frac: float = 0.05
+
     # --- the probe: the measurement instrument for the whole phase ---
     probe_channels: List[int] = field(default_factory=lambda: [32, 64, 128])
     probe_groups: int = 8
