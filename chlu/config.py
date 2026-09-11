@@ -3710,6 +3710,79 @@ class GenDreamConfig:
 
 
 @dataclass
+class GenCertificateConfig:
+    """⭐ The **composition certificate**: refusal derived from the R0 store, with
+    zero invalid-example supervision.
+
+    Backs ``chlu exp-gen-certificate`` and
+    ``chlu.experiments.exp_gen_certificate``.  Everything here is a knob of the
+    *derivation*, never of a refusal target: ⛔ there is no learned refusal head and
+    no threshold in this block is fitted against invalid data.  Thresholds are
+    quantiles of the **valid** A set, fitted through
+    :class:`chlu.eval.gen_cert_eval.ValidOnlyFitter`, whose audit asserts that no C
+    record id ever reached a fit.
+
+    ⚠ The store's own hyper-parameters are NOT duplicated here — the certificate
+    re-materialises the ladder's pinned store and therefore reads ``gen_store`` for
+    ``n_modes``, ``n_store_train``, ``train_steps``, ``tau_end`` and the grouping
+    method.  A knob that appears in both places would let this stage silently fit a
+    different store than the one the ladder pinned.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: Where ``gen-store-grouping`` wrote ``store_plan.json`` (the ladder contract).
+    #: ``None`` -> ``$CHLU_GEN_STORE_RUNS`` else ``<repo>/.claude/outputs/gen-store-grouping/runs``.
+    store_runs: Optional[str] = None
+    #: ⛔ The single-sourced C set.  ``None`` -> ``<gen_data.data_root>/<dataset>/c_invalid.json``.
+    #: It is read verbatim and **never regenerated** (R2).
+    c_invalid_path: Optional[str] = None
+
+    #: ⭐ Both groupings, always: ``random`` is the store-level laundering control.
+    groupings: List[str] = field(
+        default_factory=lambda: ["correlation", "random"]
+    )
+    #: Laplace smoothing of the per-``(factor, value)`` mode histograms.  ⛔ A
+    #: property of the estimator, not a tuned refusal parameter.
+    laplace_alpha: float = 1.0
+    #: Reach is measured in units of ``radius = reach_radius_frac * median grid
+    #: spacing``; ``0.5`` is the factor's own **Voronoi radius** — the distance at
+    #: which a requested value stops being *the* nearest realised value.
+    reach_radius_frac: float = 0.5
+    #: Temperature of the soft energy whose Hessian gives the curvature component.
+    #: ``None`` -> ``gen_store.tau_end`` (the store's own final training temperature).
+    tau_curvature: Optional[float] = None
+    #: Operating point: accept below this quantile of the **A** (valid) scores.
+    #: ⛔ Fitted on valid data only; the audit asserts it.
+    accept_quantile: float = 0.95
+    #: Cap on the number of A requests (``None`` = every held-back ``eval_a`` row).
+    n_requests_a: Optional[int] = None
+    #: ⭐ Score a **term-count control** (``A7``): valid requests carrying a redundant
+    #: extra term, so they are as long as a ``duplicate_factor`` C record without
+    #: being invalid.  ⛔ Never off in a reported run — a statistic that only counts
+    #: terms separates A from C-duplicates at AUROC 1.000 for free.
+    term_count_control: bool = True
+    #: Write the re-materialised modes beside the manifest, so a later rung does not
+    #: have to re-train a store that is reproducible but not cheap.
+    save_store: bool = True
+    #: Assert the re-materialised store reproduces the shipped manifest bit-for-bit
+    #: (costs one extra ``eval_a`` gather; ⛔ off only in quick mode).
+    assert_store_bit_identity: bool = True
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    make_plots: bool = True
+
+    # --- quick mode (plumbing smoke only; ⛔ never a reported number) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_store_train: int = 2048
+    quick_n_corr: int = 1024
+    quick_train_steps: int = 30
+    quick_n_modes: int = 8
+    quick_n_requests_a: int = 64
+
+
+@dataclass
 class ProjectConfig:
     """Project-level configuration."""
 
@@ -3823,6 +3896,9 @@ class CHLUConfig:
     # --- gen-r0-wide-refit (additive; R24) ---
     gen_r0_wide: GenR0WideConfig = field(default_factory=GenR0WideConfig)
     gen_dream: GenDreamConfig = field(default_factory=GenDreamConfig)
+    gen_certificate: GenCertificateConfig = field(
+        default_factory=GenCertificateConfig
+    )
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -4063,6 +4139,11 @@ def load_config(path: Path) -> CHLUConfig:
         gen_dream=GenDreamConfig(
             **filter_valid_fields(GenDreamConfig, data.get("gen_dream", {}))
         ),
+        gen_certificate=GenCertificateConfig(
+            **filter_valid_fields(
+                GenCertificateConfig, data.get("gen_certificate", {})
+            )
+        ),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -4127,6 +4208,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         # --- gen-r0-wide-refit (additive; R24) ---
         "gen_r0_wide": asdict(config.gen_r0_wide),
         "gen_dream": asdict(config.gen_dream),
+        "gen_certificate": asdict(config.gen_certificate),
         "project": asdict(config.project),
     }
 

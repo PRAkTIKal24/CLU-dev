@@ -967,6 +967,30 @@ def setup_experiment_parsers(subparsers):
     exp_gd_parser.add_argument('--out', help='Output directory')
     exp_gd_parser.set_defaults(func=cmd_exp_gen_dream)
 
+    # exp-gen-certificate (generative pivot phase 1: the admission dial)
+    exp_gc_parser = subparsers.add_parser(
+        'exp-gen-certificate',
+        help='Generative phase 1: a REFUSAL criterion derived from the store, with '
+             'zero invalid-example supervision. The plain distance-to-store '
+             'laundering control runs beside every number and is never optional.'
+    )
+    exp_gc_parser.add_argument('--project', help='Project name to use')
+    exp_gc_parser.add_argument('--seed', type=int, help='Single seed (default: config seeds)')
+    exp_gc_parser.add_argument('--quick', action='store_true',
+                               help='Plumbing smoke only — NEVER a reported AUROC')
+    exp_gc_parser.add_argument('--dataset', choices=['shapes3d', 'dsprites'],
+                               help='Dataset (default: gen_certificate.dataset)')
+    exp_gc_parser.add_argument('--pretext', choices=['recon', 'cls'],
+                               help='recon = the mandatory primary (R1)')
+    exp_gc_parser.add_argument('--condition',
+                               help='Hold-out condition (default: gen_data.condition)')
+    exp_gc_parser.add_argument('--bridge-root',
+                               help='Where gen-feature-bridge wrote its frozen runs')
+    exp_gc_parser.add_argument('--store-runs',
+                               help="Where gen-store-grouping wrote store_plan.json")
+    exp_gc_parser.add_argument('--out', help='Output directory')
+    exp_gc_parser.set_defaults(func=cmd_exp_gen_certificate)
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -2822,4 +2846,64 @@ def cmd_exp_gen_dream(args):
                     "landscape. Reported as such.", style='bold red',
                 )
     console.print(f"✓ gen-dream completed -> {out_dir}", style="bold green")
+    return 0
+
+
+def cmd_exp_gen_certificate(args):
+    """Run the generative-phase-1 composition certificate (the admission dial)."""
+    console.print("[bold cyan]Generative phase 1: the composition certificate[/bold cyan]")
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    from ..experiments.exp_gen_certificate import run_experiment_gen_certificate
+
+    if getattr(args, 'condition', None):
+        config.gen_data.condition = args.condition
+    if getattr(args, 'bridge_root', None):
+        config.gen_certificate.bridge_root = args.bridge_root
+    if getattr(args, 'store_runs', None):
+        config.gen_certificate.store_runs = args.store_runs
+    seeds = [args.seed] if getattr(args, 'seed', None) is not None else None
+    out_dir = args.out or str(Path(paths['results']) / 'gen_certificate')
+
+    try:
+        agg = run_experiment_gen_certificate(
+            config=config,
+            dataset=getattr(args, 'dataset', None),
+            pretext=getattr(args, 'pretext', None),
+            out_dir=out_dir,
+            seeds=seeds,
+            quick=bool(getattr(args, 'quick', False)),
+            log=console.print,
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    for grouping, block in agg.get('arms', {}).items():
+        clu = block['per_arm'].get('clu', {})
+        ctl = block['per_arm'].get('distance', {})
+        if not clu:
+            continue
+        console.print(
+            f"⭐ [{grouping}] B-vs-C AUROC: certificate "
+            f"{clu['B_vs_C']['mean']:.4f} ± {clu['B_vs_C']['std']:.4f}  vs  "
+            f"distance-to-store control {ctl['B_vs_C']['mean']:.4f} ± "
+            f"{ctl['B_vs_C']['std']:.4f}",
+            style='bold',
+        )
+        console.print(
+            f"   dup-only (where the mechanism lives): "
+            f"{clu['B_vs_C[duplicate_factor]']['mean']:.4f}; "
+            f"hard-control margin {block['laundering_margin_dup']['mean']:+.4f} ± "
+            f"{block['laundering_margin_dup']['std']:.4f}"
+        )
+    ok = agg.get('CERTIFIED_no_invalid_supervision', False)
+    console.print(
+        f"{'⭐' if ok else '⛔'} zero-invalid-supervision audit: "
+        f"{'CERTIFIED' if ok else 'FAILED — the headline claim is void'}",
+        style='bold green' if ok else 'bold red',
+    )
+    console.print(f"✓ gen-certificate completed -> {out_dir}", style="bold green")
     return 0
