@@ -3517,6 +3517,65 @@ class GenStoreConfig:
     quick_k_max: int = 6
 
 
+# --- BEGIN gen-r0-wide-refit (additive; R24) ---
+@dataclass
+class GenR0WideConfig:
+    """⭐ R24: R0 of the factorisation ladder, re-fitted on the **wide** cache.
+
+    Backs the wide re-fit of ``exp-gen-store``'s store.  The ladder holds the
+    store configuration, the byte budget and ``K`` fixed across rungs and R1-R5
+    run on the widened hold-out condition, so R0 must be measured on the **same**
+    configuration: *a monotonicity claim on a mixed baseline is no claim at all*.
+
+    ⛔ Montero's R0 is NOT touched by anything here.  It stays as the published
+    link to the literature and is read back only for the cache-consistency gate
+    (``chlu.core.gen_store.read_margin_gate``); the ladder figure carries
+    wide-configuration rungs only, never both on one axis.
+    """
+
+    #: The hold-out condition R0 is re-fitted against (``gen_data.condition``'s
+    #: widened sibling).  ⛔ Montero's ``recomb2element`` remains the headline.
+    condition: str = "recomb2element_wide"
+    #: Where the wide bridge wrote ``<dataset>_<pretext>_<condition>/seed_<s>/``.
+    #: ``None`` -> ``$CHLU_GEN_WIDE_BRIDGE_ROOT`` else the repo's
+    #: ``.claude/outputs/gen-bridge-wide/runs``.
+    bridge_runs_root: Optional[str] = None
+    #: The shipped Montero R0 run directory (``store_manifest.json`` per seed and
+    #: ``store_plan.json``), read **read-only** for the grouping-agreement metric
+    #: and the gate.  ``None`` -> ``$CHLU_GEN_STORE_RUNS``.
+    montero_store_runs: Optional[str] = None
+    #: The pinned ladder contract; ``None`` -> ``<montero_store_runs>/store_plan.json``.
+    #: ⛔ ``K`` is loaded from it verbatim and is never re-derived on a later rung.
+    store_plan: Optional[str] = None
+    #: ⛔ THE DECODER TRAP.  ``gen_bridge.dec_recipe`` still defaults to
+    #: ``"baseline"`` so Montero's history reproduces — and that decoder FAILED the
+    #: gate (0.7191 balanced accuracy vs the winner's 0.9414).  ⭐ Here the winner
+    #: is the default and the loaded decoder's recipe is asserted against it.
+    dec_recipe: str = "v1_capacity_schedule"
+    assert_dec_recipe: bool = True
+    #: ⛔ THE GATE: |wide margin - Montero margin| above this many pooled seed
+    #: spreads is a PLUMBING FAULT (the two caches are not the same encoder's)
+    #: and it STOPS the ladder.  It is never rationalised as a property of the split.
+    gate_tolerance_sigmas: float = 3.0
+    #: ⭐ The pre-registered ruling-2 fallback: a ``shape``-leakage margin smaller
+    #: than this many seed spreads means ``shape``-leakage is declared
+    #: **underpowered, in those words** — a pre-registered outcome, not a failure.
+    underpowered_spread_multiple: float = 3.0
+    #: R23.3 — ``montero`` and ``wide-000`` are the SAME colour corner and are a
+    #: two-class corner, never pooled.  The pooled headline runs on the other cells
+    #: and the corner pair is reported alongside.
+    exclude_shared_corner_from_pooled: bool = True
+    shared_corner_cells: List[str] = field(
+        default_factory=lambda: ["montero", "wide-000"]
+    )
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    verify_cache_checksum: bool = True
+    make_plots: bool = True
+
+
+# --- END gen-r0-wide-refit ---
+
+
 @dataclass
 class ProjectConfig:
     """Project-level configuration."""
@@ -3628,6 +3687,8 @@ class CHLUConfig:
     gen_data: GenDataConfig = field(default_factory=GenDataConfig)
     gen_bridge: GenBridgeConfig = field(default_factory=GenBridgeConfig)
     gen_store: GenStoreConfig = field(default_factory=GenStoreConfig)
+    # --- gen-r0-wide-refit (additive; R24) ---
+    gen_r0_wide: GenR0WideConfig = field(default_factory=GenR0WideConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -3861,6 +3922,10 @@ def load_config(path: Path) -> CHLUConfig:
         gen_store=GenStoreConfig(
             **filter_valid_fields(GenStoreConfig, data.get("gen_store", {}))
         ),
+        # --- gen-r0-wide-refit (additive; R24) ---
+        gen_r0_wide=GenR0WideConfig(
+            **filter_valid_fields(GenR0WideConfig, data.get("gen_r0_wide", {}))
+        ),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -3922,6 +3987,8 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "gen_data": asdict(config.gen_data),
         "gen_bridge": asdict(config.gen_bridge),
         "gen_store": asdict(config.gen_store),
+        # --- gen-r0-wide-refit (additive; R24) ---
+        "gen_r0_wide": asdict(config.gen_r0_wide),
         "project": asdict(config.project),
     }
 
