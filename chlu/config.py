@@ -3399,6 +3399,20 @@ class GenBridgeConfig:
 
     #: R3.1 gate: PROCEED iff ``ceiling_B >= ceiling_floor * ceiling_A``.
     ceiling_floor: float = 0.8
+
+    # --- the DISCRIMINATION read (R20) ---
+    # ⭐ Kill rule (i) reads discrimination WITHIN the colour corner, never a
+    # detection rate: a one-class held-out cell makes bare accuracy degenerate
+    # (answer "cylinder" to everything in that corner and score 1.000).  The
+    # read is therefore the **balanced accuracy / AUROC** of the cell's shape
+    # against **matched-seen** negatives — the same corner, a seen shape.
+    #: Floor on the ratio (held-out / seen normaliser) of the balanced metric.
+    disc_floor: float = 0.8
+    #: Absolute floor on the balanced metric itself (0.5 is chance).
+    disc_abs_floor: float = 0.75
+    #: Refuse to score a cell with fewer matched-seen negatives than this
+    #: (⛔ a balanced accuracy over 3 negatives is not a measurement).
+    disc_min_negatives: int = 20
     seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
     make_plots: bool = True
     #: Verify the feature-cache sha256 on load (never disable in a reported run).
