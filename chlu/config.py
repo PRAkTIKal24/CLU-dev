@@ -3628,6 +3628,14 @@ class CHLUConfig:
     gen_data: GenDataConfig = field(default_factory=GenDataConfig)
     gen_bridge: GenBridgeConfig = field(default_factory=GenBridgeConfig)
     gen_store: GenStoreConfig = field(default_factory=GenStoreConfig)
+    # --- BEGIN gen-baselines (additive) ---
+    # ⭐ String annotation + lambda factory: ``GenBaselinesConfig`` is defined at
+    # the END of this file (the shared append anchor for four concurrent spokes),
+    # so neither the annotation nor the default may be evaluated here.
+    gen_baselines: "GenBaselinesConfig" = field(
+        default_factory=lambda: GenBaselinesConfig()
+    )
+    # --- END gen-baselines ---
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -3861,6 +3869,11 @@ def load_config(path: Path) -> CHLUConfig:
         gen_store=GenStoreConfig(
             **filter_valid_fields(GenStoreConfig, data.get("gen_store", {}))
         ),
+        # --- BEGIN gen-baselines (additive) ---
+        gen_baselines=GenBaselinesConfig(
+            **filter_valid_fields(GenBaselinesConfig, data.get("gen_baselines", {}))
+        ),
+        # --- END gen-baselines ---
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -3922,9 +3935,158 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "gen_data": asdict(config.gen_data),
         "gen_bridge": asdict(config.gen_bridge),
         "gen_store": asdict(config.gen_store),
+        # --- BEGIN gen-baselines (additive) ---
+        "gen_baselines": asdict(config.gen_baselines),
+        # --- END gen-baselines ---
         "project": asdict(config.project),
     }
 
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
+
+
+# --- BEGIN gen-baselines (additive; owner: experiment-engineer) --------------
+# ⭐ Appended at the END of the file, per the wave instruction that four spokes
+# all extend `chlu/config.py` at the same anchor.  A dataclass defined *after*
+# `CHLUConfig` cannot be referenced by an evaluated annotation, so the field is
+# declared with a **string annotation** and a **lambda default_factory** — both
+# resolve lazily at instantiation, by which point the module is fully loaded.
+# ⛔ Nothing above this line was modified except the three house wiring sites
+# (the `CHLUConfig` field, `load_config`, `save_config`).
+@dataclass
+class GenBaselinesConfig:
+    """⭐ The two COMPETITOR arms: byte-matched kNN, and LACE.
+
+    Backs ``chlu exp-gen-baselines`` and ``chlu.experiments.exp_gen_baselines``.
+
+    ⛔ **No CLU number is produced here — this module IS the laundering control.**
+    The kNN arm is the comparator for two kill rules ((ii) on B and (iv) on C), so
+    a weak kNN would make both pass trivially and let a dead mechanism through.
+    Every default below is set to let the rivals win if they can.
+
+    ⛔ **The trap.** ``GenBridgeConfig.dec_recipe`` still defaults to ``"baseline"``
+    — the decoder that FAILED the gate (balanced accuracy 0.7191, 0/3 seeds
+    clear).  The winner is ``v1_capacity_schedule`` (0.9414, 3/3).  The default was
+    left alone deliberately so Montero's history reproduces, so this config selects
+    the winner explicitly through :attr:`decoder_source` and the run **asserts the
+    decoder parameter hash** before recording a number.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    #: Which arms run.  ``knn`` covers both byte-matched kNN-family members
+    #: (bottlenecked retrieval **and** the prototype-direct variant).
+    arms: List[str] = field(default_factory=lambda: ["knn", "lace"])
+
+    # --- frozen artifacts (⛔ every one of these is loaded, never fitted here) ---
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: ``"decoder_lift_v1"`` (⭐ the winner, 0.9414) | ``"bridge"`` (⛔ the SUPERSEDED
+    #: baseline that failed the gate — kept only so a deliberate reproduction is possible).
+    decoder_source: str = "decoder_lift_v1"
+    #: ``None`` -> ``$CHLU_GEN_DECLIFT_DIR`` else ``<repo>/.claude/outputs/gen-decoder-lift/winner``.
+    decoder_lift_dir: Optional[str] = None
+    #: Assert the decoder parameter hash against the winner manifest before scoring.
+    #: ⛔ Never disable in a reported run: a run through the wrong decoder looks
+    #: entirely normal in the logs and is void.
+    assert_decoder_hash: bool = True
+    verify_cache_checksum: bool = True
+    #: Rows per on-the-fly encoding chunk when the frozen cache does not cover a row
+    #: (seeds 1/2 were written at ``scope="used"``, 9,288 rows).
+    encode_chunk: int = 16384
+
+    # --- the byte budget (⭐ shrink to match; ⛔ never grow, never hand-solved) ---
+    #: ``None`` -> read from ``store_bytes.json``; an int pins it.  The measured
+    #: Shapes3D/recon value is 524,288 B (``n_modes * D * 4 = 64 * 2048 * 4``).
+    store_bytes: Optional[int] = None
+    #: ``None`` -> ``$CHLU_GEN_STORE_RUNS`` else ``<repo>/.claude/outputs/gen-store-grouping/runs``.
+    store_runs_root: Optional[str] = None
+    #: ⭐ The declared STORE ceiling companion (R23.5): the in-corner store read,
+    #: 0.6866 balanced accuracy against the 0.9414 real-feature decoder ceiling.
+    #: Quoted from R22 with provenance; the decoder ceiling is re-measured in-run.
+    store_ceiling_balacc: float = 0.6866
+
+    # --- rows ---
+    #: Train rows the prototypes / kNN store / LACE classifier are fitted on.
+    #: ⭐ ``n_fit + n_val == gen_store.n_store_train`` (32,768) by construction, so
+    #: the matched-seen negatives are excluded by **exactly** the same row set
+    #: ``gen-store-grouping`` and ``gen-r0-rescore`` excluded and the realised
+    #: negative count reproduces theirs (198 / 199 / 199).
+    n_fit: int = 32256
+    #: Held-back TRAIN rows used to SELECT a tuning trial.  ⛔ Disjoint from A, B,
+    #: the matched-seen negatives and C; C never enters tuning.
+    n_val: int = 512
+    #: Requests per sampling batch.
+    eval_batch: int = 256
+
+    # --- kNN arm ---
+    knn_ks: List[int] = field(default_factory=lambda: [1, 3, 5])
+    knn_metrics: List[str] = field(default_factory=lambda: ["euclidean", "cosine"])
+    knn_normalisers: List[str] = field(default_factory=lambda: ["none", "zscore"])
+    #: ⛔ No dtype normalisation: bytes are counted **as deployed**, so a competitor
+    #: that quantises genuinely fits more entries into the same budget.
+    knn_deployments: List[str] = field(default_factory=lambda: ["fp32", "fp16", "int8"])
+    knn_store_method: str = "kmeans"
+    knn_kmeans_iters: int = 25
+    #: Distance reduction over the k neighbours for the refusal score.
+    knn_refusal_reduce: str = "min"
+
+    # --- LACE arm ---
+    lace_sigmas: List[float] = field(default_factory=lambda: [0.03, 0.1, 0.3, 1.0])
+    lace_forms: List[str] = field(default_factory=lambda: ["categorical", "continuous", "both"])
+    #: ``"ledoit_wolf"`` or a float intensity; parsed by ``fit_whitening``.
+    #: ⚠ **`1e-1` was dropped on a TRAIN-ONLY diagnostic before any arm result
+    #: existed** (PREREG amendment A1): at that intensity the whitened train
+    #: features have ``mean |diag(cov) - 1| = 0.86``, i.e. ``p0(u) = N(0, I)`` is
+    #: badly violated — and that identity is the *only* thing licensing LACE's ODE
+    #: drift to omit the prior score (R9.1).  ⭐ Shrinking LACE's own validity is a
+    #: crippling, not a tuning choice.  All three shipped values whiten near-exactly
+    #: at ``N = 32,256 >> D = 2,048``; the realised check ships in the manifest.
+    lace_shrinkages: List[str] = field(default_factory=lambda: ["ledoit_wolf", "1e-3", "1e-2"])
+    #: ``OFFICIAL IMPLEMENTATION:`` run_clf.sh ``--n_epochs 50``. ⛔ NOT the appendix's
+    #: 100 and ⛔ NOT argparse's 200.
+    lace_n_epochs: int = 50
+    #: ``OFFICIAL IMPLEMENTATION:`` FFHQ batch 128. ⛔ NOT argparse's default 64.
+    lace_batch: int = 128
+    lace_lr: float = 1e-4
+    lace_warmup_iters: int = 1000
+    #: Shorter schedule used for the 36 tuning trials; the SELECTED configuration is
+    #: retrained at the full shipped ``lace_n_epochs`` before any reported number.
+    lace_tune_epochs: int = 6
+    #: Validation requests scored per tuning trial (the trial sampler is cheap LD).
+    lace_tune_n: int = 256
+    lace_tune_ld_steps: int = 30
+    #: ``OFFICIAL IMPLEMENTATION:`` ``--n_steps 100`` for ``sample_q_sgld``.
+    lace_ld_steps: int = 100
+    #: R9.4: every sampler is run and LACE's best is reported.
+    lace_samplers: List[str] = field(default_factory=lambda: ["ode", "ld_published", "ld_corrected"])
+    #: R9.3 concession, calibrated on validation as a declared SIDE diagnostic —
+    #: ⛔ not folded into the 36-trial budget, because no A/B/C request uses OR or NOT.
+    lace_tune_or_not: bool = True
+    lace_or_cofs: List[float] = field(default_factory=lambda: [5.0, 20.0, 80.0, 320.0])
+    lace_not_nums: List[float] = field(default_factory=lambda: [0.03, 0.1, 0.3, 1.0])
+
+    # --- refusal ---
+    #: Quantile of the VALID-data score distribution that sets the refusal
+    #: threshold.  ⛔ No C item and no held-out item participates.
+    refusal_valid_quantile: float = 0.95
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    make_plots: bool = True
+
+    # --- quick mode (plumbing smoke only; ⛔ never a reported number) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_fit: int = 2048
+    quick_n_val: int = 64
+    quick_n_eval_a: int = 64
+    quick_lace_n_epochs: int = 1
+    quick_lace_tune_epochs: int = 1
+    quick_lace_tune_n: int = 32
+    quick_lace_tune_ld_steps: int = 3
+    quick_lace_ld_steps: int = 5
+    quick_knn_kmeans_iters: int = 3
+    quick_knn_ks: List[int] = field(default_factory=lambda: [1, 3])
+    quick_lace_sigmas: List[float] = field(default_factory=lambda: [0.1])
+    quick_lace_shrinkages: List[str] = field(default_factory=lambda: ["1e-2"])
+# --- END gen-baselines ------------------------------------------------------
