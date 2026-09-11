@@ -45,6 +45,7 @@ from chlu.core.gen_certificate import (
     naive_distance,
     pair_conflict,
     reach_energy,
+    redundant_requests,
     requests_from_rows,
     score_requests,
     store_energy,
@@ -526,3 +527,31 @@ def test_module_refuses_a_stage_that_is_not_its_own(capsys):
 
 def test_arms_include_both_laundering_controls():
     assert "distance" in ARMS and "distance_reach" in ARMS and "count" in ARMS
+
+
+def test_the_term_count_control_is_valid_and_the_same_length_as_a_C_duplicate():
+    """⭐ A7: a redundant term repeats a factor **at the value it already has**, so the
+    request stays satisfiable while carrying the 7th term a ``duplicate_factor`` C
+    record carries.  ⛔ Built from valid requests alone — no invalid example is used."""
+    grid, rows, fi, _ = _synthetic(n=12)
+    reqs = requests_from_rows(grid, rows[:6], "A")
+    a7 = redundant_requests(reqs, len(FACTORS))
+    assert len(a7) == len(reqs)
+    for base, r in zip(reqs, a7, strict=True):
+        assert r.source == "A7" and r.kind == "valid_redundant"
+        assert r.n_terms == base.n_terms + 1
+        # the extra term is a REPEAT, not a conflict: one value per factor still
+        per_factor = {}
+        for j, u in r.terms:
+            per_factor.setdefault(j, set()).add(u)
+        assert all(len(v) == 1 for v in per_factor.values())
+
+
+def test_the_count_control_is_blind_to_the_term_count_control():
+    """The syntactic ``count`` statistic separates A from C-duplicates for free; on A7
+    it is exactly at chance, which is the whole point of A7."""
+    grid, rows, fi, _ = _synthetic(n=12)
+    a7 = redundant_requests(requests_from_rows(grid, rows[:6], "A"), len(FACTORS))
+    n_a7 = [float(r.n_terms) for r in a7]
+    n_cdup = [4.0] * 6
+    assert auroc([0] * 6 + [1] * 6, n_a7 + n_cdup) == 0.5

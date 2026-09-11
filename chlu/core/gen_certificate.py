@@ -74,7 +74,7 @@ from .gen_store import GenStore, address_codes
 #: The request sources.  ``A`` = seen-combination held-back rows, ``B`` = the
 #: held-out valid combinations, ``C`` = the structurally invalid requests, read
 #: VERBATIM from ``c_invalid.json`` (R2) and never regenerated.
-SOURCES = ("A", "B", "C")
+SOURCES = ("A", "A7", "B", "C")
 #: The C kinds, exactly as ``gen-data-splits`` defines them.
 C_KINDS = ("duplicate_factor", "out_of_range")
 #: ⭐ Components of the derived certificate, in the declared order.  ``reach`` is
@@ -101,6 +101,7 @@ __all__ = [
     "naive_distance",
     "pair_conflict",
     "reach_energy",
+    "redundant_requests",
     "requests_from_rows",
     "score_requests",
     "store_energy",
@@ -153,6 +154,34 @@ def requests_from_rows(grid, rows, source: str) -> list:
         terms = tuple((int(j), float(vals[i, j])) for j in range(vals.shape[1]))
         out.append(Request(id=f"{source}:{int(r)}", source=str(source), terms=terms,
                            kind="valid", row=int(r)))
+    return out
+
+
+def redundant_requests(requests: Sequence[Request], n_factors: int) -> list:
+    """⭐ **The term-count control**, built from VALID requests only.
+
+    Each request is given one extra term that repeats a factor **at the value it
+    already has**.  The result is still perfectly satisfiable — it is the same image
+    — but it carries the same number of terms as a ``duplicate_factor`` C record.
+
+    ⛔ This is why it exists: the C ``duplicate_factor`` records carry 7 terms while A
+    and B carry 6, so *any* term-count-sensitive statistic separates them for free
+    (the ``count`` control measures exactly that, at AUROC 1.000).  Scoring C's
+    duplicates against **these** requests instead of against A asks the only question
+    that matters — does the barrier fire on the **contradiction**, or on the length?
+
+    ⚠ No invalid example is used or synthesised: the construction is a function of a
+    valid request alone, which is what keeps the supervision claim intact.
+    """
+    out = []
+    for i, r in enumerate(requests):
+        j = int(i % int(n_factors))
+        dup_terms = tuple(t for t in r.terms if int(t[0]) == j)
+        if not dup_terms:
+            continue
+        out.append(Request(id=f"A7:{r.id.split(':', 1)[-1]}", source="A7",
+                           terms=tuple(r.terms) + (dup_terms[0],),
+                           kind="valid_redundant", row=r.row))
     return out
 
 

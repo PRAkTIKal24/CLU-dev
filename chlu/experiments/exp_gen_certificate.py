@@ -63,6 +63,7 @@ from ..core.gen_certificate import (  # noqa: E402
     codes_for,
     factor_support,
     load_c_requests,
+    redundant_requests,
     requests_from_rows,
     score_requests,
 )
@@ -79,6 +80,7 @@ from ..core.gen_store import (  # noqa: E402
 )
 from ..eval.gen_cert_eval import (  # noqa: E402
     ValidOnlyFitter,
+    auroc,
     certificate_metrics,
     operating_point,
     risk_coverage,
@@ -297,9 +299,13 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path,
     req_a = requests_from_rows(grid, rows["eval_a"], "A")
     req_b = requests_from_rows(grid, rows["eval_b"], "B")
     req_c = load_c_requests(c_invalid_path(config, dataset), names)
+    # ⭐ the term-count control: valid requests carrying a REDUNDANT extra term, so
+    # they have the same length as a duplicate_factor C record without being invalid.
+    req_a7 = redundant_requests(req_a, len(names)) if cfg.term_count_control else []
     c_ids = [r.id for r in req_c]
-    log(f"{_stamp(t0)} requests: A={len(req_a)} B={len(req_b)} C={len(req_c)} "
-        f"(C kinds: {sorted(set(r.kind for r in req_c))})")
+
+    log(f"{_stamp(t0)} requests: A={len(req_a)} A7={len(req_a7)} B={len(req_b)} "
+        f"C={len(req_c)} (C kinds: {sorted(set(r.kind for r in req_c))})")
 
     support = factor_support(grid, cfg.reach_radius_frac)
     lab_store = np.asarray(grid.factor_indices_of(rows["store_train"]), np.int64)
@@ -321,7 +327,8 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path,
         "reach_radius": [float(x) for x in support.radius],
         "tau_curvature": float(cfg.tau_curvature if cfg.tau_curvature is not None
                               else scfg.tau_end),
-        "requests": {"A": len(req_a), "B": len(req_b), "C": len(req_c)},
+        "requests": {"A": len(req_a), "A7": len(req_a7), "B": len(req_b),
+                     "C": len(req_c)},
         "c_invalid_path": str(c_invalid_path(config, dataset)),
         "arms": {},
     }
@@ -366,6 +373,13 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path,
             log(f"{_stamp(t0)} [{grouping}] ⭐ BIT-IDENTICAL re-materialisation "
                 f"(rel_mse {r_a['relative_mse']!r})")
 
+        if cfg.save_store:
+            np.savez_compressed(
+                out_dir / f"store_{grouping}.npz",
+                **{f"modes_{i}": np.asarray(m) for i, m in enumerate(store.modes)},
+                **{f"channels_{i}": np.asarray(w, np.int64)
+                   for i, w in enumerate(store.well_channels)},
+                feat_shape=np.asarray(store.feat_shape, np.int64))
         codes = codes_for(store, X_store, scfg.eval_batch * 16)
         usage = mode_usage(codes, scfg.n_modes)
         stats = build_term_statistics(codes, lab_store, cards, features=X_store,
@@ -375,7 +389,9 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path,
             f"rows; mean used modes {usage['mean_used_modes']:.1f}/{scfg.n_modes}")
 
         rows_by_set = {}
-        for nm, reqs in (("A", req_a), ("B", req_b), ("C", req_c)):
+        for nm, reqs in (("A", req_a), ("A7", req_a7), ("B", req_b), ("C", req_c)):
+            if not reqs:
+                continue
             rows_by_set[nm] = score_requests(reqs, store, stats, support, tau,
                                              log=log if nm == "A" else None)
             log(f"{_stamp(t0)} [{grouping}] scored {nm}: {len(rows_by_set[nm])} requests")
@@ -412,6 +428,20 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path,
                           np.full(sb.size, 1.0 / max(sb.size, 1)),
                           np.full(sc.size, 1.0 / max(sc.size, 1))]),
             }
+            if "A7" in scores:
+                s7 = scores["A7"][arm]
+                kk7 = np.asarray([r["kind"] for r in rows_by_set["C"]])
+                for kind in ("duplicate_factor", "out_of_range"):
+                    sel = kk7 == kind
+                    if sel.any():
+                        y = np.r_[np.zeros(s7.size), np.ones(int(sel.sum()))]
+                        m[f"A7_vs_C[{kind}]"] = auroc(y, np.r_[s7, sc[sel]])
+                m["A7_vs_C"] = auroc(np.r_[np.zeros(s7.size), np.ones(sc.size)],
+                                     np.r_[s7, sc])
+                m["A7_note"] = (
+                    "⭐ the term-count-controlled number: A7 requests are VALID and "
+                    "carry a redundant 7th term, so a statistic that only counts terms "
+                    "scores exactly 0.5 here")
             m["aurc"] = {kk: vv["aurc"] for kk, vv in m["risk_coverage"].items()}
             m["aurc_random"] = {kk: vv["aurc_random"] for kk, vv in m["risk_coverage"].items()}
             for kk in m["risk_coverage"]:
@@ -422,7 +452,8 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path,
                 f"(dup {m.get('B_vs_C[duplicate_factor]', float('nan')):.4f} / "
                 f"oor {m.get('B_vs_C[out_of_range]', float('nan')):.4f}) · "
                 f"A-vs-C {m['A_vs_C']:.4f} · bal {m['AB_vs_C_balanced']:.4f} · "
-                f"AURC(B∪C) {m['aurc']['B_vs_C']:.4f}")
+                f"AURC(B∪C) {m['aurc']['B_vs_C']:.4f} · ⭐A7-vs-Cdup "
+                f"{m.get('A7_vs_C[duplicate_factor]', float('nan')):.4f}")
 
         audit = fitter.assert_no_invalid(c_ids)
         log(f"{_stamp(t0)} [{grouping}] ⭐ AUDIT PASSED: {audit['n_fits_audited']} fits, "
@@ -522,6 +553,7 @@ def aggregate_runs(run_dirs, log: Callable = _log) -> dict:
     groupings = sorted(set().union(*[set(m["arms"]) for m in mans]))
     keys = ("A_vs_C", "B_vs_C", "AB_vs_C_balanced", "pooled_UNBALANCED_do_not_quote",
             "B_vs_C[duplicate_factor]", "B_vs_C[out_of_range]",
+            "A7_vs_C[duplicate_factor]", "A7_vs_C[out_of_range]", "A7_vs_C",
             "A_vs_C[duplicate_factor]", "A_vs_C[out_of_range]")
     agg = {"schema": "chlu-gen-certificate-aggregate/1",
            "seeds": [m["seed"] for m in mans],
@@ -545,6 +577,11 @@ def aggregate_runs(run_dirs, log: Callable = _log) -> dict:
             per_arm[arm] = got
         agg["arms"][g] = {
             "per_arm": per_arm,
+            "term_count_controlled_margin_dup": _ms([
+                m["arms"][g]["arms"]["clu"].get("A7_vs_C[duplicate_factor]", float("nan"))
+                - m["arms"][g]["arms"]["distance_reach"].get("A7_vs_C[duplicate_factor]",
+                                                             float("nan"))
+                for m in mans]),
             "laundering_margin_dup": _ms([
                 m["arms"][g]["arms"]["clu"].get("B_vs_C[duplicate_factor]", float("nan"))
                 - m["arms"][g]["arms"]["distance_reach"].get("B_vs_C[duplicate_factor]", float("nan"))
