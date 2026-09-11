@@ -59,6 +59,14 @@ def setup_data_parser(subparsers):
     shapes3d_parser.add_argument('--download', action='store_true', help='Fetch if missing')
     shapes3d_parser.add_argument('--quick', action='store_true', help='Subsample train rows')
     shapes3d_parser.add_argument('--no-verify', action='store_true', help='Skip checksum check')
+    shapes3d_parser.add_argument(
+        '--condition',
+        choices=['recomb2element', 'recomb2element_wide'],
+        help=(
+            "Hold-out condition: Montero's headline split (default) or the widened "
+            'SECONDARY split, which is a separate full configuration'
+        ),
+    )
     shapes3d_parser.set_defaults(func=cmd_data_shapes3d)
 
     # data dsprites
@@ -257,8 +265,9 @@ def cmd_data_shapes3d(args):
         Path(cfg.data_root) if cfg.data_root else s3d.shapes3d_root()
     )
     verify = cfg.verify_checksum and not args.no_verify
+    condition = getattr(args, 'condition', None) or cfg.condition
 
-    console.print("[bold cyan]Preparing Shapes3D (Montero recomb-to-element)[/bold cyan]")
+    console.print(f"[bold cyan]Preparing Shapes3D ({condition})[/bold cyan]")
     console.print(f"  Root: {root}")
     try:
         if args.download:
@@ -271,9 +280,30 @@ def cmd_data_shapes3d(args):
             quick_rows=cfg.quick_rows,
             seed=get_default_config().project.seed,
             holdout_assert=cfg.holdout_assert,
+            condition=condition,
+            wide_n_cells=cfg.wide_n_cells,
+            wide_seed=cfg.wide_seed,
+            wide_include_montero=cfg.wide_include_montero,
         )
         split = result['split']
-        extra = _build_gen_artifacts(s3d, split, cfg, Path(root))
+        # ⛔ The wide condition writes into its OWN subdirectory so Montero's
+        # artifacts (and their checksums) are provably untouched.
+        out_dir = Path(root) if condition == 'recomb2element' else Path(root) / condition
+        extra = _build_gen_artifacts(s3d, split, cfg, out_dir)
+        if 'wide_metadata' in result:
+            from ..data.gen_splits import write_json_with_checksum
+            meta_path, meta_sha = write_json_with_checksum(
+                result['wide_metadata'], out_dir / 'wide_cells.json'
+            )
+            extra.append(f"wide_cells: {meta_path}  sha256={meta_sha}")
+            extra.append(
+                f"cells: {len(result['cells'])} "
+                f"(contrast labels "
+                + ', '.join(
+                    f"{c.meta['object_bg_hue_contrast']:.3f}" for c in result['cells']
+                )
+                + ')'
+            )
         _report_gen_split(split, result['n_checked'], extra)
     except Exception as e:
         console.print(f"✗ Error: {e}", style="bold red")

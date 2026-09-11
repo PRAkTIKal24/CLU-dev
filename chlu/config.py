@@ -3291,6 +3291,19 @@ class GenDataConfig:
     #: C set much larger or smaller than B distorts it. Set an int to override.
     c_invalid_n_per_kind: Optional[int] = None
     c_invalid_seed: int = 0
+    #: Widened SECONDARY hold-out (``condition="recomb2element_wide"``, R17).
+    #: ⛔ Montero's ``recomb2element`` remains the untouched headline; the wide
+    #: condition is a SEPARATE full configuration (the frozen encoder/decoder
+    #: trained under Montero's split have SEEN these rows) and its numbers are
+    #: reported separately, never pooled with Montero's 72.
+    #: Number of ADDITIONAL held-out cells, each structurally identical to
+    #: Montero's cell (72 rows) but placed across the hue/contrast range.
+    wide_n_cells: int = 12
+    #: Seed for the wide cells' hue-band placement (the rule is otherwise fixed).
+    wide_seed: int = 0
+    #: Carry Montero's own cell as cell 0 of the wide condition, so a wide-trained
+    #: stack has also never seen Montero's 72 (a strict superset hold-out).
+    wide_include_montero: bool = True
 
 
 @dataclass

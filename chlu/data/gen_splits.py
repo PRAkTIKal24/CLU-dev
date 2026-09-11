@@ -39,12 +39,16 @@ from pathlib import Path
 import numpy as np
 
 __all__ = [
+    "FactorCell",
     "FactorGrid",
     "GenSplit",
     "HoldoutViolation",
+    "assert_cells_disjoint",
     "assert_holdout_disjoint",
     "assert_index_partitions_grid",
     "build_c_invalid",
+    "build_cell_split",
+    "cells_test_predicate",
     "default_gen_data_root",
     "file_sha256",
     "write_json_with_checksum",
@@ -340,6 +344,169 @@ def assert_index_partitions_grid(split: GenSplit) -> int:
             f"partition the {n}-cell grid (unique rows: {np.unique(union).size})"
         )
     return n
+
+
+# ---------------------------------------------------------------------------
+# held-out CELLS: the widened secondary condition
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class FactorCell:
+    """One held-out **cell**: a conjunction over factors, an allowed value-set each.
+
+    Montero's held-out set is exactly one such conjunction (three hue bands x a
+    scale corner x one shape x an orientation corner).  A widened *secondary*
+    condition is a **union of several cells of the same kind**, which is what
+    keeps the two conditions comparable: the wide split is not "more rows",
+    it is "more cells of Montero's shape, placed elsewhere in factor space".
+
+    ⛔ The values must be **grid values, verbatim** — membership is decided by
+    exact float equality, the same convention :meth:`FactorGrid.verify_bijection`
+    uses, because both sides are lifted from the same array.
+
+    Attributes:
+        cell_id: stable id, unique within a condition.
+        values: factor name -> allowed values.  A factor that is absent is
+            unconstrained (all of its values are held out).
+        meta: measured / descriptive labels (e.g. a photometric contrast label).
+            Carried into the emitted metadata verbatim; never read by the split.
+    """
+
+    cell_id: str
+    values: dict[str, tuple[float, ...]]
+    meta: dict = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.meta is None:
+            object.__setattr__(self, "meta", {})
+
+    def factor_index_sets(self, grid: FactorGrid) -> list[np.ndarray]:
+        """Per-factor arrays of allowed **grid indices** (all of them if unconstrained)."""
+        out: list[np.ndarray] = []
+        for k, name in enumerate(grid.names):
+            allowed = self.values.get(name)
+            if allowed is None:
+                out.append(np.arange(grid.cardinalities[k], dtype=np.int64))
+                continue
+            allowed_arr = np.asarray(allowed, dtype=float)
+            sel = np.flatnonzero(np.isin(grid.values[k], allowed_arr))
+            if sel.size != np.unique(allowed_arr).size:
+                missing = sorted(
+                    set(allowed_arr.tolist()) - set(grid.values[k].tolist())
+                )
+                raise ValueError(
+                    f"cell {self.cell_id!r}: factor {name!r} value(s) {missing} are "
+                    "not on the grid"
+                )
+            out.append(sel.astype(np.int64))
+        return out
+
+    def mask(self, grid: FactorGrid, factor_values: np.ndarray) -> np.ndarray:
+        """(N, F) factor **values** -> (N,) boolean membership of this cell."""
+        vals = np.asarray(factor_values)
+        if vals.ndim != 2 or vals.shape[1] != grid.n_factors:
+            raise ValueError(
+                f"cell {self.cell_id!r}: expected (N, {grid.n_factors}) values, "
+                f"got {vals.shape}"
+            )
+        hit = np.ones(len(vals), dtype=bool)
+        for name, allowed in self.values.items():
+            k = grid.index_of(name)
+            hit &= np.isin(vals[:, k], np.asarray(allowed, dtype=float))
+        return hit
+
+    def rows(self, grid: FactorGrid) -> np.ndarray:
+        """Sorted dataset row indices covered by this cell (via the bijection)."""
+        idx = self.factor_index_sets(grid)
+        mesh = np.meshgrid(*idx, indexing="ij")
+        fi = np.stack([m.ravel() for m in mesh], axis=-1)
+        return np.sort(grid.rows_of(fi))
+
+    @property
+    def n_rows_nominal(self) -> int:
+        """Product of the constrained set sizes — the *predicted* count.
+
+        ⛔ Never substituted for the realised count: callers report
+        ``rows(grid).size``, which is what the grid actually yields.
+        """
+        return int(np.prod([len(set(v)) for v in self.values.values()]))
+
+    def to_dict(self, grid: FactorGrid | None = None) -> dict:
+        d = {
+            "cell_id": self.cell_id,
+            "values": {k: [float(x) for x in v] for k, v in self.values.items()},
+            "meta": self.meta,
+        }
+        if grid is not None:
+            d["n_rows_realised"] = int(self.rows(grid).size)
+        return d
+
+
+def cells_test_predicate(
+    grid: FactorGrid, cells: Sequence[FactorCell]
+) -> Callable[[np.ndarray], np.ndarray]:
+    """Build the held-out predicate of a multi-cell condition: the OR of the cells.
+
+    Returned as a plain callable over reconstructed factor **values**, so
+    :func:`assert_holdout_disjoint` treats a wide condition exactly as it treats
+    Montero's: re-evaluate the predicate on values rebuilt from the bijection,
+    never re-read the mask that produced the split.
+    """
+    if not cells:
+        raise ValueError("a condition needs at least one cell")
+
+    def predicate(factor_values: np.ndarray) -> np.ndarray:
+        vals = np.asarray(factor_values)
+        hit = np.zeros(len(vals), dtype=bool)
+        for cell in cells:
+            hit |= cell.mask(grid, vals)
+        return hit
+
+    return predicate
+
+
+def assert_cells_disjoint(grid: FactorGrid, cells: Sequence[FactorCell]) -> int:
+    """Assert no two cells share a row; return the pooled held-out row count.
+
+    Overlapping cells would double-count rows in the per-cell table while the
+    pooled count silently disagreed — so this fires rather than de-duplicating.
+    """
+    seen: dict[int, str] = {}
+    for cell in cells:
+        for row in cell.rows(grid).tolist():
+            if row in seen:
+                raise HoldoutViolation(
+                    f"cells {seen[row]!r} and {cell.cell_id!r} both contain row "
+                    f"{row} — the per-cell counts would double-count it"
+                )
+            seen[row] = cell.cell_id
+    return len(seen)
+
+
+def build_cell_split(
+    grid: FactorGrid,
+    cells: Sequence[FactorCell],
+    dataset: str,
+    condition: str,
+    variant: str,
+) -> GenSplit:
+    """Split the grid on a union of :class:`FactorCell`s (train = exact complement)."""
+    assert_cells_disjoint(grid, cells)
+    test_rows = np.sort(
+        np.concatenate([cell.rows(grid) for cell in cells]).astype(np.int64)
+    )
+    all_rows = np.arange(grid.n_rows, dtype=np.int64)
+    train_rows = np.setdiff1d(all_rows, test_rows, assume_unique=True)
+    return GenSplit(
+        dataset=dataset,
+        condition=condition,
+        variant=variant,
+        grid=grid,
+        train_rows=train_rows,
+        test_rows=test_rows,
+        test_predicate=cells_test_predicate(grid, cells),
+    )
 
 
 # ---------------------------------------------------------------------------
