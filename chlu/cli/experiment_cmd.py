@@ -911,6 +911,28 @@ def setup_experiment_parsers(subparsers):
     exp_gb_parser.add_argument('--out', help='Output directory')
     exp_gb_parser.set_defaults(func=cmd_exp_gen_bridge)
 
+    # exp-gen-store (generative pivot phase 1: R0 of the factorisation ladder)
+    exp_gs_parser = subparsers.add_parser(
+        'exp-gen-store',
+        help='Generative phase 1: group the cached channels into wells, learn the '
+             'modes, and measure the DELETE-THE-STORE delta. Random grouping at '
+             'the same K is a full arm, never a footnote.'
+    )
+    exp_gs_parser.add_argument('--project', help='Project name to use')
+    exp_gs_parser.add_argument('--seed', type=int, help='Single seed (default: config seeds)')
+    exp_gs_parser.add_argument('--quick', action='store_true',
+                               help='Plumbing smoke only — NEVER a reported number')
+    exp_gs_parser.add_argument('--dataset', choices=['shapes3d', 'dsprites'],
+                               help='Dataset (default: gen_store.dataset)')
+    exp_gs_parser.add_argument('--pretext', choices=['recon', 'cls'],
+                               help='recon = the mandatory primary (R1)')
+    exp_gs_parser.add_argument('--k-wells', type=int,
+                               help='Pin K (default: the pre-registered eigengap rule)')
+    exp_gs_parser.add_argument('--bridge-root',
+                               help='Where gen-feature-bridge wrote its frozen runs')
+    exp_gs_parser.add_argument('--out', help='Output directory')
+    exp_gs_parser.set_defaults(func=cmd_exp_gen_store)
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -2645,4 +2667,58 @@ def cmd_exp_gen_bridge(args):
         style=style,
     )
     console.print(f"✓ gen-bridge completed -> {out_dir}", style="bold green")
+    return 0
+
+
+def cmd_exp_gen_store(args):
+    """Run the generative-phase-1 store: grouping, modes, and the deletion check."""
+    console.print("[bold cyan]Generative phase 1: store grouping (ladder R0)[/bold cyan]")
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    from ..experiments.exp_gen_store import run_experiment_gen_store
+
+    if getattr(args, 'k_wells', None) is not None:
+        config.gen_store.k_wells = int(args.k_wells)
+    if getattr(args, 'bridge_root', None):
+        config.gen_store.bridge_root = args.bridge_root
+    seeds = [args.seed] if getattr(args, 'seed', None) is not None else None
+    out_dir = args.out or str(Path(paths['results']) / 'gen_store')
+
+    try:
+        agg = run_experiment_gen_store(
+            config=config,
+            dataset=getattr(args, 'dataset', None),
+            pretext=getattr(args, 'pretext', None),
+            out_dir=out_dir,
+            seeds=seeds,
+            quick=bool(getattr(args, 'quick', False)),
+            log=console.print,
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    con = agg.get('contrast', {})
+    if con:
+        m = con['read_aggregate_margin']
+        console.print(
+            f"⭐ correlation − random @ K={agg['K']}: read aggregate margin = "
+            f"{m['mean']:+.4f} ± {m['std']:.4f}",
+            style='bold',
+        )
+    fb = agg.get('falsifier_store_is_bypassed', {})
+    if fb:
+        d = fb['delete_zero_delta_aggregate']
+        console.print(
+            f"⭐ DELETE-THE-STORE Δaggregate = {d:+.4f}",
+            style='bold red' if fb.get('FAILED_TASK') else 'bold green',
+        )
+        if fb.get('FAILED_TASK'):
+            console.print(
+                "⛔ near-zero delta: the read BYPASSES the store — this is a FAILED "
+                "task, reported as such.", style='bold red',
+            )
+    console.print(f"✓ gen-store completed -> {out_dir}", style="bold green")
     return 0
