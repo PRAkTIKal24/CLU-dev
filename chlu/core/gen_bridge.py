@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
@@ -285,6 +286,19 @@ class GenEncoder(eqx.Module):
         return int(c * h * w)
 
 
+def _n_upsamples(feat_shape, out_shape) -> int:
+    """Number of x2 steps from the feature map to the image (raises if inexact)."""
+    n_up, side = 0, int(feat_shape[1])
+    while side < int(out_shape[1]):
+        side *= 2
+        n_up += 1
+    if side != int(out_shape[1]):
+        raise ValueError(
+            f"feature side {feat_shape[1]} does not reach {out_shape[1]} by x2 steps"
+        )
+    return n_up
+
+
 class GenDecoder(eqx.Module):
     """Conv renderer: penultimate feature map -> pixels in [0, 1].
 
@@ -298,20 +312,16 @@ class GenDecoder(eqx.Module):
     feat_shape: tuple
     out_shape: tuple
 
-    def __init__(self, feat_shape, out_shape, channels, groups, key):
-        n_up = 0
-        side = feat_shape[1]
-        while side < out_shape[1]:
-            side *= 2
-            n_up += 1
-        if side != out_shape[1]:
-            raise ValueError(
-                f"feature side {feat_shape[1]} does not reach {out_shape[1]} by x2 steps"
-            )
+    def __init__(self, feat_shape, out_shape, channels, groups, key, blocks_per_stage=1):
+        n_up = _n_upsamples(feat_shape, out_shape)
+        b = max(1, int(blocks_per_stage))
         chans = list(channels[:n_up])
         while len(chans) < n_up:
             chans.append(chans[-1] if chans else feat_shape[0])
-        chans = chans + [out_shape[0]]
+        # ``blocks_per_stage`` repeats each stage's channel width; b == 1 leaves
+        # the key split, the conv order and every constructor argument
+        # bit-identical to the shipped decoder (asserted in the tests).
+        chans = [c for c in chans for _ in range(b)] + [out_shape[0]]
         keys = jax.random.split(key, len(chans))
         convs, norms, c_in = [], [], int(feat_shape[0])
         for i, (c_out, k) in enumerate(zip(chans, keys, strict=True)):
@@ -328,11 +338,18 @@ class GenDecoder(eqx.Module):
         self.feat_shape = tuple(feat_shape)
         self.out_shape = tuple(out_shape)
 
+    @property
+    def blocks_per_stage(self) -> int:
+        """Derived, never stored — an added pytree field would break the shipped
+        ``decoder.pkl`` (``eqx.partition`` + pickle round-trips the module itself)."""
+        return (len(self.convs) - 1) // _n_upsamples(self.feat_shape, self.out_shape)
+
     def __call__(self, z):
         x = jnp.asarray(z, self.convs[0].weight.dtype)
-        n_up = len(self.convs) - 1
+        b = self.blocks_per_stage
+        n_conv_up = len(self.convs) - 1
         for i, (conv, norm) in enumerate(zip(self.convs, self.norms, strict=True)):
-            if i < n_up:
+            if i < n_conv_up and i % b == 0:
                 x = jax.image.resize(
                     x, (x.shape[0], x.shape[1] * 2, x.shape[2] * 2), method="bilinear"
                 )
@@ -415,9 +432,23 @@ def model_dtype(model):
     return jnp.result_type(leaves[0]) if leaves else jnp.float32
 
 
-def _sgd_loop(model, loss_fn, data, steps, batch, lr, key, log: Optional[Callable] = None):
-    """Minibatch Adam loop.  ``loss_fn(model, *batch_arrays) -> scalar``."""
-    opt = optax.adam(lr)
+def _sgd_loop(
+    model,
+    loss_fn,
+    data,
+    steps,
+    batch,
+    lr,
+    key,
+    log: Optional[Callable] = None,
+    schedule=None,
+):
+    """Minibatch Adam loop.  ``loss_fn(model, *batch_arrays) -> scalar``.
+
+    ``schedule=None`` (the default everywhere except an explicitly non-constant
+    decoder recipe) keeps the shipped constant-LR ``optax.adam(lr)`` **exactly**.
+    """
+    opt = optax.adam(lr if schedule is None else schedule)
     opt_state = opt.init(eqx.filter(model, eqx.is_array))
     n = int(data[0].shape[0])
     batch = min(int(batch), n)
@@ -514,28 +545,265 @@ def train_encoder(
     return model[0], model[1], history
 
 
+# ---------------------------------------------------------------------------
+# ⭐ THE DECODER RECIPE (gen-decoder-lift)
+#
+# A decoder is a **recipe** — architecture + schedule + loss, refit from scratch
+# against whatever feature cache it is handed — ⛔ not one fitted ``.pkl`` that
+# every rung reuses.  A later factorisation rung retrains the encoder, so its
+# feature space differs and its decoder must be refit and scored against *its
+# own* ceiling.  ⛔ Nothing below is a function of the feature width ``D``.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class DecoderRecipe:
+    """Resolved decoder hyperparameters (a config, not a fitted artifact)."""
+
+    name: str
+    channels: tuple
+    groups: int
+    blocks_per_stage: int
+    steps: int
+    batch: int
+    lr: float
+    loss: str
+    edge_weight: float
+    edge_blur: int
+    grad_weight: float
+    lr_schedule: str
+    warmup_frac: float
+
+    def as_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "channels": [int(c) for c in self.channels],
+            "groups": int(self.groups),
+            "blocks_per_stage": int(self.blocks_per_stage),
+            "steps": int(self.steps),
+            "batch": int(self.batch),
+            "lr": float(self.lr),
+            "loss": self.loss,
+            "edge_weight": float(self.edge_weight),
+            "edge_blur": int(self.edge_blur),
+            "grad_weight": float(self.grad_weight),
+            "lr_schedule": self.lr_schedule,
+            "warmup_frac": float(self.warmup_frac),
+        }
+
+
+#: Named presets.  A recipe overrides only the ``GenBridgeConfig`` fields it
+#: names; ``"baseline"`` names none, so it reproduces the shipped decoder
+#: bit-identically (asserted in ``tests/test_gen_decoder_lift.py``).
+DECODER_RECIPES: dict = {
+    "baseline": {},
+    # ⭐ V1 — capacity + schedule.  Filed as the *null control* ("is the renderer
+    # merely too small / undertrained?") and it WON: on Shapes3D/recon, 3 seeds,
+    # against the frozen encoder and the untouched feature cache, held-out
+    # `shape` goes 0.5926 -> 0.9398 and the R16 ratio goes 0.653 -> 0.966
+    # (random-A) / 0.698 -> 0.996 (matched-seen), clearing the 0.8 floor on
+    # every seed and both normalisers.  Decode MSE 0.0030 -> 0.0011.
+    # ⛔ The shipped decoder was under-resourced, not compositionally blocked.
+    # Cost: 1,516,227 params (6.05x) and ~16x the baseline CPU training time.
+    "v1_capacity_schedule": {
+        "dec_width_mult": 2.0,
+        "dec_blocks_per_stage": 2,
+        # 1800, not the 4800 first drafted: hand-counted at 6.69x the baseline
+        # per-step MAC count, 4800 steps is ~25 h of CPU for three seeds, outside
+        # this task's bound. Cut before any V1 run and recorded in PREREG.md §6;
+        # the training-loss curve is reported so "undertrained" stays checkable.
+        "dec_steps": 1800,
+        "dec_lr_schedule": "cosine",
+        "dec_warmup_frac": 0.05,
+    },
+    # ⛔ V2 — the objective.  Architecture and schedule identical to the shipped
+    # baseline so the comparison isolates the loss.  It LOST: it renders the
+    # silhouettes it has SEEN much better (matched-seen `shape` 0.849 -> 0.974)
+    # and turns the held-out one into a coin flip (0.139 / 0.847 / 0.583 across
+    # seeds, mean 0.523 vs the baseline's 0.593).  Kept, reported, and ⛔ NOT
+    # recommended; a sharper silhouette objective buys confidence, not identity.
+    "v2_object_weighted": {
+        "dec_loss": "object_weighted",
+        "dec_edge_weight": 8.0,
+        "dec_edge_blur": 5,
+        "dec_grad_weight": 1.0,
+    },
+}
+
+
+def resolve_decoder_cfg(cfg, recipe: Optional[str] = None) -> DecoderRecipe:
+    """Fold ``DECODER_RECIPES[name]`` onto ``cfg``'s ``dec_*`` knobs.
+
+    The knobs remain the source of truth; a recipe is a named set of overrides,
+    so ``dec_recipe="baseline"`` (the default) changes nothing.
+    """
+    name = str(recipe if recipe is not None else getattr(cfg, "dec_recipe", "baseline"))
+    if name not in DECODER_RECIPES:
+        raise ValueError(
+            f"unknown decoder recipe {name!r} (have {sorted(DECODER_RECIPES)})"
+        )
+    over = DECODER_RECIPES[name]
+
+    def g(field, default=None):
+        return over.get(field, getattr(cfg, field, default))
+
+    width = float(g("dec_width_mult", 1.0))
+    chans = tuple(max(1, int(round(float(c) * width))) for c in g("dec_channels"))
+    return DecoderRecipe(
+        name=name,
+        channels=chans,
+        groups=int(g("dec_groups")),
+        blocks_per_stage=int(g("dec_blocks_per_stage", 1)),
+        steps=int(g("dec_steps")),
+        batch=int(g("dec_batch")),
+        lr=float(g("dec_lr")),
+        loss=str(g("dec_loss", "mse")),
+        edge_weight=float(g("dec_edge_weight", 8.0)),
+        edge_blur=int(g("dec_edge_blur", 5)),
+        grad_weight=float(g("dec_grad_weight", 1.0)),
+        lr_schedule=str(g("dec_lr_schedule", "constant")),
+        warmup_frac=float(g("dec_warmup_frac", 0.05)),
+    )
+
+
+def make_decoder(feat_shape, out_shape, recipe: DecoderRecipe, key):
+    """Build (do not fit) the recipe's decoder for an arbitrary feature shape."""
+    return GenDecoder(
+        feat_shape,
+        out_shape,
+        recipe.channels,
+        recipe.groups,
+        key,
+        blocks_per_stage=recipe.blocks_per_stage,
+    )
+
+
+def _fdiff(x, axis: int):
+    """Forward difference along ``axis``, zero-padded so the shape is preserved."""
+    d = jnp.diff(x, axis=axis)
+    pad = [(0, 0)] * x.ndim
+    pad[axis] = (0, 1)
+    return jnp.pad(d, pad)
+
+
+def edge_weight_map(images, alpha: float, blur: int):
+    """Per-pixel weights ``w = 1 + alpha * s`` from the **target image only**.
+
+    ``s`` is a box-blurred luminance-gradient magnitude renormalised to mean 1
+    *per image*, so a low-contrast image (the Montero hue corner is exactly
+    that) still gets its object boundary weighted — the weighting is about
+    *where* the error is, not how bright the image is.
+    ⛔ No factor label is involved: this is a function of the pixels (R1).
+    """
+    y = jnp.mean(images, axis=1)  # (B, H, W)
+    g = jnp.abs(_fdiff(y, -2)) + jnp.abs(_fdiff(y, -1))
+    k = max(1, int(blur))
+    if k > 1:
+        g = jax.lax.reduce_window(
+            g, 0.0, jax.lax.add, (1, k, k), (1, 1, 1), "SAME"
+        ) / float(k * k)
+    g = g / (jnp.mean(g, axis=(-2, -1), keepdims=True) + 1e-8)
+    return 1.0 + float(alpha) * g
+
+
+def decoder_loss_fn(recipe: DecoderRecipe) -> Callable:
+    """``loss(decoder, z_batch, x_batch) -> scalar`` for the recipe's objective.
+
+    ⚠ ``"mse"`` is the shipped uniform pixel MSE and is bit-identical to it.
+    ``"object_weighted"`` exists because uniform pixel MSE is **never asked to
+    preserve silhouette identity**: the object is a small pixel fraction, so a
+    wrong-but-right-sized blob is nearly free (measured: decode MSE 0.0027 on
+    the held-out corner vs 0.0031 on seen data — the held-out corner is *not*
+    harder to reconstruct, only harder to render *identifiably*).
+    """
+    if recipe.loss == "mse":
+
+        def loss_fn(dec, zb, xb):
+            return jnp.mean((jax.vmap(dec)(zb) - xb) ** 2)
+
+        return loss_fn
+    if recipe.loss == "object_weighted":
+        alpha, blur, lam = recipe.edge_weight, recipe.edge_blur, recipe.grad_weight
+
+        def loss_fn(dec, zb, xb):
+            recon = jax.vmap(dec)(zb)
+            w = jax.lax.stop_gradient(edge_weight_map(xb, alpha, blur))  # (B, H, W)
+            se = jnp.sum((recon - xb) ** 2, axis=1)  # sum over channels
+            num = jnp.sum(w * se, axis=(-2, -1))
+            den = float(xb.shape[1]) * jnp.sum(w, axis=(-2, -1))
+            l_w = jnp.mean(num / den)
+            l_g = jnp.mean((_fdiff(recon, -2) - _fdiff(xb, -2)) ** 2) + jnp.mean(
+                (_fdiff(recon, -1) - _fdiff(xb, -1)) ** 2
+            )
+            return l_w + lam * l_g
+
+        return loss_fn
+    raise ValueError(f"unknown dec_loss {recipe.loss!r} (have 'mse', 'object_weighted')")
+
+
+def decoder_schedule(recipe: DecoderRecipe):
+    """Optax LR schedule for the recipe, or ``None`` for the shipped constant LR."""
+    if recipe.lr_schedule == "constant":
+        return None
+    if recipe.lr_schedule == "cosine":
+        warm = int(max(0, round(recipe.warmup_frac * recipe.steps)))
+        return optax.warmup_cosine_decay_schedule(
+            init_value=0.0,
+            peak_value=recipe.lr,
+            warmup_steps=warm,
+            decay_steps=max(1, recipe.steps),
+            end_value=0.0,
+        )
+    raise ValueError(
+        f"unknown dec_lr_schedule {recipe.lr_schedule!r} (have 'constant', 'cosine')"
+    )
+
+
+def train_decoder_from_features(
+    feat_shape,
+    features: np.ndarray,
+    images: np.ndarray,
+    cfg,
+    key,
+    log: Optional[Callable] = None,
+    recipe: Optional[str] = None,
+):
+    """⭐ The recipe applied to **any** feature cache — the refit entry point.
+
+    A rung whose encoder was retrained hands its own ``(features, images)`` here
+    and gets a decoder fit by the same recipe, to be scored against its own
+    ceiling.  ⛔ The encoder is not touched and no cache is rewritten.
+    """
+    rec = resolve_decoder_cfg(cfg, recipe)
+    in_shape = tuple(images.shape[1:])
+    key, dk = jax.random.split(key)
+    decoder = make_decoder(feat_shape, in_shape, rec, dk)
+    dtype = model_dtype(decoder)
+    Z = jnp.asarray(features, dtype)
+    X = jnp.asarray(images, dtype)
+    decoder, history, key = _sgd_loop(
+        decoder,
+        decoder_loss_fn(rec),
+        (Z, X),
+        rec.steps,
+        rec.batch,
+        rec.lr,
+        key,
+        log,
+        schedule=decoder_schedule(rec),
+    )
+    return decoder, history, rec
+
+
 def train_decoder(encoder, images: np.ndarray, cfg, key, log: Optional[Callable] = None):
     """⭐ THE shared decoder: real ``(feature, image)`` pairs, train split only.
 
     The encoder is **frozen** here (features are precomputed and detached), so
     the renderer cannot co-adapt with it and is exactly the map every arm uses.
     """
-    in_shape = tuple(images.shape[1:])
-    key, dk = jax.random.split(key)
-    decoder = GenDecoder(
-        encoder.feat_shape, in_shape, tuple(cfg.dec_channels), int(cfg.dec_groups), dk
-    )
-    dtype = model_dtype(decoder)
     feats = encode_images(encoder, images, int(cfg.eval_batch))
-    Z = jnp.asarray(feats, dtype)
-    X = jnp.asarray(images, dtype)
-
-    def loss_fn(dec, zb, xb):
-        recon = jax.vmap(dec)(zb)
-        return jnp.mean((recon - xb) ** 2)
-
-    decoder, history, key = _sgd_loop(
-        decoder, loss_fn, (Z, X), cfg.dec_steps, cfg.dec_batch, cfg.dec_lr, key, log
+    decoder, history, _ = train_decoder_from_features(
+        encoder.feat_shape, feats, images, cfg, key, log=log
     )
     return decoder, history
 
