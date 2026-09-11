@@ -58,6 +58,7 @@ from ..core.gen_bridge import (  # noqa: E402
     load_feature_cache,
     param_count,
     param_hash,
+    resolve_decoder_cfg,
     stream_images,
     train_decoder,
     train_encoder,
@@ -76,6 +77,12 @@ from ..eval.gen_probe import (  # noqa: E402
 from ..utils.checkpoints import load_model, save_model  # noqa: E402
 
 STAGES = ("encoder", "decoder", "all", "aggregate")
+#: The HEADLINE hold-out condition.  Anything else is a **secondary full
+#: configuration** (R17/R20): its encoder, cache, decoder and probe are re-fitted
+#: with its own cells excluded and land in their own artifacts directory.
+#: ⛔ Artifacts frozen under one condition have SEEN the other's held-out rows
+#: and must never be scored on them.
+DEFAULT_CONDITION = "recomb2element"
 #: Kept only so the CSF3 launcher's --stage {store,cell} do not silently no-op here.
 NOT_MINE = ("store", "cell")
 
@@ -107,18 +114,98 @@ def _data_root(config: CHLUConfig) -> Optional[str]:
     return config.gen_data.data_root
 
 
-def load_split(dataset: str, config: CHLUConfig, log: Callable = print):
-    """Load the pinned Montero split (⛔ never re-derive one here)."""
+def artifacts_tag(dataset: str, pretext: str, condition: str) -> str:
+    """``<dataset>_<pretext>`` for the headline condition, suffixed otherwise.
+
+    ⛔ Back-compatible by construction: every Montero path already in the ledger
+    stays valid, and two conditions can never overwrite each other's frozen
+    artifacts (the load-bearing edit in `gen-wide-split` §6).
+    """
+    tag = f"{dataset}_{pretext}"
+    return tag if condition == DEFAULT_CONDITION else f"{tag}_{condition}"
+
+
+def condition_of(config: CHLUConfig) -> str:
+    """The hold-out condition this run is fitted against (``gen_data.condition``)."""
+    return str(getattr(config.gen_data, "condition", DEFAULT_CONDITION))
+
+
+def load_split_and_cells(dataset: str, config: CHLUConfig, log: Callable = print):
+    """Load the pinned split for ``gen_data.condition`` (⛔ never re-derive one here).
+
+    Returns ``(split, cells)``; ``cells`` is ``None`` for the headline Montero
+    condition and the list of :class:`~chlu.data.gen_splits.FactorCell` for a
+    multi-cell secondary condition (``recomb2element_wide``, R17).
+    """
     from ..data.gen_splits import assert_holdout_disjoint
 
     mod = _dataset_mod(dataset)
-    split, _ = mod.build_split(_data_root(config))
+    condition = condition_of(config)
+    cells = None
+    if condition == DEFAULT_CONDITION:
+        split, _ = mod.build_split(_data_root(config))
+    elif condition == getattr(mod, "WIDE_CONDITION", None):
+        gd = config.gen_data
+        split, _, cells = mod.build_wide_split(
+            _data_root(config),
+            n_cells=int(gd.wide_n_cells),
+            seed=int(gd.wide_seed),
+            include_montero=bool(gd.wide_include_montero),
+        )
+    else:
+        raise ValueError(
+            f"unknown condition {condition!r} for dataset {dataset!r} "
+            f"(have {DEFAULT_CONDITION!r}"
+            + (
+                f", {mod.WIDE_CONDITION!r})"
+                if hasattr(mod, "WIDE_CONDITION")
+                else ")"
+            )
+        )
     n_checked = assert_holdout_disjoint(split)
     log(
-        f"  split {dataset}: n_total={split.n_total} n_train={split.n_train} "
-        f"n_test={split.n_test} (hold-out assertion over {n_checked} train rows)"
+        f"  split {dataset}/{condition}: n_total={split.n_total} "
+        f"n_train={split.n_train} n_test={split.n_test} "
+        f"(hold-out assertion over {n_checked} train rows"
+        + (f", {len(cells)} cells)" if cells is not None else ")")
     )
-    return split
+    return split, cells
+
+
+def load_split(dataset: str, config: CHLUConfig, log: Callable = print):
+    """Back-compatible wrapper: the split alone."""
+    return load_split_and_cells(dataset, config, log)[0]
+
+
+def per_cell_no_leak(split, cells, used_rows: np.ndarray) -> list:
+    """R3.3 **per cell**: no fitted row may sit in any held-out cell, with counts.
+
+    ⛔ A pooled assertion over an OR-predicate can pass while one disjunct is
+    wrong; this re-derives every cell's rows from the grid and checks each.
+    """
+    from ..data.gen_splits import HoldoutViolation
+
+    used = np.unique(np.asarray(used_rows, dtype=np.int64))
+    out = []
+    for cell in cells:
+        rows = cell.rows(split.grid)
+        leaked = np.intersect1d(rows, used, assume_unique=False)
+        if leaked.size:
+            raise HoldoutViolation(
+                f"cell {cell.cell_id!r}: {leaked.size} fitted row(s) are held out "
+                f"(first: {int(leaked[0])})"
+            )
+        out.append(
+            {
+                "cell_id": cell.cell_id,
+                "n_rows": int(rows.size),
+                "n_excluded": int(rows.size - leaked.size),
+                "n_leaked": int(leaked.size),
+                "contrast": float(cell.meta.get("object_bg_hue_contrast", float("nan"))),
+                "shape_value": cell.meta.get("shape_value"),
+            }
+        )
+    return out
 
 
 def _dataset_mod(dataset: str):
@@ -174,7 +261,7 @@ def run_encoder_stage(
     cfg = config.gen_bridge
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    split = load_split(dataset, config, log)
+    split, cells = load_split_and_cells(dataset, config, log)
     rows = select_rows(split, cfg, seed)
     grid = split.grid
 
@@ -184,6 +271,13 @@ def run_encoder_stage(
         f"{leak['n_holdout_excluded']}/{leak['n_holdout_total']} held-out images "
         f"excluded, {leak['n_holdout_leaked']} leaked"
     )
+    cell_leak = per_cell_no_leak(split, cells, rows["train"]) if cells else None
+    if cell_leak is not None:
+        log(
+            f"  ⭐ R3.3 per cell: {len(cell_leak)} cells, "
+            f"{sum(c['n_excluded'] for c in cell_leak)} rows excluded, "
+            f"{sum(c['n_leaked'] for c in cell_leak)} leaked"
+        )
 
     log(f"  streaming {rows['train'].size} train images …")
     imgs = stream_images(dataset, rows["train"], _data_root(config), int(cfg.cache_block))
@@ -221,6 +315,7 @@ def run_encoder_stage(
     manifest = {
         "schema": "chlu-gen-bridge-encoder/1",
         "dataset": dataset,
+        "condition": condition_of(config),
         "pretext": pretext,
         "seed": int(seed),
         "encoder": {
@@ -241,6 +336,10 @@ def run_encoder_stage(
         "pretext_head": {"param_hash": aux_hash, "discarded": True},
         "rows": {k: int(v.size) for k, v in rows.items()},
         "no_leak": leak,
+        "no_leak_per_cell": cell_leak,
+        "cells": (
+            [c.to_dict(grid) for c in cells] if cells is not None else None
+        ),
         "feature_cache": cache,
         "whitening": whitening_feasibility(encoder.feature_dim, int(rows["train"].size)),
     }
@@ -266,7 +365,7 @@ def run_decoder_stage(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     encoder_dir = Path(encoder_dir) if encoder_dir is not None else out_dir
-    split = load_split(dataset, config, log)
+    split, cells = load_split_and_cells(dataset, config, log)
     rows = select_rows(split, cfg, seed)
     grid = split.grid
     names = grid.names
@@ -277,6 +376,13 @@ def run_decoder_stage(
         f"{leak['n_holdout_excluded']}/{leak['n_holdout_total']} held-out images "
         f"excluded, {leak['n_holdout_leaked']} leaked"
     )
+    cell_leak = per_cell_no_leak(split, cells, rows["train"]) if cells else None
+    if cell_leak is not None:
+        log(
+            f"  ⭐ R3.3 per cell: {len(cell_leak)} cells, "
+            f"{sum(c['n_excluded'] for c in cell_leak)} rows excluded, "
+            f"{sum(c['n_leaked'] for c in cell_leak)} leaked"
+        )
 
     encoder = load_model(encoder_dir / "encoder.pkl")
     with open(encoder_dir / "encoder_manifest.json") as fh:
@@ -358,6 +464,7 @@ def run_decoder_stage(
     manifest = {
         "schema": "chlu-gen-bridge/1",
         "dataset": dataset,
+        "condition": condition_of(config),
         "pretext": pretext,
         "seed": int(seed),
         "encoder_dir": str(encoder_dir),
@@ -369,10 +476,12 @@ def run_decoder_stage(
         "probe_param_count": param_count(probe),
         "feature_cache": cache_manifest,
         "no_leak": leak,
+        "no_leak_per_cell": cell_leak,
         "rows": {k: int(v.size) for k, v in rows.items()},
         "D": int(encoder.feature_dim),
         "whitening": enc_manifest.get("whitening"),
         "training": {
+            "dec_recipe": resolve_decoder_cfg(cfg).as_dict(),
             "dec_steps": int(cfg.dec_steps),
             "dec_loss_first": float(dec_hist[0]) if dec_hist else None,
             "dec_loss_final": float(dec_hist[-1]) if dec_hist else None,
@@ -420,6 +529,7 @@ def aggregate_runs(run_dirs, floor: float, log: Callable = print) -> dict:
     out = {
         "schema": "chlu-gen-bridge-aggregate/1",
         "dataset": mans[0]["dataset"],
+        "condition": mans[0].get("condition", DEFAULT_CONDITION),
         "pretext": mans[0]["pretext"],
         "seeds": [m["seed"] for m in mans],
         "D": mans[0]["D"],
@@ -490,13 +600,19 @@ def run_experiment_gen_bridge(
     if pretext not in PRETEXTS:
         raise ValueError(f"pretext must be one of {PRETEXTS}")
     seeds = list(seeds) if seeds is not None else list(cfg.seeds)
-    root = Path(out_dir or Path("results") / "gen_bridge") / f"{dataset}_{pretext}"
+    condition = condition_of(config)
+    # ⛔ Back-compatible by construction: the headline condition keeps its path,
+    # a secondary condition gets its own, so the two configurations can never
+    # overwrite each other's frozen artifacts.
+    root = Path(out_dir or Path("results") / "gen_bridge") / artifacts_tag(
+        dataset, pretext, condition
+    )
     root.mkdir(parents=True, exist_ok=True)
 
     run_dirs = []
     for seed in seeds:
         d = root / f"seed_{seed}"
-        log(f"[gen-bridge] {dataset}/{pretext} seed={seed} -> {d}")
+        log(f"[gen-bridge] {dataset}/{pretext}/{condition} seed={seed} -> {d}")
         if (d / "encoder_manifest.json").exists():
             log("  encoder artifacts present — reusing (train-or-load)")
         else:
@@ -597,6 +713,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--dataset", default=None, choices=["shapes3d", "dsprites"])
     p.add_argument("--pretext", default=None, choices=list(PRETEXTS))
     p.add_argument(
+        "--condition", default=None,
+        help="hold-out condition (default: gen_data.condition = recomb2element, "
+             "Montero's headline). ⛔ A non-default condition is a SEPARATE full "
+             "configuration: encoder, cache, decoder and probe are re-fitted with "
+             "its cells excluded, into their own artifacts directory.",
+    )
+    p.add_argument(
         "--stage", default="all", choices=list(STAGES) + list(NOT_MINE),
         help="encoder | decoder | all | aggregate (store/cell belong to other spokes)",
     )
@@ -629,6 +752,8 @@ def _config_from_args(args) -> CHLUConfig:
     if args.quick:
         config = apply_quick(config)
     gb = config.gen_bridge
+    if args.condition:
+        config.gen_data.condition = args.condition
     if args.data_root:
         config.gen_data.data_root = args.data_root
     if args.cache_scope:
@@ -665,12 +790,13 @@ def main(argv=None) -> int:
     cfg = config.gen_bridge
     dataset = args.dataset or cfg.dataset
     pretext = args.pretext or cfg.pretext
-    out = Path(args.out or (Path("results") / "gen_bridge" / f"{dataset}_{pretext}"
-                            / f"seed_{args.seed}"))
+    condition = condition_of(config)
+    tag = artifacts_tag(dataset, pretext, condition)
+    out = Path(args.out or (Path("results") / "gen_bridge" / tag / f"seed_{args.seed}"))
     out.mkdir(parents=True, exist_ok=True)
     print(
-        f"[gen-bridge] dataset={dataset} pretext={pretext} stage={args.stage} "
-        f"arm={args.arm} seed={args.seed} out={out}"
+        f"[gen-bridge] dataset={dataset} condition={condition} pretext={pretext} "
+        f"stage={args.stage} arm={args.arm} seed={args.seed} out={out}"
     )
     print("[gen-bridge] ⛔ arm is metadata only: the bridge is arm-independent.")
 
