@@ -1,10 +1,14 @@
 """`gen-csf3-launcher` — the ONE generative-pivot launch script, as tests.
 
-``scripts/csf3/job_gpu_gen.sh`` is the single entry point for all four stages
-of the generative pivot (encoder -> decoder -> store -> cell). It is a shell
-script, so nothing about it is type-checked and nothing about it is exercised
-by the rest of the suite — which is exactly how a launcher "looks right and has
-never actually run".
+``scripts/csf3/job_gpu_gen.sh`` is the single entry point for every stage of
+the generative pivot. The stage DAG is a chain with two leaves::
+
+    encoder -> decoder -> store -+-> cell
+                                 `-> certificate
+
+It is a shell script, so nothing about it is type-checked and nothing about it
+is exercised by the rest of the suite — which is exactly how a launcher "looks
+right and has never actually run".
 
 Two things are under test here, and neither is science:
 
@@ -19,6 +23,12 @@ Two things are under test here, and neither is science:
    that makes every later number traceable. A run is refused outright if it
    cannot resolve a git commit, or if its target is not under a ``CHLU-gen``
    workspace.
+
+3. **Every stage owns its own workspace subdirectory.** ``certificate`` in
+   particular must never land in ``cell/``: the pre-stage workaround
+   (``STAGE=cell`` + ``EXTRA_ARGS=--stage certificate``) wrote certificate
+   artefacts into a different stage's provenance directory, and the regression
+   test below is what keeps it from coming back.
 
 Everything runs through ``GEN_LOCAL=1 SMOKE=1``: no module system, no venv,
 no GPU preflight, a trivial payload. CPU, seconds, no JAX import.
@@ -330,7 +340,13 @@ def test_missing_stage_module_fails_loudly_and_names_the_module(tmp_path):
 
 @pytest.mark.parametrize(
     "stage,upstream",
-    [("decoder", "encoder"), ("store", "decoder"), ("cell", "store")],
+    [
+        ("decoder", "encoder"),
+        ("store", "decoder"),
+        ("cell", "store"),
+        # the certificate is a LEAF off the store, not a child of the cell
+        ("certificate", "store"),
+    ],
 )
 def test_stage_refuses_to_run_on_a_missing_upstream(tmp_path, stage, upstream):
     proc = run_launcher(smoke_env(tmp_path, STAGE=stage), expect_ok=False)
@@ -398,3 +414,185 @@ def test_slurm_streams_are_captured_into_the_run_logs(tmp_path):
     assert (logs / "clu-gen-777000_2.out").read_text() == "stdout stream\n"
     assert (logs / "clu-gen-777000_2.err").read_text() == "stderr stream\n"
     assert (logs / "stage.log").is_file()
+
+
+# --------------------------------------------------------------------------
+# 5. the `certificate` stage — a LEAF off the store, with its own workspace
+#
+# Before this stage existed the only way to run the certificate on CSF3 was
+# ``STAGE=cell`` + ``EXTRA_ARGS=--stage certificate``, which wrote certificate
+# artefacts into ``cell/`` and corrupted a different stage's provenance. These
+# tests exist to make that unrepresentable.
+# --------------------------------------------------------------------------
+
+
+def _chain_to_store(tmp_path, **kw):
+    """Run encoder -> decoder -> store as smoke, so a leaf has an ok upstream."""
+    for stage in ("encoder", "decoder", "store"):
+        run_launcher(smoke_env(tmp_path, STAGE=stage, **kw), expect_ok=True)
+
+
+def test_unset_stage_message_names_the_certificate_stage():
+    """The 'no default' message has to enumerate every stage that exists."""
+    env = {"DATASET": "shapes3d", "PRETEXT": "recon", "STAGE": None, "PLAN": "1"}
+    proc = run_launcher(env, expect_ok=False)
+    assert "STAGE=encoder|decoder|store|cell|certificate" in proc.stderr, proc.stderr
+
+
+def test_invalid_stage_message_names_the_certificate_stage():
+    env = {"DATASET": "shapes3d", "PRETEXT": "recon", "STAGE": "readout", "PLAN": "1"}
+    proc = run_launcher(env, expect_ok=False)
+    assert "encoder decoder store cell certificate" in proc.stderr, proc.stderr
+
+
+def test_certificate_plans_its_own_paths_never_the_cells(tmp_path):
+    """Every arm is scored inside one certificate job -> the array is over seeds."""
+    proc = run_launcher(
+        {
+            "DATASET": "shapes3d",
+            "PRETEXT": "recon",
+            "STAGE": "certificate",
+            "ARMS": "clu",
+            "SEEDS": "0 1 2",
+            "PLAN": "1",
+            "GEN_ROOT": str(tmp_path / "CHLU-gen"),
+        },
+        expect_ok=True,
+    )
+    assert "-a 0-2%2" in proc.stdout
+    assert '--export="ALL,DATASET=shapes3d,PRETEXT=recon,STAGE=certificate,' in (
+        proc.stdout
+    )
+    root = tmp_path / "CHLU-gen" / "workspaces" / "shapes3d_recon" / "certificate"
+    for idx, seed in enumerate((0, 1, 2)):
+        assert f"task {idx}: arm=clu seed={seed} -> {root / f'clu_s{seed}'}" in (
+            proc.stdout
+        ), proc.stdout
+    # ⛔ the workaround this stage replaces put every one of those under cell/
+    assert "/cell/" not in proc.stdout, proc.stdout
+
+
+def test_certificate_upstream_is_the_store_not_the_cell(tmp_path):
+    """A missing cell must NOT block the certificate: they are siblings."""
+    _chain_to_store(tmp_path)
+    ws = tmp_path / "CHLU-gen" / "workspaces" / "shapes3d_recon"
+    assert not (ws / "cell").exists()
+    proc = run_launcher(smoke_env(tmp_path, STAGE="certificate"), expect_ok=True)
+    assert f"upstream ok: {ws / 'store' / 'clu_s0' / 'run_manifest.json'}" in (
+        proc.stdout
+    ), proc.stdout
+
+
+def test_certificate_writes_its_own_workspace_and_leaves_the_cell_alone(tmp_path):
+    _chain_to_store(tmp_path)
+    ws = tmp_path / "CHLU-gen" / "workspaces" / "shapes3d_recon"
+    run_launcher(smoke_env(tmp_path, STAGE="cell"), expect_ok=True)
+    run_launcher(smoke_env(tmp_path, STAGE="certificate"), expect_ok=True)
+
+    cert_dir = ws / "certificate" / "clu_s0"
+    cell_dir = ws / "cell" / "clu_s0"
+    assert cert_dir.is_dir() and cell_dir.is_dir()
+    assert cert_dir != cell_dir
+
+    cert = json.loads((cert_dir / "run_manifest.json").read_text())
+    cell = json.loads((cell_dir / "run_manifest.json").read_text())
+    assert cert["status"] == "ok" and cert["axes"]["stage"] == "certificate"
+    assert cell["status"] == "ok" and cell["axes"]["stage"] == "cell"
+    assert cert["paths"]["run_dir"] == str(cert_dir)
+    assert "/cell/" not in cert["paths"]["run_dir"]
+    # the smoke artefact records the stage it was run under, per directory
+    for d, stage in ((cert_dir, "certificate"), (cell_dir, "cell")):
+        art = json.loads((d / "artifacts" / "smoke_artifact.json").read_text())
+        assert art["stage"] == stage, (d, art)
+
+
+def test_certificate_default_payload_module(tmp_path):
+    """Its own module — ⛔ never exp_gen_cell with a --stage override."""
+    _chain_to_store(tmp_path)
+    run_launcher(smoke_env(tmp_path, STAGE="certificate"), expect_ok=True)
+    m = json.loads(
+        (
+            tmp_path
+            / "CHLU-gen"
+            / "workspaces"
+            / "shapes3d_recon"
+            / "certificate"
+            / "clu_s0"
+            / "run_manifest.json"
+        ).read_text()
+    )
+    assert m["payload"]["module"] == "chlu.experiments.exp_gen_certificate"
+    assert m["payload"]["extra_args"] == ""
+    assert not any(f.startswith("EXTRA_ARGS=") for f in m["non_default_flags"])
+
+
+def test_certificate_payload_module_exists_on_disk():
+    """Guards the typo class that would otherwise surface after GPU allocation.
+
+    (Checked as a path, not an import: importing the module pulls in JAX, which
+    is a ~20-minute cold start on the dev machine and buys nothing here. The
+    launcher's own in-job ``find_spec`` preflight does the import-level check.)
+    """
+    assert (REPO / "chlu" / "experiments" / "exp_gen_certificate.py").is_file()
+
+
+# --- and every pre-existing guard still fires for the new stage -----------
+
+
+def test_certificate_stage_keeps_the_commit_guard(tmp_path):
+    env = smoke_env(tmp_path, STAGE="certificate")
+    env["GEN_GIT_COMMIT"] = None
+    env["CLU_REPO"] = str(tmp_path / "no_git_here")
+    (tmp_path / "no_git_here").mkdir()
+    proc = run_launcher(env, expect_ok=False)
+    assert "cannot resolve the git commit" in proc.stderr
+    assert not list((tmp_path / "CHLU-gen").rglob("run_manifest.json"))
+
+
+def test_certificate_stage_keeps_the_workspace_guard(tmp_path):
+    proc = run_launcher(
+        smoke_env(
+            tmp_path,
+            STAGE="certificate",
+            GEN_ROOT=str(tmp_path / "projects" / "csf3_b1"),
+        ),
+        expect_ok=False,
+    )
+    assert "not under a CHLU-gen workspace" in proc.stderr
+    assert not (tmp_path / "projects").exists()
+
+
+def test_certificate_stage_keeps_the_short_array_guard(tmp_path):
+    """3 seeds x 1 arm = 3 tasks; a 2-task array drops a seed unless declared."""
+    _chain_to_store(tmp_path)
+    env = smoke_env(
+        tmp_path,
+        STAGE="certificate",
+        ARMS="clu",
+        SEEDS="0 1 2",
+        GEN_TASK_ID=None,
+        SLURM_ARRAY_TASK_ID="0",
+        SLURM_ARRAY_TASK_COUNT="2",
+    )
+    proc = run_launcher(env, expect_ok=False)
+    assert "cells would be silently missing" in proc.stderr
+    assert "ARMS x SEEDS = 3" in proc.stderr
+    run_launcher({**env, "PARTIAL": "1"}, expect_ok=True)
+
+
+def test_certificate_stage_keeps_the_grid_bounds_guard(tmp_path):
+    proc = run_launcher(
+        smoke_env(
+            tmp_path, STAGE="certificate", ARMS="clu", SEEDS="0 1 2", GEN_TASK_ID="3"
+        ),
+        expect_ok=False,
+    )
+    assert "outside the grid" in proc.stderr
+
+
+@pytest.mark.parametrize("axis", ["DATASET", "PRETEXT"])
+def test_certificate_stage_keeps_the_unset_axis_guards(axis, tmp_path):
+    env = smoke_env(tmp_path, STAGE="certificate")
+    env[axis] = None
+    proc = run_launcher(env, expect_ok=False)
+    assert f"{axis} is unset" in proc.stderr, proc.stderr

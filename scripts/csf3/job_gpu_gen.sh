@@ -1,11 +1,21 @@
 #!/bin/bash --login
 # scripts/csf3/job_gpu_gen.sh — THE launch script for the GENERATIVE PIVOT.
 #
-# ONE script for all four stages (encoder -> decoder -> store -> cell), sized as
-# a Slurm job array over ARMS x SEEDS, one A100 per array task. It reuses the
-# existing cluster idiom verbatim (env.sh, module purge, the `%N` throttle,
-# push_repo.sh / rsync pull-back) — there is deliberately no second way of
-# talking to CSF3.
+# ONE script for every stage, sized as a Slurm job array over ARMS x SEEDS, one
+# A100 per array task. It reuses the existing cluster idiom verbatim (env.sh,
+# module purge, the `%N` throttle, push_repo.sh / rsync pull-back) — there is
+# deliberately no second way of talking to CSF3.
+#
+# The stage DAG is a chain with two leaves:
+#
+#       encoder -> decoder -> store -+-> cell
+#                                    `-> certificate
+#
+# `cell` and `certificate` are SIBLINGS: both read the store, neither reads the
+# other. Each stage owns its own workspace subdirectory — ⛔ `certificate` must
+# NEVER be run as `STAGE=cell` with an `EXTRA_ARGS=--stage certificate`
+# override, because that writes certificate artefacts into the cell's provenance
+# directory. That workaround existed before this stage did; it is now banned.
 #
 # It writes into a FRESH tree that no C2/C3 run has ever touched:
 #
@@ -36,6 +46,11 @@
 #   # 2. the next stage, gated on the previous one (per-arm manifests are checked
 #   #    in-job as well, so a half-finished upstream fails loudly, not silently):
 #   sbatch --dependency=afterok:<jobid> --export=ALL,...,STAGE=decoder ...
+#
+#   # 2b. the certificate leaf. It hangs off `store`, NOT off `cell`, so it can
+#   #     be submitted in parallel with the cell. Every arm is scored inside one
+#   #     job, so the array is over SEEDS only -> ARMS=clu, -a 0-2.
+#   sbatch --export="ALL,DATASET=shapes3d,PRETEXT=recon,STAGE=certificate,ARMS=clu,SEEDS=0 1 2,GEN_GIT_COMMIT=$GEN_GIT_COMMIT" -a 0-2%2 -t 04:00:00 scripts/csf3/job_gpu_gen.sh
 #
 #   # 3. pull the tree back to the CONSUMING SPOKE's own output dir (never a
 #   #    shared one — see `Pull to laptop` at the end of this script)
@@ -80,7 +95,7 @@ say() { echo "[gen] $*"; }
 # ===========================================================================
 [ -n "${DATASET:-}" ] || die "DATASET is unset. No default: set DATASET=shapes3d|dsprites"
 [ -n "${PRETEXT:-}" ] || die "PRETEXT is unset. No default: set PRETEXT=recon|cls"
-[ -n "${STAGE:-}" ]   || die "STAGE is unset. No default: set STAGE=encoder|decoder|store|cell"
+[ -n "${STAGE:-}" ]   || die "STAGE is unset. No default: set STAGE=encoder|decoder|store|cell|certificate"
 
 case "$DATASET" in
     shapes3d|dsprites) ;;
@@ -93,8 +108,8 @@ case "$PRETEXT" in
     *) die "PRETEXT='$PRETEXT' is not one of: recon cls" ;;
 esac
 case "$STAGE" in
-    encoder|decoder|store|cell) ;;
-    *) die "STAGE='$STAGE' is not one of: encoder decoder store cell" ;;
+    encoder|decoder|store|cell|certificate) ;;
+    *) die "STAGE='$STAGE' is not one of: encoder decoder store cell certificate" ;;
 esac
 
 DEF_SEEDS="0 1 2"
@@ -246,6 +261,8 @@ case "$STAGE" in
     decoder) DEF_MODULE="chlu.experiments.exp_gen_decoder" ;;
     store)   DEF_MODULE="chlu.experiments.exp_gen_store" ;;
     cell)    DEF_MODULE="chlu.experiments.exp_gen_cell" ;;
+    # sibling of cell, not a variant of it: its own module, its own workspace.
+    certificate) DEF_MODULE="chlu.experiments.exp_gen_certificate" ;;
 esac
 MODULE="${PAYLOAD_MODULE:-$DEF_MODULE}"
 
@@ -355,15 +372,25 @@ say "commit=$GIT_COMMIT  module=$MODULE  smoke=${SMOKE:-0}"
 write_manifest running 0
 
 # ===========================================================================
-# 7. Stage dependency: encoder -> decoder -> store -> cell, per arm and seed.
+# 7. Stage dependency, per arm and seed:
+#       encoder -> decoder -> store -+-> cell
+#                                    `-> certificate
 #    The stages are submitted independently; this refuses to run on top of an
 #    upstream stage that never finished.
+#
+#    ⭐ `certificate`'s declared upstream is `store`: the certificate is
+#    re-materialised from the store's own `store_plan.json` grouping (plus the
+#    bridge encoder it already depends on through the store), and it reads
+#    NOTHING the cell produces. Gating it on `cell` would serialise two
+#    independent leaves for no reason and would make a cell failure block a
+#    result that does not depend on the cell.
 # ===========================================================================
 case "$STAGE" in
-    encoder) UPSTREAM="" ;;
-    decoder) UPSTREAM="encoder" ;;
-    store)   UPSTREAM="decoder" ;;
-    cell)    UPSTREAM="store" ;;
+    encoder)     UPSTREAM="" ;;
+    decoder)     UPSTREAM="encoder" ;;
+    store)       UPSTREAM="decoder" ;;
+    cell)        UPSTREAM="store" ;;
+    certificate) UPSTREAM="store" ;;
 esac
 if [ -n "$UPSTREAM" ] && [ "${ALLOW_MISSING_UPSTREAM:-0}" != "1" ]; then
     UP_MF="$WORKSPACE/$UPSTREAM/${ARM}_s${SEED}/run_manifest.json"
