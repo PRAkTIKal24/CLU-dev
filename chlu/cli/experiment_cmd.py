@@ -991,6 +991,44 @@ def setup_experiment_parsers(subparsers):
     exp_gc_parser.add_argument('--out', help='Output directory')
     exp_gc_parser.set_defaults(func=cmd_exp_gen_certificate)
 
+    # --- BEGIN gen-baselines (additive; owner: experiment-engineer) ----------
+    # exp-gen-baselines (generative pivot phase 1: the two COMPETITOR arms)
+    exp_gbl_parser = subparsers.add_parser(
+        'exp-gen-baselines',
+        help='Generative phase 1: the byte-matched kNN arm (distance-threshold '
+             'refusal) and the LACE arm, both decoded through THE one shared frozen '
+             'decoder. ⛔ No CLU number and no kill-rule verdict: these arms are the '
+             'control, and they are built to WIN if they can.'
+    )
+    exp_gbl_parser.add_argument('--project', help='Project name to use')
+    exp_gbl_parser.add_argument('--seed', type=int, help='Single seed (default: config seeds)')
+    exp_gbl_parser.add_argument('--quick', action='store_true',
+                                help='Plumbing smoke only — NEVER a reported number')
+    exp_gbl_parser.add_argument('--dataset', choices=['shapes3d', 'dsprites'],
+                                help='Dataset (default: gen_baselines.dataset)')
+    exp_gbl_parser.add_argument('--pretext', choices=['recon', 'cls'],
+                                help='recon = the mandatory primary (R1)')
+    exp_gbl_parser.add_argument('--arm', choices=['knn', 'lace', 'all'], default='all',
+                                help='which competitor arm(s) to run')
+    exp_gbl_parser.add_argument('--condition',
+                                help='hold-out condition (default: gen_data.condition). '
+                                     '⛔ A non-default condition is a SEPARATE full '
+                                     'configuration and is never pooled with Montero.')
+    exp_gbl_parser.add_argument('--decoder-source',
+                                choices=['decoder_lift_v1', 'bridge'],
+                                help="⭐ 'decoder_lift_v1' (the winner, 0.9414) is the "
+                                     "default; ⛔ 'bridge' is the SUPERSEDED decoder that "
+                                     "FAILED the gate (0.7191) and exists only for a "
+                                     "deliberate historical reproduction")
+    exp_gbl_parser.add_argument('--store-bytes', type=int,
+                                help='Pin the byte-match target (default: read from '
+                                     'store_bytes.json; ⛔ never hand-solved)')
+    exp_gbl_parser.add_argument('--bridge-root',
+                                help='Where gen-feature-bridge wrote its frozen runs')
+    exp_gbl_parser.add_argument('--out', help='Output directory')
+    exp_gbl_parser.set_defaults(func=cmd_exp_gen_baselines)
+    # --- END gen-baselines --------------------------------------------------
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -2907,3 +2945,67 @@ def cmd_exp_gen_certificate(args):
     )
     console.print(f"✓ gen-certificate completed -> {out_dir}", style="bold green")
     return 0
+
+
+
+
+# --- BEGIN gen-baselines (additive; owner: experiment-engineer) --------------
+def cmd_exp_gen_baselines(args):
+    """Run the generative-phase-1 competitor arms (byte-matched kNN + LACE)."""
+    console.print("[bold cyan]Generative phase 1: the competitor arms[/bold cyan]")
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    from ..experiments.exp_gen_baselines import run_experiment_gen_baselines
+
+    if getattr(args, 'condition', None):
+        config.gen_data.condition = args.condition
+    if getattr(args, 'decoder_source', None):
+        config.gen_baselines.decoder_source = args.decoder_source
+    if getattr(args, 'store_bytes', None) is not None:
+        config.gen_baselines.store_bytes = int(args.store_bytes)
+    if getattr(args, 'bridge_root', None):
+        config.gen_baselines.bridge_root = args.bridge_root
+        config.gen_store.bridge_root = args.bridge_root
+    seeds = [args.seed] if getattr(args, 'seed', None) is not None else None
+    out_dir = args.out or str(Path(paths['results']) / 'gen_baselines')
+
+    try:
+        agg = run_experiment_gen_baselines(
+            config=config,
+            dataset=getattr(args, 'dataset', None),
+            pretext=getattr(args, 'pretext', None),
+            out_dir=out_dir,
+            seeds=seeds,
+            arm=getattr(args, 'arm', 'all'),
+            quick=bool(getattr(args, 'quick', False)),
+            log=console.print,
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    ceil = agg['summary'].get('_ceiling_decoder', {}).get('in_corner_balacc', {})
+    if ceil:
+        console.print(
+            f"⭐ ceilings — decoder {ceil['mean']:.4f} ± {ceil['std']:.4f} · "
+            f"STORE {agg['store_ceiling_balanced_accuracy']:.4f} "
+            "(⛔ a number quoted against only one of the two is incomplete)",
+            style='bold',
+        )
+    for label in sorted(k for k in agg['summary'] if not k.startswith('_')):
+        row = agg['summary'][label]
+        console.print(
+            f"  {label:<16} in-corner balacc {row['in_corner_balacc']['mean']:+.4f} "
+            f"± {row['in_corner_balacc']['std']:.4f} · "
+            f"AUROC(B vs C) {row['auroc_c_vs_b']['mean']:.4f} "
+            f"± {row['auroc_c_vs_b']['std']:.4f}"
+        )
+    console.print(
+        "⛔ arm numbers only — gen-cell-run renders every kill-rule verdict against a "
+        "filed prereg.", style='yellow',
+    )
+    console.print(f"✓ gen-baselines completed -> {out_dir}", style="bold green")
+    return 0
+# --- END gen-baselines ------------------------------------------------------
