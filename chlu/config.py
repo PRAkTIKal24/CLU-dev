@@ -3541,8 +3541,17 @@ class GenDreamConfig:
     bridge_root: Optional[str] = None
     #: ``.claude`` root for the shipped artifacts (a worktree has none of its own).
     claude_root: Optional[str] = None
-    #: ``gen-store-grouping``'s pinned plan; ⛔ loaded verbatim, never re-derived.
+    #: ``gen-store-grouping``'s pinned plan (``K``, ``n_modes``, ``D``, bytes).
     store_plan: Optional[str] = None
+    #: ⛔⭐ How the channel grouping is obtained. ``per_seed`` (default) re-derives
+    #: it by the plan's own procedure on THIS seed's train activations, at the
+    #: plan's ``K``, and asserts bit-identity with the plan on the seed whose
+    #: encoder wrote it. ``plan`` takes the plan's label vector verbatim — ⛔ which
+    #: is only meaningful on that one seed: the labels index ENCODER CHANNELS and
+    #: every bridge seed trained its own encoder, so on any other seed the plan's
+    #: vector is a size-matched RANDOM partition wearing the clustered grouping's
+    #: name. Kept only so the defect is reproducible.
+    grouping_source: str = "per_seed"
 
     # --- ⛔ the decoder guard ---
     #: ``winner`` = gen-decoder-lift's frozen V1 checkpoint (default, and the only

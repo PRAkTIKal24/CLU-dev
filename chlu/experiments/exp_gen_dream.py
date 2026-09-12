@@ -78,7 +78,10 @@ from ..core.gen_dream import (  # noqa: E402
 from ..core.gen_store import (  # noqa: E402
     address_codes,
     assert_no_bypass,
+    channel_correlation,
+    dead_channels,
     delete_store,
+    grouping_labels,
     init_store,
     load_store_plan,
     store_bytes,
@@ -390,6 +393,82 @@ def _arm_landscape(store, coupling, arm: str, cfg, seed: int):
     raise ValueError(f"arm must be one of {ARMS}, got {arm!r}")
 
 
+def resolve_grouping(plan, X_store, config: CHLUConfig, seed: int,
+                     encoder_hash: str, log: Callable = print) -> tuple:
+    """⛔⭐ The grouping, resolved per seed — and why it CANNOT be the plan's vector.
+
+    ``store_plan.json``'s ``labels`` vector indexes **encoder channels**, and the
+    plan was written from the ``k_choice_seed``'s encoder alone (``i == 0`` in
+    ``exp_gen_store``).  Every bridge seed trained its **own** encoder, so channel
+    ``c`` of seed 1 has no relation to channel ``c`` of seed 0: applying the plan's
+    labels to another seed is a size-matched **random** partition wearing the
+    clustered grouping's name.  ⛔ ``gen-store-grouping`` itself did not do this --
+    it re-derived the grouping per seed -- but the plan's "load this VERBATIM"
+    wording invites exactly that mistake.
+
+    What IS pinned by the plan is what ``assert_plan_matched`` actually guards:
+    ``K``, ``n_modes``, ``D`` and ``store_bytes``.  The plan's own note says only
+    ``labels`` may change.  So the grouping is re-derived here by the *same*
+    procedure, on this seed's own train activations, at the plan's ``K``.
+
+    ⭐ And the re-derivation is **verified, not asserted**: on the seed whose
+    encoder hash matches the plan's, the labels must come back **bit-identical to
+    the plan's**, which proves this is the same procedure that wrote it.
+    """
+    cfg = config.gen_dream
+    K = int(plan["K"])
+    if str(cfg.grouping_source) == "plan":
+        labels = np.asarray(plan["labels"], np.int64)
+        return labels, {
+            "grouping_source": "plan (VERBATIM)",
+            "well_sizes": [int(x) for x in np.bincount(labels, minlength=K)],
+            "warning": (
+                "⛔ the plan's labels index the k_choice seed's encoder channels; "
+                "on any other seed this is a size-matched RANDOM partition"
+            ),
+        }
+    if str(cfg.grouping_source) != "per_seed":
+        raise ValueError(
+            f"grouping_source must be 'per_seed' or 'plan', got {cfg.grouping_source!r}"
+        )
+    gs = config.gen_store
+    Xc = np.asarray(X_store, np.float32)[: int(gs.n_corr)]
+    dead = dead_channels(Xc)
+    corr = channel_correlation(Xc)
+    labels, info = grouping_labels(
+        corr, K, "correlation", int(seed), gs.grouping_method,
+        dead=dead, min_well_frac=float(gs.min_well_frac),
+    )
+    out = {
+        "grouping_source": "per_seed (re-derived at the plan's K)",
+        "n_corr_rows": int(Xc.shape[0]),
+        "n_dead_channels": int(dead.sum()),
+        "grouping_info": info,
+        "well_sizes": [int(x) for x in np.bincount(labels, minlength=K)],
+        "plan_encoder_param_hash": plan.get("encoder_param_hash"),
+        "this_encoder_param_hash": str(encoder_hash),
+    }
+    if str(encoder_hash) == str(plan.get("encoder_param_hash")):
+        same = bool(np.array_equal(labels, np.asarray(plan["labels"], np.int64)))
+        out["reproduces_the_plan_bit_identically"] = same
+        if not same:
+            raise AssertionError(
+                "the per-seed grouping does NOT reproduce store_plan.json's labels "
+                "on the seed whose encoder wrote it — ⛔ this is not the same "
+                "procedure and the ladder comparison would be void"
+            )
+        log("  ⭐ grouping re-derivation reproduces the plan BIT-IDENTICALLY on its own seed")
+    else:
+        out["reproduces_the_plan_bit_identically"] = None
+        log(
+            "  ⚠ this seed's encoder differs from the plan's "
+            f"({str(encoder_hash)[:12]}… vs {str(plan.get('encoder_param_hash'))[:12]}…), "
+            "so the grouping is re-derived on its own channels — ⛔ the plan's label "
+            "vector would be a size-matched RANDOM partition here"
+        )
+    return labels, out
+
+
 def run_seed(
     dataset: str,
     pretext: str,
@@ -453,18 +532,21 @@ def run_seed(
     lab_dream = factor_labels(grid, dream_rows)
     tlog(f"features gathered: store {X_store.shape} dream {X_dream.shape}")
 
-    # ---- the store: load the PINNED plan, then train-or-load ----------------
+    # ---- the store: the PINNED plan, then the grouping, then train-or-load ---
     plan = load_store_plan(store_plan_path(config, dataset, pretext))
-    labels_vec = np.asarray(plan["labels"], np.int64)
     K = int(plan["K"])
-    if labels_vec.size != int(np.prod(feat_shape)):
+    D = int(np.prod(feat_shape))
+    if len(plan["labels"]) != D:
         raise AssertionError(
-            f"the store plan's label vector is {labels_vec.size} long but D = "
-            f"{int(np.prod(feat_shape))} — ⛔ this plan was not written for this cache"
+            f"the store plan's label vector is {len(plan['labels'])} long but D = "
+            f"{D} — ⛔ this plan was not written for this cache"
         )
+    labels_vec, ginfo = resolve_grouping(
+        plan, X_store, config, seed, bman["encoder_param_hash"], log=tlog
+    )
     wc = well_channels_from_labels(labels_vec, K)
-    tlog(f"⭐ store plan loaded VERBATIM: K={K} n_modes={plan['n_modes']} "
-         f"well sizes {[len(w) for w in wc]}")
+    tlog(f"⭐ K={K} n_modes={plan['n_modes']} pinned from the plan; grouping "
+         f"{ginfo['grouping_source']}; well sizes {[len(w) for w in wc]}")
 
     ckpt = out_dir / f"store_s{seed}.pkl"
     if ckpt.exists() and bool(cfg.use_store_checkpoint):
@@ -531,6 +613,7 @@ def run_seed(
         "cache_reencode_check": reenc,
         "store_plan_path": str(store_plan_path(config, dataset, pretext)),
         "K": K,
+        "grouping": ginfo,
         "n_modes": int(plan["n_modes"]),
         "store_bytes": sb,
         "coupling_bytes": cbytes,

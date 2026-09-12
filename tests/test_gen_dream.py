@@ -575,3 +575,72 @@ def test_the_saturation_column_is_in_every_rollout_summary():
     for k in ("mean_max_pi_first", "mean_max_pi_final", "occupancy_is_saturated"):
         assert k in s
     assert 0.0 <= s["mean_max_pi_first"] <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# ⛔⭐ the ladder contract: the plan's labels index ENCODER CHANNELS
+# ---------------------------------------------------------------------------
+
+
+def test_the_plan_label_vector_is_only_meaningful_on_its_OWN_encoder(tmp_path):
+    """⛔⭐ The defect, reproduced on purpose, and the guard that catches it.
+
+    ``store_plan.json``'s ``labels`` vector was written from ONE seed's encoder.
+    Every bridge seed trained its own encoder, so channel ``c`` of seed 1 has no
+    relation to channel ``c`` of seed 0: taking the plan's labels verbatim on
+    another seed is a size-matched **random** partition wearing the clustered
+    grouping's name. ``resolve_grouping`` therefore re-derives the grouping per
+    seed and ⭐ **asserts bit-identity with the plan on the seed whose encoder
+    wrote it** — which is what proves it is the same procedure.
+    """
+    from chlu.core.gen_store import (
+        channel_correlation,
+        dead_channels,
+        grouping_labels,
+        save_store_plan,
+        store_bytes,
+    )
+    from chlu.experiments.exp_gen_dream import resolve_grouping
+
+    rng = np.random.default_rng(0)
+    k, per = 4, 8
+    lat = rng.normal(size=(2000, k))
+    W = np.zeros((k, k * per))
+    for j in range(k):
+        W[j, j * per : (j + 1) * per] = 1.0
+    X = (lat @ W + 0.05 * rng.normal(size=(2000, k * per))).astype(np.float32)
+
+    cfg = get_default_config()
+    cfg.gen_store.n_corr = 2000
+    cfg.gen_store.grouping_method = "auto"
+    dead = dead_channels(X)
+    ref = grouping_labels(
+        channel_correlation(X), k, "correlation", 0, "auto",
+        dead=dead, min_well_frac=cfg.gen_store.min_well_frac,
+    )[0]
+    st = _store(k=k, m=4, dk=per)
+    plan = save_store_plan(
+        tmp_path / "store_plan.json", dataset="shapes3d", pretext="recon", k=k,
+        n_modes=4, dim=k * per, feat_shape=(k * per,), labels=ref,
+        k_choice={"k": k, "rule": "test"}, grouping_method="auto",
+        store_bytes_dict=store_bytes(st), extra={"encoder_param_hash": "ENC0"},
+    )
+
+    # (a) on the plan's OWN encoder the re-derivation must reproduce it exactly
+    lab, info = resolve_grouping(plan, X, cfg, 0, "ENC0", log=lambda *_: None)
+    assert info["reproduces_the_plan_bit_identically"] is True
+    assert np.array_equal(lab, np.asarray(plan["labels"], np.int64))
+
+    # (b) on a DIFFERENT encoder it re-derives and says so, loudly
+    lab2, info2 = resolve_grouping(plan, X, cfg, 1, "ENC1", log=lambda *_: None)
+    assert info2["grouping_source"].startswith("per_seed")
+    assert info2["reproduces_the_plan_bit_identically"] is None
+
+    # (c) the defect is still reachable, and it carries its own warning
+    cfg.gen_dream.grouping_source = "plan"
+    lab3, info3 = resolve_grouping(plan, X, cfg, 1, "ENC1", log=lambda *_: None)
+    assert np.array_equal(lab3, np.asarray(plan["labels"], np.int64))
+    assert "RANDOM" in info3["warning"]
+
+    # ⛔ and K is NEVER re-derived: it comes from the plan either way
+    assert len(set(np.asarray(lab).tolist())) == k
