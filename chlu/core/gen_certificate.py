@@ -104,6 +104,7 @@ __all__ = [
     "redundant_requests",
     "requests_from_rows",
     "score_requests",
+    "self_conflict_is_non_positive",
     "store_energy",
     "term_distribution",
     "well_curvature",
@@ -402,6 +403,21 @@ def pair_conflict(q1: np.ndarray, q2: np.ndarray, prior: np.ndarray) -> float:
     """
     ov = np.sum(np.asarray(q1) * np.asarray(q2) / np.asarray(prior), axis=1)
     return float(-np.sum(np.log(np.maximum(ov, 1e-300))))
+
+
+def self_conflict_is_non_positive(q: np.ndarray, prior: np.ndarray) -> bool:
+    """``chi(t, t) <= 0`` for every term — the identity that makes ``pair`` immune to a
+    redundant term.
+
+    By Cauchy-Schwarz, ``sum_m q^2 / pbar >= (sum_m q)^2 / sum_m pbar = 1``, so
+    ``chi(t,t) = -sum_k log(...) <= 0``.  ⭐ Repeating a term therefore adds only
+    (a) that non-positive self-pair and (b) copies of pair values the request already
+    had, so ``max over pairs`` is **unchanged** whenever it was already non-negative.
+    That is why ``pair`` — unlike the composed-point components — cannot inherit the C
+    set's 7-terms-vs-6 giveaway.  Asserted in
+    ``tests/test_gen_certificate.py::test_the_pair_barrier_is_invariant_to_a_redundant_term``.
+    """
+    return pair_conflict(q, q, prior) <= 1e-12
 
 
 def compose(qs: Sequence[np.ndarray], prior: np.ndarray) -> tuple:

@@ -48,6 +48,7 @@ from chlu.core.gen_certificate import (
     redundant_requests,
     requests_from_rows,
     score_requests,
+    self_conflict_is_non_positive,
     store_energy,
     term_distribution,
     well_curvature,
@@ -572,3 +573,31 @@ def test_the_aggregate_plot_draws_the_controls_in_the_same_axes(tmp_path):
     agg = {"seeds": [0], "arms": {"correlation": {"per_arm": per}}}
     p = plot_aggregate(agg, tmp_path / "fig.png")
     assert p.exists() and p.stat().st_size > 0
+
+
+def test_the_pair_barrier_is_invariant_to_a_redundant_term():
+    """⭐ The structural reason ``pair`` is the term-count-clean statistic.
+
+    ``chi(t,t) <= 0`` by Cauchy-Schwarz, and every other new pair repeats a value the
+    request already had, so ``max over pairs`` does not move when a term is repeated.
+    ⛔ The composed-point components (``curv``, ``energy``) have no such property —
+    they read a distribution that sharpens with each extra term, which is exactly how
+    the C set's 7-terms-vs-6 giveaway leaks into a score."""
+    grid, rows, fi, x = _synthetic()
+    sup = factor_support(grid, 0.5)
+    store = _fitted_store(x)
+    stats = _stats(store, x, fi)
+    base = requests_from_rows(grid, rows[:16], "A")
+    a7 = redundant_requests(base, len(FACTORS))
+    moved_pair, moved_curv = 0, 0
+    for b, r in zip(base, a7, strict=True):
+        cb = certificate_components(b, store, stats, sup, 0.5)
+        cr = certificate_components(r, store, stats, sup, 0.5)
+        assert cr["n_terms"] == cb["n_terms"] + 1
+        moved_pair += cr["pair"] != cb["pair"]
+        moved_curv += cr["curv"] != cb["curv"]
+    assert moved_pair == 0, f"{moved_pair}/16 pair scores moved under a redundant term"
+    assert moved_curv > 0, "the curvature component should move — that is the point"
+    for j in range(len(FACTORS)):
+        for v in range(CARDS[j]):
+            assert self_conflict_is_non_positive(stats.term(j, v), stats.prior)

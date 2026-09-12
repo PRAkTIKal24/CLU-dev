@@ -486,7 +486,7 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path,
             "seconds": float(time.time() - tg),
         }
         _write_json(manifest, out_dir / "cert_manifest.json")
-        _write_json({"A": rows_by_set["A"], "B": rows_by_set["B"], "C": rows_by_set["C"]},
+        _write_json({k: v for k, v in rows_by_set.items()},
                     out_dir / f"scores_{grouping}.json")
         log(f"{_stamp(t0)} [{grouping}] written -> {out_dir}")
 
@@ -627,7 +627,7 @@ def plot_aggregate(agg: dict, path: Path) -> Path:
         ax = axes[r][0]
         for off, key, lab in ((-0.27, "A_vs_C", "A vs C"),
                               (0.0, "B_vs_C", "B vs C (R23 primary)"),
-                              (0.27, "AB_vs_C_balanced", "A∪B vs C (balanced)")):
+                              (0.27, "AB_vs_C_balanced", "A+B vs C (balanced)")):
             ax.bar(x + off, [per[a][key]["mean"] for a in arms], 0.26,
                    yerr=[per[a][key]["std"] for a in arms], capsize=2, label=lab)
         ax.axhline(0.5, color="k", lw=0.8, ls=":")
@@ -641,7 +641,7 @@ def plot_aggregate(agg: dict, path: Path) -> Path:
         for off, key, lab in ((-0.2, "B_vs_C[duplicate_factor]",
                                "B vs C-dup (⚠ 6 terms vs 7)"),
                               (0.2, "A7_vs_C[duplicate_factor]",
-                               "⭐ A7 vs C-dup (term-count controlled)")):
+                               "A7 vs C-dup (term-count CONTROLLED)")):
             ax.bar(x + off, [per[a].get(key, {}).get("mean", np.nan) for a in arms], 0.38,
                    yerr=[per[a].get(key, {}).get("std", np.nan) for a in arms],
                    capsize=2, label=lab)
