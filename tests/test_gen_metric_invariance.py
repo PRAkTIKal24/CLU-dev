@@ -321,3 +321,24 @@ def test_the_config_block_round_trips_and_keeps_its_pre_registered_defaults(tmp_
     assert back.class_budget == g.class_budget
     assert back.partitions == g.partitions
     assert back.configurations == g.configurations
+
+
+def test_class_count_restriction_accepts_an_explicit_value_set():
+    """⭐ The form a RATIO axis needs.  A count budget resolved on the FULL set keeps
+    the lowest-indexed values; applied to a corner that fixes the HIGHEST-indexed
+    ones (Montero: ``scale >= 1.1``, ``orientation > 20``) it keeps **nothing**.  So
+    the survivors are read off the numerator instead of chosen."""
+    _, labels = _synthetic_codes()
+    corner = np.isin(labels[:, 5], [9, 10, 11, 12, 13, 14])
+    full_budget = class_count_restriction(labels, FACTORS, {"orientation": 6})
+    chosen = full_budget["kept_values"]["orientation"]
+    assert chosen == [0, 1, 2, 3, 4, 5]
+    # the full set's budget, applied to the corner, empties it
+    empty = class_count_restriction(labels[corner], FACTORS, {"orientation": chosen})
+    assert empty["n_kept"] == 0
+    # the numerator's own realised classes, applied to the full set, do not
+    realised = sorted(int(v) for v in np.unique(labels[corner, 5]))
+    res = class_count_restriction(labels, FACTORS, {"orientation": realised})
+    assert res["kept_values"]["orientation"] == realised
+    assert res["realised_classes_restricted"]["orientation"] == len(realised)
+    assert 0 < res["n_kept"] < res["n_total"]

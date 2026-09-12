@@ -1457,10 +1457,19 @@ def class_count_restriction(
     """Leg 2 operator: the row mask that makes the evaluation realise **fewer
     classes** on the named factors.
 
-    ``budget`` maps a factor name to how many of its values survive; the survivors
-    are the ``n`` **lowest-indexed** values, which is deterministic and carries no
-    tuning freedom.  The defaults used by this programme (``orientation: 6``,
-    ``scale: 6``) are the counts the **wide corners actually realise**, measured in
+    ``budget`` maps a factor name either to **how many** of its values survive (an
+    int; the survivors are the ``n`` lowest-indexed values, deterministic and
+    tuning-free) or to the **explicit value set** that survives (any sequence).
+
+    ⭐ The explicit form is what a *ratio* axis needs: the count form, applied to a
+    numerator that is itself a corner of the factor grid, can empty the set — the
+    Montero corner fixes ``scale >= 1.1`` and ``orientation > 20``, i.e. the
+    HIGHEST-indexed values, so "keep the lowest 6" keeps nothing.  Restricting the
+    *denominator* to the classes the numerator actually realises is the same
+    operator with the survivors read off the data instead of chosen.
+
+    The count defaults used by this programme (``orientation: 6``, ``scale: 6``)
+    are the counts the **wide corners actually realise**, measured in
     ``gen-r0-wide-refit`` §4.2 (6 of 15 orientations, 6 of 8 scales) — ⛔ they are a
     reproduction of the diagnosed failure, not a knob.
     """
@@ -1468,12 +1477,14 @@ def class_count_restriction(
     names = [str(n) for n in factor_names]
     mask = np.ones(Y.shape[0], bool)
     kept = {}
-    for nm, n_keep in dict(budget).items():
+    for nm, spec in dict(budget).items():
         if str(nm) not in names:
             raise KeyError(f"{nm!r} is not one of the factors {names}")
         j = names.index(str(nm))
-        vals = np.unique(Y[:, j])
-        keep = vals[: int(n_keep)]
+        if isinstance(spec, (int, np.integer)) and not isinstance(spec, bool):
+            keep = np.unique(Y[:, j])[: int(spec)]
+        else:
+            keep = np.unique(np.asarray(list(spec), np.int64))
         kept[str(nm)] = [int(v) for v in keep]
         mask &= np.isin(Y[:, j], keep)
     return {
