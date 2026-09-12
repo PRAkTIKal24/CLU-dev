@@ -643,14 +643,38 @@ def run_seed(
 
 
 def load_c_records(dataset: str, config: CHLUConfig, log: Callable = print) -> list:
-    """The FACTOR-SPACE C set, byte-identical for every arm (R2).  ⛔ Never rewritten."""
+    """The FACTOR-SPACE C set, byte-identical for every arm (R2).  ⛔ Never rewritten.
+
+    ⛔ **Raises** if the C set is not where ``gen_data.data_root`` says it is (R26
+    ruling 7).  This used to log a warning and return ``[]``, which is *"declared
+    not-run reported as null"* in code form: a mistyped ``--data-root`` silently
+    produced a run with no C mapping in it and no failure anywhere.
+
+    ``gen_data.data_root`` is the **parent** of the dataset directory here (the
+    spelling ``default_gen_data_root()`` uses), while ``shapes3d_root()`` means the
+    dataset directory itself.  That ambiguity is the whole bug, so when the parent
+    spelling misses, the message says which spelling was passed — but there is
+    ⛔ **no fallback that papers over it**, because a fallback would hide a
+    ``--data-root`` pointing at the wrong dataset entirely.
+    """
     from ..data.gen_splits import default_gen_data_root
 
     root = Path(config.gen_data.data_root) if config.gen_data.data_root else default_gen_data_root()
     p = root / dataset / "c_invalid.json"
     if not p.exists():
-        log(f"  ⚠ no C set at {p} — the well-space C mapping is SKIPPED, not faked")
-        return []
+        hint = (
+            f"\n  ⚠ {root / 'c_invalid.json'} DOES exist — gen_data.data_root is set "
+            f"to the DATASET directory, but this path wants its PARENT "
+            f"(<root>/{dataset}/c_invalid.json)."
+            if (root / "c_invalid.json").exists()
+            else f"\n  (gen_data.data_root={config.gen_data.data_root!r}, "
+            f"CHLU_GEN_DATA_ROOT={os.environ.get('CHLU_GEN_DATA_ROOT')!r})"
+        )
+        raise FileNotFoundError(
+            f"no C set at {p} — ⛔ the C set is single-sourced by `chlu data "
+            f"{dataset}` and a run without it is NOT a run with a null C result."
+            + hint
+        )
     with open(p) as fh:
         d = json.load(fh)
     log(f"  C set: {len(d['records'])} factor-space records (⛔ diagnostic mapping only)")
