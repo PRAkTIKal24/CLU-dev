@@ -336,6 +336,26 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path,
         "c_invalid_path": str(c_invalid_path(config, dataset)),
         "arms": {},
     }
+    # ⭐ Resume, not restart.  A seed runs one grouping at a time and writes after
+    # each, so an interrupted seed (or a seed re-run with a narrower --groupings)
+    # keeps the arms it already has instead of silently dropping them.  ⛔ The
+    # provenance keys must agree exactly, or the old manifest is refused rather than
+    # merged — half a manifest from a different encoder is worse than no manifest.
+    prior_path = out_dir / "cert_manifest.json"
+    if prior_path.exists():
+        prior = json.load(open(prior_path))
+        keys = ("dataset", "pretext", "condition", "seed", "K", "n_modes", "D",
+                "encoder_param_hash", "feature_cache_sha256")
+        clash = [k for k in keys if prior.get(k) != manifest.get(k)]
+        if clash:
+            raise AssertionError(
+                f"{prior_path} exists but disagrees on {clash} — ⛔ refusing to merge "
+                "a manifest from a different configuration; move it aside first")
+        kept = {g: v for g, v in prior.get("arms", {}).items()
+                if g not in set(cfg.groupings)}
+        manifest["arms"].update(kept)
+        log(f"{_stamp(t0)} resuming: kept {sorted(kept)} from the existing manifest, "
+            f"recomputing {list(cfg.groupings)}")
     _write_json(manifest, out_dir / "cert_manifest.json")
 
     tau = float(cfg.tau_curvature if cfg.tau_curvature is not None else scfg.tau_end)
@@ -567,35 +587,41 @@ def aggregate_runs(run_dirs, log: Callable = _log) -> dict:
            "requests": mans[0]["requests"], "arms": {}}
     for g in groupings:
         per_arm = {}
-        arm_names = sorted(set().union(*[set(m["arms"][g]["arms"]) for m in mans if g in m["arms"]]))
+        # ⚠ a seed may be missing a grouping (an interrupted run); aggregate over the
+        # seeds that HAVE it and say how many, rather than dying or silently
+        # pretending the mean is over three seeds.
+        mans_g = [m for m in mans if g in m["arms"]]
+        arm_names = sorted(set().union(*[set(m["arms"][g]["arms"]) for m in mans_g]))
         for arm in arm_names:
-            got = {kk: _ms([m["arms"][g]["arms"][arm].get(kk, float("nan")) for m in mans])
+            got = {kk: _ms([m["arms"][g]["arms"][arm].get(kk, float("nan"))
+                            for m in mans_g])
                    for kk in keys}
-            got["aurc_B_vs_C"] = _ms([m["arms"][g]["arms"][arm]["aurc"]["B_vs_C"] for m in mans])
+            got["aurc_B_vs_C"] = _ms([m["arms"][g]["arms"][arm]["aurc"]["B_vs_C"] for m in mans_g])
             got["refusal_rate_B"] = _ms([m["arms"][g]["arms"][arm]["operating_point"]["refusal_rate_B"]
-                                         for m in mans])
+                                         for m in mans_g])
             got["refusal_rate_A"] = _ms([m["arms"][g]["arms"][arm]["operating_point"]["refusal_rate_A"]
-                                         for m in mans])
+                                         for m in mans_g])
             got["refusal_rate_C"] = _ms([m["arms"][g]["arms"][arm]["operating_point"]["refusal_rate_C"]
-                                         for m in mans])
+                                         for m in mans_g])
             per_arm[arm] = got
         agg["arms"][g] = {
+            "seeds_with_this_grouping": [m["seed"] for m in mans_g],
             "per_arm": per_arm,
             "term_count_controlled_margin_dup": _ms([
                 m["arms"][g]["arms"]["clu"].get("A7_vs_C[duplicate_factor]", float("nan"))
                 - m["arms"][g]["arms"]["distance_reach"].get("A7_vs_C[duplicate_factor]",
                                                              float("nan"))
-                for m in mans]),
+                for m in mans_g]),
             "laundering_margin_dup": _ms([
                 m["arms"][g]["arms"]["clu"].get("B_vs_C[duplicate_factor]", float("nan"))
                 - m["arms"][g]["arms"]["distance_reach"].get("B_vs_C[duplicate_factor]", float("nan"))
-                for m in mans]),
+                for m in mans_g]),
             "laundering_margin_overall": _ms([
                 m["arms"][g]["arms"]["clu"]["B_vs_C"]
-                - m["arms"][g]["arms"]["distance"]["B_vs_C"] for m in mans]),
-            "attribution": [m["arms"][g]["violated_factor_attribution"] for m in mans],
+                - m["arms"][g]["arms"]["distance"]["B_vs_C"] for m in mans_g]),
+            "attribution": [m["arms"][g]["violated_factor_attribution"] for m in mans_g],
             "audit": [m["arms"][g]["no_invalid_supervision_audit"][
-                "n_invalid_ids_found_in_any_fit"] for m in mans],
+                "n_invalid_ids_found_in_any_fit"] for m in mans_g],
         }
     agg["CERTIFIED_no_invalid_supervision"] = all(
         v == 0 for g in agg["arms"].values() for v in g["audit"])
