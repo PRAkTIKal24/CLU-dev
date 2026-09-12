@@ -465,20 +465,31 @@ def test_scoring_a_set_preserves_order_and_emits_every_component():
 
 
 def test_certificate_is_stable_under_x64():
-    """⚠ §7.23: six shipped modules enable x64 at import and sort before this one."""
+    """⚠ §7.23: shipped modules enable x64 and this one must survive that.
+
+    ⛔ **And must not cause it.**  ``test_goldstone`` / ``test_kt`` / ``test_lattice``
+    / ``test_twins`` / ``test_friction_field`` / ``test_wormhole`` enable
+    ``jax_enable_x64`` at **module import**, i.e. during collection — *before any
+    test runs*, and regardless of how the file names sort.  An earlier version of
+    this test restored the flag to a hard-coded ``False`` and turned x64 off under
+    all of them: 9 failures in ``test_goldstone.py`` alone, reproducible with just
+    these two files.  ⭐ Save and restore the **observed** value, never a literal.
+    """
     grid, rows, fi, x = _synthetic()
     store = _fitted_store(x)
     stats = _stats(store, x, fi)
     sup = factor_support(grid, 0.5)
     req = requests_from_rows(grid, rows[:1], "A")[0]
     before = certificate_components(req, store, stats, sup, 0.5)
+    prior = bool(jax.config.jax_enable_x64)
     jax.config.update("jax_enable_x64", True)
     try:
         after = certificate_components(req, store, stats, sup, 0.5)
         codes = codes_for(store, x)
         assert codes.dtype == np.int64
     finally:
-        jax.config.update("jax_enable_x64", False)
+        jax.config.update("jax_enable_x64", prior)
+    assert bool(jax.config.jax_enable_x64) is prior
     for c in COMPONENTS:
         assert after[c] == pytest.approx(before[c], rel=1e-9, abs=1e-12)
 
