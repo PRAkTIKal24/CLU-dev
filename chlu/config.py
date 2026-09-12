@@ -4000,6 +4000,20 @@ class GenBaselinesConfig:
     #: ``None`` -> read from ``store_bytes.json``; an int pins it.  The measured
     #: Shapes3D/recon value is 524,288 B (``n_modes * D * 4 = 64 * 2048 * 4``).
     store_bytes: Optional[int] = None
+    #: ⭐ **The landscape is store + inter-well PMI coupling, and the byte match is
+    #: to the TOTAL** (Head, 2026-09-12).  ``gen_dream.fit_code_coupling`` learns a
+    #: field ``J[k, l][m, m'] = PMI(code_k = m ; code_l = m')`` that is **extra** to
+    #: ``store_bytes`` — ``gen_dream.coupling_bytes``'s own docstring says a
+    #: byte-matched baseline *"must be told about it"*.  At the shipped cell
+    #: ``K(K-1)/2 * M^2 * 4 = 10 * 64^2 * 4 = 163,840 B``, so the true total is
+    #: **688,128 B**.  ⛔ Matching to 524,288 under-resources the comparator by 24 %,
+    #: and the kNN arm is the comparator for TWO kill rules — a weak one hands both a
+    #: false pass.  ⭐ The read channel is untouched at ``K*log2(M) = 30`` bits, so
+    #: R20's design constant is unaffected.
+    include_coupling_bytes: bool = True
+    #: ``None`` -> derived by ``K(K-1)/2 * M^2 * 4`` from ``store_plan.json``'s own
+    #: ``K`` and ``n_modes``.  ⛔ Never hand-typed; an int pins it.
+    coupling_bytes: Optional[int] = None
     #: ``None`` -> ``$CHLU_GEN_STORE_RUNS`` else ``<repo>/.claude/outputs/gen-store-grouping/runs``.
     store_runs_root: Optional[str] = None
     #: ⭐ The declared STORE ceiling companion (R23.5): the in-corner store read,

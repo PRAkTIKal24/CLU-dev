@@ -154,25 +154,86 @@ def store_runs_root(config: CHLUConfig) -> Path:
 
 
 def resolve_store_bytes(config: CHLUConfig, dataset: str, pretext: str, log: Callable) -> dict:
-    """⭐ The byte-match target, read from ``store_bytes.json`` — ⛔ never hand-solved.
+    """⭐ The byte-match target: **store + inter-well coupling** — ⛔ never hand-solved.
 
-    Without a machine-readable byte count the kNN arm cannot be matched, and an
-    unmatched kNN arm is worthless: this raises rather than guess.
+    ⭐ **The landscape is two structures, not one** (Head ruling, 2026-09-12).  The
+    modes are ``store_bytes``; ``gen_dream.fit_code_coupling`` additionally learns an
+    inter-well PMI field ``J[k, l][m, m']`` which is **extra** to it —
+    ``gen_dream.coupling_bytes``'s own docstring says a byte-matched baseline *"must
+    be told about it"* or *"the byte match is wrong"*.
+
+    ⛔ Matching to ``store_bytes`` alone under-resources the comparator by 24 % at the
+    shipped cell, and the kNN arm is the comparator for **two** kill rules — (ii) on B
+    and (iv) on C — so a weak one hands **both** a false pass.  That is the inversion
+    this spoke exists to avoid.
+
+    ⭐ Both components are derived mechanically: ``store_bytes`` from
+    ``store_bytes.json``, the coupling from ``K(K-1)/2 * M^2 * 4`` using
+    ``store_plan.json``'s **own** ``K`` and ``n_modes``.  ⛔ Neither is hand-typed.
+    ⭐ The read channel is untouched at ``K*log2(M) = 30`` bits (R20's design
+    constant); this is a **capacity** correction, not a channel one.
     """
     g = config.gen_baselines
+    runs = store_runs_root(config) / f"{dataset}_{pretext}"
+    p = runs / "store_bytes.json"
     if g.store_bytes is not None:
-        return {"store_bytes": int(g.store_bytes), "source": "pinned by gen_baselines.store_bytes"}
-    p = store_runs_root(config) / f"{dataset}_{pretext}" / "store_bytes.json"
-    if not p.exists():
-        raise FileNotFoundError(
-            f"no machine-readable store byte count at {p}. ⛔ The kNN arm cannot be "
-            "byte-matched without it and an unmatched kNN arm is worthless — stop "
-            "and report (set gen_baselines.store_bytes or $CHLU_GEN_STORE_RUNS)."
-        )
-    with open(p) as fh:
-        payload = json.load(fh)
-    log(f"  byte-match target: {payload['store_bytes']} B  ({p})")
-    return {"store_bytes": int(payload["store_bytes"]), "source": str(p), "store_meta": payload}
+        store_b, src, meta = int(g.store_bytes), "pinned by gen_baselines.store_bytes", None
+    else:
+        if not p.exists():
+            raise FileNotFoundError(
+                f"no machine-readable store byte count at {p}. ⛔ The kNN arm cannot be "
+                "byte-matched without it and an unmatched kNN arm is worthless — stop "
+                "and report (set gen_baselines.store_bytes or $CHLU_GEN_STORE_RUNS)."
+            )
+        with open(p) as fh:
+            meta = json.load(fh)
+        store_b, src = int(meta["store_bytes"]), str(p)
+
+    coupling_b, c_src, k_wells, n_modes = 0, "excluded (include_coupling_bytes=False)", None, None
+    if bool(g.include_coupling_bytes):
+        if g.coupling_bytes is not None:
+            coupling_b, c_src = int(g.coupling_bytes), "pinned by gen_baselines.coupling_bytes"
+        else:
+            plan = runs / "store_plan.json"
+            if plan.exists():
+                with open(plan) as fh:
+                    pl = json.load(fh)
+                k_wells, n_modes = int(pl["K"]), int(pl["n_modes"])
+                c_src = f"{plan} (K={k_wells}, n_modes={n_modes})"
+            elif meta is not None:
+                k_wells, n_modes = int(meta["n_wells"]), int(meta["n_modes"])
+                c_src = f"{p} (K={k_wells}, n_modes={n_modes})"
+            else:
+                raise FileNotFoundError(
+                    f"cannot derive the coupling bytes: neither {plan} nor a store "
+                    "manifest is readable, and gen_baselines.coupling_bytes is unset. "
+                    "⛔ Guessing it would silently under- or over-resource the kNN arm."
+                )
+            coupling_b = (k_wells * (k_wells - 1) // 2) * n_modes * n_modes * 4
+
+    total = store_b + coupling_b
+    log(
+        f"  ⭐ byte-match target: {total} B = store {store_b} + coupling {coupling_b} "
+        f"(K(K-1)/2 * M^2 * 4). ⛔ The read channel is UNCHANGED at K*log2(M) bits."
+    )
+    return {
+        "store_bytes": store_b,
+        "coupling_bytes": coupling_b,
+        "total_bytes": total,
+        "K": k_wells,
+        "n_modes": n_modes,
+        "coupling_bytes_formula": "K(K-1)/2 * M^2 * 4",
+        "source_store": src,
+        "source_coupling": c_src,
+        "store_meta": meta,
+        "rationale": (
+            "⭐ Head, 2026-09-12: the landscape is store + inter-well PMI coupling and "
+            "the match is to the TOTAL. gen_dream.coupling_bytes' own docstring: the "
+            "coupling is EXTRA to store_bytes and a byte-matched baseline 'must be told "
+            "about it'. ⛔ Matching to store_bytes alone under-resources the comparator "
+            "for kill rules (ii) and (iv). ⭐ bits_per_read is untouched (R20)."
+        ),
+    }
 
 
 def _write_json(payload: dict, path: Path) -> Path:
@@ -461,7 +522,8 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
     rule.
     """
     g = config.gen_baselines
-    budget = int(ctx["byte_target"]["store_bytes"])
+    budget = int(ctx["byte_target"]["total_bytes"])
+    store_only = int(ctx["byte_target"]["store_bytes"])
     Xfit = ctx["X_fit"]
     t0 = time.time()
 
@@ -611,8 +673,19 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
         "byte_ledger": {
             dep: stores[dep].info["byte_ledger"] for dep in list(g.knn_deployments)
         },
+        # ⭐ The superseded R19 figure, kept as a declared row so the correction is
+        # visible rather than silent: what the arm WOULD have got had it matched
+        # `store_bytes` alone (24 % fewer bytes, hence 24 % fewer entries).
+        "byte_ledger_store_only_SUPERSEDED": {
+            dep: knn.byte_ledger(
+                knn.entries_for_budget(store_only, int(Xfit.shape[1]), dep),
+                int(Xfit.shape[1]), dep, store_only,
+            )
+            for dep in list(g.knn_deployments)
+        },
         "prototype_table_ledger": ctx["protos"].byte_ledger(),
         "store_bytes_target": budget,
+        "byte_target": ctx["byte_target"],
         "refusal_reduction_sensitivity": reduce_sensitivity,
         "refusal_axis": refusal_axis,
         "variants": {},

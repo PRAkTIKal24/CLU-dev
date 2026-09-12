@@ -34,7 +34,9 @@ from chlu.data.gen_splits import FactorGrid, build_c_invalid, validate_c_invalid
 from chlu.eval.rivals import gen_knn as knn
 from chlu.eval.rivals import gen_lace as lace
 
-STORE_BYTES = 524_288  # gen-store-grouping/runs/shapes3d_recon/store_bytes.json
+STORE_BYTES = 524_288      # gen-store-grouping/runs/shapes3d_recon/store_bytes.json
+COUPLING_BYTES = 163_840   # gen_dream.coupling_bytes: K(K-1)/2 * M^2 * 4 = 10 * 64^2 * 4
+TOTAL_BYTES = 688_128      # ⭐ the landscape = store + inter-well PMI coupling (Head, 2026-09-12)
 
 
 # ---------------------------------------------------------------------------
@@ -167,8 +169,36 @@ def test_offgrid_value_normalises_outside_the_unit_interval(grid):
 
 
 @pytest.mark.parametrize("dep,expected", [("fp32", 64), ("fp16", 128), ("int8", 248)])
-def test_entries_for_budget_matches_the_shipped_store_exactly(dep, expected):
+def test_entries_for_budget_matches_the_store_component_exactly(dep, expected):
     assert knn.entries_for_budget(STORE_BYTES, 2048, dep) == expected
+
+
+@pytest.mark.parametrize("dep,expected", [("fp32", 84), ("fp16", 168), ("int8", 328)])
+def test_entries_for_budget_at_the_CORRECTED_total(dep, expected):
+    """⭐ The byte match is to store + coupling, not to the store alone.
+
+    ⛔ Matching ``store_bytes`` alone under-resources the comparator by 24 % — and
+    the kNN arm is what kill rules (ii) and (iv) read, so a weak one hands BOTH a
+    false pass. Every deployment lands on the budget exactly, zero slack.
+    """
+    assert knn.entries_for_budget(TOTAL_BYTES, 2048, dep) == expected
+    assert knn.byte_ledger(expected, 2048, dep, TOTAL_BYTES)["slack_bytes"] == 0
+
+
+def test_the_coupling_component_is_derived_not_hand_typed():
+    """``K(K-1)/2 * M^2 * 4`` at the shipped cell (K=5, M=64)."""
+    k, m = 5, 64
+    assert (k * (k - 1) // 2) * m * m * 4 == COUPLING_BYTES
+    assert STORE_BYTES + COUPLING_BYTES == TOTAL_BYTES
+
+
+def test_the_corrected_budget_does_not_widen_the_read_channel():
+    """⭐ R20's 30-bit design constant is a CHANNEL fact and is untouched by a
+    CAPACITY correction: the coupling shapes which codes are chosen, it is never
+    transmitted to the decoder."""
+    assert knn.bits_per_read(64, 5) == 30.0  # the CLU's K*log2(M)
+    # the kNN's own channel does move, because its entry count moved — reported, not hidden
+    assert knn.bits_per_read(84, 1) == pytest.approx(np.log2(84))
 
 
 @pytest.mark.parametrize("dep", knn.DEPLOYMENTS)
@@ -417,6 +447,28 @@ def test_a_missing_byte_count_stops_the_run_rather_than_guessing(tmp_path):
     c.gen_baselines.store_runs_root = str(tmp_path)
     with pytest.raises(FileNotFoundError, match="byte-matched"):
         resolve_store_bytes(c, "shapes3d", "recon", lambda *a: None)
+
+
+def test_resolve_store_bytes_derives_the_coupling_from_the_plans_own_K_and_M(tmp_path):
+    """⭐ Both components mechanical: store from ``store_bytes.json``, coupling from
+    ``store_plan.json``'s own ``K``/``n_modes``. ⛔ Neither hand-typed."""
+    from chlu.experiments.exp_gen_baselines import resolve_store_bytes
+
+    d = tmp_path / "shapes3d_recon"
+    d.mkdir(parents=True)
+    (d / "store_bytes.json").write_text(json.dumps(
+        {"store_bytes": STORE_BYTES, "n_wells": 5, "n_modes": 64}))
+    (d / "store_plan.json").write_text(json.dumps({"K": 5, "n_modes": 64}))
+    c = get_default_config()
+    c.gen_baselines.store_runs_root = str(tmp_path)
+    t = resolve_store_bytes(c, "shapes3d", "recon", lambda *a: None)
+    assert t["store_bytes"] == STORE_BYTES
+    assert t["coupling_bytes"] == COUPLING_BYTES
+    assert t["total_bytes"] == TOTAL_BYTES
+    # ⛔ and the escape hatch still excludes it explicitly, never silently
+    c.gen_baselines.include_coupling_bytes = False
+    t2 = resolve_store_bytes(c, "shapes3d", "recon", lambda *a: None)
+    assert t2["coupling_bytes"] == 0 and t2["total_bytes"] == STORE_BYTES
 
 
 def test_a_missing_decoder_lift_winner_refuses_to_fall_back(tmp_path):
