@@ -236,7 +236,7 @@ is reused unchanged — there is deliberately no second way of talking to CSF3.
 |---|---|---|---|
 | `DATASET` | `shapes3d` \| `dsprites` | **none — fails loudly** | |
 | `PRETEXT` | `recon` \| `cls` | **none — fails loudly** | `recon` is primary, `cls` a diagnostic; the script privileges neither |
-| `STAGE` | `encoder` \| `decoder` \| `store` \| `cell` | **none — fails loudly** | submitted independently, in that dependency order |
+| `STAGE` | `encoder` \| `decoder` \| `store` \| `cell` \| `certificate` | **none — fails loudly** | submitted independently; the DAG is `encoder → decoder → store → {cell, certificate}` (§7.6) |
 | `ARMS` | subset of `clu store_removed lace knn` | all four | a *narrowed* list is always explicit and is recorded in the manifest |
 | `SEEDS` | space-separated ints | `0 1 2` | |
 | `CONCURRENCY` | 1–4 | `2` | the array `%N` throttle (CSF3 free tier caps you at 4 GPUs) |
@@ -310,7 +310,8 @@ rsync -av csf3:~/scratch/CHLU-gen/workspaces/shapes3d_recon/encoder/ \
 ### 7.5 Verification status
 
 - **[LOCAL, 2026-09-09]** `bash -n` clean; `shellcheck 0.11.0 -s bash` clean
-  (zero warnings); `tests/test_gen_launcher.py` — 25 tests, ~4 s, covering the
+  (zero warnings); `tests/test_gen_launcher.py` — 39 tests (25 at 2026-09-09,
+  +14 for the `certificate` stage of §7.6 on 2026-09-13), ~67 s, covering the
   unset/invalid-axis aborts, the grid/path construction, the array-size guard,
   the provenance guard, the slurm-stream capture and the full
   encoder→decoder→store→cell chain via `GEN_LOCAL=1 SMOKE=1`. A dry run produces a populated `run_manifest.json`
@@ -319,3 +320,53 @@ rsync -av csf3:~/scratch/CHLU-gen/workspaces/shapes3d_recon/encoder/ \
   `csf3.itservices.manchester.ac.uk` does not resolve from the laptop without
   GlobalProtect, which the authoring agent cannot establish. The `-p serial`
   smoke line above is the exact command to run first.
+
+### 7.6 The `certificate` stage (added 2026-09-13)
+
+The stage DAG is a chain with **two leaves**:
+
+```
+encoder -> decoder -> store -+-> cell
+                             `-> certificate
+```
+
+`cell` and `certificate` are **siblings**: both read the store, neither reads
+the other, and each owns its own workspace subdirectory. `certificate`'s
+declared **upstream is `store`** — it is re-materialised from the store's own
+`store_plan.json` grouping and reads nothing the cell produces, so gating it on
+`cell` would serialise two independent leaves and let a cell failure block a
+result that does not depend on it. The same `status == "ok"` upstream-manifest
+check applies, for the same arm and seed.
+
+| | |
+|---|---|
+| default payload module | `chlu.experiments.exp_gen_certificate` (override with `PAYLOAD_MODULE`) |
+| workspace | `$SCRATCH/CHLU-gen/workspaces/<dataset>_<pretext>/**certificate**/<arm>_s<seed>/` |
+| upstream | `store` |
+
+⛔ **The pre-stage workaround is now banned.** Before this stage existed the
+only way to run the certificate was `STAGE=cell` with
+`EXTRA_ARGS=--stage certificate`, which wrote certificate artefacts into
+`cell/` and corrupted a different stage's provenance directory. Four of the
+tests in `tests/test_gen_launcher.py` exist solely to keep it from returning.
+
+Every arm (including the laundering controls) is scored inside **one**
+certificate job so they share a byte-identical context — so the array is over
+**seeds only**, `ARMS=clu`, `-a 0-2`:
+
+```bash
+DATASET=shapes3d PRETEXT=recon STAGE=certificate ARMS=clu SEEDS="0 1 2" PLAN=1 bash scripts/csf3/job_gpu_gen.sh
+sbatch --export="ALL,DATASET=shapes3d,PRETEXT=recon,STAGE=certificate,ARMS=clu,SEEDS=0 1 2,GEN_GIT_COMMIT=$GEN_GIT_COMMIT" -a 0-2%2 -t 04:00:00 scripts/csf3/job_gpu_gen.sh
+```
+
+⭐ **One literal line per submission.** The `--export` value contains spaces
+(`SEEDS=0 1 2`), so the whole argument is quoted as a single shell word; `sbatch
+--export` splits on **commas only**. ⛔ Never build the argument list in a shell
+variable and expand it — zsh does not word-split an expanded variable, and that
+has submitted garbage on this programme before.
+
+**[UNTESTED-ON-CLUSTER, 2026-09-13]** the `certificate` stage has **never been
+submitted**; no job id exists. Verified locally only: `bash -n` clean,
+`shellcheck` clean, and the 14 stage tests above (`GEN_LOCAL=1 SMOKE=1`). The
+`-p serial` smoke of §7.3 is still the first thing to run, and it too has never
+been submitted.
