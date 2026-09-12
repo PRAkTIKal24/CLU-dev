@@ -228,12 +228,23 @@ def _report_gen_split(split, n_checked, extra=None):
 
 
 def _build_gen_artifacts(mod, split, cfg, out_dir):
-    """Persist the factor-grid index and the C set; return their checksums."""
+    """Persist the factor-grid index, the C set, its A7 control, and the registry.
+
+    ⭐ The query sets are emitted together and registered together (``query_sets.json``),
+    because that registry is what ``tests/test_gen_c_set_a7.py`` discovers from disk: a
+    query set that ships without being registered is invisible to the no-model detector
+    audit, and an invalid kind that ships without a declared structural control makes
+    that audit fail (R26 ruling 1).
+    """
     from ..data.gen_splits import (
+        build_a7_redundant,
         build_c_invalid,
         save_index,
+        select_a7_rows,
+        validate_a7_redundant,
         validate_c_invalid,
         write_json_with_checksum,
+        write_query_set_registry,
     )
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -249,10 +260,31 @@ def _build_gen_artifacts(mod, split, cfg, out_dir):
     )
     n_c = validate_c_invalid(c_set, split.grid)
     c_path, c_sha = write_json_with_checksum(c_set, out_dir / 'c_invalid.json')
-    return [
+    lines = [
         f"index:     {index_path}  sha256={index_sha}",
         f"c_invalid: {c_path}  sha256={c_sha}  ({n_c} records)",
     ]
+    # ⛔ Checksums and counts only, never absolute paths: the registry travels with
+    # the directory (worktree, cluster scratch, another machine) and a baked-in path
+    # would make it a file about somewhere else.
+    emitted = {
+        'base': {'derived_from_sha256': index_sha, 'n_records': int(split.n_train + split.n_test)},
+        'c_invalid': {'sha256': c_sha, 'n_records': int(n_c)},
+    }
+    if cfg.emit_a7:
+        n_a7 = cfg.a7_n_requests if cfg.a7_n_requests is not None else 2 * n_per_kind
+        a7_rows = select_a7_rows(split.train_rows, n_a7, seed=cfg.a7_seed)
+        a7_set = build_a7_redundant(split.grid, a7_rows, seed=cfg.a7_seed)
+        n_a = validate_a7_redundant(a7_set, split.grid)
+        a7_path, a7_sha = write_json_with_checksum(a7_set, out_dir / 'a7_redundant.json')
+        emitted['a7_redundant'] = {'sha256': a7_sha, 'n_records': int(n_a)}
+        lines.append(
+            f"a7:        {a7_path}  sha256={a7_sha}  ({n_a} records, "
+            f"{split.grid.n_factors + 1} terms each)"
+        )
+    reg_path, reg_sha = write_query_set_registry(out_dir, split.dataset, emitted)
+    lines.append(f"query_sets:{reg_path}  sha256={reg_sha}")
+    return lines
 
 
 def cmd_data_shapes3d(args):
