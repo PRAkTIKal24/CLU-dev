@@ -186,6 +186,31 @@ def test_the_detector_reaches_more_than_the_term_count():
     } <= feats
 
 
+def test_the_definitional_giveaway_is_reported_not_hidden(tmp_path):
+    """⭐ The residual A7 cannot close, measured and named rather than left implicit.
+
+    ``duplicate_factor`` means "one factor, two different values", which is decidable
+    from the request by **value equality alone** -- no values, no grid, no model.  It
+    is the dup counterpart of the grid lookup that decides ``out_of_range``.  ⛔ It is
+    not a structural leak and no control removes it: it is what makes the record
+    invalid.  The claim it leaves standing is the one the cell actually makes -- that
+    the barrier is computed from the store's geometry -- so the number is reported.
+    """
+    _emit(tmp_path)
+    report = G.audit_query_sets(
+        tmp_path / "query_sets.json", tolerance=DETECTOR_TOLERANCE
+    )
+    dup = report["definitional_vs_base"]["c_invalid[duplicate_factor]"]
+    oor = report["definitional_vs_base"]["c_invalid[out_of_range]"]
+    assert dup["has_conflicting_repeat"] == 1.0  # decidable, by definition
+    assert oor["has_conflicting_repeat"] == 0.5  # oor's counterpart needs the grid
+    # ⛔ and it does NOT reach the asserted view, which stays at chance
+    assert report["per_kind"]["c_invalid[duplicate_factor]"][
+        "max_auroc"
+    ] == pytest.approx(0.5)
+    assert not report["violations"]
+
+
 # ---------------------------------------------------------------------------
 # 3. The detector is CAPABLE OF FAILING -- the positive control
 # ---------------------------------------------------------------------------

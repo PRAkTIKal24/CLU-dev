@@ -60,6 +60,7 @@ __all__ = [
     "file_sha256",
     "load_registered_query_sets",
     "mask_request",
+    "definitional_features",
     "no_model_detector",
     "select_a7_rows",
     "structural_features",
@@ -1089,6 +1090,38 @@ def diagnostic_features(record: dict) -> dict[str, float]:
     }
 
 
+def definitional_features(record: dict) -> dict[str, float]:
+    """⭐ The C set's own DEFINITION, restated as a statistic -- reported, never asserted.
+
+    ``duplicate_factor`` means "one factor, two different values", and that is decidable
+    from the request by **value equality alone**, without knowing a single value or
+    owning a model.  ⛔ No control can remove it: it is what makes the record invalid.
+    It is the ``duplicate_factor`` counterpart of the grid lookup that decides
+    ``out_of_range`` (``reach``, AUROC 1.0000 in ``gen-certificate`` §3a).
+
+    ⚠ This is reported so the distinction is explicit in the numbers: the refusal claim
+    is that the barrier is computed **from the store's geometry**, ⛔ never that no
+    syntactic rule could decide these requests.  A7 closes the *structural* giveaway --
+    request length and shape -- and cannot close the definitional one.
+    """
+    req = list(record["request"])
+    by_factor: dict[int, set] = {}
+    for t in req:
+        by_factor.setdefault(int(t["factor_index"]), set()).add(t["value"])
+    return {
+        "n_distinct_values": float(len({t["value"] for t in req})),
+        "has_conflicting_repeat": float(any(len(v) > 1 for v in by_factor.values())),
+    }
+
+
+#: The three feature views.  ⛔ Only ``structural`` is asserted on; see the test.
+FEATURE_VIEWS = {
+    "structural": structural_features,
+    "diagnostic": diagnostic_features,
+    "definitional": definitional_features,
+}
+
+
 def auroc(pos_scores: Sequence[float], neg_scores: Sequence[float]) -> float:
     """AUROC of ``pos`` over ``neg`` by mid-ranks (a tied feature gives exactly 0.5)."""
     pos = np.asarray(list(pos_scores), dtype=float)
@@ -1121,15 +1154,20 @@ def _feature_table(records: Sequence[dict], fn) -> dict[str, list[float]]:
 def no_model_detector(
     invalid_records: Sequence[dict],
     valid_records: Sequence[dict],
-    diagnostics: bool = False,
+    view: str = "structural",
 ) -> dict[str, float]:
-    """Orientation-free AUROC of every structural feature, invalid vs valid.
+    """Orientation-free AUROC of every feature of one VIEW, invalid vs valid.
+
+    ``view`` is ``"structural"`` (the asserted one), ``"diagnostic"`` (the set labels)
+    or ``"definitional"`` (the C set's own definition).  ⛔ Only ``"structural"`` is
+    ever asserted on; the other two exist so their numbers are reported rather than
+    left implicit in a docstring.
 
     Orientation-free (``max(a, 1 - a)``) because a detector that fires LOW separates
     exactly as well as one that fires high; scoring only the high direction would let
     a giveaway through for free.
     """
-    fn = diagnostic_features if diagnostics else structural_features
+    fn = FEATURE_VIEWS[view]
     pos = _feature_table(invalid_records, fn)
     neg = _feature_table(valid_records, fn)
     out = {}
@@ -1184,6 +1222,7 @@ def audit_query_sets(
         "per_kind": {},
         "uncontrolled_vs_base": {},
         "diagnostics_vs_base": {},
+        "definitional_vs_base": {},
         "pooled": {},
         "pooled_uncontrolled_vs_base": {},
         "violations": violations,
@@ -1238,8 +1277,12 @@ def audit_query_sets(
                     "worst_feature": w,
                     "max_auroc": unc[w],
                 }
-                dia = no_model_detector(recs, sets["base"], diagnostics=True)
-                report["diagnostics_vs_base"][key] = dia
+                report["diagnostics_vs_base"][key] = no_model_detector(
+                    recs, sets["base"], view="diagnostic"
+                )
+                report["definitional_vs_base"][key] = no_model_detector(
+                    recs, sets["base"], view="definitional"
+                )
             # stratified pooling: each kind weighted by its share of the invalid set.
             # ⛔ Pooled DIRECTIONALLY and only then made orientation-free, so two kinds
             # separating in opposite directions cannot cancel into a clean 0.5.
