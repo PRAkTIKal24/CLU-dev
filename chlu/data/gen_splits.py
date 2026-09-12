@@ -39,6 +39,7 @@ from pathlib import Path
 import numpy as np
 
 __all__ = [
+    "QUERY_SET_REGISTRY",
     "FactorCell",
     "FactorGrid",
     "GenSplit",
@@ -46,12 +47,25 @@ __all__ = [
     "assert_cells_disjoint",
     "assert_holdout_disjoint",
     "assert_index_partitions_grid",
+    "assert_no_model_detector_at_chance",
+    "audit_query_sets",
+    "auroc",
+    "build_a7_redundant",
+    "build_base_requests",
     "build_c_invalid",
     "build_cell_split",
     "cells_test_predicate",
     "default_gen_data_root",
+    "discover_query_set_registries",
     "file_sha256",
+    "load_registered_query_sets",
+    "mask_request",
+    "no_model_detector",
+    "select_a7_rows",
+    "structural_features",
+    "validate_a7_redundant",
     "write_json_with_checksum",
+    "write_query_set_registry",
 ]
 
 
@@ -669,6 +683,619 @@ def validate_c_invalid(payload: dict, grid: FactorGrid) -> int:
         if not (dup or oor):
             raise AssertionError(f"{rec['id']}: request is satisfiable — not a C item")
     return len(records)
+
+
+# ---------------------------------------------------------------------------
+# A7: the term-count control -- VALID requests carrying one REDUNDANT term
+# ---------------------------------------------------------------------------
+#
+# Why this exists (gen-certificate section 3, R26 ruling 1).  ``build_c_invalid``
+# makes a ``duplicate_factor`` record by APPENDING a second term for a factor the
+# request already names, so every such record carries ``n_factors + 1`` terms while
+# A and B carry ``n_factors``.  A function that does nothing but *count terms*
+# therefore scores AUROC 1.0000 on C[dup]-vs-B and 0.7500 pooled -- with no model in
+# it, and every arm in the cell inherits that number invisibly.
+#
+# A7 removes the giveaway by giving each VALID request one redundant extra term: a
+# factor repeated **at the value it already has**.  The request still denotes exactly
+# the same image, so it remains satisfiable, and it is ``n_factors + 1`` terms long.
+# It is built from valid requests ALONE -- no invalid example is read, synthesised or
+# fitted to -- which is what keeps the zero-invalid-supervision claim intact.
+#
+# The redundancy rule is a 1:1 map over valid requests, so the convention is
+# ``|A7| = |A|`` for whatever A a consumer passes (``chlu.core.gen_certificate.
+# redundant_requests`` instantiates the same rule in memory over its own A of 1,024).
+# The SHIPPED artifact instantiates it at ``A = a deterministic sample of TRAIN rows``
+# of size ``gen_data.a7_n_requests`` (default ``|C|``), so the file is class-balanced
+# against the C set it controls for.
+
+#: The one place the term-dict key ORDER is defined.  Every query set writes its terms
+#: through this, so key order can never itself become a giveaway.
+TERM_KEYS = ("factor", "factor_index", "value")
+
+A7_SCHEMA = {
+    "version": 1,
+    "description": (
+        "VALID factor requests carrying one REDUNDANT term (a factor repeated at "
+        "the value it already has).  The structural control for the C set's "
+        "'duplicate_factor' records: same term count, same term ordering, same "
+        "repeated-factor pattern, and still satisfiable.  Built from valid "
+        "requests alone -- no invalid example is used."
+    ),
+    "record": {
+        "id": "stable string id, unique within the file",
+        "kind": "'valid_redundant'",
+        "request": (
+            "list of {factor, factor_index, value} terms; every factor named once "
+            "plus ONE repeat of a single factor at its own value"
+        ),
+        "redundant_factor": "name of the repeated factor",
+        "row": "dataset row this request denotes (it is satisfiable, and this is it)",
+    },
+    "convention": (
+        "|A7| = |A|: the construction is a 1:1 map over valid requests.  The "
+        "shipped file instantiates A as a deterministic TRAIN-row sample."
+    ),
+}
+
+
+def _grid_terms(grid: FactorGrid, row: int) -> list[dict]:
+    """The ``n_factors`` terms of the request denoting ``row`` (grid values, verbatim)."""
+    vals = grid.values_of(np.array([int(row)], dtype=np.int64))[0]
+    return [
+        {"factor": grid.names[k], "factor_index": k, "value": float(vals[k])}
+        for k in range(grid.n_factors)
+    ]
+
+
+def build_base_requests(
+    grid: FactorGrid,
+    rows: Sequence[int],
+    source: str = "base",
+) -> list[dict]:
+    """The plain ``n_factors``-term valid requests for ``rows`` -- the ``base`` control.
+
+    Derived from ``factor_index.npz`` rather than stored: a valid request *is* a row,
+    so persisting them would duplicate the index.  Emitted in the same record shape as
+    every other query set so the detector consumes all of them identically.
+    """
+    out = []
+    for i, r in enumerate(np.asarray(rows, dtype=np.int64).tolist()):
+        out.append(
+            {
+                "id": f"{grid.dataset}-{source}-{i:06d}",
+                "kind": "valid",
+                "request": _grid_terms(grid, r),
+                "row": int(r),
+            }
+        )
+    return out
+
+
+def select_a7_rows(
+    train_rows: np.ndarray, n_requests: int, seed: int = 0
+) -> np.ndarray:
+    """Deterministic TRAIN-row sample the shipped A7 file is built from.
+
+    Train rows only: B is the held-out set and must not be spent on a control.
+    """
+    train_rows = np.asarray(train_rows, dtype=np.int64)
+    n = int(n_requests)
+    if n <= 0:
+        raise ValueError(f"a7_n_requests must be >= 1, got {n}")
+    if train_rows.size == 0:
+        raise ValueError("no train rows to build A7 from")
+    rng = np.random.default_rng(int(seed))
+    replace = train_rows.size < n
+    return np.sort(rng.choice(train_rows, size=n, replace=replace))
+
+
+def build_a7_redundant(
+    grid: FactorGrid,
+    rows: Sequence[int],
+    seed: int = 0,
+) -> dict:
+    """Build the A7 set: one redundant-term VALID request per row of ``rows``.
+
+    The repeated factor cycles as ``i % n_factors`` and the repeated term is appended
+    at the **end** of the term list -- deliberately the same placement and the same
+    cycling rule ``build_c_invalid`` uses for its duplicate, so the two sets are
+    structurally identical and differ only in the (masked) value.
+
+    ``chlu.core.gen_certificate.redundant_requests`` implements the same rule in
+    memory; ``tests/test_gen_c_set_a7.py`` asserts the two agree term-for-term.
+    """
+    rows = np.asarray(rows, dtype=np.int64)
+    n_f = grid.n_factors
+    records: list[dict] = []
+    for i, r in enumerate(rows.tolist()):
+        terms = _grid_terms(grid, r)
+        j = int(i % n_f)
+        terms.append(dict(terms[j]))  # same keys, same order, SAME value
+        records.append(
+            {
+                "id": f"{grid.dataset}-a7-{i:03d}",
+                "kind": "valid_redundant",
+                "request": terms,
+                "redundant_factor": grid.names[j],
+                "row": int(r),
+            }
+        )
+    return {
+        "schema": A7_SCHEMA,
+        "dataset": grid.dataset,
+        "seed": int(seed),
+        "n_requests": len(records),
+        "factors": {
+            "names": list(grid.names),
+            "cardinalities": list(grid.cardinalities),
+            "ranges": [[float(v[0]), float(v[-1])] for v in grid.values],
+        },
+        "records": records,
+    }
+
+
+def validate_a7_redundant(payload: dict, grid: FactorGrid) -> int:
+    """Assert every A7 record is SATISFIABLE and ``n_factors + 1`` terms long.
+
+    An A7 whose "redundant" term carried a *different* value would be a C record with
+    the wrong label -- it would make the control harder than the thing it controls and
+    every margin computed against it would be wrong in our favour.  So it is checked.
+    """
+    records = payload["records"]
+    if not records:
+        raise AssertionError("A7 set is empty")
+    n_f = grid.n_factors
+    for rec in records:
+        req = rec["request"]
+        if len(req) != n_f + 1:
+            raise AssertionError(
+                f"{rec['id']}: {len(req)} terms, expected {n_f + 1} "
+                "(the whole point of A7 is the term count)"
+            )
+        by_factor: dict[str, set] = {}
+        for term in req:
+            if tuple(term.keys()) != TERM_KEYS:
+                raise AssertionError(
+                    f"{rec['id']}: term keys {tuple(term.keys())} != {TERM_KEYS}"
+                )
+            k = int(term["factor_index"])
+            if grid.names[k] != term["factor"]:
+                raise AssertionError(
+                    f"{rec['id']}: factor {term['factor']!r} at index {k} "
+                    f"(grid says {grid.names[k]!r})"
+                )
+            if not np.any(grid.values[k] == term["value"]):
+                raise AssertionError(
+                    f"{rec['id']}: value {term['value']} of factor "
+                    f"{term['factor']!r} is OFF-GRID -- A7 must be satisfiable"
+                )
+            by_factor.setdefault(term["factor"], set()).add(term["value"])
+        if len(by_factor) != n_f:
+            raise AssertionError(
+                f"{rec['id']}: names {len(by_factor)} factors, expected {n_f}"
+            )
+        conflicting = [f for f, v in by_factor.items() if len(v) > 1]
+        if conflicting:
+            raise AssertionError(
+                f"{rec['id']}: factor(s) {conflicting} requested at two DIFFERENT "
+                "values -- that is a C record, not a valid control"
+            )
+        row = rec.get("row")
+        if row is not None:
+            want = grid.values_of(np.array([int(row)], dtype=np.int64))[0]
+            got = np.array([by_factor[grid.names[k]].pop() for k in range(n_f)])
+            if not np.array_equal(got, want):
+                raise AssertionError(
+                    f"{rec['id']}: request does not denote its own row {row}"
+                )
+    return len(records)
+
+
+# ---------------------------------------------------------------------------
+# The query-set REGISTRY and the no-model structural detector
+# ---------------------------------------------------------------------------
+#
+# R26 ruling 1, standing rule: every C set carries a mandatory no-model detector
+# control.  "The convention that has to be remembered is the one that failed", so this
+# is not a convention: the registry below is written to disk beside the artifacts as
+# ``query_sets.json``, and ``tests/test_gen_c_set_a7.py`` DISCOVERS it from disk and
+# audits whatever it finds.  A future query-set definition inherits the audit by being
+# registered -- there is no list of today's sets to update.
+
+#: Keys the detector is allowed to SCORE.  The request is the object an arm consumes.
+ASSERTION_RECORD_KEYS = ("id", "request")
+#: Keys that are the answer key or provenance, excluded from the scored feature view
+#: BY NAME (and reported as diagnostics so the exclusion is visible, never silent).
+EXCLUDED_RECORD_KEYS = ("kind", "violated_factor", "reason", "row", "redundant_factor")
+
+QUERY_SET_REGISTRY: dict[str, dict] = {
+    "base": {
+        "role": "valid",
+        "derived_from": "factor_index.npz",
+        "builder": "chlu.data.gen_splits.build_base_requests",
+        "n_terms": "n_factors",
+        "description": "A and B: one term per factor, the plain valid request.",
+    },
+    "a7_redundant": {
+        "role": "valid",
+        "file": "a7_redundant.json",
+        "builder": "chlu.data.gen_splits.build_a7_redundant",
+        "n_terms": "n_factors + 1",
+        "description": "valid requests carrying one redundant (same-value) term.",
+    },
+    "c_invalid": {
+        "role": "invalid",
+        "file": "c_invalid.json",
+        "builder": "chlu.data.gen_splits.build_c_invalid",
+        # ⭐ Per KIND, the valid set that is structurally matched to it.  A kind with
+        # no control here fails the audit loudly -- that is the inheritance mechanism.
+        "controls": {"duplicate_factor": "a7_redundant", "out_of_range": "base"},
+        "description": "structurally invalid requests (the C set).",
+    },
+}
+
+
+def write_query_set_registry(
+    out_dir: str | Path,
+    dataset: str,
+    emitted: dict[str, dict],
+) -> tuple[Path, str]:
+    """Write ``query_sets.json``: the registered query sets, with realised checksums.
+
+    ``emitted`` maps a registry name to the realised facts about it
+    (``path``/``sha256``/``n_records``).  The detector test reads THIS file, so a set
+    that is built but not registered is invisible to the audit -- and a set that is
+    registered but missing from disk makes the audit fail.
+    """
+    out_dir = Path(out_dir)
+    sets = {}
+    for name, spec in QUERY_SET_REGISTRY.items():
+        entry = {k: v for k, v in spec.items()}
+        entry.update(emitted.get(name, {}))
+        sets[name] = entry
+    payload = {
+        "schema": {
+            "version": 1,
+            "description": (
+                "The registered query sets of this dataset directory.  Every invalid "
+                "set names, per kind, the valid set that is its STRUCTURAL control; "
+                "the no-model detector test discovers this file and audits the "
+                "invalid sets against those controls."
+            ),
+        },
+        "dataset": dataset,
+        "excluded_record_keys": list(EXCLUDED_RECORD_KEYS),
+        "sets": sets,
+    }
+    return write_json_with_checksum(payload, out_dir / "query_sets.json")
+
+
+def discover_query_set_registries(root: str | Path | None = None) -> list[Path]:
+    """Every ``query_sets.json`` under the generative data root.  ⛔ Never a hardcoded list.
+
+    This is what makes the detector test inherit future query-set definitions: it
+    audits what is ON DISK, including dataset directories and secondary-condition
+    subdirectories that did not exist when the test was written.
+    """
+    root = Path(root) if root is not None else default_gen_data_root()
+    if not root.exists():
+        return []
+    return sorted(root.glob("**/query_sets.json"))
+
+
+def load_registered_query_sets(
+    registry_path: str | Path,
+    max_base: int = 2048,
+    base_seed: int = 0,
+) -> tuple[dict, dict[str, list[dict]]]:
+    """Load a registry + every query set it declares -> (registry, {name: records}).
+
+    ``base`` is rebuilt from the sibling ``factor_index.npz`` (a valid request *is* a
+    row) over a deterministic sample of train + test rows, i.e. A ∪ B.
+    """
+    registry_path = Path(registry_path)
+    registry = json.loads(registry_path.read_text())
+    d = registry_path.parent
+    sets: dict[str, list[dict]] = {}
+    for name, spec in registry["sets"].items():
+        if spec.get("file"):
+            p = d / spec["file"]
+            if not p.exists():
+                raise FileNotFoundError(
+                    f"{registry_path}: query set {name!r} is registered at {p} but "
+                    "the file is missing -- the audit cannot be run"
+                )
+            sets[name] = json.loads(p.read_text())["records"]
+        elif spec.get("derived_from") == "factor_index.npz":
+            grid, train_rows, test_rows, _ = load_index(d / "factor_index.npz")
+            pool = np.concatenate(
+                [np.asarray(train_rows, np.int64), np.asarray(test_rows, np.int64)]
+            )
+            rng = np.random.default_rng(int(base_seed))
+            if pool.size > int(max_base):
+                pool = np.sort(rng.choice(pool, size=int(max_base), replace=False))
+            sets[name] = build_base_requests(grid, pool, source=name)
+        else:
+            raise ValueError(
+                f"{registry_path}: query set {name!r} declares neither a file nor a "
+                "derivation -- the detector cannot reach it"
+            )
+    return registry, sets
+
+
+# -- the detector ----------------------------------------------------------------
+
+#: The value every term is masked with before a single feature is computed.  The
+#: detector is allowed EVERY field except the factor values; this is how that is
+#: enforced rather than promised.
+MASKED_VALUE = 0.0
+
+
+def mask_request(request: Sequence[dict]) -> list[dict]:
+    """The request with every factor VALUE replaced by :data:`MASKED_VALUE`."""
+    return [{k: (MASKED_VALUE if k == "value" else t[k]) for k in t} for t in request]
+
+
+def structural_features(record: dict) -> dict[str, float]:
+    """Every structural property of a record we can reach WITHOUT its factor values.
+
+    Adversarial by intent: term count is only the giveaway we already found, so this
+    also reaches term ordering, the repeated-factor pattern and its position, the
+    factor-index arithmetic, and the length of the value-masked serialisation.
+    """
+    req = list(record["request"])
+    idx = [int(t["factor_index"]) for t in req]
+    n = len(idx)
+    counts: dict[int, int] = {}
+    for j in idx:
+        counts[j] = counts.get(j, 0) + 1
+    first_dup = -1
+    for p, j in enumerate(idx):
+        if idx.index(j) != p:
+            first_dup = p
+            break
+    inversions = sum(1 for a in range(n) for b in range(a + 1, n) if idx[a] > idx[b])
+    masked = json.dumps(mask_request(req))
+    return {
+        "n_terms": float(n),
+        "n_distinct_factors": float(len(counts)),
+        "max_factor_multiplicity": float(max(counts.values())) if counts else 0.0,
+        "n_redundant_terms": float(n - len(counts)),
+        "is_factor_order_sorted": float(idx == sorted(idx)),
+        "n_order_inversions": float(inversions),
+        "first_duplicate_position": float(first_dup),
+        "sum_factor_indices": float(sum(idx)),
+        "first_factor_index": float(idx[0]) if idx else -1.0,
+        "last_factor_index": float(idx[-1]) if idx else -1.0,
+        "masked_request_json_len": float(len(masked)),
+    }
+
+
+def diagnostic_features(record: dict) -> dict[str, float]:
+    """Features that are SET LABELS by construction -- reported, never asserted on.
+
+    A record id names the file it came from, and a C record carries its own answer
+    (``violated_factor``, ``reason``).  Any arm reading those is not being fooled by a
+    structural leak, it is reading the label.  They are measured and reported anyway,
+    so the exclusion is visible in the numbers rather than buried in a docstring.
+    """
+    rid = str(record.get("id", ""))
+    tail = rid.rsplit("-", 1)[-1]
+    return {
+        "id_numeric_suffix": float(tail) if tail.isdigit() else -1.0,
+        "id_token_count": float(len(rid.split("-"))),
+        "record_key_count": float(len(record)),
+    }
+
+
+def auroc(pos_scores: Sequence[float], neg_scores: Sequence[float]) -> float:
+    """AUROC of ``pos`` over ``neg`` by mid-ranks (a tied feature gives exactly 0.5)."""
+    pos = np.asarray(list(pos_scores), dtype=float)
+    neg = np.asarray(list(neg_scores), dtype=float)
+    if pos.size == 0 or neg.size == 0:
+        raise ValueError("AUROC needs a non-empty class on both sides")
+    allv = np.concatenate([pos, neg])
+    order = np.argsort(allv, kind="mergesort")
+    ranks = np.empty(allv.size, dtype=float)
+    sorted_v = allv[order]
+    i = 0
+    while i < sorted_v.size:
+        j = i
+        while j + 1 < sorted_v.size and sorted_v[j + 1] == sorted_v[i]:
+            j += 1
+        ranks[order[i : j + 1]] = 0.5 * (i + j) + 1.0
+        i = j + 1
+    r_pos = ranks[: pos.size].sum()
+    return float((r_pos - pos.size * (pos.size + 1) / 2.0) / (pos.size * neg.size))
+
+
+def _feature_table(records: Sequence[dict], fn) -> dict[str, list[float]]:
+    cols: dict[str, list[float]] = {}
+    for rec in records:
+        for k, v in fn(rec).items():
+            cols.setdefault(k, []).append(v)
+    return cols
+
+
+def no_model_detector(
+    invalid_records: Sequence[dict],
+    valid_records: Sequence[dict],
+    diagnostics: bool = False,
+) -> dict[str, float]:
+    """Orientation-free AUROC of every structural feature, invalid vs valid.
+
+    Orientation-free (``max(a, 1 - a)``) because a detector that fires LOW separates
+    exactly as well as one that fires high; scoring only the high direction would let
+    a giveaway through for free.
+    """
+    fn = diagnostic_features if diagnostics else structural_features
+    pos = _feature_table(invalid_records, fn)
+    neg = _feature_table(valid_records, fn)
+    out = {}
+    for k in sorted(pos):
+        a = auroc(pos[k], neg[k])
+        out[k] = float(max(a, 1.0 - a))
+    return out
+
+
+def audit_query_sets(
+    registry_path: str | Path,
+    tolerance: float,
+    max_base: int = 2048,
+) -> dict:
+    """⭐ Run the no-model detector over a registry discovered on disk.
+
+    For every invalid set, every kind is scored against **the valid set the registry
+    declares as its structural control**, and -- separately, for the record -- against
+    the uncontrolled ``base`` pool, which is what the leak looked like before A7.
+
+    Returns a report; ``report["violations"]`` is non-empty iff the audit FAILS.  The
+    caller (the test) raises; this function does not, so the numbers can be reported
+    either way.
+    """
+    registry, sets = load_registered_query_sets(registry_path, max_base=max_base)
+    violations: list[str] = []
+
+    allowed = set(ASSERTION_RECORD_KEYS) | set(EXCLUDED_RECORD_KEYS)
+    for name, recs in sets.items():
+        for rec in recs:
+            extra = set(rec) - allowed
+            if extra:
+                violations.append(
+                    f"{name}/{rec.get('id')}: record key(s) {sorted(extra)} are not "
+                    f"in the declared allowlist {sorted(allowed)} -- a new field is a "
+                    "candidate giveaway and must be declared before it ships"
+                )
+                break
+            for term in rec["request"]:
+                if tuple(term.keys()) != TERM_KEYS:
+                    violations.append(
+                        f"{name}/{rec.get('id')}: term keys {tuple(term.keys())} != "
+                        f"{TERM_KEYS} -- key order is itself a giveaway"
+                    )
+                    break
+
+    report = {
+        "registry": str(registry_path),
+        "dataset": registry.get("dataset", ""),
+        "tolerance": float(tolerance),
+        "n_records": {k: len(v) for k, v in sets.items()},
+        "per_kind": {},
+        "uncontrolled_vs_base": {},
+        "diagnostics_vs_base": {},
+        "pooled": {},
+        "pooled_uncontrolled_vs_base": {},
+        "violations": violations,
+    }
+
+    for name, spec in registry["sets"].items():
+        if spec.get("role") != "invalid":
+            continue
+        controls = spec.get("controls") or {}
+        by_kind: dict[str, list[dict]] = {}
+        for rec in sets[name]:
+            by_kind.setdefault(str(rec.get("kind", "unknown")), []).append(rec)
+        pooled_dir: dict[str, float] = {}
+        pooled_unc_dir: dict[str, float] = {}
+        n_total = sum(len(v) for v in by_kind.values())
+        for kind, recs in sorted(by_kind.items()):
+            control = controls.get(kind)
+            if control is None:
+                violations.append(
+                    f"{name}: kind {kind!r} has NO declared structural control in "
+                    f"{registry_path} -- every invalid kind needs one (R26 ruling 1)"
+                )
+                continue
+            if control not in sets:
+                violations.append(
+                    f"{name}: kind {kind!r} declares control {control!r}, which is "
+                    "not a registered query set"
+                )
+                continue
+            key = f"{name}[{kind}]"
+            feats = no_model_detector(recs, sets[control])
+            worst = max(feats, key=lambda k: feats[k])
+            report["per_kind"][key] = {
+                "control": control,
+                "n_invalid": len(recs),
+                "n_control": len(sets[control]),
+                "features": feats,
+                "worst_feature": worst,
+                "max_auroc": feats[worst],
+            }
+            if feats[worst] > 0.5 + tolerance:
+                violations.append(
+                    f"{key} vs {control}: no-model detector reaches AUROC "
+                    f"{feats[worst]:.4f} on {worst!r} (tolerance {0.5 + tolerance:.4f})"
+                    " -- a structural giveaway separates this set with no model in it"
+                )
+            if "base" in sets:
+                unc = no_model_detector(recs, sets["base"])
+                w = max(unc, key=lambda k: unc[k])
+                report["uncontrolled_vs_base"][key] = {
+                    "features": unc,
+                    "worst_feature": w,
+                    "max_auroc": unc[w],
+                }
+                dia = no_model_detector(recs, sets["base"], diagnostics=True)
+                report["diagnostics_vs_base"][key] = dia
+            # stratified pooling: each kind weighted by its share of the invalid set.
+            # ⛔ Pooled DIRECTIONALLY and only then made orientation-free, so two kinds
+            # separating in opposite directions cannot cancel into a clean 0.5.
+            w_k = len(recs) / n_total if n_total else 0.0
+            for f, a in no_model_detector_directional(recs, sets[control]).items():
+                pooled_dir[f] = pooled_dir.get(f, 0.0) + w_k * a
+            if "base" in sets:
+                for f, a in no_model_detector_directional(recs, sets["base"]).items():
+                    pooled_unc_dir[f] = pooled_unc_dir.get(f, 0.0) + w_k * a
+        if pooled_unc_dir:
+            pu = {f: float(max(a, 1.0 - a)) for f, a in pooled_unc_dir.items()}
+            w = max(pu, key=lambda k: pu[k])
+            report["pooled_uncontrolled_vs_base"][name] = {
+                "features": pu,
+                "worst_feature": w,
+                "max_auroc": pu[w],
+            }
+        if pooled_dir:
+            pooled = {f: float(max(a, 1.0 - a)) for f, a in pooled_dir.items()}
+            worst = max(pooled, key=lambda k: pooled[k])
+            report["pooled"][name] = {
+                "features": pooled,
+                "worst_feature": worst,
+                "max_auroc": pooled[worst],
+            }
+            if pooled[worst] > 0.5 + tolerance:
+                violations.append(
+                    f"{name} pooled: no-model detector reaches AUROC "
+                    f"{pooled[worst]:.4f} on {worst!r} "
+                    f"(tolerance {0.5 + tolerance:.4f})"
+                )
+    return report
+
+
+def no_model_detector_directional(
+    invalid_records: Sequence[dict], valid_records: Sequence[dict]
+) -> dict[str, float]:
+    """Signed per-feature AUROC (used for stratified pooling, where sign matters)."""
+    pos = _feature_table(invalid_records, structural_features)
+    neg = _feature_table(valid_records, structural_features)
+    return {k: auroc(pos[k], neg[k]) for k in sorted(pos)}
+
+
+def assert_no_model_detector_at_chance(
+    registry_path: str | Path,
+    tolerance: float,
+    max_base: int = 2048,
+) -> dict:
+    """:func:`audit_query_sets`, raising loudly on any violation.  Returns the report."""
+    report = audit_query_sets(registry_path, tolerance, max_base=max_base)
+    if report["violations"]:
+        raise AssertionError(
+            f"no-model detector audit FAILED for {registry_path}:\n  "
+            + "\n  ".join(report["violations"])
+        )
+    return report
 
 
 # ---------------------------------------------------------------------------

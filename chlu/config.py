@@ -3291,6 +3291,20 @@ class GenDataConfig:
     #: C set much larger or smaller than B distorts it. Set an int to override.
     c_invalid_n_per_kind: Optional[int] = None
     c_invalid_seed: int = 0
+    #: ⭐ A7, the term-count CONTROL for the C set (R26 ruling 1): valid requests
+    #: carrying one REDUNDANT term (a factor repeated at the value it already has),
+    #: so they are ``n_factors + 1`` terms long like a ``duplicate_factor`` record
+    #: and still satisfiable.  ⛔ Emitting it is not optional in a reported run: a C
+    #: set without its structural control hands every arm an AUROC of 0.75 that a
+    #: one-line term-count function also gets (gen-certificate §3).
+    emit_a7: bool = True
+    #: ``|A7|``; ``None`` -> ``|C| = 2 * c_invalid_n_per_kind`` so the shipped file is
+    #: class-balanced against the set it controls for.  ⭐ The construction itself is
+    #: a 1:1 map over valid requests (``|A7| = |A|``); this only sizes the artifact.
+    a7_n_requests: Optional[int] = None
+    #: Seed for A7's deterministic TRAIN-row sample (⛔ never held-out rows: B is
+    #: the evaluation set and must not be spent on a control).
+    a7_seed: int = 0
     #: Widened SECONDARY hold-out (``condition="recomb2element_wide"``, R17).
     #: ⛔ Montero's ``recomb2element`` remains the untouched headline; the wide
     #: condition is a SEPARATE full configuration (the frozen encoder/decoder
