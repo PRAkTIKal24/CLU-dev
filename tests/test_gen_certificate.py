@@ -555,3 +555,20 @@ def test_the_count_control_is_blind_to_the_term_count_control():
     n_a7 = [float(r.n_terms) for r in a7]
     n_cdup = [4.0] * 6
     assert auroc([0] * 6 + [1] * 6, n_a7 + n_cdup) == 0.5
+
+
+def test_the_aggregate_plot_draws_the_controls_in_the_same_axes(tmp_path):
+    """⛔ A laundering control that lives in an appendix panel is easy to skip; the
+    plot puts the certificate and both controls on the same axes."""
+    from chlu.experiments.exp_gen_certificate import plot_aggregate
+
+    def ms(v):
+        return {"mean": v, "std": 0.01, "per_seed": [v], "n_seeds": 1}
+
+    per = {a: {k: ms(0.8) for k in ("A_vs_C", "B_vs_C", "AB_vs_C_balanced",
+                                    "B_vs_C[duplicate_factor]",
+                                    "A7_vs_C[duplicate_factor]")}
+           for a in ("clu", "distance", "distance_reach", "count")}
+    agg = {"seeds": [0], "arms": {"correlation": {"per_arm": per}}}
+    p = plot_aggregate(agg, tmp_path / "fig.png")
+    assert p.exists() and p.stat().st_size > 0

@@ -48,7 +48,11 @@ from pathlib import Path
 from typing import Callable, Optional
 
 import jax
-import numpy as np
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
 
 from ..config import CHLUConfig, get_default_config  # noqa: E402
 from ..core.gen_bridge import (  # noqa: E402
@@ -603,6 +607,60 @@ def aggregate_runs(run_dirs, log: Callable = _log) -> dict:
     return agg
 
 
+def plot_aggregate(agg: dict, path: Path) -> Path:
+    """Two panels per grouping: the three AUROCs per arm, and the dup question in its
+    contaminated and ⭐ term-count-controlled forms side by side.
+
+    ⛔ The controls are drawn in the same axes as the certificate, not in an appendix
+    panel: a laundering control that is easy to skip is not a control.
+    """
+    groupings = [g for g in ("correlation", "random") if g in agg.get("arms", {})]
+    if not groupings:
+        return path
+    fig, axes = plt.subplots(len(groupings), 2, figsize=(12.5, 4.4 * len(groupings)),
+                             squeeze=False)
+    for r, g in enumerate(groupings):
+        per = agg["arms"][g]["per_arm"]
+        arms = [a for a in ("clu", "clu_pair_reach", "pair", "energy", "reach",
+                            "distance", "distance_reach", "count") if a in per]
+        x = np.arange(len(arms))
+        ax = axes[r][0]
+        for off, key, lab in ((-0.27, "A_vs_C", "A vs C"),
+                              (0.0, "B_vs_C", "B vs C (R23 primary)"),
+                              (0.27, "AB_vs_C_balanced", "A∪B vs C (balanced)")):
+            ax.bar(x + off, [per[a][key]["mean"] for a in arms], 0.26,
+                   yerr=[per[a][key]["std"] for a in arms], capsize=2, label=lab)
+        ax.axhline(0.5, color="k", lw=0.8, ls=":")
+        ax.set_xticks(x)
+        ax.set_xticklabels(arms, rotation=30, ha="right", fontsize=8)
+        ax.set_ylim(0, 1.05)
+        ax.set_ylabel("AUROC")
+        ax.set_title(f"{g}: all three AUROCs, never one pooled number", fontsize=9)
+        ax.legend(fontsize=7)
+        ax = axes[r][1]
+        for off, key, lab in ((-0.2, "B_vs_C[duplicate_factor]",
+                               "B vs C-dup (⚠ 6 terms vs 7)"),
+                              (0.2, "A7_vs_C[duplicate_factor]",
+                               "⭐ A7 vs C-dup (term-count controlled)")):
+            ax.bar(x + off, [per[a].get(key, {}).get("mean", np.nan) for a in arms], 0.38,
+                   yerr=[per[a].get(key, {}).get("std", np.nan) for a in arms],
+                   capsize=2, label=lab)
+        ax.axhline(0.5, color="k", lw=0.8, ls=":")
+        ax.set_xticks(x)
+        ax.set_xticklabels(arms, rotation=30, ha="right", fontsize=8)
+        ax.set_ylim(0, 1.05)
+        ax.set_title(f"{g}: the duplicate_factor question, contaminated vs controlled",
+                     fontsize=9)
+        ax.legend(fontsize=7)
+    fig.suptitle("composition certificate — mean ± std over seeds "
+                 f"{agg.get('seeds')}; out_of_range is a grid lookup and is reported "
+                 "separately", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path, dpi=130)
+    plt.close(fig)
+    return path
+
+
 # ---------------------------------------------------------------------------
 # Entry points
 # ---------------------------------------------------------------------------
@@ -630,6 +688,8 @@ def run_experiment_gen_certificate(config: Optional[CHLUConfig] = None,
         dirs.append(out / f"seed_{s}")
     agg = aggregate_runs(dirs, log=log)
     _write_json(agg, out / "certificate_results.json")
+    if cfg.make_plots:
+        plot_aggregate(agg, out / "certificate_summary.png")
     return agg
 
 
@@ -708,6 +768,8 @@ def main(argv=None) -> int:
             return 2
         agg = aggregate_runs(args.runs)
         _write_json(agg, out / "certificate_results.json")
+        if cfg.make_plots:
+            plot_aggregate(agg, out / "certificate_summary.png")
         print(f"[gen-cert] ⭐ audit certified across seeds: "
               f"{agg['CERTIFIED_no_invalid_supervision']}")
     return 0
