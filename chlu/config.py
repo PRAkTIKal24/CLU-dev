@@ -3577,6 +3577,139 @@ class GenR0WideConfig:
 
 
 @dataclass
+class GenDreamConfig:
+    """⭐ Conditional dreaming: clamp the wells a request addresses, relax the rest,
+    run Langevin on the store's landscape, decode through the ONE frozen decoder.
+
+    Backs ``chlu exp-gen-dream`` and ``chlu.experiments.exp_gen_dream``.  ⛔ The
+    store, encoder, decoder and probe are all consumed **frozen**; this block only
+    describes the sampler, the addressing head and the audit trail.
+
+    ⛔ **The decoder trap.** ``GenBridgeConfig.dec_recipe`` still defaults to
+    ``"baseline"`` — the SUPERSEDED decoder that failed the gate (0.7191 balanced
+    accuracy, 0/3 seeds) — deliberately, so Montero's history reproduces.  This
+    block therefore defaults to loading ``gen-decoder-lift``'s **winner**
+    checkpoint and asserting both its parameter hash and its recipe name; a run
+    through the baseline looks entirely normal in the logs and is void.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    #: Where the frozen bridge runs live. ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT``
+    #: else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: ``.claude`` root for the shipped artifacts (a worktree has none of its own).
+    claude_root: Optional[str] = None
+    #: ``gen-store-grouping``'s pinned plan (``K``, ``n_modes``, ``D``, bytes).
+    store_plan: Optional[str] = None
+    #: ⛔⭐ How the channel grouping is obtained. ``per_seed`` (default) re-derives
+    #: it by the plan's own procedure on THIS seed's train activations, at the
+    #: plan's ``K``, and asserts bit-identity with the plan on the seed whose
+    #: encoder wrote it. ``plan`` takes the plan's label vector verbatim — ⛔ which
+    #: is only meaningful on that one seed: the labels index ENCODER CHANNELS and
+    #: every bridge seed trained its own encoder, so on any other seed the plan's
+    #: vector is a size-matched RANDOM partition wearing the clustered grouping's
+    #: name. Kept only so the defect is reproducible.
+    grouping_source: str = "per_seed"
+
+    # --- ⛔ the decoder guard ---
+    #: ``winner`` = gen-decoder-lift's frozen V1 checkpoint (default, and the only
+    #: safe choice against Montero's bridge); ``bridge`` = the bridge directory's
+    #: own decoder, valid only when its manifest records the winning recipe.
+    decoder_source: str = "winner"
+    winner_root: Optional[str] = None
+    winner_decoder_pattern: str = "decoder_v1_s{seed}.pkl"
+    #: ⛔ Refuse any other recipe. ``"baseline"`` is the decoder that FAILED the gate.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+
+    # --- the landscape ---
+    #: ⚠ Inter-well PMI coupling strength. ⛔ At 0 the energy is SEPARABLE and
+    #: conditional dreaming is provably inert — which is why ``no_coupling`` is run
+    #: as a full arm rather than argued about.
+    coupling_strength: float = 1.0
+    coupling_smoothing: float = 1.0
+    address_smoothing: float = 1.0
+    #: Top-1 posterior mass above which a request is said to ADDRESS a well (and
+    #: the well is clamped). Below it the well is relaxed.
+    clamp_threshold: float = 0.5
+    #: How relaxed wells start: ``centroid`` (least committed), ``prior_sample``,
+    #: ``prior_mode``.
+    init_mode: str = "centroid"
+
+    # --- the sampler (declared, per the Head's sampler ruling) ---
+    #: ⭐ ``mala`` APPLIES a Metropolis-Hastings correction. ``ula`` is the same
+    #: proposal with the correction removed (so its cost is measured, not argued);
+    #: ``uld`` is the repo's underdamped integrator at ``noise_mode="fdt"``.
+    sampler: str = "mala"
+    samplers: List[str] = field(default_factory=lambda: ["mala", "ula", "uld"])
+    steps: int = 200
+    #: ``None`` -> tuned on TRAIN requests to ``target_accept`` (⛔ an acceptance
+    #: target, never an accuracy); a float pins it.
+    step_size: Optional[float] = None
+    step_size_init: float = 0.1
+    target_accept: float = 0.7
+    accept_tolerance: float = 0.1
+    tune_rounds: int = 8
+    tune_steps: int = 20
+    tune_factor: float = 2.0
+    n_tune_requests: int = 128
+    #: ⭐ Geometric anneals, in CALIBRATED units. ⛔ ``tau_start``/``tau_end`` are
+    #: **fractions of the store's own median inter-mode distance**
+    #: (``tau_calibration="mode_distance"``), not absolute numbers: on a 2048-dim
+    #: cache the squared distance to a mode is of order hundreds, so an absolute
+    #: tau of ~1 leaves ``exp(-d^2/2 tau^2)`` saturated one-hot, the coupling
+    #: term's gradient vanishes and the chain cannot move (measured: only 5 % of
+    #: rollouts changed a single code). ``"absolute"`` keeps the literal numbers
+    #: and reproduces that pre-fix behaviour.
+    tau_calibration: str = "mode_distance"
+    tau_start: float = 1.0
+    tau_end: float = 0.25
+    #: ⭐ Sampling temperature as a fraction of the landscape's OWN energy scale
+    #: (median ``|E(x0)|`` at ``tau_end``) — the only way ``exp(-dE/T)`` means
+    #: anything once tau is calibrated. ``"absolute"`` keeps the literal numbers.
+    temp_calibration: str = "energy_scale"
+    temp_start: float = 0.05
+    temp_end: float = 0.005
+    #: The underdamped arm's integrator knobs (``chlu.core.integrators``).
+    uld_dt: float = 0.05
+    uld_gamma: float = 0.1
+
+    # --- the cells ---
+    #: ⛔ ``store_removed`` (the ablation this spoke owns) and ``no_coupling`` (the
+    #: separability control) are never optional.
+    arms: List[str] = field(
+        default_factory=lambda: ["clu", "store_removed", "no_coupling"]
+    )
+    #: ⭐ ``zero_step`` is THE laundering control: decode the clamp, no Langevin.
+    variants: List[str] = field(
+        default_factory=lambda: ["full", "zero_step", "prior_mode"]
+    )
+    #: ``full`` = all factors (cell-native); ``partial`` drops factors so the
+    #: relaxed set cannot be empty. The headline is chosen by a PRE-REGISTERED rule.
+    request_protocols: List[str] = field(default_factory=lambda: ["full", "partial"])
+    request_drop_factors: int = 2
+    n_dream: int = 512
+    eval_batch: int = 256
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    save_traces: bool = True
+    make_plots: bool = True
+    use_store_checkpoint: bool = True
+    verify_cache_checksum: bool = True
+    store_removed_delete_mode: str = "mean"
+
+    # --- quick mode (plumbing smoke only; ⛔ never a reported number) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_dream: int = 64
+    quick_steps: int = 10
+    quick_tune_rounds: int = 2
+    quick_n_store_train: int = 2048
+    quick_store_train_steps: int = 30
+    quick_arms: List[str] = field(default_factory=lambda: ["clu", "no_coupling"])
+    quick_samplers: List[str] = field(default_factory=lambda: ["mala"])
+    quick_request_protocols: List[str] = field(default_factory=lambda: ["partial"])
+
+
+@dataclass
 class ProjectConfig:
     """Project-level configuration."""
 
@@ -3689,6 +3822,7 @@ class CHLUConfig:
     gen_store: GenStoreConfig = field(default_factory=GenStoreConfig)
     # --- gen-r0-wide-refit (additive; R24) ---
     gen_r0_wide: GenR0WideConfig = field(default_factory=GenR0WideConfig)
+    gen_dream: GenDreamConfig = field(default_factory=GenDreamConfig)
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -3926,6 +4060,9 @@ def load_config(path: Path) -> CHLUConfig:
         gen_r0_wide=GenR0WideConfig(
             **filter_valid_fields(GenR0WideConfig, data.get("gen_r0_wide", {}))
         ),
+        gen_dream=GenDreamConfig(
+            **filter_valid_fields(GenDreamConfig, data.get("gen_dream", {}))
+        ),
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -3989,6 +4126,7 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "gen_store": asdict(config.gen_store),
         # --- gen-r0-wide-refit (additive; R24) ---
         "gen_r0_wide": asdict(config.gen_r0_wide),
+        "gen_dream": asdict(config.gen_dream),
         "project": asdict(config.project),
     }
 

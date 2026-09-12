@@ -933,6 +933,40 @@ def setup_experiment_parsers(subparsers):
     exp_gs_parser.add_argument('--out', help='Output directory')
     exp_gs_parser.set_defaults(func=cmd_exp_gen_store)
 
+    # exp-gen-dream (generative pivot phase 1: conditional dreaming + its audit trail)
+    exp_gd_parser = subparsers.add_parser(
+        'exp-gen-dream',
+        help='Generative phase 1: clamp the wells a request addresses, relax the '
+             'rest, run Langevin on the store landscape and decode through THE '
+             'frozen decoder. The ZERO-STEP rollout is a full control on every '
+             'number: if it matches, the sampler is inert.'
+    )
+    exp_gd_parser.add_argument('--project', help='Project name to use')
+    exp_gd_parser.add_argument('--seed', type=int, help='Single seed (default: config seeds)')
+    exp_gd_parser.add_argument('--quick', action='store_true',
+                               help='Plumbing smoke only — NEVER a reported number')
+    exp_gd_parser.add_argument('--dataset', choices=['shapes3d', 'dsprites'],
+                               help='Dataset (default: gen_dream.dataset)')
+    exp_gd_parser.add_argument('--pretext', choices=['recon', 'cls'],
+                               help='recon = the mandatory primary (R1)')
+    exp_gd_parser.add_argument('--stage', default='dream',
+                               choices=['dream', 'aggregate'])
+    exp_gd_parser.add_argument('--arm', action='append',
+                               choices=['clu', 'store_removed', 'no_coupling'],
+                               help='repeatable (default: gen_dream.arms)')
+    exp_gd_parser.add_argument('--condition',
+                               help='hold-out condition (default: gen_data.condition)')
+    exp_gd_parser.add_argument('--sampler', choices=['mala', 'ula', 'uld'],
+                               help='mala APPLIES the Metropolis correction (default)')
+    exp_gd_parser.add_argument('--steps', type=int, help='Langevin steps per rollout')
+    exp_gd_parser.add_argument('--step-size', type=float,
+                               help='Pin the step size (default: tuned to target_accept)')
+    exp_gd_parser.add_argument('--n-dream', type=int, help='A-split requests per seed')
+    exp_gd_parser.add_argument('--bridge-root', help='Where the frozen bridge runs live')
+    exp_gd_parser.add_argument('--store-plan', help="gen-store-grouping's store_plan.json")
+    exp_gd_parser.add_argument('--out', help='Output directory')
+    exp_gd_parser.set_defaults(func=cmd_exp_gen_dream)
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -2721,4 +2755,71 @@ def cmd_exp_gen_store(args):
                 "task, reported as such.", style='bold red',
             )
     console.print(f"✓ gen-store completed -> {out_dir}", style="bold green")
+    return 0
+
+
+def cmd_exp_gen_dream(args):
+    """Run conditional dreaming: the clamped-well rollout and its zero-step control."""
+    console.print("[bold cyan]Generative phase 1: conditional dreaming[/bold cyan]")
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    from ..experiments.exp_gen_dream import run_experiment_gen_dream
+
+    g = config.gen_dream
+    if getattr(args, 'condition', None):
+        config.gen_data.condition = args.condition
+    if getattr(args, 'sampler', None):
+        g.sampler = args.sampler
+        g.samplers = [args.sampler]
+    if getattr(args, 'steps', None) is not None:
+        g.steps = int(args.steps)
+    if getattr(args, 'step_size', None) is not None:
+        g.step_size = float(args.step_size)
+    if getattr(args, 'n_dream', None) is not None:
+        g.n_dream = int(args.n_dream)
+    if getattr(args, 'bridge_root', None):
+        g.bridge_root = args.bridge_root
+    if getattr(args, 'store_plan', None):
+        g.store_plan = args.store_plan
+    seeds = [args.seed] if getattr(args, 'seed', None) is not None else None
+    out_dir = args.out or str(Path(paths['results']) / 'gen_dream')
+
+    try:
+        agg = run_experiment_gen_dream(
+            config=config,
+            dataset=getattr(args, 'dataset', None),
+            pretext=getattr(args, 'pretext', None),
+            out_dir=out_dir,
+            seeds=seeds,
+            stage=getattr(args, 'stage', 'dream'),
+            arms=getattr(args, 'arm', None),
+            quick=bool(getattr(args, 'quick', False)),
+            log=console.print,
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    if agg:
+        console.print(
+            f"⭐ headline protocol (pre-registered rule): {agg.get('headline_protocol')}",
+            style='bold',
+        )
+        for k, v in agg.get('falsifier_sampler_is_inert', {}).items():
+            inert = v['SAMPLER_IS_INERT']
+            console.print(
+                f"⭐ {k}: full − zero_step = {v['delta_aggregate_mean']:+.4f} "
+                f"± {v['delta_aggregate_std']:.4f} "
+                f"({v['n_seeds_positive']} seed(s) positive)",
+                style='bold red' if inert else 'bold green',
+            )
+            if inert:
+                console.print(
+                    "⛔ the zero-step control MATCHES the full rollout: the sampler "
+                    "is inert and we are decoding the clamp, not sampling the "
+                    "landscape. Reported as such.", style='bold red',
+                )
+    console.print(f"✓ gen-dream completed -> {out_dir}", style="bold green")
     return 0
