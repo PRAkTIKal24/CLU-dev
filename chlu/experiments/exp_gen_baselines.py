@@ -346,6 +346,37 @@ def corner_discrimination(
     return out
 
 
+def _oracle_aurocs(s_a, s_b, s_c) -> dict:
+    """⭐ ORACLE-ONLY per-trial refusal AUROCs.
+
+    ⛔ These use C and are therefore **never** the selection criterion; they exist
+    so the family's upper bound is available on **both** metrics — including
+    ``C-vs-(A u B)``, which is the metric kill rule (iv) actually names.
+
+    ⚠ Why an oracle bound is the honest comparator here, stated once.  A refusal
+    configuration cannot be selected from valid data alone: no valid-only
+    statistic measures *detection power*.  Giving the kNN a surrogate invalid set
+    would fix that — and would also **break the supervision-class match** that
+    makes kill rule (iv) meaningful (R7: kNN's threshold is "the same supervision
+    class as us: no labels, no dynamics, **no invalid examples**").  So the arm
+    ships a deployable, composition-selected number *and* an explicitly-labelled
+    oracle bound, and ⛔ does not invent a third thing.
+    """
+    a, b, c = (np.asarray(x, np.float64) for x in (s_a, s_b, s_c))
+
+    def au(neg, pos):
+        return binary_auroc(
+            np.concatenate([neg, pos]),
+            np.concatenate([np.zeros(neg.size, bool), np.ones(pos.size, bool)]),
+        )
+
+    return {
+        "auroc_c_vs_b_ORACLE_ONLY": au(b, c),
+        "auroc_c_vs_a_ORACLE_ONLY": au(a, c),
+        "auroc_c_vs_a_union_b_ORACLE_ONLY": au(np.concatenate([a, b]), c),
+    }
+
+
 def _auroc_by_kind(B: np.ndarray, C: np.ndarray, c_kinds) -> dict:
     """AUROC(B vs C) restricted to each C kind, plus each kind's count."""
     if c_kinds is None:
@@ -465,12 +496,12 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
             ctx["decoder"], ctx["probe"], r_val, ctx["lab_val"], ctx["names"],
             ctx["feat_shape"], g.eval_batch,
         )
+        _, s_a = read_and_dist(trial, ctx["E_A"])
         _, s_b = read_and_dist(trial, ctx["E_B"])
         _, s_c = read_and_dist(trial, ctx["E_C"])
-        au = binary_auroc(
-            np.concatenate([s_b, s_c]),
-            np.concatenate([np.zeros(s_b.size, bool), np.ones(s_c.size, bool)]),
-        )
+        # ⛔ Reported for the ORACLE bound only; ⛔ never the selection criterion.
+        orc = _oracle_aurocs(s_a, s_b, s_c)
+        au = orc["auroc_c_vs_b_ORACLE_ONLY"]
         n_ent = stores[trial["deployment"]].n_entries
         trials.append({
             **trial,
@@ -478,8 +509,7 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
             "bits_per_read": knn.bits_per_read(n_ent, int(trial["k"])),
             "val_aggregate": comp["aggregate"],
             "val_compositional": comp["per_factor"][COMPOSITIONAL_FACTOR],
-            # ⛔ Reported for the ORACLE bound only; ⛔ never the selection criterion.
-            "auroc_c_vs_b_ORACLE_ONLY": float(au),
+            **orc,
         })
         log(
             f"  [knn] trial {t_i + 1}/{len(grid)} k={trial['k']} {trial['metric']} "
@@ -487,17 +517,35 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
             f"(AUROC(B vs C)={au:.4f}, oracle-only)"
         )
 
-    best_i = int(np.argmax([t["val_aggregate"] for t in trials]))
-    best = trials[best_i]
+    best = trials[int(np.argmax([t["val_aggregate"] for t in trials]))]
+    # ⭐ A SECOND, equally valid-only selection rule, declared (PREREG amendment A3).
+    # The pre-registered rule selects on the validation AGGREGATE — but ⚠ four of
+    # the six factors sit at ~1.0 and carry no compositional information, so the
+    # aggregate is *not* the quantity the reported metric reads.  Selecting on the
+    # validation ``shape`` accuracy is the same supervision class (valid rows only,
+    # ⛔ no C, ⛔ no held-out row) and is aligned with what is scored.  Both are
+    # reported; ⛔ neither is dropped because of how it came out.
+    best_comp = trials[int(np.argmax([t["val_compositional"] for t in trials]))]
     oracle_i = int(np.argmax([t["auroc_c_vs_b_ORACLE_ONLY"] for t in trials]))
     log(
-        f"  ⭐ [knn] SELECTED (validation composition): k={best['k']} {best['metric']} "
-        f"{best['normaliser']} {best['deployment']} — val agg {best['val_aggregate']:.4f}"
+        f"  ⭐ [knn] SELECTED (pre-registered, validation aggregate): k={best['k']} "
+        f"{best['metric']} {best['normaliser']} {best['deployment']} — "
+        f"val agg {best['val_aggregate']:.4f} val shape {best['val_compositional']:.4f}"
+    )
+    log(
+        f"  ⭐ [knn] SELECTED (declared 2nd rule, validation `shape`): k={best_comp['k']} "
+        f"{best_comp['metric']} {best_comp['normaliser']} {best_comp['deployment']} — "
+        f"val agg {best_comp['val_aggregate']:.4f} val shape {best_comp['val_compositional']:.4f}"
     )
 
     reads, scores = {}, {}
     for name in REQUEST_SETS:
         reads[name], scores[name] = read_and_dist(best, ctx[f"E_{name}"])
+    same_sel = all(best[k] == best_comp[k] for k in ("k", "metric", "normaliser", "deployment"))
+    reads_c, scores_c = ({}, {}) if same_sel else ({}, {})
+    if not same_sel:
+        for name in REQUEST_SETS:
+            reads_c[name], scores_c[name] = read_and_dist(best_comp, ctx[f"E_{name}"])
 
     # ⭐ Declared sensitivity, ⛔ NOT a 37th tuning trial: the distance reduction
     # over the k neighbours is a free choice the specification does not fix, so
@@ -516,6 +564,22 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
         )["auroc_c_vs_b"]
     log(f"  [knn] refusal-reduction sensitivity (declared, not tuned): "
         f"min={reduce_sensitivity['min']:.4f} mean={reduce_sensitivity['mean']:.4f}")
+    # ⭐ MEASURED, not assumed: under ``min`` reduction the refusal score is the
+    # distance to the FIRST neighbour, so it does not depend on ``k`` at all. The
+    # 36 trials therefore contain only |metric| x |normaliser| x |deployment|
+    # DISTINCT refusal configurations, and ``k`` is free on that axis. Recorded so
+    # nobody reads 36 independent refusal trials off this table.
+    by_conf = {}
+    for t in trials:
+        by_conf.setdefault(
+            (t["metric"], t["normaliser"], t["deployment"]), set()
+        ).add(round(t["auroc_c_vs_b_ORACLE_ONLY"], 12))
+    refusal_axis = {
+        "n_distinct_refusal_configurations": len(by_conf),
+        "refusal_score_is_invariant_in_k": bool(all(len(v) == 1 for v in by_conf.values())),
+        "note": ("⭐ measured: with reduce='min' the refusal score is the distance to "
+                 "the first neighbour, so k does not enter it"),
+    }
     proto_reads = {name: knn.prototype_direct_read(ctx[f"E_{name}"]) for name in REQUEST_SETS}
 
     out = {
@@ -527,9 +591,16 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
                      "deployment": list(g.knn_deployments)},
             "selection_criterion": "validation aggregate probe accuracy (⛔ C never enters)",
             "selected": best,
+            "selected_compositional_rule": best_comp,
+            "selection_rules_coincide": bool(same_sel),
             "trials": trials,
             "ORACLE_UPPER_BOUND_auroc_c_vs_b": {
                 "value": trials[oracle_i]["auroc_c_vs_b_ORACLE_ONLY"],
+                # ⭐ kill rule (iv) names C-vs-(A u B); it is carried here too.
+                "auroc_c_vs_a_union_b_at_that_trial":
+                    trials[oracle_i]["auroc_c_vs_a_union_b_ORACLE_ONLY"],
+                "max_auroc_c_vs_a_union_b_over_all_trials": float(max(
+                    t["auroc_c_vs_a_union_b_ORACLE_ONLY"] for t in trials)),
                 "trial": {k: trials[oracle_i][k] for k in
                           ("k", "metric", "normaliser", "deployment")},
                 "note": ("⭐ ORACLE-SELECTED over all trials using C — an explicitly "
@@ -543,20 +614,36 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
         "prototype_table_ledger": ctx["protos"].byte_ledger(),
         "store_bytes_target": budget,
         "refusal_reduction_sensitivity": reduce_sensitivity,
+        "refusal_axis": refusal_axis,
         "variants": {},
         "wall_clock_s": None,
     }
 
-    for vname, vreads, chan in (
-        ("knn", reads, {"bits_per_read": best["bits_per_read"],
-                        "note": "k * log2(n_entries); the request embedding NEVER reaches the decoder"}),
-        ("knn_proto", proto_reads, {"bits_per_read": float("inf"),
-                                    "note": ("⭐ the byte-matched PROTOTYPE arm: the composed "
-                                             "prototype is decoded directly, so the whole D-float "
-                                             "vector reaches the decoder. In-budget "
-                                             "(466,944 B < 524,288 B) and reported as its own arm "
-                                             "⛔ never in the same column as knn's bits/read.")}),
-    ):
+    variant_specs = [
+        ("knn", reads, scores, {"bits_per_read": best["bits_per_read"],
+                                "selection": "PRE-REGISTERED (validation aggregate)",
+                                "config": {k: best[k] for k in
+                                           ("k", "metric", "normaliser", "deployment")},
+                                "note": "k * log2(n_entries); the request embedding NEVER reaches the decoder"}),
+    ]
+    if not same_sel:
+        variant_specs.append(
+            ("knn_compsel", reads_c, scores_c,
+             {"bits_per_read": best_comp["bits_per_read"],
+              "selection": "DECLARED 2nd rule (validation `shape`) — same supervision class",
+              "config": {k: best_comp[k] for k in ("k", "metric", "normaliser", "deployment")},
+              "note": "k * log2(n_entries); the request embedding NEVER reaches the decoder"})
+        )
+    variant_specs.append(
+        ("knn_proto", proto_reads, scores,
+         {"bits_per_read": float("inf"),
+          "selection": "N/A — the prototype read depends on NO tuning axis",
+          "note": ("⭐ the byte-matched PROTOTYPE arm: the composed prototype is decoded "
+                   "directly, so the whole D-float vector reaches the decoder. In-budget "
+                   "(475,136 B < 524,288 B) and reported as its own arm ⛔ never in the "
+                   "same column as knn's bits/read.")})
+    )
+    for vname, vreads, vscores, chan in variant_specs:
         comp_a = score_composition(ctx["decoder"], ctx["probe"], vreads["A"], ctx["lab_A"],
                                    ctx["names"], ctx["feat_shape"], g.eval_batch)
         comp_b = score_composition(ctx["decoder"], ctx["probe"], vreads["B"], ctx["lab_B"],
@@ -573,7 +660,7 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
             # ⭐ Both kNN-family members refuse by the SAME rule (distance to the
             # byte-matched store) — knn_proto's contribution is composition, not a
             # second refusal criterion. Stated so the column is not read twice.
-            "refusal": refusal_metrics(scores, float(g.refusal_valid_quantile),
+            "refusal": refusal_metrics(vscores, float(g.refusal_valid_quantile),
                                        ctx["c_kinds"]),
         }
         log(
@@ -592,7 +679,8 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
 
 
 def _parse_shrinkage(s):
-    return s if s == "ledoit_wolf" else float(s)
+    """``"none"`` / ``"ledoit_wolf"`` pass through; anything else is an intensity."""
+    return s if s in ("none", "ledoit_wolf") else float(s)
 
 
 def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict:
@@ -672,23 +760,35 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
                             batch=int(g.eval_batch))
         e_c = lace.energy_of(m, Uc, ctx["req_C"], trial["form"], float(trial["sigma"]),
                              g.eval_batch)
-        au = binary_auroc(np.concatenate([e_b, e_c]),
-                          np.concatenate([np.zeros(e_b.size, bool), np.ones(e_c.size, bool)]))
+        e_a = lace.energy_of(m, whitenings[trial["shrinkage"]].forward(ctx["X_A"]),
+                             ctx["req_A"], trial["form"], float(trial["sigma"]), g.eval_batch)
+        orc = _oracle_aurocs(e_a, e_b, e_c)
+        au = orc["auroc_c_vs_b_ORACLE_ONLY"]
         trials.append({**trial, "val_aggregate": comp["aggregate"],
                        "val_compositional": comp["per_factor"][COMPOSITIONAL_FACTOR],
-                       "auroc_c_vs_b_ORACLE_ONLY": float(au)})
+                       **orc})
         log(
             f"  [lace] trial {t_i + 1}/{len(grid)} sigma={trial['sigma']} {trial['form']} "
             f"shrink={trial['shrinkage']}: val agg={comp['aggregate']:.4f} "
             f"(AUROC(B vs C)={au:.4f}, oracle-only)"
         )
 
-    best_i = int(np.argmax([t["val_aggregate"] for t in trials]))
-    best = trials[best_i]
+    best = trials[int(np.argmax([t["val_aggregate"] for t in trials]))]
+    # ⭐ The same declared second rule the kNN arm gets (PREREG amendment A3), so
+    # the two arms stay symmetric: ⛔ a selection rule applied to one competitor
+    # and not the other is a thumb on the scale.
+    best_comp = trials[int(np.argmax([t["val_compositional"] for t in trials]))]
+    same_sel = all(best[k] == best_comp[k] for k in ("sigma", "form", "shrinkage"))
     oracle_i = int(np.argmax([t["auroc_c_vs_b_ORACLE_ONLY"] for t in trials]))
     log(
-        f"  ⭐ [lace] SELECTED: sigma={best['sigma']} form={best['form']} "
-        f"shrinkage={best['shrinkage']} — val agg {best['val_aggregate']:.4f}"
+        f"  ⭐ [lace] SELECTED (pre-registered, validation aggregate): sigma={best['sigma']} "
+        f"form={best['form']} shrinkage={best['shrinkage']} — val agg {best['val_aggregate']:.4f}"
+    )
+    log(
+        f"  ⭐ [lace] SELECTED (declared 2nd rule, validation `shape`): sigma={best_comp['sigma']} "
+        f"form={best_comp['form']} shrinkage={best_comp['shrinkage']} — "
+        f"val shape {best_comp['val_compositional']:.4f}"
+        + ("  (identical to the pre-registered choice)" if same_sel else "")
     )
 
     # ---- retrain the SELECTED configuration at the shipped 50 epochs ----------
@@ -703,50 +803,73 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
     log(f"  [lace] classifier (its own supervision): val per-factor mean {clf_acc['mean']:.4f}")
 
     # ---- every sampler; ⭐ LACE's best is what gets reported (R9.4) -----------
-    samplers = {}
-    for sname in list(g.lace_samplers):
-        spec = lace.SAMPLERS[sname]
-        key, sk = jax.random.split(key)
-        U, E = {}, {}
-        for rs in REQUEST_SETS:
-            key, rk = jax.random.split(key)
-            req = ctx[f"req_{rs}"]
-            if spec["kind"] == "ode":
-                U[rs] = lace.sample_ode(model, req, rk, form=best["form"],
-                                        sigma=float(best["sigma"]), batch=int(g.eval_batch))
-            else:
-                U[rs] = lace.sample_ld(
-                    model, req, rk, std=float(spec["std"]), lr=lace.LACE_SGLD_LR,
-                    steps=int(g.lace_ld_steps), form=best["form"],
-                    sigma=float(best["sigma"]), batch=int(g.eval_batch),
-                )
-            E[rs] = lace.energy_of(model, U[rs], req, best["form"], float(best["sigma"]),
-                                   g.eval_batch)
-        X = {rs: wh.inverse(U[rs]) for rs in REQUEST_SETS}
-        comp_a = score_composition(ctx["decoder"], ctx["probe"], X["A"], ctx["lab_A"],
-                                   ctx["names"], ctx["feat_shape"], g.eval_batch)
-        comp_b = score_composition(ctx["decoder"], ctx["probe"], X["B"], ctx["lab_B"],
-                                   ctx["names"], ctx["feat_shape"], g.eval_batch)
-        disc = corner_discrimination(
-            ctx["decoder"], ctx["probe"], X["B"], X["MS"], ctx["lab_B"], ctx["lab_MS"],
-            ctx["shape_idx"], ctx["n_shape_classes"], ctx["feat_shape"], g.eval_batch,
-        )
-        ref = refusal_metrics({k: E[k] for k in REQUEST_SETS},
-                              float(g.refusal_valid_quantile), ctx["c_kinds"])
-        samplers[sname] = {
-            "spec": {k: (float(v) if isinstance(v, (int, float)) else v)
-                     for k, v in spec.items()},
-            "composition_A": comp_a, "composition_B": comp_b,
-            "in_corner_discrimination": disc, "refusal": ref,
-            "sample_norm_mean": float(np.mean(np.linalg.norm(U["B"], axis=1))),
-        }
-        log(
-            f"  ⭐ [lace/{sname}] in-corner {COMPOSITIONAL_FACTOR} balacc="
-            f"{disc['balanced_accuracy']:.4f} · B aggregate={comp_b['aggregate']:.4f} · "
-            f"refusal AUROC(B vs C)={ref['auroc_c_vs_b']:.4f}"
-        )
+    configs = [("", best, model, wh)]
+    fit_info_compsel = None
+    if not same_sel:
+        wh_c = whitenings[best_comp["shrinkage"]]
+        if best_comp["shrinkage"] == best["shrinkage"]:
+            model_c = model  # same whitening ⇒ the same classifier, no refit
+        else:
+            key, fk2 = jax.random.split(key)
+            model_c, fit_info_compsel, key = lace.train_classifier(
+                wh_c.forward(Xfit), lab_fit, val_targets_fit, cards, fk2,
+                n_epochs=int(g.lace_n_epochs), batch=int(g.lace_batch), lr=float(g.lace_lr),
+                warmup=int(g.lace_warmup_iters), log=None,
+            )
+        configs.append(("_compsel", best_comp, model_c, wh_c))
+        log(f"  [lace] 2nd-rule config needs its own whitening/classifier: "
+            f"shrinkage={best_comp['shrinkage']}"
+            if best_comp["shrinkage"] != best["shrinkage"] else
+            "  [lace] 2nd-rule config shares the pre-registered whitening ⇒ no refit")
 
-    best_comp = max(samplers, key=lambda s: samplers[s]["in_corner_discrimination"]["balanced_accuracy"])
+    samplers = {}
+    for suffix, sel, model_s, wh_s in configs:
+        for sname_base in list(g.lace_samplers):
+            sname = sname_base + suffix
+            spec = lace.SAMPLERS[sname_base]
+            key, sk = jax.random.split(key)
+            U, E = {}, {}
+            for rs in REQUEST_SETS:
+                key, rk = jax.random.split(key)
+                req = ctx[f"req_{rs}"]
+                if spec["kind"] == "ode":
+                    U[rs] = lace.sample_ode(model_s, req, rk, form=sel["form"],
+                                            sigma=float(sel["sigma"]), batch=int(g.eval_batch))
+                else:
+                    U[rs] = lace.sample_ld(
+                        model_s, req, rk, std=float(spec["std"]), lr=lace.LACE_SGLD_LR,
+                        steps=int(g.lace_ld_steps), form=sel["form"],
+                        sigma=float(sel["sigma"]), batch=int(g.eval_batch),
+                    )
+                E[rs] = lace.energy_of(model_s, U[rs], req, sel["form"], float(sel["sigma"]),
+                                       g.eval_batch)
+            X = {rs: wh_s.inverse(U[rs]) for rs in REQUEST_SETS}
+            comp_a = score_composition(ctx["decoder"], ctx["probe"], X["A"], ctx["lab_A"],
+                                       ctx["names"], ctx["feat_shape"], g.eval_batch)
+            comp_b = score_composition(ctx["decoder"], ctx["probe"], X["B"], ctx["lab_B"],
+                                       ctx["names"], ctx["feat_shape"], g.eval_batch)
+            disc = corner_discrimination(
+                ctx["decoder"], ctx["probe"], X["B"], X["MS"], ctx["lab_B"], ctx["lab_MS"],
+                ctx["shape_idx"], ctx["n_shape_classes"], ctx["feat_shape"], g.eval_batch,
+            )
+            ref = refusal_metrics({k: E[k] for k in REQUEST_SETS},
+                                  float(g.refusal_valid_quantile), ctx["c_kinds"])
+            samplers[sname] = {
+                "spec": {k: (float(v) if isinstance(v, (int, float)) else v)
+                         for k, v in spec.items()},
+                "composition_A": comp_a, "composition_B": comp_b,
+                "in_corner_discrimination": disc, "refusal": ref,
+                "sample_norm_mean": float(np.mean(np.linalg.norm(U["B"], axis=1))),
+            }
+            log(
+                f"  ⭐ [lace/{sname}] in-corner {COMPOSITIONAL_FACTOR} balacc="
+                f"{disc['balanced_accuracy']:.4f} · B aggregate={comp_b['aggregate']:.4f} · "
+                f"refusal AUROC(B vs C)={ref['auroc_c_vs_b']:.4f}"
+            )
+
+    best_sampler_comp = max(
+        samplers, key=lambda s: samplers[s]["in_corner_discrimination"]["balanced_accuracy"]
+    )
     best_ref = max(samplers, key=lambda s: samplers[s]["refusal"]["auroc_c_vs_b"])
 
     out = {
@@ -769,20 +892,29 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
             "both Langevin temperatures run and LACE's best reported — R9.4",
         ],
         "classifier": {**fit_info, "own_val_accuracy": clf_acc},
+        "classifier_compsel": fit_info_compsel,
         "tuning": {
             "budget": len(grid),
             "axes": {"sigma": list(g.lace_sigmas), "form": list(g.lace_forms),
                      "shrinkage": [str(s) for s in g.lace_shrinkages]},
             "selection_criterion": "validation aggregate probe accuracy (⛔ C never enters)",
-            "selected": best, "trials": trials,
+            "selected": best,
+            "selected_compositional_rule": best_comp,
+            "selection_rules_coincide": bool(same_sel),
+            "trials": trials,
             "ORACLE_UPPER_BOUND_auroc_c_vs_b": {
                 "value": trials[oracle_i]["auroc_c_vs_b_ORACLE_ONLY"],
+                # ⭐ kill rule (iv) names C-vs-(A u B); it is carried here too.
+                "auroc_c_vs_a_union_b_at_that_trial":
+                    trials[oracle_i]["auroc_c_vs_a_union_b_ORACLE_ONLY"],
+                "max_auroc_c_vs_a_union_b_over_all_trials": float(max(
+                    t["auroc_c_vs_a_union_b_ORACLE_ONLY"] for t in trials)),
                 "trial": {k: trials[oracle_i][k] for k in ("sigma", "form", "shrinkage")},
                 "note": "⭐ ORACLE-SELECTED over all trials using C — an UPPER BOUND, ⛔ not achievable.",
             },
         },
         "samplers": samplers,
-        "best_sampler_composition": best_comp,
+        "best_sampler_composition": best_sampler_comp,
         "best_sampler_refusal": best_ref,
         "wall_clock_s": float(time.time() - t0),
     }
@@ -1059,7 +1191,9 @@ def _arm_rows(man: dict) -> dict:
                 "auroc_c_vs_a": v["refusal"]["auroc_c_vs_a"],
                 "auroc_c_vs_a_union_b": v["refusal"]["auroc_c_vs_a_union_b"],
             }
-        out["knn"]["ORACLE_auroc_c_vs_b"] = knn_arm["tuning"]["ORACLE_UPPER_BOUND_auroc_c_vs_b"]["value"]
+        ob = knn_arm["tuning"]["ORACLE_UPPER_BOUND_auroc_c_vs_b"]
+        out["knn"]["ORACLE_auroc_c_vs_b"] = ob["value"]
+        out["knn"]["ORACLE_auroc_c_vs_a_union_b"] = ob["max_auroc_c_vs_a_union_b_over_all_trials"]
     lace_arm = man["arms"].get("lace")
     if lace_arm:
         for sname, s in lace_arm["samplers"].items():
@@ -1073,9 +1207,10 @@ def _arm_rows(man: dict) -> dict:
                 "auroc_c_vs_a": s["refusal"]["auroc_c_vs_a"],
                 "auroc_c_vs_a_union_b": s["refusal"]["auroc_c_vs_a_union_b"],
             }
-        out[f"lace_{lace_arm['best_sampler_composition']}"]["ORACLE_auroc_c_vs_b"] = (
-            lace_arm["tuning"]["ORACLE_UPPER_BOUND_auroc_c_vs_b"]["value"]
-        )
+        ob = lace_arm["tuning"]["ORACLE_UPPER_BOUND_auroc_c_vs_b"]
+        lbl = f"lace_{lace_arm['best_sampler_composition']}"
+        out[lbl]["ORACLE_auroc_c_vs_b"] = ob["value"]
+        out[lbl]["ORACLE_auroc_c_vs_a_union_b"] = ob["max_auroc_c_vs_a_union_b_over_all_trials"]
     out["_ceiling_decoder"] = {
         "in_corner_balacc": man["ceilings"]["decoder_ceiling"]["in_corner_discrimination"]["balanced_accuracy"],
         "in_corner_auroc": man["ceilings"]["decoder_ceiling"]["in_corner_discrimination"]["auroc"],

@@ -112,7 +112,9 @@ LACE_MAX_OPERANDS = 10
 LACE_SGLD_STD_CORRECTED = float(np.sqrt(2.0 * LACE_SGLD_LR))
 
 ENERGY_FORMS = ("categorical", "continuous", "both")
-SHRINKAGES = ("ledoit_wolf", 1e-3, 1e-1)
+#: ⭐ ``"none"`` first: MEASURED to give the most exact N(0,I) prior (see
+#: :func:`fit_whitening`), which is the identity LACE's ODE drift depends on.
+SHRINKAGES = ("none", "ledoit_wolf", 1e-3)
 #: ⭐ The bridge's own limit: above this a full ``D x D`` whitening is infeasible
 #: and LACE would need a **declared** PCA projection (R14.3), never a silent drop.
 WHITENING_D_LIMIT = 20_000
@@ -166,12 +168,26 @@ class Whitening:
         return ((U @ self.W_inv.T) + self.mu[None, :]).astype(np.float32)
 
 
-def fit_whitening(X: np.ndarray, shrinkage="ledoit_wolf", eps: float = 1e-8) -> Whitening:
+def fit_whitening(
+    X: np.ndarray, shrinkage="ledoit_wolf", eps: float = 1e-8, rel_eig_floor: float = 1e-8
+) -> Whitening:
     """Fit the shrinkage Gaussian over cached **train** features.
 
     Args:
         X: ``(N, D)`` cached train features (⛔ never a held-out row).
-        shrinkage: ``"ledoit_wolf"`` or an explicit intensity in ``[0, 1]``.
+        shrinkage: ``"none"`` (⭐ the default arm — no shrinkage, see below),
+            ``"ledoit_wolf"``, or an explicit intensity in ``[0, 1]``.
+        rel_eig_floor: eigenvalues below ``rel_eig_floor * max_eigenvalue`` are
+            floored.  ⭐ **This is what makes ``shrinkage="none"`` well-posed and
+            is the right regulariser here.**  MEASURED on the shipped Shapes3D
+            cache (16,384 train rows, D=2048): shrinkage *is itself* what breaks
+            LACE's prior identity — ``mean |diag(cov(u)) - 1|`` is **0.1520** at
+            the Ledoit-Wolf intensity (3.49e-4), **0.2422** at 1e-3, and
+            **0.0343** with no shrinkage and this floor, which trips exactly the
+            **72 near-null eigendirections** produced by the cache's dead
+            (constant post-ReLU) coordinates and nothing else.  Those directions
+            carry no information and *cannot* be whitened; every other direction
+            is then whitened exactly.
 
     ⛔ Raises if ``D > WHITENING_D_LIMIT``: at that width the arm would need a
     **declared** PCA projection (R14.3, Head ruling — our choices never weaken a
@@ -191,12 +207,19 @@ def fit_whitening(X: np.ndarray, shrinkage="ledoit_wolf", eps: float = 1e-8) -> 
     mu = X.mean(axis=0)
     Xc = X - mu[None, :]
     S = (Xc.T @ Xc) / max(n, 1)
-    lam = ledoit_wolf_shrinkage(X) if shrinkage == "ledoit_wolf" else float(shrinkage)
+    if shrinkage == "none":
+        lam = 0.0
+    elif shrinkage == "ledoit_wolf":
+        lam = ledoit_wolf_shrinkage(X)
+    else:
+        lam = float(shrinkage)
     lam = float(min(max(lam, 0.0), 1.0))
     target = float(np.trace(S) / d)
     S_shrunk = (1.0 - lam) * S + lam * target * np.eye(d)
     w, V = np.linalg.eigh(S_shrunk)
-    w = np.maximum(w, eps)
+    floor = max(float(eps), float(rel_eig_floor) * float(np.max(w)))
+    n_floored = int(np.sum(w < floor))
+    w = np.maximum(w, floor)
     W = (V * (w ** -0.5)[None, :]) @ V.T
     W_inv = (V * (w**0.5)[None, :]) @ V.T
     return Whitening(
@@ -206,11 +229,12 @@ def fit_whitening(X: np.ndarray, shrinkage="ledoit_wolf", eps: float = 1e-8) -> 
         meta={
             "D": int(d),
             "N_train_features": int(n),
-            "shrinkage": ("ledoit_wolf" if shrinkage == "ledoit_wolf" else float(shrinkage)),
+            "shrinkage": (shrinkage if isinstance(shrinkage, str) else float(shrinkage)),
             "shrinkage_intensity": lam,
+            "rel_eig_floor": float(rel_eig_floor),
             "eigenvalue_min": float(w.min()),
             "eigenvalue_max": float(w.max()),
-            "n_eigenvalues_floored": int(np.sum(w <= eps * (1.0 + 1e-12))),
+            "n_eigenvalues_floored": n_floored,
             "lace_option": "1 — full D x D shrinkage whitening, native (⛔ no PCA, ⛔ no channel-only)",
         },
     )

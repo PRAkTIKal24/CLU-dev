@@ -4036,14 +4036,16 @@ class GenBaselinesConfig:
     lace_sigmas: List[float] = field(default_factory=lambda: [0.03, 0.1, 0.3, 1.0])
     lace_forms: List[str] = field(default_factory=lambda: ["categorical", "continuous", "both"])
     #: ``"ledoit_wolf"`` or a float intensity; parsed by ``fit_whitening``.
-    #: ⚠ **`1e-1` was dropped on a TRAIN-ONLY diagnostic before any arm result
-    #: existed** (PREREG amendment A1): at that intensity the whitened train
-    #: features have ``mean |diag(cov) - 1| = 0.86``, i.e. ``p0(u) = N(0, I)`` is
-    #: badly violated — and that identity is the *only* thing licensing LACE's ODE
-    #: drift to omit the prior score (R9.1).  ⭐ Shrinking LACE's own validity is a
-    #: crippling, not a tuning choice.  All three shipped values whiten near-exactly
-    #: at ``N = 32,256 >> D = 2,048``; the realised check ships in the manifest.
-    lace_shrinkages: List[str] = field(default_factory=lambda: ["ledoit_wolf", "1e-3", "1e-2"])
+    #: ⚠ **Corrected twice on TRAIN-ONLY diagnostics** (PREREG amendments A1, A2).
+    #: ``p0(u) = N(0, I)`` is the *only* thing licensing LACE's ODE drift to omit the
+    #: prior score (R9.1), so an intensity that breaks it is a **crippling, not a
+    #: tuning choice**.  MEASURED ``mean |diag(cov(u)) - 1|`` on the shipped cache:
+    #: ``1e-1`` -> **0.86** (dropped, A1); ``1e-3`` -> 0.24; Ledoit-Wolf (3.49e-4)
+    #: -> 0.15; ⭐ ``"none"`` + the relative eigenvalue floor -> **0.034**, which
+    #: trips only the 72 near-null directions left by the cache's dead coordinates.
+    #: ⭐ Shrinkage is itself the thing degrading the identity here, so ``"none"``
+    #: leads the grid.  The realised check ships per shrinkage in the manifest.
+    lace_shrinkages: List[str] = field(default_factory=lambda: ["none", "ledoit_wolf", "1e-3"])
     #: ``OFFICIAL IMPLEMENTATION:`` run_clf.sh ``--n_epochs 50``. ⛔ NOT the appendix's
     #: 100 and ⛔ NOT argparse's 200.
     lace_n_epochs: int = 50
@@ -4088,5 +4090,5 @@ class GenBaselinesConfig:
     quick_knn_kmeans_iters: int = 3
     quick_knn_ks: List[int] = field(default_factory=lambda: [1, 3])
     quick_lace_sigmas: List[float] = field(default_factory=lambda: [0.1])
-    quick_lace_shrinkages: List[str] = field(default_factory=lambda: ["1e-2"])
+    quick_lace_shrinkages: List[str] = field(default_factory=lambda: ["none"])
 # --- END gen-baselines ------------------------------------------------------
