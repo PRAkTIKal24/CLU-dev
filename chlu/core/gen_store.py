@@ -73,6 +73,7 @@ __all__ = [
     "GenStore",
     "StorePlan",
     "address_codes",
+    "adjusted_rand_index",
     "assert_no_bypass",
     "block_diagonality",
     "channel_correlation",
@@ -81,12 +82,15 @@ __all__ = [
     "dead_channels",
     "delete_store",
     "dci_scores",
+    "fit_grouping_from_plan",
+    "grouping_agreement",
     "grouping_labels",
     "load_store_plan",
     "mig_score",
     "mode_usage",
     "random_grouping",
     "read_from_codes",
+    "read_margin_gate",
     "save_store_plan",
     "soft_weights",
     "store_bytes",
@@ -1105,3 +1109,219 @@ def assert_plan_matched(plans: Sequence[dict]) -> dict:
             raise AssertionError("ladder rungs disagree on store_bytes")
     return {"K": int(ref["K"]), "n_modes": int(ref["n_modes"]), "D": int(ref["D"]),
             "store_bytes": int(ref["store_bytes"]["store_bytes"]), "n_rungs": len(plans)}
+
+
+# ---------------------------------------------------------------------------
+# 9. ⭐ The WIDE-condition re-fit (R24): the same store on the other cache
+# ---------------------------------------------------------------------------
+#
+# ⛔ Everything below is **additive**.  Nothing above this line changed, so the
+# Montero R0 fit reproduces bit-identically — asserted in
+# ``tests/test_gen_r0_wide.py::test_the_wide_entry_point_is_the_shipped_path_bit_for_bit``.
+#
+# Why it exists (R24).  The ladder holds the store configuration, the byte budget
+# and ``K`` fixed across rungs, and R1-R5 run on the **widened** hold-out
+# condition — but the shipped R0 store was fitted on **Montero's** feature cache.
+# ⭐ *A monotonicity claim on a mixed baseline is no claim at all*: R0 is
+# therefore re-fitted on the wide cache, and the two configurations are compared
+# **once**, as a consistency check on the caches (:func:`read_margin_gate`).
+
+
+def adjusted_rand_index(labels_a, labels_b) -> float:
+    """Adjusted Rand index between two partitions of the same ``D`` coordinates.
+
+    Chance-corrected: 1.0 for identical partitions (up to relabelling), ~0 for
+    independent ones, and it can go negative.  ⭐ This is the statistic R24 rider 1
+    asks for, and it is the right one here precisely because well **indices** carry
+    no meaning (⛔ standing convention: wells are integer-labelled and nothing
+    else), so any agreement measure must be invariant to relabelling.
+
+    Implemented from the contingency table rather than imported so the ladder does
+    not acquire a metric whose conventions it cannot see; cross-checked against
+    ``sklearn.metrics.adjusted_rand_score`` in the tests.
+    """
+    a = np.asarray(labels_a, np.int64).ravel()
+    b = np.asarray(labels_b, np.int64).ravel()
+    if a.size != b.size:
+        raise ValueError(f"partitions cover different numbers of coordinates: {a.size} != {b.size}")
+    if a.size == 0:
+        raise ValueError("an empty partition has no adjusted Rand index")
+    ua, ia = np.unique(a, return_inverse=True)
+    ub, ib = np.unique(b, return_inverse=True)
+    cont = np.zeros((ua.size, ub.size), np.float64)
+    np.add.at(cont, (ia, ib), 1.0)
+
+    def _c2(x):
+        return x * (x - 1.0) / 2.0
+
+    sum_ij = float(_c2(cont).sum())
+    sum_i = float(_c2(cont.sum(axis=1)).sum())
+    sum_j = float(_c2(cont.sum(axis=0)).sum())
+    n_c2 = float(_c2(np.float64(a.size)))
+    expected = sum_i * sum_j / n_c2
+    maximum = 0.5 * (sum_i + sum_j)
+    if maximum == expected:  # both partitions are trivial (one well, or all singletons)
+        return 1.0
+    return float((sum_ij - expected) / (maximum - expected))
+
+
+def grouping_agreement(labels_a, labels_b, name_a: str = "a", name_b: str = "b") -> dict:
+    """⭐ R24 rider 1: how much do two groupings of the same channels agree?
+
+    Reports the **adjusted Rand index** (the headline), the uncorrected Rand index,
+    the best-matching-permutation agreement (fraction of coordinates that land in
+    the same well once the arbitrary well indices are aligned), and both well-size
+    histograms.  ⛔ No threshold is applied here: high agreement documents a
+    non-issue, low agreement is a finding about grouping stability — either way it
+    is a **reported number**, not a gate.
+    """
+    a = np.asarray(labels_a, np.int64).ravel()
+    b = np.asarray(labels_b, np.int64).ravel()
+    if a.size != b.size:
+        raise ValueError(f"partitions cover different numbers of coordinates: {a.size} != {b.size}")
+    ua, ia = np.unique(a, return_inverse=True)
+    ub, ib = np.unique(b, return_inverse=True)
+    cont = np.zeros((ua.size, ub.size), np.int64)
+    np.add.at(cont, (ia, ib), 1)
+
+    from scipy.optimize import linear_sum_assignment
+
+    ri, ci = linear_sum_assignment(-cont)
+    matched = int(cont[ri, ci].sum())
+
+    def _c2(x):
+        return x * (x - 1.0) / 2.0
+
+    n_c2 = _c2(np.float64(a.size))
+    sum_ij = float(_c2(cont.astype(np.float64)).sum())
+    sum_i = float(_c2(cont.sum(axis=1).astype(np.float64)).sum())
+    sum_j = float(_c2(cont.sum(axis=0).astype(np.float64)).sum())
+    rand = float((n_c2 + 2.0 * sum_ij - sum_i - sum_j) / n_c2)
+    return {
+        "name_a": str(name_a),
+        "name_b": str(name_b),
+        "n_channels": int(a.size),
+        "n_wells_a": int(ua.size),
+        "n_wells_b": int(ub.size),
+        "adjusted_rand_index": adjusted_rand_index(a, b),
+        "rand_index": rand,
+        "best_permutation_agreement": float(matched) / float(a.size),
+        "n_channels_in_matched_well": matched,
+        "n_channels_moved": int(a.size) - matched,
+        "well_sizes_a": [int(x) for x in np.bincount(ia, minlength=ua.size)],
+        "well_sizes_b": [int(x) for x in np.bincount(ib, minlength=ub.size)],
+        "contingency": [[int(x) for x in row] for row in cont],
+    }
+
+
+def fit_grouping_from_plan(
+    X_train: np.ndarray,
+    plan: dict,
+    *,
+    grouping: str = "correlation",
+    seed: int = 0,
+    method: str = "auto",
+    min_well_frac: float = 0.10,
+    reference_labels: Optional[np.ndarray] = None,
+) -> dict:
+    """⭐ The **wide-condition entry point**: re-derive the grouping on another
+    cache while loading ``K`` from the ladder's pinned plan **verbatim**.
+
+    ``X_train`` is the *new* condition's train activations; ``plan`` is
+    :func:`load_store_plan`'s output for R0.  ⛔ ``K`` is a ladder constant: it is
+    read from the plan and **never** re-derived here (:func:`choose_k` is not
+    called), and ``D`` must match the plan's or the two rungs are not comparable.
+
+    This is a thin wrapper over the shipped path — :func:`dead_channels`,
+    :func:`channel_correlation`, :func:`grouping_labels` — called with exactly the
+    arguments ``chlu.experiments.exp_gen_store.run_seed`` passes, so ⛔ handing it
+    Montero's own train cache reproduces Montero's own grouping bit-for-bit.
+
+    ``reference_labels`` (optional) is the grouping the *other* condition produced;
+    when given, :func:`grouping_agreement` is reported against it.
+    """
+    X = np.asarray(X_train, np.float32)
+    X = X.reshape((X.shape[0], -1))
+    k = int(plan["K"])
+    d_plan = int(plan["D"])
+    if X.shape[1] != d_plan:
+        raise ValueError(
+            f"the cache has D={X.shape[1]} but the pinned plan has D={d_plan} — "
+            "⛔ two rungs with different feature widths are not comparable"
+        )
+    dead = dead_channels(X)
+    corr = channel_correlation(X)
+    labels, info = grouping_labels(
+        corr, k, grouping, int(seed), method, dead=dead, min_well_frac=float(min_well_frac)
+    )
+    out = {
+        "K": k,
+        "K_source": "pinned from store_plan.json (⛔ never re-derived on a later rung)",
+        "D": int(X.shape[1]),
+        "grouping": str(grouping),
+        "labels": np.asarray(labels, np.int64),
+        "grouping_info": info,
+        "n_dead_channels": int(dead.sum()),
+        "dead": dead,
+        "corr": corr,
+        "well_sizes": [int(x) for x in np.bincount(np.asarray(labels, np.int64), minlength=k)],
+        "block_diagonality": block_diagonality(corr, labels),
+    }
+    if reference_labels is not None:
+        out["agreement_vs_reference"] = grouping_agreement(
+            reference_labels, labels, "reference", f"refit_{grouping}"
+        )
+    return out
+
+
+def read_margin_gate(
+    wide: Sequence[float],
+    montero: Sequence[float],
+    tolerance_sigmas: float = 3.0,
+    label: str = "aggregate",
+) -> dict:
+    """⛔ **THE GATE (R24 rider 3)** — a consistency check on the two feature
+    CACHES, not on the science.
+
+    ``wide`` and ``montero`` are the per-seed read margins (correlation − random)
+    of the two configurations.  The two conditions hold out different rows, so
+    their absolute read *levels* may legitimately differ; ⛔ the **margin** must
+    not.  If the margins differ by more than ``tolerance_sigmas`` times the pooled
+    per-seed spread, the verdict is ``PLUMBING FAULT — STOP`` and R1 does not run:
+    ⛔ that means the two caches are not the same encoder's, and it is **not** a
+    result to be rationalised as a property of the split.
+
+    The spread is pooled as ``sqrt(sd_wide² + sd_montero²)`` (population sd over
+    seeds, ``ddof = 0``, the convention every gen spoke uses) and floored at
+    ``1e-12`` so an exactly-reproducing pair cannot divide by zero.
+    """
+    w = np.asarray(list(wide), np.float64)
+    m = np.asarray(list(montero), np.float64)
+    if w.size == 0 or m.size == 0:
+        raise ValueError("the gate needs at least one seed on each side")
+    mw, mm = float(w.mean()), float(m.mean())
+    sw, sm = float(w.std(ddof=0)), float(m.std(ddof=0))
+    pooled = float(np.sqrt(sw ** 2 + sm ** 2))
+    delta = mw - mm
+    n_sigma = abs(delta) / max(pooled, 1e-12)
+    ok = bool(n_sigma <= float(tolerance_sigmas))
+    return {
+        "label": str(label),
+        "wide_mean": mw,
+        "wide_sd": sw,
+        "wide_per_seed": [float(x) for x in w],
+        "montero_mean": mm,
+        "montero_sd": sm,
+        "montero_per_seed": [float(x) for x in m],
+        "delta": delta,
+        "pooled_seed_spread": pooled,
+        "delta_in_pooled_spreads": n_sigma,
+        "tolerance_sigmas": float(tolerance_sigmas),
+        "verdict": "CONSISTENT" if ok else "PLUMBING FAULT — STOP",
+        "consistent": ok,
+        "note": (
+            "⛔ A divergence is a plumbing fault (the caches are not the same "
+            "encoder's), never a property of the split. R1 does not start on a "
+            "failed gate."
+        ),
+    }
