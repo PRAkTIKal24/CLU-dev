@@ -240,8 +240,24 @@ def fit_whitening(
     )
 
 
-def whitening_check(wh: Whitening, X: np.ndarray) -> dict:
-    """⭐ Verify the claim: whitened train features really have ``mean≈0``, ``cov≈I``."""
+def whitening_check(wh: Whitening, X: np.ndarray, n: int = 8192, seed: int = 0) -> dict:
+    """⭐ Verify the claim: whitened train features really have ``mean≈0``, ``cov≈I``.
+
+    ⛔ **Subsamples at RANDOM, never a head slice.**  The experiment's fit rows are
+    ``np.sort``ed row indices, and a Shapes3D row index is a C-order encoding of the
+    factor tuple — so ``X[:n]`` is not a sample of the training distribution, it is
+    the **lowest-`floor_hue` sub-population**.  Whitening by the *full* covariance
+    does not make a biased sub-population isotropic, so checking on a head slice
+    measures the wrong thing and reports a violation that is not there (measured:
+    ``mean |diag-1|`` 0.26 on the head slice vs 0.034 on a random draw, same
+    whitening).  ⚠ This is a property of the CHECK, not of the whitening.
+    """
+    X = np.asarray(X)
+    if X.ndim > 2:
+        X = X.reshape((X.shape[0], -1))
+    if X.shape[0] > int(n):
+        idx = np.random.default_rng(int(seed)).choice(X.shape[0], int(n), replace=False)
+        X = X[np.sort(idx)]
     U = wh.forward(X)
     C = np.cov(np.asarray(U, np.float64), rowvar=False)
     d = C.shape[0]
@@ -250,8 +266,7 @@ def whitening_check(wh: Whitening, X: np.ndarray) -> dict:
         "mean_abs_mean": float(np.mean(np.abs(U.mean(axis=0)))),
         "mean_abs_diag_minus_one": float(np.mean(np.abs(np.diag(C) - 1.0))),
         "mean_abs_offdiag": float((np.abs(C).sum() - np.abs(np.diag(C)).sum()) / (d * d - d)),
-        "roundtrip_max_abs_err": float(np.max(np.abs(wh.inverse(U) - np.asarray(
-            X if np.ndim(X) == 2 else np.reshape(X, (np.shape(X)[0], -1)), np.float32)))),
+        "roundtrip_max_abs_err": float(np.max(np.abs(wh.inverse(U) - np.asarray(X, np.float32)))),
     }
 
 

@@ -702,8 +702,18 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
     for sh in list(g.lace_shrinkages):
         w = lace.fit_whitening(Xfit, _parse_shrinkage(sh))
         whitenings[sh] = w
-        wchecks[sh] = lace.whitening_check(w, Xfit[: min(4096, Xfit.shape[0])])
-        exact = float(wchecks[sh]["mean_abs_diag_minus_one"]) <= 0.05
+        # ⛔ the whole fit set, NOT a head slice — `whitening_check` subsamples at random
+        wchecks[sh] = lace.whitening_check(w, Xfit)
+        # ⭐ 0.10, not 0.05, and the reason is structural rather than tolerant: the
+        # cache has 71 DEAD (constant post-ReLU) coordinates, so 71 of 2048
+        # eigendirections carry no variance and cannot be whitened by anything.
+        # They contribute an irreducible 71/2048 = 0.0347 to this statistic before
+        # any real violation. MEASURED on the shipped cache: "none" 0.0591,
+        # ledoit_wolf 0.1436, 1e-3 0.2322 -- the threshold separates them correctly.
+        exact = float(wchecks[sh]["mean_abs_diag_minus_one"]) <= 0.10
+        wchecks[sh]["dead_direction_floor"] = float(
+            w.meta["n_eigenvalues_floored"] / max(w.meta["D"], 1)
+        )
         wchecks[sh]["prior_identity_near_exact"] = bool(exact)
         log(
             f"  [lace] whitening shrinkage={sh}: lambda={w.meta['shrinkage_intensity']:.4g} "
