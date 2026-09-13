@@ -1029,6 +1029,43 @@ def setup_experiment_parsers(subparsers):
     exp_gbl_parser.set_defaults(func=cmd_exp_gen_baselines)
     # --- END gen-baselines --------------------------------------------------
 
+    # --- BEGIN gen-read-compose (additive; owner: experiment-engineer) -------
+    # exp-gen-compose (generative pivot phase 1: the B path, THROUGH THE READ)
+    exp_gcm_parser = subparsers.add_parser(
+        'exp-gen-compose',
+        help='Generative phase 1: composition through the store READ — '
+             'request -> code -> frozen decoder -> probe (R26 ruling 3). Four arms: '
+             'the 30-bit read, CLU-wide (composed modes from the REQUEST), '
+             'store-removed and a no-store prototype composition. ⛔ No kill-rule '
+             'verdict is rendered here.'
+    )
+    exp_gcm_parser.add_argument('--project', help='Project name to use')
+    exp_gcm_parser.add_argument('--seed', type=int, help='Single seed (default: config seeds)')
+    exp_gcm_parser.add_argument('--quick', action='store_true',
+                                help='Plumbing smoke only — NEVER a reported number')
+    exp_gcm_parser.add_argument('--dataset', choices=['shapes3d', 'dsprites'],
+                                help='Dataset (default: gen_compose.dataset)')
+    exp_gcm_parser.add_argument('--pretext', choices=['recon', 'cls'],
+                                help='recon = the mandatory primary (R1)')
+    exp_gcm_parser.add_argument('--arm', action='append',
+                                choices=['read', 'clu_wide', 'store_removed', 'proto'],
+                                help='repeatable; default: all four (gen_compose.arms)')
+    exp_gcm_parser.add_argument('--stage', default='compose',
+                                help="'compose' (default) or 'aggregate'")
+    exp_gcm_parser.add_argument('--condition',
+                                help='hold-out condition (default: gen_data.condition). '
+                                     '⛔ A non-default condition is a SEPARATE full '
+                                     'configuration and is never pooled with Montero.')
+    exp_gcm_parser.add_argument('--n-eval-a', type=int,
+                                help='A-split requests per seed (default: 512)')
+    exp_gcm_parser.add_argument('--bridge-root',
+                                help='Where gen-feature-bridge wrote its frozen runs')
+    exp_gcm_parser.add_argument('--store-plan',
+                                help="Where gen-store-grouping wrote store_plan.json")
+    exp_gcm_parser.add_argument('--out', help='Output directory')
+    exp_gcm_parser.set_defaults(func=cmd_exp_gen_compose)
+    # --- END gen-read-compose -----------------------------------------------
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -3009,3 +3046,80 @@ def cmd_exp_gen_baselines(args):
     console.print(f"✓ gen-baselines completed -> {out_dir}", style="bold green")
     return 0
 # --- END gen-baselines ------------------------------------------------------
+
+
+# --- BEGIN gen-read-compose (additive; owner: experiment-engineer) -----------
+def cmd_exp_gen_compose(args):
+    """Run the generative-phase-1 composition path (request -> read -> decode)."""
+    console.print("[bold cyan]Generative phase 1: composition through the READ[/bold cyan]")
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    from ..experiments.exp_gen_compose import (
+        COMPOSITIONAL_FACTOR,
+        run_experiment_gen_compose,
+    )
+
+    if getattr(args, 'condition', None):
+        config.gen_data.condition = args.condition
+    if getattr(args, 'n_eval_a', None) is not None:
+        config.gen_compose.n_eval_a = int(args.n_eval_a)
+    if getattr(args, 'bridge_root', None):
+        config.gen_compose.bridge_root = args.bridge_root
+        config.gen_store.bridge_root = args.bridge_root
+    if getattr(args, 'store_plan', None):
+        config.gen_compose.store_plan = args.store_plan
+    seeds = [args.seed] if getattr(args, 'seed', None) is not None else None
+    out_dir = args.out or str(Path(paths['results']) / 'gen_compose')
+
+    try:
+        agg = run_experiment_gen_compose(
+            config=config,
+            dataset=getattr(args, 'dataset', None),
+            pretext=getattr(args, 'pretext', None),
+            out_dir=out_dir,
+            seeds=seeds,
+            stage=getattr(args, 'stage', 'compose'),
+            arms=getattr(args, 'arm', None),
+            quick=bool(getattr(args, 'quick', False)),
+            log=console.print,
+        )
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    if not agg:
+        return 0
+    console.print(
+        f"⭐ ceilings — decoder {agg['ceiling_decoder_in_corner_balacc']['mean']:.4f} · "
+        f"store (measured) {agg['ceiling_store_in_corner_balacc']['mean']:.4f} · "
+        f"knn_proto {agg['reference_rows']['knn_proto_in_corner_balacc']:.4f} "
+        "(⛔ a number quoted against only one ceiling is incomplete)",
+        style='bold',
+    )
+    for arm, row in agg['table'].items():
+        console.print(
+            f"  {arm:<14} in-corner {COMPOSITIONAL_FACTOR} balacc "
+            f"{row['in_corner_balacc']['mean']:.4f} ± {row['in_corner_balacc']['std']:.4f} · "
+            f"A aggregate {row['A_aggregate']['mean']:.4f} · "
+            f"B {COMPOSITIONAL_FACTOR} {row['B_shape']['mean']:.4f}"
+        )
+    fals = agg.get('falsifier_read_vs_store_removed')
+    if fals:
+        ok = fals['beats_store_removed_beyond_seed_spread']
+        console.print(
+            f"⭐ falsifier: read − store_removed = {fals['delta']['mean']:+.4f} ± "
+            f"{fals['delta']['std']:.4f} "
+            f"({fals['n_seeds_positive']}/{fals['delta']['n']} seeds positive) ⇒ "
+            + ("the read beats its ablation" if ok
+               else "⛔ THE FALSIFIER FIRED — composition is not the store's"),
+            style='bold green' if ok else 'bold red',
+        )
+    console.print(
+        "⛔ arm numbers only — gen-cell-run renders every kill-rule verdict against a "
+        "filed prereg.", style='yellow',
+    )
+    console.print(f"✓ gen-compose completed -> {out_dir}", style="bold green")
+    return 0
+# --- END gen-read-compose ---------------------------------------------------
