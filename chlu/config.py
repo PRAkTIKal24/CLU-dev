@@ -4886,3 +4886,103 @@ class GenClassifierConfig:
     quick_render_check_n: int = 8
     quick_verify_cache_checksum: bool = False
 # --- END gen-external-classifier --------------------------------------------
+
+
+# --- BEGIN gen-navigation ---------------------------------------------------
+# ⭐ R29 pivot item 4 (and item 1's pre-registered fail route): the NAVIGATION dial
+# — the commitment lands on nine points, is the space BETWEEN them structured?
+# ⛔ APPEND-ONLY at EOF: this block touches no existing dataclass and adds no
+# ``CHLUConfig`` field / ``load_config`` / ``save_config`` site, so the merge anchor
+# stays ONE contiguous region (this file's syntax has been broken twice by
+# hunk-by-hunk "keep both" merges; the rule is take the peer's whole file and
+# re-apply this block, asserting 0 deletions).
+@dataclass
+class GenNavigateConfig:
+    """Knobs for the traversal harness (``exp_gen_navigate``).
+
+    ⛔ **Every number carries both controls** — straight-line interpolation between
+    the two endpoint READ vectors (store bypassed at every interior point) and the
+    ``mean``-deleted store (the fair deletion).  ⛔ A per-factor statistic is never
+    reported without ``n_values_realised`` (R31, fourth strike).
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- frozen artifacts (⛔ every one is LOADED, never fitted here) --------
+    #: ⭐ ``gen-read-compose``'s per-seed store, exactly the one R28/R29/R31 measured,
+    #: reached through ``GenCommitConfig.store_checkpoint_source``.
+    #: The address book + grouping come from ``gen-commitment-collapse``'s own cache,
+    #: so the endpoints are bit-identical to the codes R31 reasoned about.
+    commit_cache_pattern: str = (
+        "outputs/gen-commitment-collapse/runs/{dataset}_{pretext}/seed_{seed}"
+    )
+    #: ⭐ The GATED external classifier (``classifier_gate.json`` = ``PASS``).
+    #: ⛔ Never the linear probe — it shares the decoder's lineage.
+    classifier_root: Optional[str] = "outputs/gen-external-classifier"
+    classifier_pattern: str = "seed_{seed}/external_classifier.pkl"
+    gate_file: str = "classifier_gate.json"
+    #: ⛔ Refuse to run against an un-gated instrument.
+    require_gate_pass: bool = True
+    #: ⛔ ``GenBridgeConfig.dec_recipe`` still defaults to ``"baseline"`` — the
+    #: decoder that FAILED the gate.  The winner is asserted by hash AND by name.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+
+    # --- the traversal ------------------------------------------------------
+    #: Interior divisions; the path has ``n_steps + 1`` points including endpoints.
+    n_steps: int = 8
+    #: ⛔ PREREG §2: ``CORNER`` = the 72 held-out (B) requests (Montero's cell);
+    #: ``GRID`` = anchors from the 512 seen ``eval_a`` configurations, corner excluded.
+    pools: List[str] = field(default_factory=lambda: ["CORNER", "GRID"])
+    n_pairs_per_factor: int = 8
+    #: ⭐ The step-function guard: prefer pairs whose endpoint indices differ by >= 2,
+    #: so an intermediate grid value EXISTS to be visited.  A two-valued factor makes
+    #: every path weakly monotone and would score as a confident-looking success.
+    min_delta: int = 2
+    #: ⛔ PREREG §2: ``shape`` is CATEGORICAL — "monotone in shape" is meaningless, so
+    #: it is switch-only however many values it realises.  ⚠ Without this, a 4-valued
+    #: categorical factor looks ordinal and silently enters the monotone denominator.
+    categorical_factors: List[str] = field(default_factory=lambda: ["shape"])
+    #: PREREG §3: a traversal must keep the five non-target factors this stable.
+    stability_floor: float = 0.9
+    pair_seed_mult: int = 7_919
+    pair_seed_offset: int = 20_260_913
+    scramble_seed: int = 20_260_913
+    #: R20's declared design constant; the realised per-point width is reported
+    #: against it for every arm at every intermediate point.
+    design_constant_bits: float = 30.0
+    eval_batch: int = 256
+    #: ⚠ Cap on rendered images per seed — a 16 GB machine, and the harness holds
+    #: one arm's path at a time.  0 = no cap.
+    max_images_per_seed: int = 0
+
+    make_plots: bool = True
+    out_root: Optional[str] = None
+    claude_root: Optional[str] = None
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ----
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_pairs_per_factor: int = 1
+    quick_n_steps: int = 4
+    quick_pools: List[str] = field(default_factory=lambda: ["CORNER"])
+
+
+def gen_navigate_config(config: Optional["CHLUConfig"] = None, **overrides) -> GenNavigateConfig:
+    """Return (and memoise on ``config``) the navigation block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field, for the same reason
+    :func:`gen_commit_config` is not: the merge rule for this file's tail is "take
+    the peer's whole file and re-apply your block", which only holds if the block is
+    one contiguous region with zero house wiring sites.
+    """
+    cfg = getattr(config, "gen_navigate", None) if config is not None else None
+    if cfg is None:
+        cfg = GenNavigateConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_navigate", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+# --- END gen-navigation -----------------------------------------------------
