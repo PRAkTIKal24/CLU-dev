@@ -339,6 +339,12 @@ def test_defaults_are_the_reported_ones():
     assert d.n_clf_train == get_default_config().gen_bridge.n_train
     assert d.gap_abs_threshold == 0.05 and d.gap_spread_mult == 2.0
     assert d.probe_reference_balacc == 0.9414 and d.wide_reference_balacc == 0.9894
+    # ⛔ full precision from gen-r0-rescore's own JSON, not the 4-dp report figures:
+    # the in-run recomputation is asserted bit-identical, never merely "close".
+    assert d.probe_reference_per_seed == [
+        0.9223484848484849, 0.9364530988274706, 0.9652777777777778
+    ]
+    assert np.mean(d.probe_reference_per_seed) == pytest.approx(0.9414, abs=5e-5)
 
 
 def test_the_new_block_round_trips_through_yaml(tmp_path):

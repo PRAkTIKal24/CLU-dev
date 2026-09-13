@@ -4727,8 +4727,12 @@ class GenClassifierConfig:
     #: R22, from disk: the probe's in-corner ``shape`` balanced accuracy on the V1
     #: decoder's renders.  ⛔ Quoted with provenance and **recomputed** in-run.
     probe_reference_balacc: float = 0.9414
+    #: ⛔ Full precision, transcribed from
+    #: ``gen-r0-rescore/rescore_seed_{0,1,2}.json: gate_real_features.v1_decoder.
+    #: balanced_accuracy`` — NOT from the 4-dp figures in the report, so an in-run
+    #: recomputation can be asserted bit-identical rather than "close".
     probe_reference_per_seed: List[float] = field(
-        default_factory=lambda: [0.9223484848484849, 0.9365, 0.9653]
+        default_factory=lambda: [0.9223484848484849, 0.9364530988274706, 0.9652777777777778]
     )
     #: R23.3, the wide configuration's 11-cell pooled held-out ``shape``.  ⛔ A
     #: DECLARED reference only — the wide comparison is its own condition.
