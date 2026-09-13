@@ -110,6 +110,117 @@ def load_c_requests(path: str | Path) -> list[dict]:
     return requests_from_records(payload["records"])
 
 
+def requests_from_valid_records(records: Sequence[dict]) -> list[dict]:
+    """A **valid control** set (e.g. ``a7_redundant.json``), taken verbatim.
+
+    ⭐ Same verbatim contract as :func:`requests_from_records`; the difference is
+    that a control record is *satisfiable* and therefore carries the ``row`` it was
+    built from, which the caller uses to assert the control never spends a held-out
+    row.  ⛔ Nothing is re-sampled, re-ordered or re-expressed.
+    """
+    out = []
+    for rec in records:
+        out.append(
+            {
+                "id": rec["id"],
+                "kind": rec.get("kind", "valid"),
+                "row": (int(rec["row"]) if rec.get("row") is not None else None),
+                "request": [dict(t) for t in rec["request"]],
+                "redundant_factor": rec.get("redundant_factor"),
+            }
+        )
+    return out
+
+
+def deduplicate_terms(requests: Sequence[dict], suffix: str = "-dedup") -> list[dict]:
+    """⭐ **DECLARED SENSITIVITY, ⛔ never the registered control.**
+
+    The same requests with every *repeated* factor term after the first removed.
+    Its only job is to isolate one arithmetic fact about R8's declared embedding
+    rule: a ``valid_redundant`` (A7) request names one factor **twice at the same
+    value**, and "both terms enter the composition" means its deviation is added
+    **twice** — so an A7 request sits off the valid manifold in the same direction a
+    ``duplicate_factor`` request does, by construction rather than by accident.
+    ⛔ That is a property of the DECLARED rule, applied identically to the control
+    and to C, so it is not a defect to be quietly patched; but a Hub reading an
+    A7-controlled AUROC must be able to see how much of it is this doubling, which
+    is what this set measures.
+    """
+    out = []
+    for req in requests:
+        seen, terms = set(), []
+        for t in req["request"]:
+            k = int(t["factor_index"])
+            if k in seen:
+                continue
+            seen.add(k)
+            terms.append(dict(t))
+        out.append({**req, "id": f"{req['id']}{suffix}", "request": terms})
+    return out
+
+
+def load_query_set_registry(path: str | Path) -> dict:
+    """Read ``query_sets.json`` — the per-kind declaration of C's structural controls.
+
+    ⭐ **Why an arm reads this at all** (R26.1, standing rule).  A C kind whose
+    records are structurally distinguishable from their control is scoring the
+    control, not the arm: all 36 ``duplicate_factor`` records carry **7** terms
+    against A/B's **6**, so a bare term counter scores AUROC **1.0000** on that
+    half.  ``a7_redundant`` is the valid set built to erase exactly that giveaway,
+    and the registry — ⛔ not this module, and ⛔ not the arm — declares which
+    control belongs to which kind.  ``out_of_range``'s control is ``base``, the
+    ordinary one-term-per-factor pool, which is why that kind is unaffected.
+    """
+    with open(path) as fh:
+        return json.load(fh)
+
+
+def control_map_of(registry: dict, invalid_set: str = "c_invalid") -> dict[str, str]:
+    """``{C kind: the name of the valid set that controls it}`` from the registry."""
+    try:
+        spec = registry["sets"][invalid_set]
+    except KeyError as exc:  # pragma: no cover - a malformed registry is a hard stop
+        raise KeyError(
+            f"query-set registry declares no {invalid_set!r} set; ⛔ the arms cannot "
+            "know which valid pool controls which C kind"
+        ) from exc
+    return {str(k): str(v) for k, v in dict(spec.get("controls", {})).items()}
+
+
+def load_registered_control_requests(
+    registry_dir: str | Path, registry: dict, names: Sequence[str]
+) -> dict[str, list[dict]]:
+    """Load the FILE-backed control sets named in ``names`` (e.g. ``a7_redundant``).
+
+    ⛔ A control that is registered but absent from disk raises — a silent skip is
+    "declared not-run reported as null" in code form (R26.7).  ⛔ A control that is
+    *derived* rather than file-backed (``base``, which is just the plain valid
+    request pool) is **not** loaded here: the arms already hold it as their own
+    A / B request lists, and building a second copy would let the two drift.
+    """
+    registry_dir = Path(registry_dir)
+    out: dict[str, list[dict]] = {}
+    for name in names:
+        spec = registry.get("sets", {}).get(name)
+        if spec is None:
+            raise KeyError(
+                f"{registry_dir / 'query_sets.json'}: control set {name!r} is named by "
+                "a C kind but is not registered"
+            )
+        fname = spec.get("file")
+        if not fname:
+            continue  # derived (``base``) — held by the caller, never duplicated here
+        path = registry_dir / str(fname)
+        if not path.exists():
+            raise FileNotFoundError(
+                f"control set {name!r} is registered at {path} but the file is missing "
+                "— ⛔ the A7-controlled column cannot be scored and must not be faked"
+            )
+        with open(path) as fh:
+            out[name] = requests_from_valid_records(json.load(fh)["records"])
+    return out
+
+
 # ---------------------------------------------------------------------------
 # ⭐ The kNN arm's embedding: per-factor prototypes, composed additively
 # ---------------------------------------------------------------------------
