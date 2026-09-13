@@ -4399,17 +4399,25 @@ class GenBaselinesConfig:
     #: ``None`` -> read from ``store_bytes.json``; an int pins it.  The measured
     #: Shapes3D/recon value is 524,288 B (``n_modes * D * 4 = 64 * 2048 * 4``).
     store_bytes: Optional[int] = None
-    #: ⭐ **The landscape is store + inter-well PMI coupling, and the byte match is
-    #: to the TOTAL** (Head, 2026-09-12).  ``gen_dream.fit_code_coupling`` learns a
-    #: field ``J[k, l][m, m'] = PMI(code_k = m ; code_l = m')`` that is **extra** to
-    #: ``store_bytes`` — ``gen_dream.coupling_bytes``'s own docstring says a
-    #: byte-matched baseline *"must be told about it"*.  At the shipped cell
-    #: ``K(K-1)/2 * M^2 * 4 = 10 * 64^2 * 4 = 163,840 B``, so the true total is
-    #: **688,128 B**.  ⛔ Matching to 524,288 under-resources the comparator by 24 %,
-    #: and the kNN arm is the comparator for TWO kill rules — a weak one hands both a
-    #: false pass.  ⭐ The read channel is untouched at ``K*log2(M) = 30`` bits, so
-    #: R20's design constant is unaffected.
-    include_coupling_bytes: bool = True
+    #: ⛔ **FLIPPED TO ``False`` BY R26 RULING 3** (2026-09-13).  Conditional dreaming
+    #: is dropped as the composition mechanism, so ``gen_dream.fit_code_coupling``'s
+    #: inter-well PMI field ``J[k, l][m, m']`` (``K(K-1)/2 * M^2 * 4 = 163,840 B`` at
+    #: the shipped cell) **leaves the deployed store** and the byte-match target
+    #: reverts ``688,128 -> 524,288 B``.  Hub-verified: ``coupling_bytes`` is
+    #: referenced only inside ``gen_dream``; ``gen_certificate`` never imports it.
+    #: ⚠ The historical ``gen-baselines`` run (2026-09-12, all 3 seeds) was fitted at
+    #: **688,128 B** — a declared ~31 % byte ADVANTAGE to the kNN arm, conservative in
+    #: direction but ⛔ never to be described as byte-matched.  ⭐ The flag is KEPT so
+    #: that run reproduces bit-identically (``--byte-budget historical``); ⛔ it is no
+    #: longer the default, because a future run would inherit the wrong budget
+    #: silently.  ⭐ The read channel is untouched at ``K*log2(M) = 30`` bits either
+    #: way — this is a CAPACITY knob, never a channel one.
+    include_coupling_bytes: bool = False
+    #: ⭐ The realised byte-match target is **asserted**, not merely logged: a budget
+    #: that silently reverts is exactly the defect R26.3 left behind.  ``None``
+    #: disables the assertion (used by ``--byte-budget historical``, which pins
+    #: 688,128 explicitly instead).
+    expect_byte_target_bytes: Optional[int] = 524288
     #: ``None`` -> derived by ``K(K-1)/2 * M^2 * 4`` from ``store_plan.json``'s own
     #: ``K`` and ``n_modes``.  ⛔ Never hand-typed; an int pins it.
     coupling_bytes: Optional[int] = None
@@ -4482,10 +4490,55 @@ class GenBaselinesConfig:
     lace_or_cofs: List[float] = field(default_factory=lambda: [5.0, 20.0, 80.0, 320.0])
     lace_not_nums: List[float] = field(default_factory=lambda: [0.03, 0.1, 0.3, 1.0])
 
+    #: ⭐ **R27.3 — the whitening exactness GATE.**  ``p0(u) = N(0, I)`` is the only
+    #: thing licensing LACE's ODE drift to omit the prior score (R9.1), so
+    #: ``mean |diag(cov(u)) - 1|`` above this tolerance means the SELECTED
+    #: configuration is running an unlicensed sampler.  ⭐ 0.10, not 0.05, and the
+    #: reason is structural: 71 of 2,048 cache coordinates are dead (constant
+    #: post-ReLU), contributing an irreducible 71/2048 = 0.0347 before any real
+    #: violation.  MEASURED: ``none`` 0.051-0.057, ``ledoit_wolf`` 0.143-0.150,
+    #: ``1e-3`` 0.216-0.238 — the tolerance separates them correctly.
+    lace_whitening_exact_tol: float = 0.10
+    #: ⭐ **R27.3, binding**: *"a rival weakened by our own selection procedure is our
+    #: fault."*  If the pre-registered (validation-aggregate) selection lands on a
+    #: NON-exact whitening, additionally run the **nearest exact** configuration in
+    #: the same grid — same ``sigma`` and ``form`` where available, shrinkage swapped
+    #: to the exact one — and report **both**, quoting the stronger.  ⛔ The
+    #: pre-registered leg is never dropped, and ⛔ its RNG stream is untouched (the
+    #: fallback draws from its own key), so the pre-registered numbers stay
+    #: bit-identical to the historical run.
+    lace_whitening_exactness_fallback: bool = True
+
     # --- refusal ---
     #: Quantile of the VALID-data score distribution that sets the refusal
     #: threshold.  ⛔ No C item and no held-out item participates.
     refusal_valid_quantile: float = 0.95
+    #: ⭐ **A7 (R26.1 / R27.4).**  Score C against the VALID CONTROL each kind
+    #: declares in the on-disk ``query_sets.json`` registry, as well as against the
+    #: ordinary valid pool.  ``duplicate_factor``'s control is ``a7_redundant``
+    #: (same term count, same ordering, same repeated-factor pattern, still
+    #: satisfiable); ``out_of_range``'s control is ``base`` — i.e. the ordinary
+    #: 6-term pool — so ⭐ that kind is **A7-clean as shipped** and must reproduce
+    #: bit-identically.
+    score_registered_controls: bool = True
+    #: The registry file, read from ``<data_root>/<dataset>/``.  ⛔ Never a hardcoded
+    #: set list: the arms score whatever the registry declares.
+    query_set_registry_file: str = "query_sets.json"
+    #: ⛔ Fail loudly when the registry or a declared control file is missing.  A
+    #: silent skip here is "declared not-run reported as null" in code form (R26.7),
+    #: and it is exactly what made the first A7 re-score impossible.
+    require_registered_controls: bool = True
+    #: ⭐ Also score each kind against the control with its **repeated term removed**
+    #: (``A7D``).  R8's declared embedding composes *every* term, so an A7 request's
+    #: repeated factor enters twice — this isolates how much of the controlled number
+    #: is that doubling.  ⛔ A DECLARED SENSITIVITY, never a registered control and
+    #: never the quoted number.
+    control_dedup_sensitivity: bool = True
+    #: ⭐ Persist the **per-request** refusal score of every arm/variant to
+    #: ``refusal_scores.json`` beside the manifest.  ⛔ Their absence is what blocked
+    #: `gen-baselines-consolidate`: with only ``score_summary`` aggregates on disk, a
+    #: re-score needs a 3-seed re-run instead of a spreadsheet.
+    persist_per_request_refusal_scores: bool = True
 
     seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
     make_plots: bool = True

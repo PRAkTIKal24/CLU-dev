@@ -74,8 +74,12 @@ from ..core.gen_bridge import (  # noqa: E402
 )
 from ..core.gen_request import (  # noqa: E402
     FactorPrototypes,
+    control_map_of,
+    deduplicate_terms,
     dense_request_arrays,
     load_c_requests,
+    load_query_set_registry,
+    load_registered_control_requests,
     requests_from_rows,
 )
 from ..data.gen_splits import default_gen_data_root  # noqa: E402
@@ -108,6 +112,24 @@ ARMS = ("knn", "lace", "all")
 COMPOSITIONAL_FACTOR = "shape"
 #: Request sets, in the order every table uses them.
 REQUEST_SETS = ("A", "B", "MS", "C")
+#: ⭐ The VALID CONTROL sets the C kinds declare in ``query_sets.json`` (A7).  ⛔ They
+#: are scored for **refusal only** — a control is never decoded, never probed and
+#: never enters composition, so adding one cannot move a composition number.
+#: ⛔ Kept OUT of :data:`REQUEST_SETS` deliberately: that tuple drives the decode /
+#: probe path and the LACE sampler's PRNG stream, and re-ordering it would move
+#: every historical number.
+CONTROL_SETS = ("A7", "A7D")
+#: The registry name each entry of :data:`CONTROL_SETS` instantiates.  ⛔ ``A7D`` is
+#: deliberately absent: it is a DECLARED SENSITIVITY (the A7 records with the
+#: redundant term removed), ⛔ never a control a kind may be scored against.
+CONTROL_SET_NAMES = {"A7": "a7_redundant"}
+#: The sensitivity set and the control it perturbs.
+CONTROL_DEDUP_OF = {"A7D": "A7"}
+#: ⭐ The registry's ``base`` set — "one term per factor, the plain valid request" —
+#: is instantiated by the arms' own **B** pool (R14.1's primary negative set), ⛔ not
+#: by a second copy built here.  ``out_of_range`` declares ``base``, which is why it
+#: is A7-clean as shipped and must reproduce bit-identically.
+CONTROL_BASE_SET = "B"
 
 
 # ---------------------------------------------------------------------------
@@ -172,6 +194,15 @@ def resolve_store_bytes(config: CHLUConfig, dataset: str, pretext: str, log: Cal
     ``store_plan.json``'s **own** ``K`` and ``n_modes``.  ⛔ Neither is hand-typed.
     ⭐ The read channel is untouched at ``K*log2(M) = 30`` bits (R20's design
     constant); this is a **capacity** correction, not a channel one.
+
+    ⛔ **SUPERSEDED BY R26 RULING 3 (2026-09-13), and this is now the default.**
+    Conditional dreaming is dropped as the composition mechanism, so the coupling
+    field leaves the deployed store and the target reverts **688,128 -> 524,288 B**.
+    :attr:`GenBaselinesConfig.include_coupling_bytes` therefore defaults to ``False``
+    and the realised total is **asserted** against
+    :attr:`GenBaselinesConfig.expect_byte_target_bytes` — a budget that silently
+    reverts is the defect this assertion exists to catch.  ⭐ The flag survives so
+    the historical 688,128 B run reproduces bit-identically.
     """
     g = config.gen_baselines
     runs = store_runs_root(config) / f"{dataset}_{pretext}"
@@ -212,14 +243,33 @@ def resolve_store_bytes(config: CHLUConfig, dataset: str, pretext: str, log: Cal
             coupling_b = (k_wells * (k_wells - 1) // 2) * n_modes * n_modes * 4
 
     total = store_b + coupling_b
+    expect = g.expect_byte_target_bytes
+    if expect is not None and int(total) != int(expect):
+        raise AssertionError(
+            f"⛔ realised byte-match target {total} B != the expected "
+            f"{int(expect)} B (store {store_b} + coupling {coupling_b}). R26 ruling 3 "
+            "took the inter-well coupling out of the deployed store: the target is "
+            "524,288 B. Set gen_baselines.expect_byte_target_bytes (or --byte-budget "
+            "historical) to reproduce the superseded 688,128 B run DELIBERATELY — "
+            "⛔ never by inheriting a stale default."
+        )
     log(
         f"  ⭐ byte-match target: {total} B = store {store_b} + coupling {coupling_b} "
         f"(K(K-1)/2 * M^2 * 4). ⛔ The read channel is UNCHANGED at K*log2(M) bits."
+        + (f"  [asserted == {int(expect)} B]" if expect is not None
+           else "  ⚠ assertion DISABLED (expect_byte_target_bytes=None)")
     )
+    if coupling_b:
+        log("  ⚠ include_coupling_bytes=True reproduces the SUPERSEDED (R26.3) budget: "
+            "the kNN arm carries a declared byte ADVANTAGE and is ⛔ NOT byte-matched.")
     return {
         "store_bytes": store_b,
         "coupling_bytes": coupling_b,
         "total_bytes": total,
+        "expected_total_bytes": (int(expect) if expect is not None else None),
+        "assertion": ("realised == expect_byte_target_bytes" if expect is not None
+                      else "⚠ DISABLED — expect_byte_target_bytes is None"),
+        "superseded_by_R26_ruling_3": bool(coupling_b),
         "K": k_wells,
         "n_modes": n_modes,
         "coupling_bytes_formula": "K(K-1)/2 * M^2 * 4",
@@ -227,13 +277,36 @@ def resolve_store_bytes(config: CHLUConfig, dataset: str, pretext: str, log: Cal
         "source_coupling": c_src,
         "store_meta": meta,
         "rationale": (
-            "⭐ Head, 2026-09-12: the landscape is store + inter-well PMI coupling and "
-            "the match is to the TOTAL. gen_dream.coupling_bytes' own docstring: the "
-            "coupling is EXTRA to store_bytes and a byte-matched baseline 'must be told "
-            "about it'. ⛔ Matching to store_bytes alone under-resources the comparator "
-            "for kill rules (ii) and (iv). ⭐ bits_per_read is untouched (R20)."
+            "⛔ R26 ruling 3 (2026-09-13) SUPERSEDES the 2026-09-12 Head ruling that set "
+            "this target to store + inter-well PMI coupling. Conditional dreaming is "
+            "dropped as the composition mechanism, so gen_dream's coupling field is "
+            "neither fitted nor deployed and the target reverts 688,128 -> 524,288 B "
+            "(= store_bytes). The historical 3-seed run at 688,128 B gave the kNN arm a "
+            "declared ~31 % byte ADVANTAGE — conservative in direction, ⛔ but it is "
+            "NOT byte-matched and must never be quoted as such. ⭐ bits_per_read is "
+            "untouched at K*log2(M) either way (R20)."
         ),
     }
+
+
+def _extract_per_request_scores(arms: dict) -> dict:
+    """POP the per-request tables out of the arm dicts into their own payload.
+
+    ⭐ They are persisted (acceptance item: a future re-score must be a spreadsheet),
+    but they are **bulk** — keeping them inside ``baselines_manifest.json`` would
+    multiply it by an order of magnitude and every reader of the manifest pays for
+    a table only the re-score needs.
+    """
+    out: dict = {}
+    for arm_name, arm in (arms or {}).items():
+        holders = {}
+        holders.update(arm.get("variants", {}) or {})
+        holders.update(arm.get("samplers", {}) or {})
+        for vname, v in holders.items():
+            table = (v.get("refusal") or {}).pop("per_request_scores", None)
+            if table is not None:
+                out.setdefault(arm_name, {})[vname] = table
+    return out
 
 
 def _write_json(payload: dict, path: Path) -> Path:
@@ -454,13 +527,88 @@ def _auroc_by_kind(B: np.ndarray, C: np.ndarray, c_kinds) -> dict:
     return out
 
 
-def refusal_metrics(scores: dict, valid_quantile: float, c_kinds=None) -> dict:
+def _auroc_controlled_by_kind(scores: dict, c_kinds, control_map) -> dict:
+    """⭐ **A7-CONTROLLED AUROC, per kind** — each kind scored against the valid
+    control the on-disk registry declares for it (R26.1 standing rule, R27.4).
+
+    ⛔ This does **not** replace :func:`_auroc_by_kind`; it ships **beside** it, so
+    the contaminated and controlled columns are always readable side by side and
+    ⛔ never merged into one.  The contamination is structural, not subtle: every
+    ``duplicate_factor`` record carries ``n_factors + 1`` terms against the plain
+    pool's ``n_factors``, so a bare term counter scores **1.0000** on that half and
+    four ordering features score 0.9167 (``gen-c-set-a7`` §1).  ``a7_redundant``
+    erases both; ``out_of_range`` declares ``base`` and is therefore **unchanged by
+    construction** — which is the regression check that this wiring did not move a
+    rival.
+    """
+    if c_kinds is None or not control_map:
+        return {}
+    kinds = np.asarray([str(k) for k in c_kinds])
+    C = np.asarray(scores["C"], np.float64)
+    if kinds.size != C.size:
+        return {"error": f"{kinds.size} kinds for {C.size} C scores"}
+    out = {}
+    for kind in sorted(set(kinds.tolist())):
+        cname = control_map.get(kind)
+        if cname is None:
+            out[kind] = {"error": ("⛔ no control declared for this kind in "
+                                   "query_sets.json — it would be scored uncontrolled")}
+            continue
+        set_key = CONTROL_BASE_SET if cname == "base" else None
+        if set_key is None:
+            set_key = next((k for k, v in CONTROL_SET_NAMES.items() if v == cname), None)
+        if set_key is None or set_key not in scores:
+            out[kind] = {"error": f"control set {cname!r} was not scored by this arm"}
+            continue
+        neg = np.asarray(scores[set_key], np.float64)
+        sel = kinds == kind
+        pos = C[sel]
+        y = np.concatenate([np.zeros(neg.size, bool), np.ones(pos.size, bool)])
+        out[kind] = {
+            "auroc": binary_auroc(np.concatenate([neg, pos]), y),
+            "control": cname,
+            "control_set": set_key,
+            "n_c": int(sel.sum()),
+            "n_control": int(neg.size),
+        }
+    return out
+
+
+def _pooled_controlled(by_kind: dict) -> dict:
+    """⛔ COMPANION ONLY (R27.4): the ``n_c``-weighted mean of the per-kind numbers.
+
+    ⛔ It is **not** an AUROC over a pooled score vector, because the two kinds have
+    **different controls** — pooling them would put a 7-term and a 6-term negative
+    pool in one ranking and re-introduce exactly the giveaway A7 removes.  ⭐ With
+    equal ``n_c`` (36/36 at the shipped cell) it coincides with ½(dup + oor), which
+    is also what the contaminated pooled AUROC equals to machine precision.
+    """
+    rows = [v for v in by_kind.values() if "auroc" in v]
+    if not rows:
+        return {}
+    w = np.asarray([float(v["n_c"]) for v in rows])
+    a = np.asarray([float(v["auroc"]) for v in rows])
+    return {
+        "value": float((w * a).sum() / w.sum()),
+        "definition": ("n_c-weighted mean of the per-kind CONTROLLED AUROCs — ⛔ a "
+                       "COMPANION, never the reported number (R27.4: always by kind)"),
+        "kinds": {k: float(v["auroc"]) for k, v in by_kind.items() if "auroc" in v},
+    }
+
+
+def refusal_metrics(scores: dict, valid_quantile: float, c_kinds=None,
+                    control_map=None, request_ids=None) -> dict:
     """⭐ Primary = AUROC(B vs C).  C-vs-A and C-vs-(A∪B) alongside (R14.1).
 
     Positives are always **C** (impossible); a higher refusal score must mean
     "more likely refused", so an AUROC of 0.5 is chance and < 0.5 means the arm
     has the sign backwards.  The threshold comes from **A only** — valid, seen
     data — ⛔ never from B, never from C.
+
+    ⭐ ``control_map`` (``{C kind: registered control set}``, read from disk) adds
+    the **A7-controlled** column beside the contaminated one; ``request_ids`` adds
+    the **per-request** score table, so the next re-score is a spreadsheet rather
+    than a 3-seed re-run.
     """
     A, B, C = (np.asarray(scores[k], np.float64) for k in ("A", "B", "C"))
     MS = np.asarray(scores.get("MS", np.zeros(0)), np.float64)
@@ -471,7 +619,16 @@ def refusal_metrics(scores: dict, valid_quantile: float, c_kinds=None) -> dict:
         return binary_auroc(s, y)
 
     thr = knn.threshold_from_valid(A, float(valid_quantile))
-    return {
+    controls = {k: np.asarray(scores[k], np.float64) for k in CONTROL_SETS if k in scores}
+    by_kind_controlled = _auroc_controlled_by_kind(scores, c_kinds, control_map)
+    # ⭐ The full cross-table: every C kind against EVERY available valid pool, so the
+    # contaminated column, the declared control and the dedup sensitivity are read off
+    # one object and ⛔ no reader has to trust that they were computed the same way.
+    by_kind_per_control = {
+        set_key: _auroc_by_kind(np.asarray(scores[set_key], np.float64), C, c_kinds)
+        for set_key in (("B",) + CONTROL_SETS) if set_key in scores
+    }
+    out = {
         "auroc_c_vs_b": au(B, C),  # ⭐ PRIMARY (kill rules (iii) and (iv) bind here)
         "auroc_c_vs_a": au(A, C),
         "auroc_c_vs_a_union_b": au(np.concatenate([A, B]), C),
@@ -485,10 +642,14 @@ def refusal_metrics(scores: dict, valid_quantile: float, c_kinds=None) -> dict:
             "B": knn.refusal_rates(B, thr)["refused_fraction"],
             "MS": knn.refusal_rates(MS, thr)["refused_fraction"] if MS.size else float("nan"),
             "C": knn.refusal_rates(C, thr)["refused_fraction"],
+            # ⚠ A7 is VALID: refusing it is a FALSE refusal, exactly as for B.
+            **{k: knn.refusal_rates(v, thr)["refused_fraction"]
+               for k, v in controls.items() if v.size},
         },
         "score_summary": {
             k: {"mean": float(v.mean()), "std": float(v.std()), "n": int(v.size)}
-            for k, v in (("A", A), ("B", B), ("MS", MS), ("C", C)) if v.size
+            for k, v in ((("A", A), ("B", B), ("MS", MS), ("C", C))
+                         + tuple(controls.items())) if v.size
         },
         # ⭐ Free diagnostic the Hub will want: the two C kinds are very different
         # problems.  ``out_of_range`` walks off the grid (a geometry question);
@@ -496,7 +657,52 @@ def refusal_metrics(scores: dict, valid_quantile: float, c_kinds=None) -> dict:
         # values (a consistency question).  An arm can be excellent at one and at
         # chance on the other, and the pooled AUROC hides exactly that.
         "auroc_c_vs_b_by_kind": _auroc_by_kind(B, C, c_kinds),
+        # ⭐ A7 (R26.1 / R27.4): the SAME kinds, each against the control its
+        # registry declares. ⛔ Reported beside the line above, never merged into it.
+        "a7_controlled": {
+            "auroc_by_kind": by_kind_controlled,
+            "pooled_COMPANION": _pooled_controlled(by_kind_controlled),
+            "control_map": dict(control_map or {}),
+            "auroc_by_kind_PER_CONTROL": by_kind_per_control,
+            "note": ("⭐ per-kind controls read from query_sets.json on disk. "
+                     "out_of_range's control is `base` (the ordinary valid pool) ⇒ it "
+                     "is A7-clean as shipped and MUST reproduce bit-identically; only "
+                     "duplicate_factor moves."),
+        },
     }
+    if controls:
+        out["auroc_c_vs_control_POOLED_COMPANION"] = {
+            k: au(v, C) for k, v in controls.items() if v.size
+        }
+    if request_ids:
+        # ⭐ PERSISTED PER REQUEST. ⛔ The absence of exactly this table is what made
+        # the first A7 re-score impossible from disk (gen-baselines §0): with only
+        # score_summary aggregates saved, a re-score needs a 3-seed re-run.
+        out["per_request_scores"] = {
+            k: {"ids": [str(i) for i in request_ids[k]],
+                "scores": [float(x) for x in np.asarray(scores[k], np.float64)]}
+            for k in scores
+            if k in request_ids and len(request_ids[k]) == np.asarray(scores[k]).size
+        }
+        out["per_request_scores"]["_kinds_C"] = [str(k) for k in (c_kinds or [])]
+    return out
+
+
+def _a7_log(ref: dict) -> str:
+    """One compact ``by kind: contaminated -> controlled`` string for the run log."""
+    by = (ref.get("a7_controlled") or {}).get("auroc_by_kind") or {}
+    raw = ref.get("auroc_c_vs_b_by_kind") or {}
+    if not by:
+        return ""
+    bits = []
+    for kind in sorted(by):
+        c = by[kind]
+        if "auroc" not in c:
+            continue
+        r = raw.get(kind, {}).get("auroc")
+        bits.append(f"{kind}: {r:.4f}(vs B) -> {c['auroc']:.4f}(vs {c['control']})"
+                    if r is not None else f"{kind}: {c['auroc']:.4f}(vs {c['control']})")
+    return ("\n      ⭐ A7 " + " · ".join(bits)) if bits else ""
 
 
 def _mean_std(vals) -> dict:
@@ -603,11 +809,19 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
     reads, scores = {}, {}
     for name in REQUEST_SETS:
         reads[name], scores[name] = read_and_dist(best, ctx[f"E_{name}"])
+    # ⭐ A7: the control is scored by the SAME rule (distance to the same store) and
+    # ⛔ never decoded — a valid control has no composition number and needs none.
+    for name in CONTROL_SETS:
+        if f"E_{name}" in ctx:
+            _, scores[name] = read_and_dist(best, ctx[f"E_{name}"])
     same_sel = all(best[k] == best_comp[k] for k in ("k", "metric", "normaliser", "deployment"))
     reads_c, scores_c = ({}, {}) if same_sel else ({}, {})
     if not same_sel:
         for name in REQUEST_SETS:
             reads_c[name], scores_c[name] = read_and_dist(best_comp, ctx[f"E_{name}"])
+        for name in CONTROL_SETS:
+            if f"E_{name}" in ctx:
+                _, scores_c[name] = read_and_dist(best_comp, ctx[f"E_{name}"])
 
     # ⭐ Declared sensitivity, ⛔ NOT a 37th tuning trial: the distance reduction
     # over the k neighbours is a free choice the specification does not fix, so
@@ -734,13 +948,15 @@ def run_knn_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dict
             # byte-matched store) — knn_proto's contribution is composition, not a
             # second refusal criterion. Stated so the column is not read twice.
             "refusal": refusal_metrics(vscores, float(g.refusal_valid_quantile),
-                                       ctx["c_kinds"]),
+                                       ctx["c_kinds"], ctx.get("control_map"),
+                                       ctx.get("request_ids")),
         }
         log(
             f"  ⭐ [{vname}] in-corner {COMPOSITIONAL_FACTOR} balacc="
             f"{disc['balanced_accuracy']:.4f} (AUROC {disc['auroc']:.4f}) · "
             f"B aggregate={comp_b['aggregate']:.4f} · "
             f"refusal AUROC(B vs C)={out['variants'][vname]['refusal']['auroc_c_vs_b']:.4f}"
+            + _a7_log(out["variants"][vname]["refusal"])
         )
     out["wall_clock_s"] = float(time.time() - t0)
     return out
@@ -783,7 +999,9 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
         # They contribute an irreducible 71/2048 = 0.0347 to this statistic before
         # any real violation. MEASURED on the shipped cache: "none" 0.0591,
         # ledoit_wolf 0.1436, 1e-3 0.2322 -- the threshold separates them correctly.
-        exact = float(wchecks[sh]["mean_abs_diag_minus_one"]) <= 0.10
+        # ⭐ Now config-backed (``lace_whitening_exact_tol``) because R27.3 makes this
+        # threshold a GATE on the configuration, not just a printed diagnostic.
+        exact = float(wchecks[sh]["mean_abs_diag_minus_one"]) <= float(g.lace_whitening_exact_tol)
         wchecks[sh]["dead_direction_floor"] = float(
             w.meta["n_eigenvalues_floored"] / max(w.meta["D"], 1)
         )
@@ -874,6 +1092,48 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
         + ("  (identical to the pre-registered choice)" if same_sel else "")
     )
 
+    # ---- ⭐ R27.3: the whitening-exactness GATE on the SELECTED configuration ----
+    # "A rival weakened by our own selection procedure is our fault." If the
+    # pre-registered rule lands on a non-exact whitening, p0(u) = N(0, I) fails and
+    # the ODE drift's licence to omit the prior score is not ours to grant — so the
+    # NEAREST EXACT configuration in the same grid is run too, and ⛔ BOTH are
+    # reported. ⛔ The pre-registered leg is never dropped and its RNG stream is
+    # untouched (the fallback draws from its own key), so it stays bit-identical.
+    def _is_exact(sh) -> bool:
+        return bool(wchecks[str(sh)]["prior_identity_near_exact"])
+
+    wexact_sel, wexact_reason = None, None
+    gate_fired = not _is_exact(best["shrinkage"])
+    if gate_fired and bool(g.lace_whitening_exactness_fallback):
+        exact_trials = [t for t in trials if _is_exact(t["shrinkage"])]
+        if not exact_trials:
+            wexact_reason = ("⛔ NO exact whitening exists anywhere in the grid — the "
+                             "fallback cannot be run and the gate is reported unrepaired")
+        else:
+            near = [t for t in exact_trials
+                    if t["sigma"] == best["sigma"] and t["form"] == best["form"]]
+            pool = near or exact_trials
+            cand = pool[int(np.argmax([t["val_aggregate"] for t in pool]))]
+            already = [c[1] for c in ([("", best)] + ([("", best_comp)] if not same_sel else []))]
+            if any(all(cand[k] == a[k] for k in ("sigma", "form", "shrinkage"))
+                   for a in already):
+                wexact_reason = ("the nearest exact configuration is already being run "
+                                 "as another leg — ⛔ not run twice")
+            else:
+                wexact_sel = cand
+                wexact_reason = ("nearest exact in the grid: same sigma/form, shrinkage "
+                                 "swapped" if near else
+                                 "no exact trial at this sigma/form; best exact by the "
+                                 "same validation-aggregate rule")
+    if gate_fired:
+        log(f"  ⚠ [lace] R27.3 GATE FIRED: selected shrinkage={best['shrinkage']} has "
+            f"|diag-1|={wchecks[str(best['shrinkage'])]['mean_abs_diag_minus_one']:.4g} "
+            f"> {float(g.lace_whitening_exact_tol)} ⇒ p0(u)=N(0,I) is NOT near-exact. "
+            f"Fallback: {wexact_reason}")
+    else:
+        log(f"  ⭐ [lace] R27.3 gate PASSES: selected shrinkage={best['shrinkage']} is "
+            "whitening-exact; ⛔ no fallback needed")
+
     # ---- retrain the SELECTED configuration at the shipped 50 epochs ----------
     wh = whitenings[best["shrinkage"]]
     key, fk = jax.random.split(key)
@@ -905,7 +1165,31 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
             if best_comp["shrinkage"] != best["shrinkage"] else
             "  [lace] 2nd-rule config shares the pre-registered whitening ⇒ no refit")
 
+    # ⭐ R27.3's fallback leg, on its OWN key stream (⛔ the pre-registered leg's
+    # numbers must not move because we added a leg beside it).
+    fit_info_wexact = None
+    if wexact_sel is not None:
+        wh_w = whitenings[wexact_sel["shrinkage"]]
+        fb_key = jax.random.PRNGKey(int(seed) * 10_009 + 20_260_911 + 7_717)
+        fb_key, wk = jax.random.split(fb_key)
+        model_w, fit_info_wexact, _ = lace.train_classifier(
+            wh_w.forward(Xfit), lab_fit, val_targets_fit, cards, wk,
+            n_epochs=int(g.lace_n_epochs), batch=int(g.lace_batch), lr=float(g.lace_lr),
+            warmup=int(g.lace_warmup_iters), log=None,
+        )
+        configs.append(("_wexact", wexact_sel, model_w, wh_w))
+        log(f"  ⭐ [lace] R27.3 FALLBACK leg: sigma={wexact_sel['sigma']} "
+            f"form={wexact_sel['form']} shrinkage={wexact_sel['shrinkage']} "
+            f"(|diag-1|="
+            f"{wchecks[str(wexact_sel['shrinkage'])]['mean_abs_diag_minus_one']:.4g}) — "
+            "⛔ reported BESIDE the pre-registered leg, never instead of it")
+
     samplers = {}
+    # ⭐ A7's sampling draws from an INDEPENDENT, deterministic stream: folding it into
+    # ``key`` would re-order every subsequent split and silently move every historical
+    # LACE number. ⛔ The whole point of the control is that nothing else moves.
+    a7_key = jax.random.PRNGKey(int(seed) * 10_009 + 20_260_911 + 4_242)
+    a7_draw = 0
     for suffix, sel, model_s, wh_s in configs:
         for sname_base in list(g.lace_samplers):
             sname = sname_base + suffix
@@ -926,6 +1210,27 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
                     )
                 E[rs] = lace.energy_of(model_s, U[rs], req, sel["form"], float(sel["sigma"]),
                                        g.eval_batch)
+            for rs in CONTROL_SETS:
+                req = ctx.get(f"req_{rs}")
+                if req is None:
+                    continue
+                ck = jax.random.fold_in(a7_key, a7_draw)
+                a7_draw += 1
+                if spec["kind"] == "ode":
+                    Uc = lace.sample_ode(model_s, req, ck, form=sel["form"],
+                                         sigma=float(sel["sigma"]), batch=int(g.eval_batch))
+                else:
+                    Uc = lace.sample_ld(
+                        model_s, req, ck, std=float(spec["std"]), lr=lace.LACE_SGLD_LR,
+                        steps=int(g.lace_ld_steps), form=sel["form"],
+                        sigma=float(sel["sigma"]), batch=int(g.eval_batch),
+                    )
+                # ⚠ Like C, a control request is scored at a SAMPLE. A7 records are
+                # satisfiable, so a cached feature exists for their row — but reading it
+                # would score the control by a different rule than C, which is the one
+                # asymmetry that would make the controlled AUROC meaningless.
+                E[rs] = lace.energy_of(model_s, Uc, req, sel["form"], float(sel["sigma"]),
+                                       g.eval_batch)
             X = {rs: wh_s.inverse(U[rs]) for rs in REQUEST_SETS}
             comp_a = score_composition(ctx["decoder"], ctx["probe"], X["A"], ctx["lab_A"],
                                        ctx["names"], ctx["feat_shape"], g.eval_batch)
@@ -935,8 +1240,9 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
                 ctx["decoder"], ctx["probe"], X["B"], X["MS"], ctx["lab_B"], ctx["lab_MS"],
                 ctx["shape_idx"], ctx["n_shape_classes"], ctx["feat_shape"], g.eval_batch,
             )
-            ref = refusal_metrics({k: E[k] for k in REQUEST_SETS},
-                                  float(g.refusal_valid_quantile), ctx["c_kinds"])
+            ref = refusal_metrics({k: E[k] for k in E},
+                                  float(g.refusal_valid_quantile), ctx["c_kinds"],
+                                  ctx.get("control_map"), ctx.get("request_ids"))
             samplers[sname] = {
                 "spec": {k: (float(v) if isinstance(v, (int, float)) else v)
                          for k, v in spec.items()},
@@ -948,12 +1254,45 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
                 f"  ⭐ [lace/{sname}] in-corner {COMPOSITIONAL_FACTOR} balacc="
                 f"{disc['balanced_accuracy']:.4f} · B aggregate={comp_b['aggregate']:.4f} · "
                 f"refusal AUROC(B vs C)={ref['auroc_c_vs_b']:.4f}"
+                + _a7_log(ref)
             )
 
     best_sampler_comp = max(
         samplers, key=lambda s: samplers[s]["in_corner_discrimination"]["balanced_accuracy"]
     )
     best_ref = max(samplers, key=lambda s: samplers[s]["refusal"]["auroc_c_vs_b"])
+
+    def _leg(suffix: str) -> dict:
+        """Best-of-leg on each axis, so the two R27.3 legs are comparable at a glance."""
+        names = [n for n in samplers
+                 if (n.endswith(suffix) if suffix else
+                     not (n.endswith("_compsel") or n.endswith("_wexact")))]
+        if not names:
+            return {}
+        bc = max(names, key=lambda n:
+                 samplers[n]["in_corner_discrimination"]["balanced_accuracy"])
+        br = max(names, key=lambda n: samplers[n]["refusal"]["auroc_c_vs_b"])
+
+        def _ctrl(n, kind):
+            k = (samplers[n]["refusal"].get("a7_controlled") or {}).get("auroc_by_kind") or {}
+            return k.get(kind, {}).get("auroc")
+        bd = max(names, key=lambda n: (_ctrl(n, "duplicate_factor") or -1.0))
+        return {
+            "samplers": sorted(names),
+            "best_composition": {"sampler": bc,
+                                 "in_corner_balacc":
+                                 samplers[bc]["in_corner_discrimination"]["balanced_accuracy"]},
+            "best_refusal_pooled_CONTAMINATED": {
+                "sampler": br, "auroc_c_vs_b": samplers[br]["refusal"]["auroc_c_vs_b"]},
+            "best_refusal_duplicate_factor_A7_CONTROLLED": {
+                "sampler": bd, "auroc": _ctrl(bd, "duplicate_factor")},
+            "out_of_range_A7_CLEAN": {
+                n: _ctrl(n, "out_of_range") for n in sorted(names)},
+        }
+
+    legs = {"pre_registered": _leg(""), "compsel": _leg("_compsel"),
+            "wexact_R27_3": _leg("_wexact")}
+    legs = {k: v for k, v in legs.items() if v}
 
     out = {
         "arm": "lace",
@@ -976,6 +1315,34 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
         ],
         "classifier": {**fit_info, "own_val_accuracy": clf_acc},
         "classifier_compsel": fit_info_compsel,
+        "classifier_wexact": fit_info_wexact,
+        # ⭐ R27.3, in one readable block: did the gate fire, what was run because it
+        # did, and which leg is stronger on each axis. ⛔ "The stronger" is quoted by
+        # the report; ⛔ neither leg is dropped here.
+        "whitening_exactness_gate": {
+            "tolerance": float(g.lace_whitening_exact_tol),
+            "statistic": "mean |diag(cov(u)) - 1| on the fit rows",
+            "selected_shrinkage": str(best["shrinkage"]),
+            "selected_mean_abs_diag_minus_one":
+                float(wchecks[str(best["shrinkage"])]["mean_abs_diag_minus_one"]),
+            "selected_is_exact": bool(_is_exact(best["shrinkage"])),
+            "fired": bool(gate_fired),
+            "fallback_enabled": bool(g.lace_whitening_exactness_fallback),
+            "fallback_selected": wexact_sel,
+            "fallback_reason": wexact_reason,
+            "per_shrinkage": {
+                sh: {"mean_abs_diag_minus_one":
+                     float(wchecks[sh]["mean_abs_diag_minus_one"]),
+                     "prior_identity_near_exact":
+                     bool(wchecks[sh]["prior_identity_near_exact"])}
+                for sh in list(g.lace_shrinkages)
+            },
+            "ruling": ("R27.3 — a rival weakened by our own selection procedure is our "
+                       "fault. A non-exact whitening means p0(u)=N(0,I) fails, and that "
+                       "identity is the ONLY thing licensing the ODE drift to omit the "
+                       "prior score (R9.1). ⛔ Both legs are reported; the stronger is "
+                       "quoted; ⛔ never-weaken-a-competitor applies to our own code."),
+        },
         "tuning": {
             "budget": len(grid),
             "axes": {"sigma": list(g.lace_sigmas), "form": list(g.lace_forms),
@@ -997,6 +1364,7 @@ def run_lace_arm(ctx: dict, config: CHLUConfig, seed: int, log: Callable) -> dic
             },
         },
         "samplers": samplers,
+        "legs": legs,
         "best_sampler_composition": best_sampler_comp,
         "best_sampler_refusal": best_ref,
         "wall_clock_s": float(time.time() - t0),
@@ -1144,6 +1512,77 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
     requests["C"] = load_c_requests(c_path)
     log(f"  C set: {len(requests['C'])} records read VERBATIM from {c_path} (⛔ never regenerated)")
 
+    # ---- ⭐ A7: the per-kind VALID CONTROLS, discovered from the on-disk registry ----
+    control_map, control_prov = {}, {"scored": False}
+    if bool(g.score_registered_controls):
+        reg_path = root / dataset / str(g.query_set_registry_file)
+        if not reg_path.exists():
+            msg = (f"⛔ no query-set registry at {reg_path}: the C kinds' structural "
+                   "controls are undeclared, so C would be scored against the "
+                   "uncontrolled valid pool and a term counter would score 1.0000 on "
+                   "the duplicate_factor half (R26.1). Emit it with `chlu data "
+                   "<dataset>` (gen_data.emit_a7), or set "
+                   "gen_baselines.require_registered_controls=False to run the "
+                   "CONTAMINATED column only — ⛔ and say so in the report.")
+            if bool(g.require_registered_controls):
+                raise FileNotFoundError(msg)
+            log("  ⚠ " + msg)
+        else:
+            registry = load_query_set_registry(reg_path)
+            control_map = control_map_of(registry)
+            loaded = load_registered_control_requests(
+                root / dataset, registry, sorted(set(control_map.values()))
+            )
+            for set_key, reg_name in CONTROL_SET_NAMES.items():
+                if reg_name in loaded:
+                    requests[set_key] = loaded[reg_name]
+            # ⭐ the declared dedup sensitivity (see ``deduplicate_terms``)
+            if bool(g.control_dedup_sensitivity):
+                for d_key, src in CONTROL_DEDUP_OF.items():
+                    if src in requests:
+                        requests[d_key] = deduplicate_terms(requests[src])
+            held = set(int(r) for r in np.asarray(split.test_rows, np.int64).tolist())
+            spent = {k: sum(1 for r in requests[k] if r.get("row") in held)
+                     for k in CONTROL_SET_NAMES if k in requests}
+            if any(v for v in spent.values()):
+                raise AssertionError(
+                    f"⛔ a valid control spends held-out rows ({spent}) — the control "
+                    "would leak B into the negative pool it controls"
+                )
+            control_prov = {
+                "scored": True,
+                "registry": str(reg_path),
+                "control_map": control_map,
+                "sets": {
+                    set_key: {
+                        "registered_as": CONTROL_SET_NAMES[set_key],
+                        "file": str(root / dataset
+                                    / registry["sets"][CONTROL_SET_NAMES[set_key]]["file"]),
+                        "sha256_registered":
+                            registry["sets"][CONTROL_SET_NAMES[set_key]].get("sha256"),
+                        "n_records": len(requests[set_key]),
+                        "n_terms": len(requests[set_key][0]["request"]),
+                        "held_out_rows_spent": spent.get(set_key, 0),
+                    }
+                    for set_key in CONTROL_SET_NAMES if set_key in requests
+                },
+                "dedup_sensitivity_sets": {
+                    d: {"derived_from": src, "n_records": len(requests[d]),
+                        "n_terms": len(requests[d][0]["request"]),
+                        "role": ("⭐ DECLARED SENSITIVITY — isolates R8's double-counted "
+                                 "redundant term; ⛔ never a registered control")}
+                    for d, src in CONTROL_DEDUP_OF.items() if d in requests
+                },
+                "base_is_instantiated_by": CONTROL_BASE_SET,
+                "note": ("⭐ out_of_range declares `base` (the ordinary valid pool) so it "
+                         "is A7-CLEAN AS SHIPPED and must reproduce bit-identically; ⛔ "
+                         "only the duplicate_factor half and the pooled companion move."),
+            }
+            log(f"  ⭐ A7 controls: {control_map} — "
+                + ", ".join(f"{k}={len(requests[k])} records, "
+                            f"{len(requests[k][0]['request'])} terms"
+                            for k in CONTROL_SETS if k in requests))
+
     protos = FactorPrototypes.fit(grid, X["fit"], rows["fit"])
     offgrid = protos.offgrid_report(requests["C"])
     if offgrid["n_offgrid_terms"] == 0:
@@ -1183,8 +1622,17 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
         "req_A": dense["A"], "req_B": dense["B"], "req_MS": dense["MS"],
         "req_C": dense["C"], "req_val": dense["val"],
         "c_kinds": [r.get("kind") for r in requests["C"]],
+        "control_map": control_map,
+        # ⭐ ids travel with the scores so the persisted per-request table is joinable
+        # back to the request records without re-deriving an order.
+        "request_ids": {k: [str(r["id"]) for r in requests[k]]
+                        for k in requests if k != "val"},
         "U_val_for_or_not": None,
     }
+    for set_key in CONTROL_SETS:
+        if set_key in requests:
+            ctx[f"E_{set_key}"] = protos.embed_many(requests[set_key])
+            ctx[f"req_{set_key}"] = dense[set_key]
 
     arms = {}
     want = ("knn", "lace") if arm in ("all", None) else (arm,)
@@ -1215,6 +1663,9 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
             "cache_reencode_check": reenc,
             "c_invalid_path": str(c_path),
             "byte_target": byte_target,
+            # ⭐ A7 (R26.1/R27.4): which valid pool controls which C kind, read from
+            # the registry on disk — ⛔ never a list hardcoded in this experiment.
+            "registered_controls": control_prov,
         },
         "no_leak": leak,
         "rows": {k: int(np.asarray(v).size) for k, v in
@@ -1242,6 +1693,30 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
         "NO_KILL_RULE_VERDICT": ("⛔ This spoke reports arm numbers only; gen-cell-run "
                                  "renders verdicts against a filed prereg."),
     }
+    # ⭐ The per-request refusal scores leave the manifest and land in their own file:
+    # ⛔ their ABSENCE is what made the first A7 re-score impossible (gen-baselines §0).
+    # Written BEFORE the manifest, so a manifest on disk always has its scores beside it.
+    if bool(g.persist_per_request_refusal_scores):
+        per_request = _extract_per_request_scores(arms)
+        _write_json(
+            {
+                "schema": "chlu-gen-baselines-refusal-scores/1",
+                "dataset": dataset, "pretext": pretext, "condition": condition,
+                "seed": int(seed),
+                "byte_target": byte_target,
+                "control_map": control_map,
+                "c_invalid_path": str(c_path),
+                "registered_controls": control_prov,
+                "sets": {k: len(v) for k, v in requests.items()},
+                "scores": per_request,
+                "note": ("⭐ one row per REQUEST per arm-variant. A re-score against a "
+                         "new control is a join on `ids`, ⛔ not a re-run."),
+            },
+            out_dir / "refusal_scores.json",
+        )
+        log(f"  ⭐ per-request refusal scores persisted: "
+            f"{sum(len(v) for v in per_request.values())} variants -> "
+            f"{out_dir / 'refusal_scores.json'}")
     _write_json(manifest, out_dir / "baselines_manifest.json")
     (out_dir / "baselines_partial.json").unlink(missing_ok=True)
     if g.make_plots:
@@ -1258,6 +1733,36 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
 # ---------------------------------------------------------------------------
 
 
+def _refusal_row(r: dict) -> dict:
+    """⭐ R27.4: BY KIND always, both columns, pooled as a companion only.
+
+    ⛔ The contaminated (``*_vs_B``) and A7-controlled columns are separate keys and
+    are never averaged together — a pooled-only row hides that neither rival covers
+    both kinds, which is the differentiator the cell exists to show.
+    """
+    raw = r.get("auroc_c_vs_b_by_kind") or {}
+    ctrl = (r.get("a7_controlled") or {}).get("auroc_by_kind") or {}
+    row = {
+        "auroc_c_vs_b": r["auroc_c_vs_b"],  # ⛔ POOLED COMPANION, contaminated on dup
+        "auroc_c_vs_a": r["auroc_c_vs_a"],
+        "auroc_c_vs_a_union_b": r["auroc_c_vs_a_union_b"],
+    }
+    for kind, v in raw.items():
+        if "auroc" in v:
+            row[f"CONTAMINATED_{kind}"] = v["auroc"]
+    for kind, v in ctrl.items():
+        if "auroc" in v:
+            row[f"A7_{kind}"] = v["auroc"]
+    pooled = (r.get("a7_controlled") or {}).get("pooled_COMPANION") or {}
+    if "value" in pooled:
+        row["A7_pooled_COMPANION"] = pooled["value"]
+    per_ctrl = (r.get("a7_controlled") or {}).get("auroc_by_kind_PER_CONTROL") or {}
+    for kind, v in (per_ctrl.get("A7D") or {}).items():
+        if isinstance(v, dict) and "auroc" in v:
+            row[f"A7D_SENSITIVITY_{kind}"] = v["auroc"]
+    return row
+
+
 def _arm_rows(man: dict) -> dict:
     """Flatten one seed's manifest to ``{label: {metric: value}}``."""
     out = {}
@@ -1270,9 +1775,7 @@ def _arm_rows(man: dict) -> dict:
                 "B_aggregate": v["composition_B"]["aggregate"],
                 "B_compositional": v["composition_B"]["per_factor"][COMPOSITIONAL_FACTOR],
                 "A_aggregate": v["composition_A"]["aggregate"],
-                "auroc_c_vs_b": v["refusal"]["auroc_c_vs_b"],
-                "auroc_c_vs_a": v["refusal"]["auroc_c_vs_a"],
-                "auroc_c_vs_a_union_b": v["refusal"]["auroc_c_vs_a_union_b"],
+                **_refusal_row(v["refusal"]),
             }
         ob = knn_arm["tuning"]["ORACLE_UPPER_BOUND_auroc_c_vs_b"]
         out["knn"]["ORACLE_auroc_c_vs_b"] = ob["value"]
@@ -1286,9 +1789,7 @@ def _arm_rows(man: dict) -> dict:
                 "B_aggregate": s["composition_B"]["aggregate"],
                 "B_compositional": s["composition_B"]["per_factor"][COMPOSITIONAL_FACTOR],
                 "A_aggregate": s["composition_A"]["aggregate"],
-                "auroc_c_vs_b": s["refusal"]["auroc_c_vs_b"],
-                "auroc_c_vs_a": s["refusal"]["auroc_c_vs_a"],
-                "auroc_c_vs_a_union_b": s["refusal"]["auroc_c_vs_a_union_b"],
+                **_refusal_row(s["refusal"]),
             }
         ob = lace_arm["tuning"]["ORACLE_UPPER_BOUND_auroc_c_vs_b"]
         lbl = f"lace_{lace_arm['best_sampler_composition']}"
@@ -1333,6 +1834,8 @@ def aggregate_runs(run_dirs, log: Callable = print) -> dict:
         "tuning_budget": {
             a: mans[0]["arms"][a]["tuning"]["budget"] for a in mans[0]["arms"]
         },
+        "byte_target": mans[0]["provenance"].get("byte_target"),
+        "registered_controls": mans[0]["provenance"].get("registered_controls"),
         "byte_ledger": mans[0]["arms"].get("knn", {}).get("byte_ledger"),
         "prototype_table_ledger": mans[0]["arms"].get("knn", {}).get("prototype_table_ledger"),
         "summary": summary,
@@ -1424,6 +1927,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--data-root", default=None)
     p.add_argument("--decoder-source", default=None, choices=["decoder_lift_v1", "bridge"])
     p.add_argument("--store-bytes", type=int, default=None)
+    p.add_argument(
+        "--byte-budget", default="deployed", choices=["deployed", "historical"],
+        help="⭐ `deployed` (default) = 524,288 B, the store alone, per R26 ruling 3. "
+             "⛔ `historical` = 524,288 + 163,840 coupling = 688,128 B: the SUPERSEDED "
+             "budget the 2026-09-12 run used, kept only so that run reproduces "
+             "bit-identically. It hands the kNN arm a ~31 %% byte advantage.",
+    )
+    p.add_argument(
+        "--expect-byte-target", type=int, default=None,
+        help="assert the realised byte-match target equals this (⛔ -1 disables the "
+             "assertion). Default: gen_baselines.expect_byte_target_bytes.",
+    )
     p.add_argument("--n-fit", type=int, default=None)
     p.add_argument("--runs", nargs="+", default=None, help="per-seed dirs for --stage aggregate")
     p.add_argument("--no-plots", action="store_true")
@@ -1446,6 +1961,13 @@ def _config_from_args(args) -> CHLUConfig:
         g.decoder_source = args.decoder_source
     if args.store_bytes is not None:
         g.store_bytes = int(args.store_bytes)
+    if getattr(args, "byte_budget", "deployed") == "historical":
+        # ⛔ Deliberate reproduction of the SUPERSEDED target, never an inherited default.
+        g.include_coupling_bytes = True
+        g.expect_byte_target_bytes = None
+    if getattr(args, "expect_byte_target", None) is not None:
+        g.expect_byte_target_bytes = (None if int(args.expect_byte_target) < 0
+                                      else int(args.expect_byte_target))
     if args.n_fit is not None:
         g.n_fit = int(args.n_fit)
     if args.no_plots:

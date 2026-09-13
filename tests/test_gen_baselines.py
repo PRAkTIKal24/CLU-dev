@@ -451,7 +451,12 @@ def test_a_missing_byte_count_stops_the_run_rather_than_guessing(tmp_path):
 
 def test_resolve_store_bytes_derives_the_coupling_from_the_plans_own_K_and_M(tmp_path):
     """⭐ Both components mechanical: store from ``store_bytes.json``, coupling from
-    ``store_plan.json``'s own ``K``/``n_modes``. ⛔ Neither hand-typed."""
+    ``store_plan.json``'s own ``K``/``n_modes``. ⛔ Neither hand-typed.
+
+    ⚠ **Amended for R26 ruling 3:** the coupling is no longer part of the deployed
+    store, so reaching it now takes an explicit opt-in *and* an explicit expectation.
+    ⛔ The derivation itself is unchanged — that is what this test still pins.
+    """
     from chlu.experiments.exp_gen_baselines import resolve_store_bytes
 
     d = tmp_path / "shapes3d_recon"
@@ -461,12 +466,15 @@ def test_resolve_store_bytes_derives_the_coupling_from_the_plans_own_K_and_M(tmp
     (d / "store_plan.json").write_text(json.dumps({"K": 5, "n_modes": 64}))
     c = get_default_config()
     c.gen_baselines.store_runs_root = str(tmp_path)
+    c.gen_baselines.include_coupling_bytes = True          # ⛔ opt-in, never inherited
+    c.gen_baselines.expect_byte_target_bytes = TOTAL_BYTES
     t = resolve_store_bytes(c, "shapes3d", "recon", lambda *a: None)
     assert t["store_bytes"] == STORE_BYTES
     assert t["coupling_bytes"] == COUPLING_BYTES
     assert t["total_bytes"] == TOTAL_BYTES
-    # ⛔ and the escape hatch still excludes it explicitly, never silently
+    # ⛔ and the default excludes it explicitly, never silently
     c.gen_baselines.include_coupling_bytes = False
+    c.gen_baselines.expect_byte_target_bytes = STORE_BYTES
     t2 = resolve_store_bytes(c, "shapes3d", "recon", lambda *a: None)
     assert t2["coupling_bytes"] == 0 and t2["total_bytes"] == STORE_BYTES
 
@@ -514,3 +522,299 @@ def test_aggregate_reports_a_missing_seed_as_absent_never_as_zero(tmp_path):
     (d / "baselines_manifest.json").write_text(json.dumps(man))
     agg = aggregate_runs([d, tmp_path / "seed_1"], log=lambda *a: None)
     assert agg["n_seeds"] == 1 and agg["seeds"] == [0]
+
+
+# ---------------------------------------------------------------------------
+# ⭐ A7 — the C set's per-kind VALID CONTROL, wired into both arms
+#
+# ⛔ The defect these pin: all 36 ``duplicate_factor`` C records carry one term MORE
+# than the valid pool, so a bare term counter scores AUROC 1.0000 on that half
+# (`gen-c-set-a7` §1).  Scoring that kind against ``a7_redundant`` — same term count,
+# same ordering, same repeated-factor pattern, still satisfiable — removes it.
+# ⛔ ``out_of_range`` declares ``base`` and must therefore be UNCHANGED: that is the
+# regression which catches a wiring change that moved a rival.
+# ---------------------------------------------------------------------------
+
+
+def _a7_style_record(grid, row: int, rec_id: str = "toy-a7-000") -> dict:
+    """One valid request carrying a redundant (same-value) term, A7's construction."""
+    req = requests_from_rows(grid, np.array([row]))[0]
+    terms = [dict(t) for t in req["request"]]
+    return {"id": rec_id, "kind": "valid_redundant", "row": int(row),
+            "redundant_factor": grid.names[0], "request": terms + [dict(terms[0])]}
+
+
+def test_a7_records_load_verbatim_and_carry_their_row(grid, tmp_path):
+    from chlu.core.gen_request import (
+        control_map_of,
+        load_query_set_registry,
+        load_registered_control_requests,
+    )
+
+    recs = [_a7_style_record(grid, r, f"toy-a7-{r:03d}") for r in (0, 3, 7)]
+    (tmp_path / "a7_redundant.json").write_text(json.dumps({"records": recs}))
+    reg = {"sets": {
+        "base": {"role": "valid", "derived_from": "factor_index.npz"},
+        "a7_redundant": {"role": "valid", "file": "a7_redundant.json"},
+        "c_invalid": {"role": "invalid", "file": "c_invalid.json",
+                      "controls": {"duplicate_factor": "a7_redundant",
+                                   "out_of_range": "base"}},
+    }}
+    (tmp_path / "query_sets.json").write_text(json.dumps(reg))
+
+    registry = load_query_set_registry(tmp_path / "query_sets.json")
+    cmap = control_map_of(registry)
+    # ⛔ the map is READ from disk, never hardcoded by the arm that is about to be scored
+    assert cmap == {"duplicate_factor": "a7_redundant", "out_of_range": "base"}
+    loaded = load_registered_control_requests(tmp_path, registry, sorted(set(cmap.values())))
+    # ⛔ ``base`` is derived, held by the arm as its own B pool, and never duplicated here
+    assert set(loaded) == {"a7_redundant"}
+    a7 = loaded["a7_redundant"]
+    assert [r["id"] for r in a7] == ["toy-a7-000", "toy-a7-003", "toy-a7-007"]
+    assert [r["row"] for r in a7] == [0, 3, 7]          # ⭐ so the caller can assert no leak
+    assert all(len(r["request"]) == grid.n_factors + 1 for r in a7)
+
+
+def test_a_registered_control_missing_from_disk_is_not_a_silent_skip(tmp_path):
+    """⛔ 'declared not-run reported as null' in code form (R26.7) — it must RAISE."""
+    from chlu.core.gen_request import load_registered_control_requests
+
+    reg = {"sets": {"a7_redundant": {"file": "a7_redundant.json"}}}
+    with pytest.raises(FileNotFoundError, match="must not be faked"):
+        load_registered_control_requests(tmp_path, reg, ["a7_redundant"])
+
+
+def test_a7_embedding_double_counts_the_redundant_term_BY_THE_DECLARED_RULE(
+        grid, toy_features):
+    """⭐ R8 says *both* terms enter the composition, so a repeated term is added twice.
+
+    ⛔ Not a defect to patch silently: the same rule produces the C ``duplicate_factor``
+    embedding, so the control and the thing it controls are displaced the same way.
+    The dedup set measures how much of a controlled number is this doubling.
+    """
+    from chlu.core.gen_request import deduplicate_terms, requests_from_valid_records
+
+    rows, X = toy_features
+    protos = FactorPrototypes.fit(grid, X, rows)
+    a7 = requests_from_valid_records([_a7_style_record(grid, 5)])
+    plain = requests_from_rows(grid, np.array([5]))
+    e_a7, e_plain = protos.embed_many(a7)[0], protos.embed_many(plain)[0]
+    dev = protos.prototype(0, float(plain[0]["request"][0]["value"])) - protos.mu_global
+    assert np.allclose(e_a7 - e_plain, dev, atol=1e-5)
+    # ⭐ and the declared sensitivity removes exactly that, nothing else
+    dd = protos.embed_many(deduplicate_terms(a7))[0]
+    assert np.allclose(dd, e_plain, atol=1e-5)
+
+
+def test_out_of_range_is_A7_CLEAN_and_duplicate_factor_is_the_only_kind_that_moves():
+    """⭐ THE regression check: A7 leaves ``out_of_range``'s control at the valid pool.
+
+    ⛔ If this ever fails, the wiring changed a number that R26/R27 say cannot move,
+    and the published 0.8045 / 0.4694 ``out_of_range`` figures are no longer comparable.
+    """
+    from chlu.experiments.exp_gen_baselines import refusal_metrics
+
+    rng = np.random.default_rng(3)
+    scores = {"A": rng.normal(0, 1, 200), "B": rng.normal(0.5, 1, 72),
+              "MS": rng.normal(0.2, 1, 50), "C": rng.normal(3.0, 1, 72),
+              # a control that is systematically FARTHER from the store than B
+              "A7": rng.normal(2.0, 1, 72)}
+    kinds = ["out_of_range"] * 36 + ["duplicate_factor"] * 36
+    cmap = {"duplicate_factor": "a7_redundant", "out_of_range": "base"}
+    out = refusal_metrics(scores, 0.95, kinds, cmap)
+    ctrl = out["a7_controlled"]["auroc_by_kind"]
+    raw = out["auroc_c_vs_b_by_kind"]
+    # ⭐ bit-identical, not merely close
+    assert ctrl["out_of_range"]["auroc"] == raw["out_of_range"]["auroc"]
+    assert ctrl["out_of_range"]["control"] == "base"
+    assert ctrl["duplicate_factor"]["control"] == "a7_redundant"
+    assert ctrl["duplicate_factor"]["auroc"] != raw["duplicate_factor"]["auroc"]
+    # ⛔ both columns survive side by side; neither overwrites the other
+    assert set(out["a7_controlled"]["auroc_by_kind_PER_CONTROL"]) == {"B", "A7"}
+
+
+def test_a_kind_with_no_declared_control_is_reported_as_an_error_not_scored():
+    """⛔ The inheritance mechanism: a NEW C kind must not slip through uncontrolled."""
+    from chlu.experiments.exp_gen_baselines import refusal_metrics
+
+    rng = np.random.default_rng(4)
+    scores = {"A": rng.normal(0, 1, 50), "B": rng.normal(0, 1, 20),
+              "C": rng.normal(1.0, 1, 20), "A7": rng.normal(0.5, 1, 20)}
+    kinds = ["duplicate_factor"] * 10 + ["brand_new_kind"] * 10
+    out = refusal_metrics(scores, 0.95, kinds,
+                          {"duplicate_factor": "a7_redundant"})
+    assert "error" in out["a7_controlled"]["auroc_by_kind"]["brand_new_kind"]
+    assert "auroc" in out["a7_controlled"]["auroc_by_kind"]["duplicate_factor"]
+
+
+def test_the_pooled_controlled_number_is_a_weighted_mean_and_says_so():
+    """⛔ Pooling two kinds with DIFFERENT controls into one ranking would re-create
+    the giveaway A7 removes, so the companion is a weighted mean of the per-kind
+    numbers — and it is labelled COMPANION (R27.4)."""
+    from chlu.experiments.exp_gen_baselines import refusal_metrics
+
+    rng = np.random.default_rng(5)
+    scores = {"A": rng.normal(0, 1, 100), "B": rng.normal(0, 1, 72),
+              "C": rng.normal(1.5, 1, 72), "A7": rng.normal(0.7, 1, 72)}
+    kinds = ["out_of_range"] * 36 + ["duplicate_factor"] * 36
+    out = refusal_metrics(scores, 0.95, kinds,
+                          {"duplicate_factor": "a7_redundant", "out_of_range": "base"})
+    by = out["a7_controlled"]["auroc_by_kind"]
+    pooled = out["a7_controlled"]["pooled_COMPANION"]
+    assert pooled["value"] == pytest.approx(
+        0.5 * (by["out_of_range"]["auroc"] + by["duplicate_factor"]["auroc"]))
+    assert "COMPANION" in pooled["definition"]
+
+
+def test_per_request_scores_are_persisted_so_a_re_score_is_a_JOIN_not_a_re_run():
+    """⭐ The acceptance item. ⛔ Their absence is what blocked the first A7 re-score:
+    with only ``score_summary`` on disk there is nothing to re-score."""
+    from chlu.experiments.exp_gen_baselines import refusal_metrics
+
+    rng = np.random.default_rng(6)
+    scores = {"A": rng.normal(0, 1, 5), "B": rng.normal(0, 1, 4),
+              "C": rng.normal(1.0, 1, 3), "A7": rng.normal(0.5, 1, 3)}
+    ids = {"A": [f"row-{i}" for i in range(5)], "B": [f"row-{i}" for i in range(4)],
+           "C": [f"c-{i}" for i in range(3)], "A7": [f"a7-{i}" for i in range(3)]}
+    kinds = ["duplicate_factor"] * 2 + ["out_of_range"]
+    out = refusal_metrics(scores, 0.95, kinds, {"duplicate_factor": "a7_redundant",
+                                                "out_of_range": "base"}, ids)
+    tab = out["per_request_scores"]
+    for k in ("A", "B", "C", "A7"):
+        assert tab[k]["ids"] == ids[k]
+        assert np.allclose(tab[k]["scores"], scores[k])
+    assert tab["_kinds_C"] == kinds  # ⭐ the join key for a per-kind re-score
+
+
+def test_extracting_the_per_request_tables_empties_them_out_of_the_manifest():
+    from chlu.experiments.exp_gen_baselines import _extract_per_request_scores
+
+    arms = {"knn": {"variants": {"knn": {"refusal": {"auroc_c_vs_b": 0.5,
+                                                     "per_request_scores": {"C": {}}}}}},
+            "lace": {"samplers": {"ode": {"refusal": {"auroc_c_vs_b": 0.6,
+                                                      "per_request_scores": {"C": {}}}}}}}
+    tab = _extract_per_request_scores(arms)
+    assert set(tab) == {"knn", "lace"}
+    assert "per_request_scores" not in arms["knn"]["variants"]["knn"]["refusal"]
+    assert "per_request_scores" not in arms["lace"]["samplers"]["ode"]["refusal"]
+
+
+# ---------------------------------------------------------------------------
+# ⛔ R26 ruling 3 — the byte budget reverts to the deployed store
+# ---------------------------------------------------------------------------
+
+
+def test_the_default_byte_target_is_the_DEPLOYED_store_and_is_asserted(tmp_path):
+    """⛔ R26.3 took the coupling field out of the deployed store: 688,128 -> 524,288.
+
+    The default must be the deployed budget, the realised total must be ASSERTED,
+    and the historical budget must still be reachable DELIBERATELY.
+    """
+    from chlu.experiments.exp_gen_baselines import resolve_store_bytes
+
+    d = tmp_path / "shapes3d_recon"
+    d.mkdir(parents=True)
+    (d / "store_bytes.json").write_text(json.dumps(
+        {"store_bytes": STORE_BYTES, "n_wells": 5, "n_modes": 64}))
+    (d / "store_plan.json").write_text(json.dumps({"K": 5, "n_modes": 64}))
+    c = get_default_config()
+    assert c.gen_baselines.include_coupling_bytes is False       # ⛔ the flipped default
+    assert c.gen_baselines.expect_byte_target_bytes == STORE_BYTES
+    c.gen_baselines.store_runs_root = str(tmp_path)
+    t = resolve_store_bytes(c, "shapes3d", "recon", lambda *a: None)
+    assert t["total_bytes"] == STORE_BYTES and t["coupling_bytes"] == 0
+    assert t["expected_total_bytes"] == STORE_BYTES
+    assert t["superseded_by_R26_ruling_3"] is False
+
+    # ⛔ inheriting the old flag without saying so now STOPS the run
+    c.gen_baselines.include_coupling_bytes = True
+    with pytest.raises(AssertionError, match="R26 ruling 3"):
+        resolve_store_bytes(c, "shapes3d", "recon", lambda *a: None)
+
+    # ⭐ the historical 688,128 B run still reproduces — deliberately
+    c.gen_baselines.expect_byte_target_bytes = None
+    t2 = resolve_store_bytes(c, "shapes3d", "recon", lambda *a: None)
+    assert t2["total_bytes"] == TOTAL_BYTES and t2["superseded_by_R26_ruling_3"] is True
+
+
+def test_the_cli_reaches_the_historical_budget_only_by_asking_for_it():
+    from chlu.experiments.exp_gen_baselines import _config_from_args, build_arg_parser
+
+    p = build_arg_parser()
+    g = _config_from_args(p.parse_args([])).gen_baselines
+    assert g.include_coupling_bytes is False and g.expect_byte_target_bytes == STORE_BYTES
+    g2 = _config_from_args(p.parse_args(["--byte-budget", "historical"])).gen_baselines
+    assert g2.include_coupling_bytes is True and g2.expect_byte_target_bytes is None
+    g3 = _config_from_args(
+        p.parse_args(["--expect-byte-target", str(TOTAL_BYTES)])).gen_baselines
+    assert g3.expect_byte_target_bytes == TOTAL_BYTES
+
+
+# ---------------------------------------------------------------------------
+# ⭐ R27.3 — the LACE whitening-exactness gate picks the FALLBACK, never a weaker rival
+# ---------------------------------------------------------------------------
+
+
+def test_the_whitening_gate_is_config_backed_and_separates_the_measured_shrinkages():
+    """MEASURED on the shipped cache: none 0.051-0.057 · ledoit_wolf 0.143-0.150 ·
+    1e-3 0.216-0.238.  ⛔ The tolerance must call exactly the first one exact."""
+    tol = get_default_config().gen_baselines.lace_whitening_exact_tol
+    assert get_default_config().gen_baselines.lace_whitening_exactness_fallback is True
+    assert 0.0570 <= tol and tol < 0.1425     # separates `none` from `ledoit_wolf`
+    for measured, exact in ((0.0570, True), (0.1438, False), (0.2382, False)):
+        assert (measured <= tol) is exact
+
+
+def test_the_fallback_is_the_nearest_exact_config_in_the_same_grid():
+    """⭐ R27.3: same sigma/form where it exists, shrinkage swapped to the exact one —
+    ⛔ not a free re-tune, and ⛔ never chosen with C in hand."""
+    trials = [
+        {"sigma": 0.1, "form": "both", "shrinkage": "1e-3", "val_aggregate": 0.25},
+        {"sigma": 0.1, "form": "both", "shrinkage": "none", "val_aggregate": 0.23},
+        {"sigma": 0.03, "form": "both", "shrinkage": "none", "val_aggregate": 0.24},
+    ]
+    exact = {"none": True, "ledoit_wolf": False, "1e-3": False}
+    best = trials[0]
+    cand = [t for t in trials if exact[t["shrinkage"]]]
+    near = [t for t in cand if t["sigma"] == best["sigma"] and t["form"] == best["form"]]
+    pool = near or cand
+    chosen = pool[int(np.argmax([t["val_aggregate"] for t in pool]))]
+    # ⛔ NOT the higher-scoring 0.03/none: the nearest config wins, the tuner does not
+    assert chosen["shrinkage"] == "none" and chosen["sigma"] == 0.1
+
+
+def test_the_fallback_leg_never_replaces_the_pre_registered_one():
+    """⛔ 'Both reported, the stronger quoted' — a leg that overwrote the other would
+    make the pre-registered number unrecoverable."""
+    from chlu.experiments.exp_gen_baselines import _arm_rows
+
+    man = {
+        "arms": {"lace": {
+            "samplers": {
+                "ode": {"in_corner_discrimination": {"balanced_accuracy": 0.68,
+                                                     "auroc": 0.78},
+                        "composition_A": {"aggregate": 0.9, "per_factor": {"shape": 0.5}},
+                        "composition_B": {"aggregate": 0.8, "per_factor": {"shape": 0.4}},
+                        "refusal": {"auroc_c_vs_b": 0.70, "auroc_c_vs_a": 0.7,
+                                    "auroc_c_vs_a_union_b": 0.7}},
+                "ode_wexact": {"in_corner_discrimination": {"balanced_accuracy": 0.66,
+                                                            "auroc": 0.75},
+                               "composition_A": {"aggregate": 0.9,
+                                                 "per_factor": {"shape": 0.5}},
+                               "composition_B": {"aggregate": 0.8,
+                                                 "per_factor": {"shape": 0.4}},
+                               "refusal": {"auroc_c_vs_b": 0.72, "auroc_c_vs_a": 0.7,
+                                           "auroc_c_vs_a_union_b": 0.7}},
+            },
+            "best_sampler_composition": "ode",
+            "tuning": {"ORACLE_UPPER_BOUND_auroc_c_vs_b": {
+                "value": 0.9, "max_auroc_c_vs_a_union_b_over_all_trials": 0.9}},
+        }},
+        "ceilings": {"decoder_ceiling": {"composition_A": {"aggregate": 0.94},
+                                         "in_corner_discrimination":
+                                             {"balanced_accuracy": 0.94, "auroc": 0.99}}},
+    }
+    rows = _arm_rows(man)
+    assert "lace_ode" in rows and "lace_ode_wexact" in rows      # ⭐ both survive
+    assert rows["lace_ode"]["in_corner_balacc"] == 0.68
+    assert rows["lace_ode_wexact"]["auroc_c_vs_b"] == 0.72
