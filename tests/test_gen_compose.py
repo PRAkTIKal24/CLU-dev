@@ -386,3 +386,217 @@ def test_the_declared_reference_rows_are_the_ruled_ones():
     assert g.knn_proto_reference_balacc == 0.8884
     assert g.knn_channel_matched_reference_balacc == 0.5206
     assert g.store_ceiling_balacc == 0.6866
+
+
+# ---------------------------------------------------------------------------
+# ⭐ 6. THE COMMITMENT DIAL (``gen-commitment-collapse``, R29 pivot item 1)
+# ---------------------------------------------------------------------------
+#
+# ⭐ The load-bearing tests here are again the ones that can fail on purpose:
+# ``test_sampling_buys_distinct_codes_with_NOISE`` shows the distinct-code
+# statistic being trivially maximised by a rule that carries no information — which
+# is exactly why the accuracy number must always be reported beside it — and
+# ``test_multiplicity_EXCEEDS_the_30_bit_design_constant`` shows the channel ledger
+# refusing to let a wider channel pass as a free win (R20).
+
+from chlu.core.gen_compose import (  # noqa: E402
+    ABSTAIN,
+    code_overlap,
+    commit,
+    commitment_channel,
+    commitment_read,
+    distinct_codes,
+    factor_evidence,
+    posterior_diagnostics,
+    temper_posterior,
+)
+from chlu.core.gen_store import read_from_codes  # noqa: E402
+from chlu.experiments.exp_gen_compose import config_key, parse_config_key  # noqa: E402
+
+
+def test_temperature_CANNOT_move_the_shipped_argmax_commitment():
+    """⭐ P0, and it is analytic: ``softmax`` is monotone, so ``argmax`` is τ-blind.
+
+    ⛔ If this ever fails, the tempering is buggy — it is **not** a finding about the
+    dial.  The sweep measures this rather than assuming it.
+    """
+    book, Y, _ = _book(n=200)
+    P = request_posterior(book, Y)
+    ref = commit(P, "argmax", tau=1.0)
+    for tau in (0.05, 0.25, 0.5, 2.0, 8.0, 64.0):
+        got = commit(P, "argmax", tau=tau)
+        assert np.array_equal(got["code"], ref["code"])
+        assert got["n_distinct"] == ref["n_distinct"]
+
+
+def test_commit_argmax_IS_the_shipped_compose_codes():
+    """The baseline arm must be the shipped one, not a look-alike."""
+    book, Y, _ = _book(n=128)
+    P = request_posterior(book, Y)
+    assert np.array_equal(commit(P, "argmax")["code"], compose_codes(P)["code"])
+    assert commit(P, "argmax")["n_distinct"] == compose_codes(P)["n_distinct_code_configs"]
+
+
+def test_pure_pointer_commitment_reads_through_the_SHIPPED_read_from_codes():
+    """⛔ The no-bypass guarantee lives in ``read_from_codes``' signature, so the
+    argmax/sample rules must route through it and not through a re-implementation."""
+    st = _store()
+    book, Y, _ = _book(n=64)
+    P = request_posterior(book, Y)
+    for rule in ("argmax", "sample"):
+        com = commit(P, rule, seed=3)
+        assert com["pure_pointer"]
+        assert np.array_equal(
+            np.asarray(commitment_read(st, com)),
+            np.asarray(read_from_codes(st, com["code"])),
+        )
+    # k=1 multiplicity is the same object, shape included
+    com1 = commit(P, "topk", k=1)
+    assert com1["code"].shape == (Y.shape[0], st.n_wells)
+    assert np.array_equal(com1["code"], commit(P, "argmax")["code"])
+
+
+def test_margin_abstain_fills_a_well_with_its_MEAN_mode():
+    """⭐ An abstained well is on-manifold ("not asked sharply enough"), ⛔ not zeroed —
+    a zeroed well would score the deletion control instead of the refusal."""
+    st = _store()
+    book, Y, _ = _book(n=48)
+    P = request_posterior(book, Y)
+    com = commit(P, "margin", margin=1.01)          # nothing can clear it
+    assert com["abstain_rate"] == 1.0
+    assert (com["code"] == ABSTAIN).all()
+    out = np.asarray(commitment_read(st, com)).reshape(Y.shape[0], -1)
+    for j, (w, m) in enumerate(zip(st.well_channels, st.modes, strict=True)):
+        mean_mode = np.asarray(m).mean(axis=0)
+        assert np.allclose(out[:, list(w)], mean_mode[None, :], atol=1e-5)
+    # ⛔ and a margin of 0 is the shipped argmax again
+    zero = commit(P, "margin", margin=0.0)
+    assert zero["abstain_rate"] == 0.0
+    assert np.array_equal(zero["code"], commit(P, "argmax")["code"])
+
+
+def test_multiplicity_EXCEEDS_the_30_bit_design_constant():
+    """⛔ R20 made ``K·log2(M) = 30`` bits a DECLARED design constant: a rule that
+    widens it is a declared change to the claim, and the ledger must say so."""
+    st = _shipped_store()
+    P = np.asarray(np.random.default_rng(0).dirichlet(np.ones(SHIPPED_M), size=(32, SHIPPED_K)))
+    base = commitment_channel(st, commit(P, "argmax"))
+    assert base["pointer_bits"] == pytest.approx(30.0)
+    assert not base["exceeds_design_constant"]
+    for k in (2, 4):
+        ch = commitment_channel(st, commit(P, "topk", k=k))
+        assert ch["pointer_bits"] > 30.0
+        assert ch["exceeds_design_constant"]
+    # abstention is a real extra symbol per well (M+1), and is reported as such
+    ab = commitment_channel(st, commit(P, "margin", margin=0.99))
+    assert ab["symbols_per_well"] == SHIPPED_M + 1
+    assert ab["pointer_bits"] > 30.0
+
+
+def test_sampling_buys_distinct_codes_with_NOISE():
+    """⭐⭐ The failure mode the whole task is shaped to catch, demonstrated.
+
+    On a posterior that commits every request to the SAME code, sampling produces
+    many distinct codes while carrying **no** extra information about the request.
+    ⛔ This is why a distinct count is never reported without its accuracy.
+    """
+    n, K, M = 72, 5, 64
+    P = np.full((n, K, M), 0.002, np.float64)
+    P[:, :, 7] = 1.0 - 0.002 * (M - 1)
+    P /= P.sum(-1, keepdims=True)
+    assert commit(P, "argmax")["n_distinct"] == 1          # the collapse, synthesised
+    hot = commit(P, "sample", tau=8.0, seed=0)             # ⛔ pure noise
+    assert hot["n_distinct"] > 40
+    # …and the "information" is a function of the SEED, not of the request:
+    other = commit(P, "sample", tau=8.0, seed=1)
+    assert not np.array_equal(hot["code"], other["code"])
+
+
+def test_posterior_diagnostics_flags_a_DEGENERATE_posterior():
+    """⭐ The diagnosis leg's gate: if top-1 ≈ 1.0 no stopping rule can move the code,
+    and the budget must not be spent on a sweep that cannot move."""
+    n, K, M = 16, 4, 8
+    hard = np.zeros((n, K, M)); hard[:, :, 0] = 1.0
+    d = posterior_diagnostics(hard)
+    assert d["degenerate"] and d["mean_entropy_bits_per_well"] == pytest.approx(0.0)
+    soft = np.full((n, K, M), 1.0 / M)
+    d2 = posterior_diagnostics(soft)
+    assert not d2["degenerate"]
+    assert d2["mean_entropy_bits_per_well"] == pytest.approx(np.log2(M))
+    assert d2["mean_top1_minus_top2_margin"] == pytest.approx(0.0)
+
+
+def test_factor_evidence_names_the_COMMON_MODE_factor():
+    """⭐ The mechanical hypothesis, as an instrument that fires.
+
+    A factor held CONSTANT across a request set contributes identical evidence to
+    every request in it: large share, zero across-request variance.  ⛔ That is the
+    shape of a colour corner drowning the factors that actually vary.
+    """
+    book, Y, _ = _book(n=300, cards=(3, 4))
+    corner = Y[:64].copy()
+    corner[:, 0] = 1                      # the "colour corner": factor 0 pinned
+    ev = factor_evidence(book, corner)
+    assert ev["across_request_std_per_factor"][0] == pytest.approx(0.0, abs=1e-12)
+    assert ev["across_request_std_per_factor"][1] > 0.0
+    assert ev["n_common_mode_factors"] == 1
+    assert 0.0 < ev["common_mode_share"] < 1.0
+    # ⛔ on a set where nothing is pinned, nothing is common mode
+    assert factor_evidence(book, Y[:64])["n_common_mode_factors"] == 0
+
+
+def test_code_overlap_counts_TUPLES_not_rows():
+    a = np.array([[1, 2], [1, 2], [3, 4]])
+    b = np.array([[3, 4], [5, 6]])
+    ov = code_overlap(a, b)
+    assert ov["n_distinct_a"] == 2 and ov["n_distinct_b"] == 2
+    assert ov["n_intersection"] == 1
+    assert ov["fraction_of_b_in_a"] == pytest.approx(0.5)
+
+
+def test_distinct_codes_is_over_the_WHOLE_tuple():
+    c = np.array([[1, 1], [1, 2], [1, 1]])
+    assert distinct_codes(c) == 2
+    assert distinct_codes(np.array([[[1, 2], [3, 4]], [[1, 2], [3, 5]]])) == 2
+
+
+def test_temper_posterior_renormalises_and_refuses_nonsense():
+    P = np.asarray(np.random.default_rng(0).dirichlet(np.ones(6), size=(5, 3)))
+    Q = temper_posterior(P, 0.3)
+    assert np.allclose(Q.sum(-1), 1.0)
+    assert np.array_equal(np.argmax(Q, -1), np.argmax(P, -1))
+    with pytest.raises(ValueError):
+        temper_posterior(P, 0.0)
+
+
+def test_config_key_roundtrips():
+    for cc in ({"rule": "argmax", "tau": 1.0, "margin": 0.0, "k": 1},
+               {"rule": "topk", "tau": 0.5, "margin": 0.0, "k": 4},
+               {"rule": "margin", "tau": 2.0, "margin": 0.25, "k": 1}):
+        assert parse_config_key(config_key(cc)) == cc
+    with pytest.raises(ValueError):
+        parse_config_key("nonsense|tau=1")
+
+
+def test_factor_leverage_separates_OUTVOTED_from_ABSENT():
+    """⭐⭐ The diagnosis instrument, shown to distinguish the two diseases.
+
+    A factor whose conditionals are flat contributes nothing and can reach exactly
+    one code on its own; a factor with real conditionals reaches several.  ⛔ Only
+    this comparison tells "the address book never learned it" apart from "the other
+    factors outvote it", and they have completely different fixes.
+    """
+    from chlu.core.gen_compose import factor_leverage
+
+    rng = np.random.default_rng(0)
+    n, k, m = 600, 4, 8
+    cards = (4, 3)
+    Y = np.stack([rng.integers(0, c, size=n) for c in cards], axis=1)
+    # factor 0 determines every well's code; factor 1 is independent noise
+    codes = np.stack([(Y[:, 0] * 2 + j) % m for j in range(k)], axis=1).astype(np.int64)
+    book = fit_address_book(codes, Y, cards)
+    lev = factor_leverage(book, Y[:64])["per_factor"]
+    assert lev[0]["code_flip_rate"] > 0.9
+    assert lev[0]["n_codes_from_factor_alone"] == 4
+    assert lev[1]["code_flip_rate"] == pytest.approx(0.0)
+    assert lev[1]["n_codes_from_factor_alone"] == 1
