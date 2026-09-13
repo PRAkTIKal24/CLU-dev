@@ -230,7 +230,11 @@ def _manifest_with(arm_balacc: dict) -> dict:
 
 def test_regression_check_FLAGS_a_weakened_rival():
     cfg = GenCellConfig()
-    man = _manifest_with({"knn_proto": 0.70, "lace": 0.68, "clu": 0.6609848484848485})
+    # ⛔ the bit-identity leg reads the CONSTANT, ⛔ never a literal retyped here: a
+    # hand-typed reference is exactly how the shipped constants were wrong the first
+    # time (they were transcribed from a rendered 4-dp table, not from disk).
+    man = _manifest_with({"knn_proto": 0.70, "lace": 0.68,
+                          "clu": cfg.clu_probe_reference_per_seed[0]})
     out = regression_check(man, cfg, 0)
     assert out["knn_proto"]["regressed"] is True          # 0.876 -> 0.70
     assert out["lace"]["regressed"] is False              # within tolerance of 0.7077
@@ -411,3 +415,16 @@ def test_the_module_refuses_another_stages_name():
     assert "compose" in NOT_MINE and "certificate" in NOT_MINE
     assert main(["--stage", "certificate"]) == 2
     assert set(STAGES) == {"cell", "aggregate"}
+
+
+def test_the_reference_constants_carry_full_double_precision():
+    """⚠ A reference constant transcribed from a 4-dp table cannot support a
+    bit-identity claim.  ⭐ These came from the peers' manifests, and the test pins
+    that they are NOT round 4-dp numbers."""
+    c = GenCellConfig()
+    for name in ("clu_probe_reference_per_seed", "knn_proto_probe_reference_per_seed",
+                 "lace_ode_probe_reference_per_seed"):
+        vals = getattr(c, name)
+        assert len(vals) == 3
+        for v in vals:
+            assert abs(v - round(v, 4)) > 1e-9, f"{name}: {v} looks like a 4-dp figure"

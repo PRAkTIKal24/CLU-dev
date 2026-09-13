@@ -5168,17 +5168,25 @@ class GenCellConfig:
     sampler_noise_seed: int = 0
 
     # --- regression guards against the published numbers (⛔ never-weaken-a-rival) ---
-    #: ``gen-read-compose`` §4, full precision — the CLU arm must reproduce these.
+    #: ⭐ **Transcribed from DISK, not from a report's 4-dp figures** —
+    #: ``gen-read-compose/runs/shapes3d_recon/seed_*/compose_manifest.json →
+    #: arms.read.in_corner_discrimination.balanced_accuracy``.  ⚠ My first version
+    #: guessed the last digits from the report's "0.6809 / 0.6858" and the measured
+    #: values then differed in the 4th decimal for a reason that was **mine, not the
+    #: run's** — the same class of error ``gen-external-classifier`` §11.4 flagged.
+    #: ⛔ Never derive a reference constant from a rendered table.
     clu_probe_reference_per_seed: List[float] = field(
-        default_factory=lambda: [0.6609848484848485, 0.6808923220973783, 0.6857638888888888]
+        default_factory=lambda: [0.6609848484848484, 0.6809045226130653, 0.6858249581239531]
     )
-    #: ``gen-arms-a7-wiring`` — ``knn_proto`` in-corner balacc, byte-invariant.
+    #: ``gen-arms-a7-wiring/runs/deployed_524288/seed_*/baselines_manifest.json →
+    #: arms.knn.variants.knn_proto`` — full precision from disk (byte-invariant, P5).
     knn_proto_probe_reference_per_seed: List[float] = field(
-        default_factory=lambda: [0.8762626262626263, 0.8919523099850969, 0.8969907407407407]
+        default_factory=lambda: [0.8762626262626263, 0.8919597989949748, 0.8969849246231156]
     )
-    #: ``gen-arms-a7-wiring`` — LACE ``ode``, the published composition row.
+    #: ``gen-arms-a7-wiring/runs/historical_688128/seed_*/baselines_manifest.json →
+    #: arms.lace.samplers.ode`` — the published composition row, from disk.
     lace_ode_probe_reference_per_seed: List[float] = field(
-        default_factory=lambda: [0.7077020202020202, 0.6732190760059612, 0.6581790123456791]
+        default_factory=lambda: [0.7077020202020202, 0.6731574539363484, 0.6582216638749302]
     )
     #: A rival landing more than this BELOW its published number is a regression and
     #: is reported as one, ⛔ never quietly absorbed into "sampler noise".
