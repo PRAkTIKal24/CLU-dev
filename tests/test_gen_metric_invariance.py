@@ -56,6 +56,17 @@ def _synthetic_codes(n=4096, k=5, m=64, seed=0):
     return codes, labels
 
 
+class _Cfg:
+    """A 40-step store fit — enough to exercise the optimiser, not the science."""
+
+    train_steps = 40
+    train_batch = 64
+    train_lr = 3e-3
+    commitment_beta = 0.25
+    tau_start = 1.0
+    tau_end = 0.1
+
+
 # ---------------------------------------------------------------------------
 # leg 1a — relabelling
 # ---------------------------------------------------------------------------
@@ -342,3 +353,36 @@ def test_class_count_restriction_accepts_an_explicit_value_set():
     assert res["kept_values"]["orientation"] == realised
     assert res["realised_classes_restricted"]["orientation"] == len(realised)
     assert 0 < res["n_kept"] < res["n_total"]
+
+
+def test_fitting_a_store_under_a_new_partition_does_not_move_the_features():
+    """⭐ The criterion says *the same features* under different partitions, so the
+    fixity of the features is part of the check, not an assumption about it.
+
+    The harness gathers ``X_store`` once per (configuration, seed) cell and re-binds
+    nothing between partitions; this asserts the other half — that the store fit
+    itself does not write into the array it is handed.  If it did, every partition
+    after the first would be scoring different features and the whole check is void.
+    """
+    import hashlib
+
+    import jax
+
+    from chlu.core.gen_store import init_store, train_store, well_channels_from_labels
+
+    def sha(a):
+        return hashlib.sha256(np.ascontiguousarray(a).tobytes()).hexdigest()
+
+    rng = np.random.default_rng(3)
+    d = 24
+    X = rng.normal(size=(256, d)).astype(np.float32)
+    before = sha(X)
+    digests = []
+    # two DIFFERENT partitions of the same coordinates, same features
+    for labels in (np.arange(d) % 3, np.sort(np.arange(d) % 3)):
+        wc = well_channels_from_labels(np.asarray(labels, np.int64), 3)
+        key = jax.random.PRNGKey(0)
+        st = init_store(X, wc, 8, (d,), key, seed=0)
+        train_store(st, X, _Cfg, key)
+        digests.append(sha(X))
+    assert digests == [before, before], "the store fit moved the features"
