@@ -4010,6 +4010,13 @@ class CHLUConfig:
         default_factory=lambda: GenClassifierConfig()
     )
     # --- END gen-external-classifier ---
+    # --- BEGIN gen-bridge-dsprites (additive; the SECOND dataset) ---
+    # ⭐ Same lazy pattern, same reason: ``GenBridgeDspritesConfig`` is defined at
+    # the END of this file (the shared append anchor for the concurrent gen spokes).
+    gen_bridge_dsprites: "GenBridgeDspritesConfig" = field(
+        default_factory=lambda: GenBridgeDspritesConfig()
+    )
+    # --- END gen-bridge-dsprites ---
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -4276,6 +4283,13 @@ def load_config(path: Path) -> CHLUConfig:
             **filter_valid_fields(GenClassifierConfig, data.get("gen_classifier", {}))
         ),
         # --- END gen-external-classifier ---
+        # --- BEGIN gen-bridge-dsprites (additive; the SECOND dataset) ---
+        gen_bridge_dsprites=GenBridgeDspritesConfig(
+            **filter_valid_fields(
+                GenBridgeDspritesConfig, data.get("gen_bridge_dsprites", {})
+            )
+        ),
+        # --- END gen-bridge-dsprites ---
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -4352,6 +4366,9 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         # --- BEGIN gen-external-classifier (additive; R29 pivot item 2) ---
         "gen_classifier": asdict(config.gen_classifier),
         # --- END gen-external-classifier ---
+        # --- BEGIN gen-bridge-dsprites (additive; the SECOND dataset) ---
+        "gen_bridge_dsprites": asdict(config.gen_bridge_dsprites),
+        # --- END gen-bridge-dsprites ---
         "project": asdict(config.project),
     }
 
@@ -4986,3 +5003,74 @@ def gen_navigate_config(config: Optional["CHLUConfig"] = None, **overrides) -> G
             setattr(cfg, k, v)
     return cfg
 # --- END gen-navigation -----------------------------------------------------
+
+
+# --- BEGIN gen-bridge-dsprites (additive; the SECOND dataset) ----------------
+@dataclass
+class GenBridgeDspritesConfig:
+    """⭐ The dSprites profile for the bridge + the R3 decoder-ceiling gate on it.
+
+    Backs ``chlu.experiments.exp_gen_bridge --dataset dsprites`` and its
+    ``--stage discrimination``.  ⛔ **Nothing here is read on the Shapes3D path**:
+    :func:`chlu.experiments.exp_gen_bridge.apply_dsprites_profile` is called only
+    when ``dataset == "dsprites"``, and every Shapes3D default in
+    :class:`GenBridgeConfig` is left exactly as shipped.
+
+    ⚠ **Why a profile exists at all.** ``GenBridgeConfig.dec_recipe`` still
+    defaults to ``"baseline"`` — the recipe that **FAILED** the Shapes3D gate
+    (``shape`` 0.5926, ratio 0.653; R16) and was superseded by
+    ``"v1_capacity_schedule"`` (0.9398, ratio 0.966; R19.1/R20).  A dSprites run
+    that inherited the default would look entirely normal in the logs and be
+    **void**.  So the winning recipe is pinned here, applied explicitly, and
+    **asserted per seed against the frozen decoder's manifest**.
+    """
+
+    # --- the decoder recipe (⛔ asserted, never assumed) ---
+    #: ⭐ R19.1's winner.  ⛔ ``"baseline"`` is the recipe that failed the gate.
+    dec_recipe: str = "v1_capacity_schedule"
+    #: ⚠ Quick mode must NOT pull in the recipe's 1800-step schedule (a smoke run
+    #: that takes 1.5 h is not a smoke run).  A quick run is void either way.
+    quick_dec_recipe: str = "baseline"
+    #: Expected recipe name in ``bridge_manifest.json``; a mismatch raises.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+
+    # --- HDF5 read geometry ---
+    #: ⭐ The dSprites HDF5 ``imgs`` dataset is chunked ``(23040, 2, 4)`` — i.e.
+    #: every chunk spans 23,040 *images*.  Reading in 8,192-row blocks (the
+    #: Shapes3D default, whose chunks are ``(15000, 4, 4, 1)``) decompresses each
+    #: chunk up to three times.  ⛔ Read geometry only: the cached features are
+    #: bit-identical either way.
+    cache_block: int = 23040
+
+    # --- ⭐ the in-corner discrimination read (R20's metric, UNCHANGED) ---
+    #: The only genuinely compositional factor: the held-out cell pins it to one
+    #: value (``shape`` class 1 = ellipse), exactly as Montero's Shapes3D cell
+    #: pins ``shape == cylinder``.
+    gate_factor: str = "shape"
+    #: Cap on the held-out positives scored (``0``/``None`` -> all 6,292).
+    max_positives: int = 6292
+    #: Cap on the matched-seen negatives (realised corner holds 12,584: 6,292
+    #: squares + 6,292 hearts).  Seeded subsample; the realised count is reported.
+    max_negatives: int = 4096
+    #: Cap on the seen-normaliser positives (realised pool 22,748 before the
+    #: fitted rows are removed).
+    max_seen: int = 4096
+    #: ⛔ Below this many negatives a balanced accuracy is not a measurement.
+    min_negatives: int = 20
+    #: Floor on the ratio (held-out / seen normaliser) of the balanced metric.
+    disc_floor: float = 0.8
+    #: Absolute floor on the balanced metric itself (0.5 is chance).
+    disc_abs_floor: float = 0.75
+    #: Also probe the REAL images of every population — the instrument row.
+    #: ⛔ If the probe cannot read ``shape`` off real dSprites images, no decoded
+    #: number below it means anything.
+    real_instrument: bool = True
+    #: Batch for the frozen-encoder side buffer and for decode/probe.
+    eval_batch: int = 256
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
+    quick_max_positives: int = 64
+    quick_max_negatives: int = 64
+    quick_max_seen: int = 64
+# --- END gen-bridge-dsprites ------------------------------------------------
