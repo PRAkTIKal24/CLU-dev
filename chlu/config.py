@@ -3907,6 +3907,13 @@ class CHLUConfig:
         default_factory=lambda: GenBaselinesConfig()
     )
     # --- END gen-baselines ---
+    # --- BEGIN gen-read-compose (additive; R26 ruling 3) ---
+    # ⭐ Same lazy pattern, same reason: ``GenComposeConfig`` is defined at the END
+    # of this file (the shared append anchor for the concurrent gen spokes).
+    gen_compose: "GenComposeConfig" = field(
+        default_factory=lambda: GenComposeConfig()
+    )
+    # --- END gen-read-compose ---
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -4157,6 +4164,11 @@ def load_config(path: Path) -> CHLUConfig:
             **filter_valid_fields(GenBaselinesConfig, data.get("gen_baselines", {}))
         ),
         # --- END gen-baselines ---
+        # --- BEGIN gen-read-compose (additive; R26 ruling 3) ---
+        gen_compose=GenComposeConfig(
+            **filter_valid_fields(GenComposeConfig, data.get("gen_compose", {}))
+        ),
+        # --- END gen-read-compose ---
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -4225,6 +4237,9 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         # --- BEGIN gen-baselines (additive) ---
         "gen_baselines": asdict(config.gen_baselines),
         # --- END gen-baselines ---
+        # --- BEGIN gen-read-compose (additive; R26 ruling 3) ---
+        "gen_compose": asdict(config.gen_compose),
+        # --- END gen-read-compose ---
         "project": asdict(config.project),
     }
 
@@ -4393,3 +4408,118 @@ class GenBaselinesConfig:
     quick_lace_sigmas: List[float] = field(default_factory=lambda: [0.1])
     quick_lace_shrinkages: List[str] = field(default_factory=lambda: ["none"])
 # --- END gen-baselines ------------------------------------------------------
+
+
+# --- BEGIN gen-read-compose (additive; owner: experiment-engineer) -----------
+# ⭐ Appended at the END of the file, behind ``gen-baselines``, for the same
+# reason: several gen spokes extend this file concurrently and a shared anchor at
+# the tail is the only one that merges cleanly.  The field on ``CHLUConfig`` uses a
+# **string annotation** + **lambda default_factory** so neither resolves before the
+# module is fully loaded.
+# ⛔ Nothing above this line was modified except the three house wiring sites
+# (the ``CHLUConfig`` field, ``load_config``, ``save_config``).
+@dataclass
+class GenComposeConfig:
+    """⭐ Composition through the READ: ``request → code → frozen decoder → probe``.
+
+    Backs ``chlu exp-gen-compose`` and ``chlu.experiments.exp_gen_compose``.
+
+    ⭐ **R26 ruling 3.**  Conditional dreaming is **dropped** as the composition
+    mechanism (its falsifier fired; steering-attributable ``+0.0015 ± 0.0204``).
+    Composition is the **k-particle launch read** over the requested modes, then
+    decode.  ⛔ No landscape, no rollout, no clamp-and-relax, and the inter-well
+    coupling field is neither fitted nor deployed — so the deployed store is
+    **524,288 B**, ⛔ not ``gen-baselines``' 688,128 B (see
+    :attr:`expect_deployed_store_bytes`).
+
+    ⛔ **The standing trap.** :attr:`GenBridgeConfig.dec_recipe` still defaults to
+    ``"baseline"`` — the decoder that **FAILED** the gate (0.7191, 0/3 seeds).  The
+    winner is ``v1_capacity_schedule`` (0.9414, 3/3).  A run through the baseline
+    looks entirely normal in the logs and is **void**, so this config selects the
+    winner explicitly and the run asserts the decoder **parameter hash** and the
+    **recipe name** before recording a number.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    #: ⭐ Four arms (R27's amendment added ``clu_wide``): the 30-bit ``read``, the
+    #: composed-mode ``clu_wide``, and the two laundering controls ``store_removed``
+    #: (store ablated) and ``proto`` (no store at all).
+    arms: List[str] = field(
+        default_factory=lambda: ["read", "clu_wide", "store_removed", "proto"]
+    )
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- frozen artifacts (⛔ every one is LOADED here, never fitted) ---
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: ``None`` -> ``$CHLU_CLAUDE_ROOT`` else ``<repo>/.claude``.
+    claude_root: Optional[str] = None
+    #: ``gen-store-grouping``'s pinned plan.  ⛔ ``K``/``n_modes``/``D``/``store_bytes``
+    #: are portable; the ``labels`` vector indexes ONE seed's encoder channels and is
+    #: re-derived per seed (R26.5).
+    store_plan: Optional[str] = None
+    #: ``"winner"`` (⭐ gen-decoder-lift's V1) | ``"bridge"`` (⛔ the SUPERSEDED baseline).
+    decoder_source: str = "winner"
+    #: ``None`` -> ``<claude_root>/outputs/gen-decoder-lift/winner``.
+    winner_root: Optional[str] = None
+    winner_decoder_pattern: str = "decoder_v1_s{seed}.pkl"
+    #: ⛔ Asserted, never assumed: a run decoded through ``"baseline"`` is void.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+    verify_cache_checksum: bool = True
+    #: Rows per on-the-fly encoding chunk when the frozen cache does not cover a row
+    #: (seeds 1/2 were written at ``scope="used"``, 9,288 rows, and contain **none**
+    #: of the matched-seen control rows).
+    encode_chunk: int = 16384
+
+    # --- the store (⭐ same procedure as gen-store-grouping / gen-dream-sampler) ---
+    #: ``"per_seed"`` re-derives the grouping on this seed's own channels at the
+    #: plan's ``K``; ⛔ ``"plan"`` applies the plan's label vector verbatim, which on
+    #: any seed but its own is a size-matched RANDOM partition (R26.5).
+    grouping_source: str = "per_seed"
+    use_store_checkpoint: bool = True
+    #: Laplace smoothing for the request-addressing head.
+    address_smoothing: float = 1.0
+    #: ``zero`` | ``mean`` | ``scramble``.  ⭐ ``mean`` is the fairest ablation: the
+    #: read stays on-manifold and correctly scaled while carrying zero information.
+    store_removed_delete_mode: str = "mean"
+
+    # --- evaluation ---
+    #: A-split requests scored per seed (B is the full 72-row held-out cell and the
+    #: matched-seen negatives are whatever the corner realises — ⛔ neither is capped).
+    n_eval_a: int = 512
+    eval_batch: int = 256
+    #: ⭐ R26 standing rule (third strike): the metric invariance check runs BEFORE
+    #: any arm is scored — same features, different partition, same value.
+    invariance_neg_repeats: int = 2
+    invariance_subsample_frac: float = 0.5
+    invariance_seed: int = 0
+
+    # --- declared reference rows (⛔ quoted with provenance, never re-measured) ---
+    #: R22/R23.5: the in-corner STORE ceiling, companion to the decoder ceiling.
+    store_ceiling_balacc: float = 0.6866
+    #: R27: the byte-matched prototype baseline kill rule (ii) reads.
+    knn_proto_reference_balacc: float = 0.8884
+    #: R27: the channel-matched kNN, near chance — the bits-efficiency companion.
+    knn_channel_matched_reference_balacc: float = 0.5206
+    #: ⭐ The deployed store, coupling EXCLUDED (R26).  ⛔ Do not inherit 688,128.
+    expect_deployed_store_bytes: Optional[int] = 524288
+
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_eval_a: int = 64
+    quick_n_store_train: int = 2048
+    quick_store_train_steps: int = 30
+    #: ⚠ ``"plan"`` in quick mode **on purpose**: the per-seed re-derivation is
+    #: asserted bit-identical to ``store_plan.json`` on the seed whose encoder wrote
+    #: it, and a 2,048-row smoke subsample cannot reproduce a grouping clustered on
+    #: 16,384 rows — the assertion would fire on plumbing, not on a defect.
+    #: ⛔ A quick run's numbers are never reported, so the verbatim labels are safe
+    #: here and ⛔ nowhere else (R26.5).
+    quick_grouping_source: str = "plan"
+    quick_arms: List[str] = field(
+        default_factory=lambda: ["read", "clu_wide", "store_removed", "proto"]
+    )
+# --- END gen-read-compose ---------------------------------------------------
