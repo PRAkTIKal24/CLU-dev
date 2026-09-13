@@ -470,3 +470,390 @@ def metric_invariance_check(
             "for the same features under a different partition is not used."
         ),
     }
+
+
+# ---------------------------------------------------------------------------
+# 6. ⭐ COMMITMENT — how the posterior becomes an INTEGER CODE (R29 pivot item 1)
+# ---------------------------------------------------------------------------
+#
+# ⭐ THE MEASUREMENT THIS SECTION EXISTS FOR.  `gen-read-compose` measured that the
+# 72 held-out (B) requests collapse onto **9** distinct code configurations, and
+# R30 then found from disk that ~198 **matched-seen** requests in the same colour
+# corner collapse at the *same* rate (≈0.14) while 512 requests spread over the
+# factor space do not collapse at all (≈0.97).  ⭐⭐ **The corner collapses, not the
+# hold-out** — so "seen vs unseen" is the wrong axis, and **every commitment number
+# below carries its MS companion**: a knob that lifts B while MS stays flat has
+# found a B-specific artefact, not a fix.
+#
+# ⛔ The commitment is the ONLY place the posterior becomes an integer, so it is the
+# only place a stopping rule, a multiplicity or a launch temperature can act.  The
+# posterior itself is `address_requests`' naive-Bayes sum and is **upstream** of
+# everything here: :func:`factor_evidence` exists so a report can say whether the
+# collapse is the argmax's fault (fixable here) or the posterior's (not).
+#
+# ⛔ Nothing in this section takes a feature tensor.  The weights of every rule are
+# a function of (request, address book) alone, exactly as `assert_request_only`
+# requires, and the pure-pointer rules are read through the **shipped**
+# `read_from_codes` rather than a re-implementation.
+
+#: The stopping rules / multiplicity settings the sweep ranges over.
+COMMITMENT_RULES = ("argmax", "sample", "margin", "topk")
+#: ⛔ Sentinel for a well the rule **refused to commit** (``margin`` with abstain).
+ABSTAIN = -1
+
+__all__ += [
+    "ABSTAIN",
+    "COMMITMENT_RULES",
+    "code_overlap",
+    "commit",
+    "commitment_channel",
+    "commitment_read",
+    "commitment_weights",
+    "distinct_codes",
+    "factor_evidence",
+    "factor_leverage",
+    "posterior_diagnostics",
+    "temper_posterior",
+]
+
+
+def temper_posterior(posterior: np.ndarray, tau: float = 1.0) -> np.ndarray:
+    """``P -> P^(1/tau)`` renormalised per well — the **launch temperature**.
+
+    ⚠ Applied in log space for numerical safety.  ⭐ **Note what it cannot do:**
+    ``argmax_m P_k(m)^(1/tau)`` is ``argmax_m P_k(m)`` for every ``tau > 0``, because
+    ``x -> x^(1/tau)`` is strictly increasing.  **Temperature is therefore a provable
+    no-op on the shipped (argmax) commitment** and can only act through ``sample``
+    (it reshapes the draw distribution) or ``margin`` (it rescales the top1−top2
+    gap).  The sweep measures that invariance rather than assuming it.
+    """
+    t = float(tau)
+    if not np.isfinite(t) or t <= 0.0:
+        raise ValueError(f"launch temperature must be positive and finite, got {tau!r}")
+    P = np.asarray(posterior, np.float64)
+    with np.errstate(divide="ignore"):
+        L = np.log(np.where(P > 0.0, P, 0.0)) / t
+    L = L - L.max(axis=-1, keepdims=True)
+    Q = np.exp(L)
+    Q /= Q.sum(axis=-1, keepdims=True)
+    return Q
+
+
+def distinct_codes(code: np.ndarray) -> int:
+    """Distinct code **configurations** in ``(N, K)`` or ``(N, K, k)`` codes.
+
+    ⛔ The whole tuple, never a per-well count: "nine answers to seventy-two
+    questions" is a statement about the K-tuple the decoder actually receives.
+    """
+    C = np.asarray(code, np.int64)
+    if C.size == 0:
+        return 0
+    return int(np.unique(C.reshape(C.shape[0], -1), axis=0).shape[0])
+
+
+def commit(
+    posterior: np.ndarray, rule: str = "argmax", tau: float = 1.0,
+    margin: float = 0.0, k: int = 1, weight: str = "posterior", seed: int = 0,
+) -> dict:
+    """``(N, K, M) posterior -> the committed code``, under one of four rules.
+
+    ``argmax``  the shipped k-particle launch read: one mode per well, the
+                request's most probable.  ⛔ Invariant to ``tau`` by construction.
+    ``sample``  draw the well's mode from the tempered posterior (seeded).
+    ``margin``  commit the argmax **only** where ``p1 − p2 >= margin``; otherwise
+                **abstain** (:data:`ABSTAIN`), which the read fills with the well's
+                mean mode — an on-manifold "I was not asked sharply enough".
+    ``topk``    **multiplicity**: launch ``k`` particles per well.  ⛔ This widens the
+                store→decoder channel beyond R20's declared 30-bit design constant
+                and :func:`commitment_channel` reports the realised width.
+
+    Returns the code (``(N, K)`` for k=1, ``(N, K, k)`` sorted ascending for k>1, so
+    the distinct count is over *sets* and not over an arbitrary ordering), the
+    per-well weights the read consumes, and the sweep's statistics.
+    """
+    P = np.asarray(posterior, np.float64)
+    if P.ndim != 3:
+        raise ValueError(f"posterior must be (N, K, M), got {P.shape}")
+    n, K, M = P.shape
+    Q = temper_posterior(P, tau)
+    order = np.argsort(-Q, axis=-1)
+    top1 = order[..., 0]
+    p1 = np.take_along_axis(Q, order[..., :1], axis=-1)[..., 0]
+    p2 = (np.take_along_axis(Q, order[..., 1:2], axis=-1)[..., 0] if M > 1
+          else np.zeros_like(p1))
+    W = np.zeros((n, K, M), np.float64)
+    abstained = np.zeros((n, K), bool)
+    kk = 1
+
+    if rule == "argmax":
+        code = top1.astype(np.int64)
+        np.put_along_axis(W, code[..., None], 1.0, axis=-1)
+    elif rule == "sample":
+        rng = np.random.default_rng(int(seed))
+        cdf = np.cumsum(Q, axis=-1)
+        cdf /= cdf[..., -1:]
+        u = rng.random((n, K, 1))
+        code = np.argmax(u < cdf, axis=-1).astype(np.int64)
+        np.put_along_axis(W, code[..., None], 1.0, axis=-1)
+    elif rule == "margin":
+        keep = (p1 - p2) >= float(margin)
+        code = np.where(keep, top1, ABSTAIN).astype(np.int64)
+        abstained = ~keep
+        np.put_along_axis(W, top1[..., None], 1.0, axis=-1)
+        # ⭐ an abstained well emits the store's *mean* mode for that well: uniform
+        # weights.  ⛔ Not zeros — a zeroed well is off-manifold and would score the
+        # deletion control, not the refusal.
+        W[abstained] = 1.0 / float(M)
+    elif rule == "topk":
+        kk = int(max(1, min(int(k), M)))
+        sel = np.sort(order[..., :kk], axis=-1)
+        # ⛔ k=1 must be byte-for-byte the shipped argmax, INCLUDING the code's shape,
+        # so it still reads through gen_store.read_from_codes.
+        code = sel[..., 0].astype(np.int64) if kk == 1 else sel.astype(np.int64)
+        w = np.take_along_axis(Q, sel, axis=-1)
+        if str(weight) == "uniform":
+            w = np.ones_like(w)
+        s = w.sum(axis=-1, keepdims=True)
+        np.put_along_axis(W, sel, w / np.where(s > 0, s, 1.0), axis=-1)
+    else:
+        raise ValueError(f"rule must be one of {COMMITMENT_RULES}, got {rule!r}")
+
+    return {
+        "rule": str(rule), "tau": float(tau), "margin": float(margin),
+        "k": int(kk), "weight": str(weight), "seed": int(seed),
+        "code": code,
+        "weights": W.astype(np.float32),
+        "pure_pointer": bool(kk == 1 and not abstained.any()),
+        "abstained": abstained,
+        "abstain_rate": float(abstained.mean()) if abstained.size else 0.0,
+        "n_distinct": distinct_codes(code),
+        "n_requests": int(n),
+        "distinct_fraction": float(distinct_codes(code) / n) if n else float("nan"),
+        "mean_top1": float(p1.mean()) if p1.size else float("nan"),
+        "mean_margin": float((p1 - p2).mean()) if p1.size else float("nan"),
+    }
+
+
+def commitment_weights(commitment: dict) -> np.ndarray:
+    """``(N, K, M)`` per-well weights the read consumes. ⛔ Request-derived, always."""
+    return np.asarray(commitment["weights"], np.float32)
+
+
+def commitment_read(store: GenStore, commitment: dict) -> np.ndarray:
+    """The arm's feature vector for a committed code.
+
+    ⭐ **A pure-pointer commitment is routed through the SHIPPED**
+    :func:`chlu.core.gen_store.read_from_codes` — so the shipped argmax baseline is
+    scored by exactly the function whose signature carries the no-bypass guarantee,
+    and only the rules that genuinely emit more than one mode per well (``topk``,
+    an abstaining ``margin``) take the weighted path, which is
+    :func:`clu_wide_vector` and therefore also feature-free.
+    """
+    if commitment["pure_pointer"]:
+        return read_from_codes(store, np.asarray(commitment["code"], np.int64))
+    return clu_wide_vector(store, commitment_weights(commitment))
+
+
+def commitment_channel(
+    store: GenStore, commitment: dict, design_constant_bits: float = 30.0
+) -> dict:
+    """⭐ The **realised** store→decoder channel width of a commitment rule.
+
+    ⛔ R20 made ``K·log2(M) = 30`` bits a **declared design constant**: any rule whose
+    realised width exceeds it is a **declared change to the claim**, never a free
+    win, and this function is what makes that auditable rather than asserted.
+
+    * ``argmax`` / ``sample`` — one of ``M`` symbols per well ⇒ ``K·log2(M)``.
+    * ``margin`` — one of ``M+1`` symbols per well (the abstain symbol is real
+      information the decoder acts on) ⇒ ``K·log2(M+1)``.
+    * ``topk`` — one of ``C(M, k)`` **unordered** sets per well, plus ``k−1`` real
+      weights per well when the launch is posterior-weighted.
+    """
+    from math import comb, log2
+
+    K, M = int(store.n_wells), int(store.n_modes)
+    rule, k = str(commitment["rule"]), int(commitment["k"])
+    n_real = 0
+    if rule == "topk" and k > 1:
+        symbols = comb(M, k)
+        n_real = K * (k - 1) if str(commitment["weight"]) == "posterior" else 0
+    elif rule == "margin" and commitment["abstain_rate"] > 0.0:
+        symbols = M + 1
+    else:
+        symbols = M
+    bits = float(K * log2(symbols))
+    return {
+        "rule": rule, "k": k,
+        "symbols_per_well": int(symbols),
+        "pointer_bits": bits,
+        "n_real_weights": int(n_real),
+        "design_constant_bits": float(design_constant_bits),
+        "exceeds_design_constant": bool(
+            bits > float(design_constant_bits) + 1e-9 or n_real > 0
+        ),
+        "note": (
+            "⛔ R20: K*log2(M) = 30 bits is a DECLARED DESIGN CONSTANT. A realised "
+            "width above it is a declared change to the claim, not a free win."
+        ),
+    }
+
+
+def posterior_diagnostics(posterior: np.ndarray) -> dict:
+    """⭐ Leg 1: **is it the posterior or the argmax?**
+
+    ⭐ If the posterior is already degenerate (top-1 ≈ 1.0, entropy ≈ 0) then
+    temperature and stopping rule **cannot** help and the fix is upstream in
+    ``fit_address_book`` / the grouping.  This is reported per set and per seed
+    *before* any sweep, so the budget is never spent on a sweep that cannot move.
+    """
+    P = np.asarray(posterior, np.float64)
+    if P.size == 0:
+        return {"n": 0}
+    srt = np.sort(P, axis=-1)[..., ::-1]
+    p1, p2 = srt[..., 0], srt[..., 1] if P.shape[-1] > 1 else np.zeros_like(srt[..., 0])
+    ent = -(P * np.log2(np.where(P > 0, P, 1.0))).sum(axis=-1)
+    return {
+        "n": int(P.shape[0]), "K": int(P.shape[1]), "M": int(P.shape[2]),
+        "mean_top1_confidence": float(p1.mean()),
+        "mean_top2": float(p2.mean()),
+        "mean_top1_minus_top2_margin": float((p1 - p2).mean()),
+        "median_top1_minus_top2_margin": float(np.median(p1 - p2)),
+        "mean_entropy_bits_per_well": float(ent.mean()),
+        "mean_entropy_bits_per_request": float(ent.sum(axis=1).mean()),
+        "max_entropy_bits_per_well": float(np.log2(P.shape[2])),
+        "frac_wells_top1_above_0p99": float((p1 > 0.99).mean()),
+        "frac_wells_margin_below_0p05": float(((p1 - p2) < 0.05).mean()),
+        "per_well_mean_top1": [float(x) for x in p1.mean(axis=0)],
+        "per_well_mean_entropy_bits": [float(x) for x in ent.mean(axis=0)],
+        "degenerate": bool(p1.mean() > 0.99 and ent.mean() < 0.05),
+        "note": (
+            "⭐ degenerate=True ⇒ temperature and stopping rule CANNOT move the code "
+            "and the fix is upstream of the commitment (fit_address_book/grouping)."
+        ),
+    }
+
+
+def factor_evidence(book: AddressBook, requests: np.ndarray) -> dict:
+    """⭐ The task's **mechanical hypothesis**, made falsifiable.
+
+    ``address_requests`` builds ``s_k(m) = log P(m) + sum_f [log P(m|f=v_f) − log P(m)]``.
+    On a **colour corner** every request carries the same three hue values, so those
+    three factors contribute an **identical** delta to every request in the set and
+    can only shift the argmax *away* from the factors that actually vary.  This
+    function measures, per factor:
+
+    * ``mean_abs_delta`` — how much evidence the factor supplies (its share of the
+      total), and
+    * ``across_request_std`` — how much of that evidence **varies between requests**;
+      ⭐ a factor with a large share and **zero** variance is pure common-mode and is
+      exactly what drowns an argmax.
+
+    ⛔ Diagnostic only: no arm consumes it, and it takes no feature tensor.
+    """
+    R = np.asarray(requests, np.int64)
+    lp = np.asarray(book.log_prior, np.float64)          # (K, M)
+    shares, stds, names = [], [], []
+    deltas = []
+    for f, lc in enumerate(book.log_cond):
+        lcf = np.asarray(lc, np.float64)                 # (V, K, M)
+        d = np.zeros((R.shape[0],) + lp.shape)
+        asked = R[:, f] >= 0
+        if asked.any():
+            d[asked] = lcf[R[asked, f]] - lp[None, :, :]
+        deltas.append(d)
+        shares.append(float(np.abs(d).mean()))
+        stds.append(float(d.std(axis=0).mean()))
+        names.append(int(f))
+    tot = float(np.sum(shares)) or 1.0
+    D = np.stack(deltas, axis=0)                         # (F, N, K, M)
+    return {
+        "n_factors": len(shares),
+        "mean_abs_delta_per_factor": shares,
+        "evidence_share_per_factor": [float(s / tot) for s in shares],
+        "across_request_std_per_factor": stds,
+        "common_mode_share": float(
+            sum(s for s, sd in zip(shares, stds, strict=True) if sd < 1e-9) / tot
+        ),
+        "n_common_mode_factors": int(sum(1 for sd in stds if sd < 1e-9)),
+        "total_abs_evidence": tot,
+        "mean_abs_prior": float(np.abs(lp).mean()),
+        "mean_abs_total_delta": float(np.abs(D.sum(axis=0)).mean()),
+        "note": (
+            "⭐ a factor with a large evidence share and ~zero across-request std is "
+            "COMMON MODE: it cannot distinguish two requests in the set, but it can "
+            "and does dominate the argmax over modes."
+        ),
+    }
+
+
+def code_overlap(codes_a: np.ndarray, codes_b: np.ndarray) -> dict:
+    """⭐ R29 Q2's owed number: do B's codes coincide with the SEEN sets' codes?
+
+    Set intersection of the **distinct code tuples**, both directions reported,
+    because ``|B ∩ A| = 9`` means something very different when ``|A| = 495``.
+    """
+    A = np.unique(np.asarray(codes_a, np.int64).reshape(len(codes_a), -1), axis=0)
+    B = np.unique(np.asarray(codes_b, np.int64).reshape(len(codes_b), -1), axis=0)
+    sa = {tuple(int(x) for x in r) for r in A}
+    sb = {tuple(int(x) for x in r) for r in B}
+    inter = sa & sb
+    return {
+        "n_distinct_a": len(sa), "n_distinct_b": len(sb),
+        "n_intersection": len(inter),
+        "fraction_of_b_in_a": float(len(inter) / len(sb)) if sb else float("nan"),
+        "fraction_of_a_in_b": float(len(inter) / len(sa)) if sa else float("nan"),
+    }
+
+
+def factor_leverage(book: AddressBook, requests: np.ndarray) -> dict:
+    """⭐⭐ **Which factor actually moves the commitment?** — the diagnosis, per factor.
+
+    Two counterfactuals on the **request** (⛔ never on features), both read through
+    the shipped ``argmax`` commitment:
+
+    * ``code_flip_rate`` — edit one factor of a request to another value the set
+      realises; how often does the committed K-tuple change at all?  ⭐ A factor
+      with a large evidence share and a **zero** flip rate supplies evidence the
+      argmax never acts on: it is **outvoted**, which is a different disease from
+      being absent, and only this comparison separates the two.
+    * ``n_codes_from_factor_alone`` — hold every other factor at the set's first
+      request and sweep this factor: how many distinct codes can it reach by
+      itself?
+
+    ⛔ Diagnostic only; no arm consumes it.
+    """
+    R = np.asarray(requests, np.int64)
+    base = commit(request_posterior(book, R), "argmax")["code"]
+    out = []
+    for f in range(R.shape[1]):
+        vals = np.unique(R[:, f])
+        vals = vals[vals >= 0]
+        flips, moved = [], []
+        for v in vals:
+            R2 = R.copy()
+            R2[:, f] = v
+            sel = R[:, f] != v
+            if not sel.any():
+                continue
+            c2 = commit(request_posterior(book, R2), "argmax")["code"]
+            d = c2[sel] != base[sel]
+            flips.append(float(d.any(axis=1).mean()))
+            moved.append(float(d.sum(axis=1).mean()))
+        alone = np.repeat(R[:1], vals.size, axis=0)
+        alone[:, f] = vals
+        out.append({
+            "factor": int(f),
+            "n_values_realised": int(vals.size),
+            "code_flip_rate": float(np.mean(flips)) if flips else 0.0,
+            "mean_wells_moved": float(np.mean(moved)) if moved else 0.0,
+            "n_codes_from_factor_alone": int(
+                distinct_codes(commit(request_posterior(book, alone), "argmax")["code"])),
+        })
+    return {
+        "per_factor": out,
+        "note": (
+            "⭐ code_flip_rate ≈ 0 with a large evidence share ⇒ the factor is "
+            "OUTVOTED by the others in the naive-Bayes sum, not missing from the "
+            "address book. ⛔ The fix for that is upstream of any stopping rule."
+        ),
+    }

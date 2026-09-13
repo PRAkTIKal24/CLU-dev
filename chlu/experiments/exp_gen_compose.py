@@ -73,20 +73,30 @@ from ..config import CHLUConfig, get_default_config  # noqa: E402
 from ..core.gen_bridge import PRETEXTS, load_feature_cache, param_hash  # noqa: E402
 from ..core.gen_compose import (  # noqa: E402
     ARMS,
+    COMMITMENT_RULES,
     COMPOSITIONAL_FACTOR,
     address_book_bytes,
     assert_request_only,
     channel_ledger,
     clu_wide_vector,
     code_agreement,
+    code_overlap,
+    commit,
+    commitment_channel,
+    commitment_read,
     compose_codes,
     deployed_byte_ledger,
+    distinct_codes,
+    factor_evidence,
+    factor_leverage,
     metric_invariance_check,
+    posterior_diagnostics,
     read_compose,
     request_posterior,
     store_removed_read,
 )
 from ..core.gen_dream import (  # noqa: E402
+    AddressBook,
     assert_dream_decoder,
     fit_address_book,
     load_winner_hashes,
@@ -891,7 +901,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--dataset", default=None, choices=["shapes3d", "dsprites"])
     p.add_argument("--pretext", default=None, choices=list(PRETEXTS))
-    p.add_argument("--stage", default="compose", choices=list(STAGES) + list(NOT_MINE))
+    p.add_argument("--stage", default="compose",
+                   choices=list(STAGES) + list(COMMIT_STAGES) + list(NOT_MINE))
     p.add_argument("--arm", default=None, action="append",
                    help=f"repeatable; default: gen_compose.arms {list(ARMS)}")
     p.add_argument("--seed", type=int, default=None, action="append", help="repeatable")
@@ -924,7 +935,14 @@ def _config_from_args(args) -> CHLUConfig:
 
 
 def main(argv=None) -> int:
-    args = build_arg_parser().parse_args(argv)
+    av = list(sys.argv[1:] if argv is None else argv)
+    # ⭐ the commitment stages take their own flags (--config is a shortlist entry),
+    # so they are dispatched BEFORE the cell parser sees the command line.
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("--stage", default="compose")
+    if pre.parse_known_args(av)[0].stage in COMMIT_STAGES:
+        return main_commit(av)
+    args = build_arg_parser().parse_args(av)
     config = _config_from_args(args)
     agg = run_experiment_gen_compose(
         config=config, dataset=args.dataset, pretext=args.pretext, out_dir=args.out,
@@ -959,5 +977,506 @@ def main(argv=None) -> int:
     return 0
 
 
+
+# ---------------------------------------------------------------------------
+# 10. ⭐ THE COMMITMENT STAGE (R29 pivot item 1) — 72 requests, 9 codes, why
+# ---------------------------------------------------------------------------
+#
+# ⭐ DIAL: *commitment* — how the request's posterior over modes becomes an integer
+# code.  **Laundering control: the matched-seen (MS) corner, on every number.**
+# **Falsifies:** ≥60/72 distinct codes on B AND the store→decoder arm within seed
+# spread of ``knn_proto`` (0.8817 ± 0.0023) ⇒ PASS; anything else is a FAIL, and
+# ⛔ a fail routes to new approaches, never to abandonment or to re-tuning.
+# **Does NOT falsify:** losing to the unbounded-channel prototype arm on level
+# alone (R23.5's standing reading), or a distinct count that rises with MS — that
+# is the corner moving, which is the honest direction.
+#
+# ⛔ Two traps this stage is written around, both already paid for:
+#   1. ``dec_recipe`` defaults to ``"baseline"`` — the decoder that FAILED the gate.
+#      :func:`resolve_decoder` asserts hash **and** recipe, and it runs in **both**
+#      sub-stages, so a void run cannot look normal in the log.
+#   2. ``gen_store.soft_read`` takes FEATURES.  Every weight here comes from
+#      :func:`chlu.core.gen_compose.request_posterior` — the request — and
+#      ``assert_request_only`` is re-run on this path before any number.
+
+COMMIT_STAGES = ("commit", "score")
+
+
+def _commit_cfg(config: CHLUConfig):
+    from ..config import gen_commit_config
+
+    return gen_commit_config(config)
+
+
+def commit_out_root(config: CHLUConfig, dataset: str, pretext: str) -> Path:
+    c = _commit_cfg(config)
+    if c.out_root:
+        return Path(c.out_root).expanduser()
+    return _claude_root(config) / "outputs" / "gen-commitment-collapse"
+
+
+def _store_source(config: CHLUConfig, dataset: str, pretext: str, seed: int):
+    c = _commit_cfg(config)
+    if not c.store_checkpoint_source:
+        return None
+    p = Path(str(c.store_checkpoint_source).format(
+        dataset=dataset, pretext=pretext, seed=int(seed)))
+    return p if p.is_absolute() else _claude_root(config) / p
+
+
+def _cache_path(out_dir: Path, seed: int) -> Path:
+    return Path(out_dir) / f"commit_cache_s{seed}.npz"
+
+
+def build_commit_cache(
+    dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUConfig,
+    log: Callable = print,
+) -> dict:
+    """Everything the commitment sweep needs, **once** per seed, then cached.
+
+    ⭐ The expensive halves are the store-train feature gather (seeds 1–2 hold no
+    matched-seen row in their cache and re-encode through the frozen encoder) and
+    the per-seed grouping.  Neither depends on any knob, so they are paid once and
+    the whole sweep afterwards is ``numpy``.
+
+    ⛔ The A/B/MS **feature** tensors are deliberately NOT gathered by default: the
+    commitment path is request-only, so gathering them would cost a 32k-row
+    re-encode to produce something no arm may consume.
+    """
+    cfg = config.gen_compose
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = _cache_path(out_dir, seed)
+    bdir = bridge_dir(config, dataset, pretext, seed)
+
+    from ..core.gen_bridge import dataset_module
+
+    mod = dataset_module(dataset)
+    split, values = mod.build_split(config.gen_data.data_root)
+    grid = split.grid
+    names, cards = list(grid.names), list(grid.cardinalities)
+    rows = select_store_rows(split, config, seed)
+    n_a = int(min(int(cfg.n_eval_a), rows["eval_a"].size))
+    row_sets = {
+        "A": rows["eval_a"][:n_a],
+        "B": rows["eval_b"],
+        "MS": matched_seen_rows(dataset, split, values, rows["store_train"]),
+    }
+    lab = {k: factor_labels(grid, v) for k, v in row_sets.items()}
+
+    if path.exists():
+        z = np.load(path, allow_pickle=False)
+        book = AddressBook(z["log_prior"], [z[f"log_cond_{f}"] for f in range(len(cards))])
+        log(f"  commit cache HIT {path.name} (⭐ no feature gather, no grouping re-derive)")
+        return {"book": book, "labels_vec": z["labels_vec"], "lab": lab, "rows": rows,
+                "row_sets": row_sets, "names": names, "cards": cards, "grid": grid,
+                "bdir": bdir, "cached": True, "split": split}
+
+    with open(bdir / "bridge_manifest.json") as fh:
+        bman = json.load(fh)
+    encoder = load_model(bdir / "encoder.pkl")
+    enc_hash = param_hash(encoder)
+    if enc_hash != bman["encoder_param_hash"]:
+        raise AssertionError("encoder checkpoint does not match the bridge manifest hash")
+    crows, feats, cman = load_feature_cache(bdir, verify=bool(cfg.verify_cache_checksum))
+    if cman["encoder_param_hash"] != enc_hash:
+        raise AssertionError("the feature cache was written by a different encoder")
+    config.gen_store.encode_chunk = int(cfg.encode_chunk)
+    X_store = gather_features(dataset, config, encoder, crows, feats, cman,
+                              rows["store_train"], log=log)
+    lab_store = factor_labels(grid, rows["store_train"])
+
+    plan = load_store_plan(store_plan_path(config, dataset, pretext))
+    config.gen_dream.grouping_source = str(cfg.grouping_source)
+    labels_vec, ginfo = resolve_grouping(
+        plan, X_store, config, seed, bman["encoder_param_hash"], log=log)
+    store = load_commit_store(dataset, pretext, seed, out_dir, config, labels_vec, plan, log)
+    codes_train = address_codes(store, np.asarray(X_store, np.float32).reshape(
+        (X_store.shape[0], -1)))
+    book = fit_address_book(codes_train, lab_store, cards, float(cfg.address_smoothing))
+    payload = {"log_prior": np.asarray(book.log_prior, np.float32),
+               "labels_vec": np.asarray(labels_vec, np.int64)}
+    for f, lc in enumerate(book.log_cond):
+        payload[f"log_cond_{f}"] = np.asarray(lc, np.float32)
+    np.savez_compressed(path, **payload)
+    log(f"  commit cache WRITTEN {path.name} (grouping {ginfo['grouping_source']})")
+    return {"book": book, "labels_vec": np.asarray(labels_vec, np.int64), "lab": lab,
+            "rows": rows, "row_sets": row_sets, "names": names, "cards": cards,
+            "grid": grid, "bdir": bdir, "cached": False, "grouping": ginfo,
+            "split": split}
+
+
+def load_commit_store(dataset, pretext, seed, out_dir, config, labels_vec, plan, log=print):
+    """Load ``gen-read-compose``'s per-seed store checkpoint — ⛔ never retrain one here.
+
+    ⭐ These commitment numbers must sit on **exactly** the store R28/R29 measured,
+    otherwise a change in the distinct-code count could be the store moving rather
+    than the commitment rule.  The parameter hash is recorded in the manifest.
+    """
+    src = _store_source(config, dataset, pretext, seed)
+    if src is None or not Path(src).exists():
+        raise FileNotFoundError(
+            f"no store checkpoint at {src} — ⛔ this spoke reads gen-read-compose's "
+            "stores rather than training its own, so the commitment rule is the only "
+            "thing that changes between it and R28's numbers"
+        )
+    store = load_model(Path(src))
+    K = int(plan["K"])
+    wc = well_channels_from_labels(np.asarray(labels_vec, np.int64), K)
+    got = [len(w) for w in store.well_channels]
+    if got != [len(w) for w in wc]:
+        raise AssertionError(
+            f"the loaded store's well sizes {got} do not match the re-derived "
+            f"grouping {[len(w) for w in wc]} — ⛔ different partitions"
+        )
+    log(f"  ⭐ store loaded from {src} (hash {param_hash(store)[:16]}…, K={store.n_wells}, "
+        f"M={store.n_modes}, {store.bits_per_read:.0f} bits/read)")
+    return store
+
+
+def sweep_configs(config: CHLUConfig) -> list:
+    """The pre-registered knob grid: **stopping rule · multiplicity · temperature**."""
+    c = _commit_cfg(config)
+    out = []
+    for tau in c.taus:
+        out.append({"rule": "argmax", "tau": float(tau), "margin": 0.0, "k": 1})
+    for tau in c.taus:
+        out.append({"rule": "sample", "tau": float(tau), "margin": 0.0, "k": 1})
+    for tau in c.taus:
+        for m in c.margins:
+            out.append({"rule": "margin", "tau": float(tau), "margin": float(m), "k": 1})
+    for tau in c.taus:
+        for k in c.ks:
+            out.append({"rule": "topk", "tau": float(tau), "margin": 0.0, "k": int(k)})
+    return out
+
+
+def config_key(cc: dict) -> str:
+    return (f"{cc['rule']}|tau={float(cc['tau']):g}|margin={float(cc.get('margin', 0.0)):g}"
+            f"|k={int(cc.get('k', 1))}")
+
+
+def parse_config_key(key: str) -> dict:
+    parts = str(key).split("|")
+    out = {"rule": parts[0], "tau": 1.0, "margin": 0.0, "k": 1}
+    for p in parts[1:]:
+        if "=" not in p:
+            continue
+        a, b = p.split("=", 1)
+        out[a] = int(b) if a == "k" else float(b)
+    if out["rule"] not in COMMITMENT_RULES:
+        raise ValueError(f"rule must be one of {COMMITMENT_RULES}, got {out['rule']!r}")
+    return out
+
+
+def run_commit_seed(
+    dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUConfig,
+    log: Callable = print,
+) -> dict:
+    """Leg 1 (diagnosis) + leg 2 (the cheap sweep) + leg 4 (persist the tuples)."""
+    t0 = time.time()
+
+    def tlog(msg):
+        log(f"[{time.time() - t0:8.1f}s] {msg}")
+
+    c = _commit_cfg(config)
+    out_dir = Path(out_dir)
+    root = commit_out_root(config, dataset, pretext)
+    man_path = out_dir / f"commit_manifest_s{seed}.json"
+    if man_path.exists():
+        with open(man_path) as fh:
+            done = json.load(fh)
+        if done.get("complete"):
+            tlog(f"seed {seed}: commit manifest already complete — ⭐ skipping (resumable)")
+            return done
+
+    cache = build_commit_cache(dataset, pretext, seed, out_dir, config, log=tlog)
+    book, lab = cache["book"], cache["lab"]
+    plan = load_store_plan(store_plan_path(config, dataset, pretext))
+    store = load_commit_store(dataset, pretext, seed, out_dir, config,
+                              cache["labels_vec"], plan, tlog)
+    # ⛔ the decoder guard runs here too: a void run must not look normal in the log
+    _, dec_info, _ = resolve_decoder(config, cache["bdir"], seed, log=tlog)
+
+    req = {k: requests_from_labels(lab[k], "full", 0, int(seed)) for k in REQUEST_SETS}
+    post = {k: request_posterior(book, req[k]) for k in REQUEST_SETS}
+    req_only = assert_request_only(store, book, req["B"], decoy_features=None)
+    tlog("⭐ request-only path asserted (no feature argument on ANY arm; soft_read not imported)")
+
+    # ---- leg 1: diagnosis — is it the posterior or the argmax? ---------------
+    diag = {k: posterior_diagnostics(post[k]) for k in REQUEST_SETS}
+    for k in REQUEST_SETS:
+        d = diag[k]
+        tlog(f"  [{k}] top1={d['mean_top1_confidence']:.4f} margin(top1−top2)="
+             f"{d['mean_top1_minus_top2_margin']:.4f} entropy={d['mean_entropy_bits_per_well']:.3f}"
+             f"/{d['max_entropy_bits_per_well']:.1f} bits per well ⇒ "
+             + ("⛔ DEGENERATE (no stopping rule can move it)" if d["degenerate"]
+                else "not degenerate"))
+    evid = {k: factor_evidence(book, req[k]) for k in REQUEST_SETS}
+    lev = {k: factor_leverage(book, req[k]) for k in REQUEST_SETS}
+    for k in REQUEST_SETS:
+        tlog(f"  [{k}] ⭐ factor leverage (code flip rate | codes reachable alone): " + " ".join(
+            f"{cache['names'][r['factor']]}={r['code_flip_rate']:.2f}|{r['n_codes_from_factor_alone']}"
+            for r in lev[k]["per_factor"]))
+    # ⭐ the mechanical hypothesis, as a counterfactual: drop the colour factors
+    hue_idx = [i for i, nm in enumerate(cache["names"]) if "hue" in nm]
+    counterfactual = {}
+    for k in REQUEST_SETS:
+        r2 = np.array(req[k], np.int64)
+        r2[:, hue_idx] = -1
+        p2 = request_posterior(book, r2)
+        counterfactual[k] = {
+            "dropped_factors": [cache["names"][i] for i in hue_idx],
+            "n_distinct_argmax": distinct_codes(commit(p2, "argmax")["code"]),
+            "n_requests": int(r2.shape[0]),
+            "mean_top1_confidence": posterior_diagnostics(p2)["mean_top1_confidence"],
+        }
+    tlog("⭐ hue-dropped counterfactual (⛔ diagnostic, not an arm): " + " ".join(
+        f"{k}={counterfactual[k]['n_distinct_argmax']}/{counterfactual[k]['n_requests']}"
+        for k in REQUEST_SETS))
+
+    # ---- leg 4: persist the per-request code tuples --------------------------
+    base = {k: commit(post[k], "argmax") for k in REQUEST_SETS}
+    for k in REQUEST_SETS:
+        _write_json({
+            "set": k, "seed": int(seed), "rule": "argmax (shipped)",
+            "dataset": dataset, "pretext": pretext,
+            "n_requests": int(base[k]["n_requests"]),
+            "n_distinct_code_configs": int(base[k]["n_distinct"]),
+            "rows": [int(x) for x in cache["row_sets"][k]],
+            "factor_names": cache["names"],
+            "requests": [[int(x) for x in r] for r in req[k]],
+            "codes": [[int(x) for x in r] for r in base[k]["code"]],
+            "note": ("⭐ R29 Q2's owed artefact: the per-request integer code TUPLES, "
+                     "not just their count."),
+        }, root / f"codes_{k}_seed{seed}.json")
+    overlap = {
+        "B_in_A": code_overlap(base["A"]["code"], base["B"]["code"]),
+        "B_in_MS": code_overlap(base["MS"]["code"], base["B"]["code"]),
+        "MS_in_A": code_overlap(base["A"]["code"], base["MS"]["code"]),
+    }
+    tlog(f"⭐ |B ∩ A| = {overlap['B_in_A']['n_intersection']} of "
+         f"{overlap['B_in_A']['n_distinct_b']} B codes · |B ∩ MS| = "
+         f"{overlap['B_in_MS']['n_intersection']} of {overlap['B_in_MS']['n_distinct_b']}")
+
+    # ---- leg 2: the cheap sweep, ⛔ every row with its MS companion ----------
+    sweep = []
+    for cc in sweep_configs(config):
+        row = {"config": config_key(cc), **cc, "sets": {}}
+        for k in REQUEST_SETS:
+            draws = int(c.sample_draws) if cc["rule"] == "sample" else 1
+            ns, com = [], None
+            for d in range(draws):
+                com = commit(post[k], cc["rule"], cc["tau"], cc["margin"], cc["k"],
+                             str(c.topk_weight),
+                             seed=int(c.sample_seed) + 1000 * int(seed)
+                             + 37 * REQUEST_SETS.index(k) + d)
+                ns.append(com["n_distinct"])
+            row["sets"][k] = {
+                "n_requests": int(com["n_requests"]),
+                "n_distinct": float(np.mean(ns)),
+                "n_distinct_draws": [int(x) for x in ns],
+                "distinct_fraction": float(np.mean(ns) / com["n_requests"]),
+                "abstain_rate": com["abstain_rate"],
+                "mean_top1": com["mean_top1"],
+            }
+            if k == "B":
+                row["channel"] = commitment_channel(store, com, float(c.design_constant_bits))
+        sweep.append(row)
+    _write_json({"seed": int(seed), "dataset": dataset, "pretext": pretext,
+                 "design_constant_bits": float(c.design_constant_bits),
+                 "sweep": sweep}, out_dir / f"sweep_s{seed}.json")
+    tlog(f"⭐ sweep: {len(sweep)} configs · B distinct from "
+         f"{min(r['sets']['B']['n_distinct'] for r in sweep):.0f} to "
+         f"{max(r['sets']['B']['n_distinct'] for r in sweep):.0f} of "
+         f"{sweep[0]['sets']['B']['n_requests']}")
+
+    man = {
+        "schema": "chlu-gen-commit/1", "complete": True,
+        "dataset": dataset, "pretext": pretext, "seed": int(seed),
+        "condition": condition_of(config),
+        "dial": ("commitment — how the request's posterior over modes becomes an "
+                 "integer code (R29 pivot item 1)"),
+        "laundering_control": ("⭐ the matched-seen (MS) corner, on every number: a "
+                               "knob that lifts B while MS stays flat has found a "
+                               "B-specific artefact, not a fix (R30)"),
+        "decoder": dec_info,
+        "store_checkpoint": str(_store_source(config, dataset, pretext, seed)),
+        "store_param_hash": param_hash(store),
+        "K": int(store.n_wells), "n_modes": int(store.n_modes),
+        "bits_per_read": float(store.bits_per_read),
+        "rows": {k: int(v.size) for k, v in cache["row_sets"].items()},
+        "request_only_path": req_only,
+        "diagnosis": diag,
+        "factor_evidence": evid,
+        "factor_leverage": lev,
+        "hue_dropped_counterfactual": counterfactual,
+        "baseline_argmax_distinct": {k: int(base[k]["n_distinct"]) for k in REQUEST_SETS},
+        "code_overlap": overlap,
+        "sweep": sweep,
+        "wall_clock_s": float(time.time() - t0),
+    }
+    _write_json(man, man_path)
+    tlog(f"seed {seed} commit stage done")
+    return man
+
+
+def score_commit_seed(
+    dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUConfig,
+    shortlist: list, log: Callable = print,
+) -> dict:
+    """Leg 3: accuracy at the **pre-registered shortlist only**, ⛔ never the sweep.
+
+    ⭐ *Both numbers or neither.*  A distinct count is trivially maximised by noise;
+    the in-corner accuracy beside it is the only thing that stops noise scoring as a
+    win.  Positives = the arm's renders of the 72 held-out (B) requests, negatives =
+    its renders of the matched-seen requests — ⛔ identical in construction to
+    ``gen-baselines``' reader so the rows stay comparable.
+    """
+    t0 = time.time()
+
+    def tlog(msg):
+        log(f"[{time.time() - t0:8.1f}s] {msg}")
+
+    cfg, c = config.gen_compose, _commit_cfg(config)
+    out_dir = Path(out_dir)
+    cache = build_commit_cache(dataset, pretext, seed, out_dir, config, log=tlog)
+    book, lab, names, cards = cache["book"], cache["lab"], cache["names"], cache["cards"]
+    shape_idx = names.index(COMPOSITIONAL_FACTOR)
+    plan = load_store_plan(store_plan_path(config, dataset, pretext))
+    store = load_commit_store(dataset, pretext, seed, out_dir, config,
+                              cache["labels_vec"], plan, tlog)
+    decoder, dec_info, bman = resolve_decoder(config, cache["bdir"], seed, log=tlog)
+    probe = load_model(cache["bdir"] / "probe.pkl")
+    if param_hash(probe) != bman["probe_param_hash"]:
+        raise AssertionError("probe checkpoint does not match the bridge manifest hash")
+    feat_shape = tuple(int(x) for x in json.load(
+        open(cache["bdir"] / "feature_cache.json"))["feat_shape"])
+
+    req = {k: requests_from_labels(lab[k], "full", 0, int(seed)) for k in REQUEST_SETS}
+    post = {k: request_posterior(book, req[k]) for k in REQUEST_SETS}
+
+    path = out_dir / f"scores_s{seed}.json"
+    scored = {}
+    if path.exists():
+        with open(path) as fh:
+            scored = json.load(fh).get("configs", {})
+    for key in shortlist:
+        if key in scored:
+            tlog(f"  [{key}] already scored — ⭐ skipping (per-unit resumable)")
+            continue
+        cc = parse_config_key(key)
+        coms, feats_arm = {}, {}
+        for k in REQUEST_SETS:
+            coms[k] = commit(post[k], cc["rule"], cc["tau"], cc["margin"], cc["k"],
+                             str(c.topk_weight),
+                             seed=int(c.sample_seed) + 1000 * int(seed)
+                             + 37 * REQUEST_SETS.index(k))
+            feats_arm[k] = np.asarray(commitment_read(store, coms[k]), np.float32)
+        disc = corner_discrimination(
+            decoder, probe, feats_arm["B"], feats_arm["MS"], lab["B"], lab["MS"],
+            shape_idx, int(cards[shape_idx]), feat_shape, cfg.eval_batch)
+        comp_a = score_set(decoder, probe, feats_arm["A"], lab["A"], names, feat_shape,
+                           cfg.eval_batch)
+        comp_b = score_set(decoder, probe, feats_arm["B"], lab["B"], names, feat_shape,
+                           cfg.eval_batch)
+        scored[key] = {
+            "config": key, **cc,
+            "in_corner_discrimination": _strip_probs(disc),
+            "composition_A": comp_a, "composition_B": comp_b,
+            "n_distinct": {k: int(coms[k]["n_distinct"]) for k in REQUEST_SETS},
+            "n_requests": {k: int(coms[k]["n_requests"]) for k in REQUEST_SETS},
+            "abstain_rate": {k: coms[k]["abstain_rate"] for k in REQUEST_SETS},
+            "n_distinct_rendered": {
+                k: int(np.unique(feats_arm[k].reshape(feats_arm[k].shape[0], -1),
+                                 axis=0).shape[0]) for k in REQUEST_SETS},
+            "channel": commitment_channel(store, coms["B"], float(c.design_constant_bits)),
+            "pass_distinct_B": bool(coms["B"]["n_distinct"] >= int(c.pass_distinct_floor)),
+            "pass_accuracy": bool(
+                disc["balanced_accuracy"]
+                >= float(c.pass_target_balacc) - float(c.pass_target_spread)),
+        }
+        scored[key]["PASS"] = bool(scored[key]["pass_distinct_B"]
+                                   and scored[key]["pass_accuracy"])
+        # ⭐ written as each (config, seed) completes: a detached spoke loses its LAST
+        # write, never the ones before it.
+        _write_json({"seed": int(seed), "dataset": dataset, "pretext": pretext,
+                     "decoder": dec_info, "store_param_hash": param_hash(store),
+                     "pass_target": {"balacc": float(c.pass_target_balacc),
+                                     "spread": float(c.pass_target_spread),
+                                     "distinct_floor": int(c.pass_distinct_floor)},
+                     "configs": scored}, path)
+        tlog(f"  [{key}] B distinct={scored[key]['n_distinct']['B']}/72 "
+             f"(MS {scored[key]['n_distinct']['MS']}/{scored[key]['n_requests']['MS']}) · "
+             f"in-corner {COMPOSITIONAL_FACTOR} balacc="
+             f"{disc['balanced_accuracy']:.4f} (AUROC {disc['auroc']:.4f}) · A aggregate="
+             f"{comp_a['aggregate']:.4f} · width={scored[key]['channel']['pointer_bits']:.1f} "
+             f"bits{' ⛔ EXCEEDS 30' if scored[key]['channel']['exceeds_design_constant'] else ''}"
+             f" ⇒ {'⭐ PASS' if scored[key]['PASS'] else 'FAIL'}")
+    return scored
+
+
+def run_commitment(
+    config: Optional[CHLUConfig] = None, dataset: Optional[str] = None,
+    pretext: Optional[str] = None, out_dir: Optional[str] = None,
+    seeds: Optional[list] = None, stage: str = "commit",
+    shortlist: Optional[list] = None, log: Callable = print,
+) -> dict:
+    config = config or get_default_config()
+    cfg, c = config.gen_compose, _commit_cfg(config)
+    dataset = dataset or cfg.dataset
+    pretext = pretext or cfg.pretext
+    root = Path(out_dir) if out_dir else (
+        commit_out_root(config, dataset, pretext) / "runs"
+        / artifacts_tag(dataset, pretext, condition_of(config)))
+    seeds = list(seeds if seeds is not None else c.seeds)
+    shortlist = list(shortlist if shortlist is not None else c.shortlist)
+    if stage == "score" and len(shortlist) > int(c.max_shortlist):
+        raise ValueError(
+            f"⛔ the accuracy leg runs at a PRE-REGISTERED shortlist of at most "
+            f"{c.max_shortlist} configs; got {len(shortlist)}")
+    log(f"[gen-commit] dataset={dataset} pretext={pretext} stage={stage} seeds={seeds} "
+        f"-> {root}")
+    out = {}
+    for s in seeds:
+        d = root / f"seed_{s}"
+        d.mkdir(parents=True, exist_ok=True)
+        if stage == "commit":
+            out[str(s)] = run_commit_seed(dataset, pretext, int(s), d, config, log=log)
+        elif stage == "score":
+            out[str(s)] = score_commit_seed(dataset, pretext, int(s), d, config,
+                                            shortlist, log=log)
+        else:
+            raise ValueError(f"stage must be one of {COMMIT_STAGES}, got {stage!r}")
+    return out
+
+
+def main_commit(argv=None) -> int:
+    p = argparse.ArgumentParser(
+        description="⭐ The commitment dial: 72 requests, 9 codes — and whether any knob undoes it.")
+    p.add_argument("--dataset", default=None, choices=["shapes3d", "dsprites"])
+    p.add_argument("--pretext", default=None, choices=list(PRETEXTS))
+    p.add_argument("--stage", default="commit", choices=list(COMMIT_STAGES))
+    p.add_argument("--seed", type=int, default=None, action="append", help="repeatable")
+    p.add_argument("--config", default=None, action="append",
+                   help="shortlist entry, e.g. 'topk|tau=1|margin=0|k=2' (⛔ max 4)")
+    p.add_argument("--out", default=None)
+    p.add_argument("--bridge-root", default=None)
+    p.add_argument("--store-plan", default=None)
+    args = p.parse_args(argv)
+    config = get_default_config()
+    if args.bridge_root:
+        config.gen_compose.bridge_root = args.bridge_root
+        config.gen_store.bridge_root = args.bridge_root
+    if args.store_plan:
+        config.gen_compose.store_plan = args.store_plan
+    run_commitment(config=config, dataset=args.dataset, pretext=args.pretext,
+                   out_dir=args.out, seeds=args.seed, stage=args.stage,
+                   shortlist=args.config)
+    return 0
+
+
+# ⛔ kept at the file tail: the commitment stages (section 10) must be defined
+# before ``main`` dispatches to them.
 if __name__ == "__main__":
     sys.exit(main())
