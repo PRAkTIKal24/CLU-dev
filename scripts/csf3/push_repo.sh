@@ -40,8 +40,13 @@ echo "push: $LOCAL_REPO/ -> $CSF3_USER@$CSF3_HOST:$REMOTE_DIR/"
 # `set -u`. The ${ARR[@]+...} guard expands to nothing when empty and to the
 # elements otherwise, on both 3.2 and 4+. Without it the DEFAULT (no-delete)
 # path of this script dies before rsync ever runs.
+# ⛔ '.git' carries NO trailing slash. An rsync pattern ending in '/' matches
+# DIRECTORIES ONLY, and in a git WORKTREE .git is a regular FILE
+# ('gitdir: ...'). With '.git/' that file was shipped and collided with the
+# remote's .git DIRECTORY -> partial transfer, rsync exit 23.
+# '.git' matches file and directory both; '.gitignore' is unaffected.
 rsync -avz --progress ${DELETE_FLAG[@]+"${DELETE_FLAG[@]}"} \
-    --exclude '.git/' \
+    --exclude '.git' \
     --exclude '.venv/' \
     --exclude '.claude/' \
     --exclude 'docs/' \
