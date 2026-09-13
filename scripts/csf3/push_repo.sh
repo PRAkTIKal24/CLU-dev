@@ -36,7 +36,11 @@ if [ -f "$LOCAL_REPO/uv.lock" ] && ! grep -q "jax-cuda12" "$LOCAL_REPO/uv.lock";
 fi
 
 echo "push: $LOCAL_REPO/ -> $CSF3_USER@$CSF3_HOST:$REMOTE_DIR/"
-rsync -avz --progress "${DELETE_FLAG[@]}" \
+# bash 3.2 (the macOS system bash) errors on "${ARR[@]}" for an EMPTY array under
+# `set -u`. The ${ARR[@]+...} guard expands to nothing when empty and to the
+# elements otherwise, on both 3.2 and 4+. Without it the DEFAULT (no-delete)
+# path of this script dies before rsync ever runs.
+rsync -avz --progress ${DELETE_FLAG[@]+"${DELETE_FLAG[@]}"} \
     --exclude '.git/' \
     --exclude '.venv/' \
     --exclude '.claude/' \
