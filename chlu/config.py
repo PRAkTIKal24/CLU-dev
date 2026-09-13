@@ -3590,6 +3590,77 @@ class GenR0WideConfig:
 # --- END gen-r0-wide-refit ---
 
 
+# --- BEGIN gen-metric-invariance (additive; R26 ruling 2) ---
+@dataclass
+class GenMetricInvarianceConfig:
+    """⭐ R26 ruling 2 — the **pre-registered configuration-invariance check** every
+    comparison metric on the ladder or the cell must pass before it is used.
+
+    Backs :mod:`chlu.core.gen_store` section 10 (``relabelling_invariance``,
+    ``class_count_invariance``, ``configuration_invariance``, ``invariance_verdict``).
+    The criterion, verbatim: *"the axis must give the same value for the same
+    features under different partitions."*
+
+    ⛔ Every tolerance here is **pre-registered**: it is fixed before the axis is
+    measured and is never re-tuned afterwards.  ⛔ The check is also required to be
+    *capable of failing*: the axis it replaced (probe-transfer leakage) is scored
+    through the identical functions as the negative control, and if it passes, the
+    check is wrong.
+    """
+
+    #: Leg 1a — a pure relabelling of the SAME set partition must leave the axis
+    #: identical to this absolute tolerance.  ⭐ It is expected to be exactly 0.
+    relabel_tol: float = 1e-12
+    #: Leg 2 / 2b — the class-count nuisance may move the correlation-minus-random
+    #: margin by at most this fraction of its own size, and never flip its sign.
+    class_count_tol_ratio: float = 0.5
+    #: Leg 2 — minimum number of (configuration x seed) cells whose restricted
+    #: margin must keep the full margin's sign.  Default 5 of 6.
+    class_count_min_sign_agreement: int = 5
+    #: Leg 3 — the two configurations' mean margins must sit inside this factor
+    #: band of each other.  ⛔ A ratio, not a sigma test: two hold-out conditions
+    #: legitimately differ in LEVEL, and a sigma test would fail an axis for being
+    #: precise.  3.0 is the programme's standing "3x spread" convention.
+    configuration_band: float = 3.0
+    #: The class-count stress: how many values of each named factor survive.  ⭐ The
+    #: defaults are the counts the WIDE CORNERS ACTUALLY REALISE (6 of 15
+    #: orientations, 6 of 8 scales; ``gen-r0-wide-refit`` §4.2) — a reproduction of
+    #: the diagnosed failure, ⛔ not a knob.
+    class_budget: Dict[str, int] = field(
+        default_factory=lambda: {"orientation": 6, "scale": 6}
+    )
+    #: The partitions the features are held fixed against.  The first two are the
+    #: ladder's own arms; the rest are the additional partitions R26's criterion
+    #: demands.  ⛔ ``well_permuted`` is the SAME set partition as ``correlation``.
+    partitions: List[str] = field(
+        default_factory=lambda: [
+            "correlation",
+            "random",
+            "random_alt",
+            "well_permuted",
+            "contiguous",
+            "balanced_random",
+        ]
+    )
+    #: Offset added to the seed for the second random draw (``random_alt``).
+    random_alt_offset: int = 1000
+    #: ⛔ THE NEGATIVE CONTROL.  The axis already known to be broken is scored
+    #: first, through the identical check; if it passes, the run STOPS and reports
+    #: that the check has no teeth.
+    negative_control_axis: str = "leak_raw"
+    #: The candidate the ladder is waiting on, and its companion (R26 ruling 2).
+    candidate_axis: str = "dci_c"
+    companion_axis: str = "leak_cc"
+    #: The two hold-out configurations the sign must agree across.
+    configurations: List[str] = field(
+        default_factory=lambda: ["recomb2element", "recomb2element_wide"]
+    )
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+
+# --- END gen-metric-invariance ---
+
+
 @dataclass
 class GenDreamConfig:
     """⭐ Conditional dreaming: clamp the wells a request addresses, relax the rest,
@@ -3909,6 +3980,10 @@ class CHLUConfig:
     gen_store: GenStoreConfig = field(default_factory=GenStoreConfig)
     # --- gen-r0-wide-refit (additive; R24) ---
     gen_r0_wide: GenR0WideConfig = field(default_factory=GenR0WideConfig)
+    # --- gen-metric-invariance (additive; R26 ruling 2) ---
+    gen_metric_invariance: GenMetricInvarianceConfig = field(
+        default_factory=GenMetricInvarianceConfig
+    )
     gen_dream: GenDreamConfig = field(default_factory=GenDreamConfig)
     gen_certificate: GenCertificateConfig = field(
         default_factory=GenCertificateConfig
@@ -4165,6 +4240,12 @@ def load_config(path: Path) -> CHLUConfig:
         gen_r0_wide=GenR0WideConfig(
             **filter_valid_fields(GenR0WideConfig, data.get("gen_r0_wide", {}))
         ),
+        # --- gen-metric-invariance (additive; R26 ruling 2) ---
+        gen_metric_invariance=GenMetricInvarianceConfig(
+            **filter_valid_fields(
+                GenMetricInvarianceConfig, data.get("gen_metric_invariance", {})
+            )
+        ),
         gen_dream=GenDreamConfig(
             **filter_valid_fields(GenDreamConfig, data.get("gen_dream", {}))
         ),
@@ -4246,6 +4327,8 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         "gen_store": asdict(config.gen_store),
         # --- gen-r0-wide-refit (additive; R24) ---
         "gen_r0_wide": asdict(config.gen_r0_wide),
+        # --- gen-metric-invariance (additive; R26 ruling 2) ---
+        "gen_metric_invariance": asdict(config.gen_metric_invariance),
         "gen_dream": asdict(config.gen_dream),
         "gen_certificate": asdict(config.gen_certificate),
         # --- BEGIN gen-baselines (additive) ---

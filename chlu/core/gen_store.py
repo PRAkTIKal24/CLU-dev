@@ -75,22 +75,32 @@ __all__ = [
     "address_codes",
     "adjusted_rand_index",
     "assert_no_bypass",
+    "balanced_random_grouping",
     "block_diagonality",
+    "chance_corrected_balanced_accuracy",
     "channel_correlation",
     "choose_k",
+    "class_count_invariance",
+    "class_count_restriction",
+    "configuration_invariance",
+    "contiguous_grouping",
     "correlation_grouping",
+    "dci_scores",
     "dead_channels",
     "delete_store",
-    "dci_scores",
     "fit_grouping_from_plan",
     "grouping_agreement",
     "grouping_labels",
+    "invariance_verdict",
     "load_store_plan",
     "mig_score",
     "mode_usage",
+    "permute_mode_codes",
+    "permute_well_codes",
     "random_grouping",
     "read_from_codes",
     "read_margin_gate",
+    "relabelling_invariance",
     "save_store_plan",
     "soft_weights",
     "store_bytes",
@@ -1323,5 +1333,308 @@ def read_margin_gate(
             "⛔ A divergence is a plumbing fault (the caches are not the same "
             "encoder's), never a property of the split. R1 does not start on a "
             "failed gate."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# 10. ⭐ THE PRE-REGISTERED METRIC-INVARIANCE CHECK (R26 ruling 2)
+#
+# R26 ruling 2 promotes DCI-C as the ladder's x-axis on one criterion:
+#
+#     "The axis must give the same value for the same features under different
+#      partitions."
+#
+# and makes it a standing rule — *every* comparison metric on the ladder or the
+# cell gets a pre-registered invariance check before it is used.  This section is
+# that check, as reusable code, so the next metric does not get a bespoke one.
+#
+# ⛔ The check is deliberately built to be CAPABLE OF FAILING.  Probe-transfer
+# leakage — the axis it replaces — is scored through the identical functions as
+# the negative control; if the check passes leakage, the check is wrong.
+#
+# The three legs, and the disease each one tests for:
+#   1a  RELABELLING (exact).   Same set partition, different labelling of it.  An
+#       axis that moves here is reading an arbitrary index, not the features.
+#   2   CLASS COUNT.           Same features, same partition, same fitted store;
+#       only the number of classes the *evaluation* realises changes.  ⭐ This is
+#       what killed the leakage axis: the wide corners fix ``scale`` and
+#       ``orientation``, so it scored a 6-class numerator against a 15-class
+#       denominator, and balanced accuracy normalises *within* a class count and
+#       not *across* one.
+#   3   CONFIGURATION.         The same axis, the same partitions, two hold-out
+#       configurations.  The sign of the correlation-minus-random margin must
+#       agree, per seed; ⛔ a single inverted seed is a finding, never noise.
+# ---------------------------------------------------------------------------
+
+
+def chance_corrected_balanced_accuracy(balanced_accuracy: float, n_classes: int) -> float:
+    """``(BA - 1/c) / (1 - 1/c)`` — R26 ruling 2's companion correction.
+
+    Maps chance (``BA = 1/c``) to 0 and perfect to 1 whatever ``c`` is.  ⛔ It
+    removes the class-count dependence of the **chance floor** only; whether that
+    is enough to make a *ratio across two different class counts* invariant is an
+    empirical question, and this module's job is to answer it, not assume it.
+    ``c = 1`` is undefined (a one-class problem has no chance level) and returns
+    NaN rather than a silent 0.
+    """
+    c = int(n_classes)
+    if c <= 1:
+        return float("nan")
+    floor = 1.0 / c
+    return float((float(balanced_accuracy) - floor) / (1.0 - floor))
+
+
+def permute_well_codes(codes: np.ndarray, perm: Sequence[int]) -> np.ndarray:
+    """Leg 1a operator: relabel the WELL indices of a ``(N, K)`` code matrix.
+
+    The set partition, the features, the fitted store and the information content
+    are all unchanged — only the integer name of each well moves.  An axis that
+    changes value here is not measuring the features.
+    """
+    c = np.asarray(codes, np.int64)
+    p = np.asarray(perm, np.int64)
+    if p.shape != (c.shape[1],) or np.unique(p).size != c.shape[1]:
+        raise ValueError(f"perm must be a permutation of range({c.shape[1]}), got {perm!r}")
+    return c[:, p]
+
+
+def permute_mode_codes(codes: np.ndarray, perms: Sequence[Sequence[int]]) -> np.ndarray:
+    """Leg 1a operator: relabel the MODE indices **within** each well.
+
+    ``perms[k][m]`` is the new name of mode ``m`` of well ``k``.  Again a pure
+    renaming: the partition of rows into code-cells is untouched.
+    """
+    c = np.asarray(codes, np.int64)
+    if len(perms) != c.shape[1]:
+        raise ValueError(f"need one permutation per well ({c.shape[1]}), got {len(perms)}")
+    out = np.empty_like(c)
+    for k, p in enumerate(perms):
+        p = np.asarray(p, np.int64)
+        if np.unique(p).size != p.size:
+            raise ValueError(f"perms[{k}] is not a permutation")
+        if int(c[:, k].max(initial=-1)) >= p.size:
+            raise ValueError(f"perms[{k}] is too short for the codes in well {k}")
+        out[:, k] = p[c[:, k]]
+    return out
+
+
+def contiguous_grouping(well_sizes: Sequence[int], d: Optional[int] = None) -> np.ndarray:
+    """A partition variant: coordinates in **index order**, cut into blocks matching
+    ``well_sizes``.
+
+    ⭐ Structured but correlation-blind, so it is a second laundering control: if an
+    axis rates it above the shuffled ``random`` control, the axis is reading the
+    well-size histogram or the channel ordering, not the channel correlations.
+    """
+    sizes = [int(s) for s in well_sizes]
+    total = int(sum(sizes))
+    if d is not None and int(d) != total:
+        raise ValueError(f"well_sizes sum to {total} but D = {int(d)}")
+    return np.repeat(np.arange(len(sizes), dtype=np.int64), sizes)
+
+
+def balanced_random_grouping(d: int, k: int, seed: int) -> np.ndarray:
+    """A partition variant at the same ``K`` with **equal** well sizes.
+
+    ⛔ Deliberately a *different* well-size histogram from ``random_grouping``'s,
+    so the check also varies the shape of the partition and not only its content.
+    """
+    d, k = int(d), int(k)
+    # ``arange(d) % k`` gives sizes differing by at most 1 for any (d, k); a
+    # ``repeat(ceil(d/k))``-then-truncate spelling does not (it can leave one well
+    # two short) and would smuggle a size imbalance into a control that exists to
+    # hold the size profile flat.
+    base = np.arange(d, dtype=np.int64) % k
+    return np.asarray(np.random.default_rng(int(seed)).permutation(base), np.int64)
+
+
+def class_count_restriction(
+    labels: np.ndarray,
+    factor_names: Sequence[str],
+    budget,
+) -> dict:
+    """Leg 2 operator: the row mask that makes the evaluation realise **fewer
+    classes** on the named factors.
+
+    ``budget`` maps a factor name either to **how many** of its values survive (an
+    int; the survivors are the ``n`` lowest-indexed values, deterministic and
+    tuning-free) or to the **explicit value set** that survives (any sequence).
+
+    ⭐ The explicit form is what a *ratio* axis needs: the count form, applied to a
+    numerator that is itself a corner of the factor grid, can empty the set — the
+    Montero corner fixes ``scale >= 1.1`` and ``orientation > 20``, i.e. the
+    HIGHEST-indexed values, so "keep the lowest 6" keeps nothing.  Restricting the
+    *denominator* to the classes the numerator actually realises is the same
+    operator with the survivors read off the data instead of chosen.
+
+    The count defaults used by this programme (``orientation: 6``, ``scale: 6``)
+    are the counts the **wide corners actually realise**, measured in
+    ``gen-r0-wide-refit`` §4.2 (6 of 15 orientations, 6 of 8 scales) — ⛔ they are a
+    reproduction of the diagnosed failure, not a knob.
+    """
+    Y = np.asarray(labels, np.int64)
+    names = [str(n) for n in factor_names]
+    mask = np.ones(Y.shape[0], bool)
+    kept = {}
+    for nm, spec in dict(budget).items():
+        if str(nm) not in names:
+            raise KeyError(f"{nm!r} is not one of the factors {names}")
+        j = names.index(str(nm))
+        if isinstance(spec, (int, np.integer)) and not isinstance(spec, bool):
+            keep = np.unique(Y[:, j])[: int(spec)]
+        else:
+            keep = np.unique(np.asarray(list(spec), np.int64))
+        kept[str(nm)] = [int(v) for v in keep]
+        mask &= np.isin(Y[:, j], keep)
+    return {
+        "mask": mask,
+        "n_kept": int(mask.sum()),
+        "n_total": int(Y.shape[0]),
+        "kept_values": kept,
+        "realised_classes_full": {
+            n: int(np.unique(Y[:, i]).size) for i, n in enumerate(names)
+        },
+        "realised_classes_restricted": {
+            n: int(np.unique(Y[mask, i]).size) for i, n in enumerate(names)
+        } if mask.any() else {},
+    }
+
+
+def relabelling_invariance(values: Sequence[float], tol: float = 1e-12, label: str = "") -> dict:
+    """**Leg 1a.** Every entry of ``values`` is the axis scored on the SAME features
+    and the SAME set partition under a different *labelling* of it.  They must agree.
+    """
+    v = np.asarray(list(values), np.float64)
+    if v.size < 2:
+        raise ValueError("leg 1a needs at least two relabellings to compare")
+    dev = float(np.max(np.abs(v - v[0])))
+    ok = bool(np.all(np.isfinite(v))) and dev <= float(tol)
+    return {
+        "leg": "1a_relabelling",
+        "label": str(label),
+        "values": [float(x) for x in v],
+        "max_abs_deviation": dev,
+        "exact": bool(dev == 0.0),
+        "tolerance": float(tol),
+        "pass": ok,
+    }
+
+
+def class_count_invariance(
+    margin_full: float,
+    margin_restricted: float,
+    tol_ratio: float = 0.5,
+    per_cell_signs: Optional[Sequence[int]] = None,
+    min_sign_agreement: int = 5,
+    label: str = "",
+) -> dict:
+    """**Leg 2 / leg 2b.** The axis is re-scored with only the realised class count
+    changed.  ``S = |Δ margin| / |margin_full|`` must stay inside ``tol_ratio`` and
+    the sign of the correlation-minus-random margin must survive.
+
+    ``per_cell_signs`` (optional) are the per-(configuration, seed) signs of the
+    restricted margin; at least ``min_sign_agreement`` of them must match the sign
+    of ``margin_full``.  ⛔ Reported per cell — a single inverted cell is a finding.
+    """
+    mf, mr = float(margin_full), float(margin_restricted)
+    denom = abs(mf)
+    s = abs(mr - mf) / denom if denom > 0 else float("inf")
+    sign_ok = bool(np.sign(mr) == np.sign(mf) and mf != 0.0)
+    cells_ok, n_agree, n_cells = True, None, None
+    if per_cell_signs is not None:
+        sg = np.asarray(list(per_cell_signs), np.float64)
+        n_cells = int(sg.size)
+        n_agree = int(np.sum(sg == np.sign(mf)))
+        cells_ok = bool(n_agree >= int(min_sign_agreement))
+    ok = bool(sign_ok and np.isfinite(s) and s <= float(tol_ratio) and cells_ok)
+    return {
+        "leg": "2_class_count",
+        "label": str(label),
+        "margin_full": mf,
+        "margin_restricted": mr,
+        "sensitivity_S": s,
+        "sign_preserved": sign_ok,
+        "n_cells_sign_agree": n_agree,
+        "n_cells": n_cells,
+        "min_sign_agreement": int(min_sign_agreement),
+        "tolerance_ratio": float(tol_ratio),
+        "pass": ok,
+    }
+
+
+def configuration_invariance(
+    margins_by_config: dict,
+    band: float = 3.0,
+    label: str = "",
+) -> dict:
+    """**Leg 3.** ``margins_by_config`` maps a configuration name to its per-seed
+    correlation-minus-random margins.  ⭐ The sign must agree in **every** cell, and
+    the configuration means must sit inside a factor-``band`` window of each other.
+
+    ⛔ The magnitudes are compared as a **ratio**, not as a number of seed spreads:
+    two hold-out conditions legitimately differ in level, and a σ-test on a metric
+    with a tiny seed spread would fail an axis for being *precise*.  The sign is
+    the criterion; the band is the sanity bound.
+    """
+    if len(margins_by_config) < 2:
+        raise ValueError("leg 3 needs at least two configurations")
+    per = {
+        str(c): [float(x) for x in v] for c, v in margins_by_config.items()
+    }
+    cells = [(c, i, x) for c, v in per.items() for i, x in enumerate(v)]
+    signs = np.sign([x for _, _, x in cells])
+    ref = np.sign(np.mean([np.mean(v) for v in per.values()]))
+    n_agree = int(np.sum(signs == ref))
+    all_agree = bool(n_agree == len(cells) and ref != 0.0)
+    means = {c: float(np.mean(v)) for c, v in per.items()}
+    mags = [abs(m) for m in means.values()]
+    ratio = (max(mags) / min(mags)) if min(mags) > 0 else float("inf")
+    band_ok = bool(np.isfinite(ratio) and ratio <= float(band))
+    return {
+        "leg": "3_configuration",
+        "label": str(label),
+        "per_config_margins": per,
+        "per_config_mean": means,
+        "per_config_sd": {c: float(np.std(v, ddof=0)) for c, v in per.items()},
+        "reference_sign": float(ref),
+        "n_cells": len(cells),
+        "n_cells_sign_agree": n_agree,
+        "inverted_cells": [
+            {"config": c, "seed_index": i, "margin": x}
+            for (c, i, x), s in zip(cells, signs, strict=True)
+            if s != ref
+        ],
+        "magnitude_ratio": ratio,
+        "band": float(band),
+        "sign_agreement": all_agree,
+        "band_ok": band_ok,
+        "pass": bool(all_agree and band_ok),
+    }
+
+
+def invariance_verdict(axis: str, legs: Sequence[dict]) -> dict:
+    """AND-compose the legs into the axis's **PASS / FAIL** verdict.
+
+    ⛔ The composition is fixed before measurement: *an axis passes iff it passes
+    every leg that is defined for it*.  A leg that does not apply is omitted by the
+    caller and named in ``legs_not_applicable``; it is never scored as a pass.
+    """
+    legs = list(legs)
+    if not legs:
+        raise ValueError("an axis with no legs has not been checked")
+    failed = [str(lg.get("leg", "?")) for lg in legs if not lg.get("pass", False)]
+    ok = not failed
+    return {
+        "axis": str(axis),
+        "verdict": "PASS" if ok else "FAIL",
+        "pass": ok,
+        "legs_run": [str(lg.get("leg", "?")) for lg in legs],
+        "legs_failed": failed,
+        "legs": legs,
+        "note": (
+            "⭐ Configuration-invariance (R26 ruling 2) is the ONLY admissible "
+            "ground for the ladder's x-axis. ⛔ A FAIL returns the ladder to the "
+            "Head and the Advisor; it is never repaired by nominating a third metric."
         ),
     }
