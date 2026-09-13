@@ -4620,3 +4620,86 @@ class GenComposeConfig:
         default_factory=lambda: ["read", "clu_wide", "store_removed", "proto"]
     )
 # --- END gen-read-compose ---------------------------------------------------
+
+
+# --- BEGIN gen-commitment-collapse ------------------------------------------
+# ⭐ R29 pivot item 1: the COMMITMENT dial — how a request's posterior over modes
+# becomes an integer code.  ⛔ APPEND-ONLY: this block touches no existing
+# dataclass (three spokes share this file's tail this wave), and it is reached
+# through :func:`gen_commit_config` rather than a ``CHLUConfig`` field so that the
+# merge anchor stays a single contiguous region.
+@dataclass
+class GenCommitConfig:
+    """Knobs for the commitment sweep (``exp_gen_compose --stage commit|score``).
+
+    ⛔ Every distinct-code number carries its **matched-seen (MS)** companion: a
+    knob that lifts B while MS stays flat has found a B-specific artefact, not a
+    fix (R30).  ⛔ Distinct counts are never reported without their accuracy.
+    """
+
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    #: ⭐ Reuse ``gen-read-compose``'s per-seed store checkpoints verbatim, so these
+    #: numbers sit on exactly the store R28/R29 measured.  ``{dataset}``/``{pretext}``/
+    #: ``{seed}`` are substituted; ⛔ the loaded store's parameter hash is recorded.
+    store_checkpoint_source: Optional[str] = (
+        "outputs/gen-read-compose/runs/{dataset}_{pretext}/seed_{seed}/store_s{seed}.pkl"
+    )
+    #: ⚠ The A/B/MS **feature** tensors are needed only for feature-addressed
+    #: diagnostics; the commitment path itself is request-only, so the default skips
+    #: a 32k-row re-encode on seeds 1–2 (their caches hold no matched-seen row).
+    gather_eval_features: bool = False
+
+    # --- the three knobs R29 names -----------------------------------------
+    #: Launch temperature applied to the posterior *before* commitment.
+    #: ⚠ ``argmax`` is provably invariant to it (softmax is monotone) — swept anyway,
+    #: because a measured invariance is a plumbing check and an assumed one is not.
+    taus: List[float] = field(default_factory=lambda: [0.25, 0.5, 1.0, 2.0, 4.0, 8.0])
+    #: Stopping rules. ``argmax`` = shipped · ``sample`` = draw · ``margin`` = commit
+    #: only above a top1−top2 margin, else abstain · ``topk`` = multiplicity.
+    rules: List[str] = field(default_factory=lambda: ["argmax", "sample", "margin", "topk"])
+    margins: List[float] = field(default_factory=lambda: [0.1, 0.25, 0.5, 0.75, 0.9])
+    #: Multiplicity: k modes per well. ⛔ k > 1 widens the channel beyond R20's
+    #: declared 30-bit design constant and is reported as a **declared change**.
+    ks: List[int] = field(default_factory=lambda: [2, 3, 4, 8])
+    #: How the k launched particles are weighted when read: ``posterior`` (the
+    #: renormalised top-k mass) or ``uniform`` (an unweighted k-particle launch).
+    topk_weight: str = "posterior"
+    #: Draws per request for ``sample`` when estimating the distinct count; ⛔ the
+    #: accuracy leg always uses a single draw (one request ⇒ one image).
+    sample_draws: int = 1
+    sample_seed: int = 20260913
+
+    # --- the accuracy leg (⛔ only at the pre-registered shortlist) ----------
+    #: Filled from ``PREREG.md``'s addendum on the command line; ⛔ at most 4.
+    shortlist: List[str] = field(default_factory=list)
+    max_shortlist: int = 4
+    #: The `knn_proto`-equivalent target and its seed spread (R27/R28 reference row,
+    #: ⛔ quoted, never re-measured here).
+    pass_target_balacc: float = 0.8817
+    pass_target_spread: float = 0.0023
+    #: ⭐ The PASS criterion's distinct-code floor, verbatim from R29's pivot item 1.
+    pass_distinct_floor: int = 60
+    #: R20's declared design constant; any realised width above it is flagged.
+    design_constant_bits: float = 30.0
+
+    out_root: Optional[str] = None
+    claude_root: Optional[str] = None
+
+
+def gen_commit_config(config: Optional["CHLUConfig"] = None, **overrides) -> GenCommitConfig:
+    """Return (and memoise on ``config``) the commitment block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field: three spokes append to this
+    file's tail in the same wave and the merge rule is "take the peer's whole file
+    and re-apply your block", which only holds if the block is contiguous.
+    """
+    cfg = getattr(config, "gen_commit", None) if config is not None else None
+    if cfg is None:
+        cfg = GenCommitConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_commit", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+# --- END gen-commitment-collapse --------------------------------------------
