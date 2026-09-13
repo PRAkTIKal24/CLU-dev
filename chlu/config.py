@@ -4003,6 +4003,13 @@ class CHLUConfig:
         default_factory=lambda: GenComposeConfig()
     )
     # --- END gen-read-compose ---
+    # --- BEGIN gen-external-classifier (additive; R29 pivot item 2) ---
+    # ⭐ Same lazy pattern, same reason: ``GenClassifierConfig`` is defined at the
+    # END of this file (the shared append anchor for the concurrent gen spokes).
+    gen_classifier: "GenClassifierConfig" = field(
+        default_factory=lambda: GenClassifierConfig()
+    )
+    # --- END gen-external-classifier ---
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -4264,6 +4271,11 @@ def load_config(path: Path) -> CHLUConfig:
             **filter_valid_fields(GenComposeConfig, data.get("gen_compose", {}))
         ),
         # --- END gen-read-compose ---
+        # --- BEGIN gen-external-classifier (additive; R29 pivot item 2) ---
+        gen_classifier=GenClassifierConfig(
+            **filter_valid_fields(GenClassifierConfig, data.get("gen_classifier", {}))
+        ),
+        # --- END gen-external-classifier ---
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -4337,6 +4349,9 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         # --- BEGIN gen-read-compose (additive; R26 ruling 3) ---
         "gen_compose": asdict(config.gen_compose),
         # --- END gen-read-compose ---
+        # --- BEGIN gen-external-classifier (additive; R29 pivot item 2) ---
+        "gen_classifier": asdict(config.gen_classifier),
+        # --- END gen-external-classifier ---
         "project": asdict(config.project),
     }
 
@@ -4620,3 +4635,116 @@ class GenComposeConfig:
         default_factory=lambda: ["read", "clu_wide", "store_removed", "proto"]
     )
 # --- END gen-read-compose ---------------------------------------------------
+
+
+# --- BEGIN gen-external-classifier (additive; owner: experiment-engineer) ----
+# ⭐ Appended at the END of the file, behind ``gen-read-compose``, for the same
+# reason it was: several gen spokes extend this file concurrently and a shared
+# anchor at the tail is the only one that merges cleanly.  The field on
+# ``CHLUConfig`` uses a **string annotation** + **lambda default_factory** so
+# neither resolves before the module is fully loaded.
+# ⛔ Nothing above this line was modified except the three house wiring sites
+# (the ``CHLUConfig`` field, ``load_config``, ``save_config``).
+@dataclass
+class GenClassifierConfig:
+    """⭐ The **external** factor classifier: ``image → factors``, decoder-independent.
+
+    Backs ``chlu.experiments.exp_gen_classifier``.
+
+    ⭐ **Why a second reader exists (R29 pivot item 2).**  Every composition number
+    in phase 1 is read by the bridge's own :class:`~chlu.core.gen_bridge.FactorProbe`,
+    which is fitted **in the same run, on the same 8,192 train rows, from the same
+    seed-derived key chain** as the shared decoder.  R29's headline table ends in an
+    **external** classifier, and ⛔ a probe of the decoder's own lineage cannot be
+    the instrument that scores the decoder's output.
+
+    ⛔ **The standing decoder trap.**  :attr:`GenBridgeConfig.dec_recipe` still
+    defaults to ``"baseline"`` — the decoder that **FAILED** the gate (0.7191, 0/3
+    seeds).  The winner is ``v1_capacity_schedule`` (0.9414, 3/3).  A run through
+    the baseline looks entirely normal in the logs and is **void**, so this config
+    selects the winner explicitly and the run asserts the decoder **parameter hash**
+    and the **recipe name** before recording a number.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- the instrument (⛔ deliberately unlike ``GenBridgeConfig.probe_*``) ---
+    #: Four stages against the probe's three.
+    clf_channels: List[int] = field(default_factory=lambda: [32, 64, 128, 128])
+    #: 5 against the probe's 4.
+    clf_kernel: int = 5
+    clf_stride: int = 2
+    clf_groups: int = 8
+    #: Hidden projection before the per-factor heads; the probe has none.
+    clf_hidden: int = 256
+    clf_steps: int = 1500
+    clf_batch: int = 128
+    clf_lr: float = 1e-3
+    #: ⭐ Checkpoint cadence in steps — the run is resumable and ⛔ never holds a
+    #: result to the end.
+    clf_checkpoint_every: int = 250
+    #: Train-split rows the classifier is fitted on.  ⭐ Matched to
+    #: ``GenBridgeConfig.n_train`` on purpose: same data budget, disjoint rows, so a
+    #: gap against the probe cannot be a sample-size artefact.
+    n_clf_train: int = 8192
+    #: ⛔ Never the bridge's ``seed * 10_007 + 20_260_910``.
+    row_seed_mult: int = 104_729
+    row_seed_offset: int = 20_260_913
+    #: Rows re-streamed from the HDF5 file and required bit-identical to the training
+    #: tensor — what turns "it never saw a render" into a measurement.
+    render_check_n: int = 64
+    #: ⭐ Also exclude the **wide** condition's held-out cells from the training
+    #: draw, so ONE fitted classifier serves both conditions with no leak either
+    #: way (it reads raw images, so it is encoder-independent and needs no refit).
+    exclude_wide_heldout: bool = True
+
+    # --- frozen artifacts (⛔ every one is LOADED here, never fitted) ---
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<repo>/.claude/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: ``None`` -> ``$CHLU_CLAUDE_ROOT`` else ``<repo>/.claude``.
+    claude_root: Optional[str] = None
+    #: ``"winner"`` (⭐ gen-decoder-lift's V1) | ``"bridge"`` (⛔ the SUPERSEDED baseline).
+    decoder_source: str = "winner"
+    #: ``None`` -> ``<claude_root>/outputs/gen-decoder-lift/winner``.
+    winner_root: Optional[str] = None
+    winner_decoder_pattern: str = "decoder_v1_s{seed}.pkl"
+    #: ⛔ Asserted, never assumed: a run decoded through ``"baseline"`` is void.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+    verify_cache_checksum: bool = True
+    eval_batch: int = 256
+
+    # --- ⭐ the gate (leg 2): pre-registered, stop-and-return ---
+    #: ⛔ Only genuinely compositional Shapes3D factor (R16).
+    gate_factor: str = "shape"
+    #: R15: the shipped probe reads REAL images at 1.0000 and is saturated.
+    gate_floor: float = 0.95
+    #: ⛔ A balanced accuracy over a handful of negatives is not a measurement.
+    gate_min_negatives: int = 20
+
+    # --- ⭐⭐ leg 3: the gap, and what makes it material ---
+    #: R22, from disk: the probe's in-corner ``shape`` balanced accuracy on the V1
+    #: decoder's renders.  ⛔ Quoted with provenance and **recomputed** in-run.
+    probe_reference_balacc: float = 0.9414
+    probe_reference_per_seed: List[float] = field(
+        default_factory=lambda: [0.9223484848484849, 0.9365, 0.9653]
+    )
+    #: R23.3, the wide configuration's 11-cell pooled held-out ``shape``.  ⛔ A
+    #: DECLARED reference only — the wide comparison is its own condition.
+    wide_reference_balacc: float = 0.9894
+    #: |mean gap| must clear this absolutely …
+    gap_abs_threshold: float = 0.05
+    #: … and this multiple of the across-seed spread, to count as material.
+    gap_spread_mult: float = 2.0
+
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_clf_train: int = 512
+    quick_clf_steps: int = 20
+    quick_clf_checkpoint_every: int = 10
+    quick_render_check_n: int = 8
+    quick_verify_cache_checksum: bool = False
+# --- END gen-external-classifier --------------------------------------------
