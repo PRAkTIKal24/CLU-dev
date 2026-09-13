@@ -71,6 +71,18 @@ def _store(k=4, m=8, dk=6, seed=0):
     return GenStore(wc, m, (k * dk,), jax.random.PRNGKey(seed))
 
 
+def _shipped_store(seed=0):
+    """The shipped Shapes3D/recon cell: 5 wells PARTITIONING D = 2048, M = 64.
+
+    ⚠ ``D`` is not divisible by ``K``, and that matters: ``store_bytes`` is
+    ``M·D·4`` **independently of K**, so an evenly-chopped fixture would quietly
+    miss the published 524,288 B by the remainder.
+    """
+    edges = np.linspace(0, SHIPPED_D, SHIPPED_K + 1).astype(int)
+    wc = tuple(tuple(range(int(a), int(b))) for a, b in zip(edges[:-1], edges[1:], strict=True))
+    return GenStore(wc, SHIPPED_M, (SHIPPED_D,), jax.random.PRNGKey(seed))
+
+
 def _book(k=4, m=8, n=400, cards=(3, 4), seed=0):
     """An address book fitted on codes that genuinely depend on the factors."""
     rng = np.random.default_rng(seed)
@@ -225,7 +237,7 @@ def test_code_agreement_is_a_diagnostic_that_separates_agreement_from_disagreeme
 def test_deployed_byte_ledger_is_524288_with_the_coupling_EXCLUDED():
     """⛔ R26: dreaming is off the critical path, so its 163,840 B PMI field leaves
     the deployed store and ``gen-baselines``' 688,128 B target does NOT apply."""
-    st = _store(k=SHIPPED_K, m=SHIPPED_M, dk=SHIPPED_D // SHIPPED_K)
+    st = _shipped_store()
     led = deployed_byte_ledger(st)
     assert led["deployed_bytes"] == store_bytes(st)["store_bytes"]
     assert led["coupling_bytes_excluded"] == COUPLING_BYTES
@@ -235,18 +247,13 @@ def test_deployed_byte_ledger_is_524288_with_the_coupling_EXCLUDED():
 
 
 def test_the_shipped_cell_ledger_is_exactly_the_published_524288_bytes():
-    st = GenStore(
-        tuple(tuple(range(j * 410, min((j + 1) * 410, SHIPPED_D)))
-              if j < SHIPPED_K - 1 else tuple(range((SHIPPED_K - 1) * 410, SHIPPED_D))
-              for j in range(SHIPPED_K)),
-        SHIPPED_M, (SHIPPED_D,), jax.random.PRNGKey(0),
-    )
+    st = _shipped_store()
     assert deployed_byte_ledger(st)["deployed_bytes"] == STORE_BYTES
     assert store_bytes(st)["bits_per_read"] == 30.0  # R20's design constant
 
 
 def test_channel_ledger_keeps_byte_matched_and_channel_matched_apart():
-    st = _store(k=SHIPPED_K, m=SHIPPED_M, dk=SHIPPED_D // SHIPPED_K)
+    st = _shipped_store()
     book, Y, _ = _book(k=SHIPPED_K, m=SHIPPED_M, cards=(3, 4))
     chan = channel_ledger(st, request_posterior(book, Y[:8]), proto_dim=SHIPPED_D)
     assert chan["read"]["bits"] == 30.0
@@ -298,7 +305,7 @@ def test_metric_invariance_check_passes_for_the_gate_statistic():
 def test_metric_invariance_check_is_not_vacuous():
     """⭐ The re-partition must really change the class balance — otherwise the
     check passes for a statistic that was never at risk."""
-    pos, neg, t = _probs(tpr=0.95, tnr=0.55)
+    pos, neg, t = _probs(n_pos=40, n_neg=40, tpr=0.95, tnr=0.55)
     out = metric_invariance_check(pos, neg, t)
     assert out["repartitioned"]["n_neg"] == 2 * out["base"]["n_neg"]
     assert abs(out["delta_raw_accuracy"]) > 0.05     # ⛔ raw accuracy MOVES
@@ -365,8 +372,8 @@ def test_gen_compose_config_survives_a_save_load_roundtrip(tmp_path):
     config.gen_compose.n_eval_a = 77
     config.gen_compose.arms = ["read", "store_removed"]
     p = tmp_path / "config.yaml"
-    save_config(config, str(p))
-    back = load_config(str(p))
+    save_config(config, p)
+    back = load_config(p)
     assert back.gen_compose.n_eval_a == 77
     assert back.gen_compose.arms == ["read", "store_removed"]
     assert isinstance(back.gen_compose, GenComposeConfig)
