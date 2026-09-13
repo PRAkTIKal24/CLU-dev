@@ -1195,6 +1195,8 @@ def audit_query_sets(
     registry, sets = load_registered_query_sets(registry_path, max_base=max_base)
     violations: list[str] = []
 
+    # ⛔ One violation per SET, not per record: a schema fault is one fault, and 6,292
+    # copies of it would bury the AUROC table under its own error message.
     allowed = set(ASSERTION_RECORD_KEYS) | set(EXCLUDED_RECORD_KEYS)
     for name, recs in sets.items():
         for rec in recs:
@@ -1206,13 +1208,15 @@ def audit_query_sets(
                     "candidate giveaway and must be declared before it ships"
                 )
                 break
-            for term in rec["request"]:
-                if tuple(term.keys()) != TERM_KEYS:
-                    violations.append(
-                        f"{name}/{rec.get('id')}: term keys {tuple(term.keys())} != "
-                        f"{TERM_KEYS} -- key order is itself a giveaway"
-                    )
-                    break
+            bad_term = next(
+                (t for t in rec["request"] if tuple(t.keys()) != TERM_KEYS), None
+            )
+            if bad_term is not None:
+                violations.append(
+                    f"{name}/{rec.get('id')}: term keys {tuple(bad_term.keys())} != "
+                    f"{TERM_KEYS} -- key order is itself a giveaway"
+                )
+                break
 
     report = {
         "registry": str(registry_path),
