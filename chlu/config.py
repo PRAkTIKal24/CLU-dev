@@ -5300,3 +5300,115 @@ class GenBridgeDspritesConfig:
     quick_max_negatives: int = 64
     quick_max_seen: int = 64
 # --- END gen-bridge-dsprites ------------------------------------------------
+
+
+# --- BEGIN gen-loss-attribution (additive; owner: experiment-engineer) -------
+# ⭐ R40.A.2: WHERE does `scale` get lost — encoder, well, or code?  ⛔ APPEND-ONLY
+# at EOF, one contiguous region, no ``CHLUConfig`` field / ``load_config`` /
+# ``save_config`` site — this file's syntax has been broken twice by hunk-by-hunk
+# "keep both" merges; the rule is take the peer's whole file and re-apply this block,
+# asserting 0 deletions.
+@dataclass
+class GenAttributionConfig:
+    """Knobs for the three-point attribution probe (``exp_gen_attribution``).
+
+    ⛔ **The same probe at all three points.**  One set of probe hyper-parameters is
+    read by the encoder point, the per-well point, the code point *and* the
+    random-code control; there is deliberately **no** per-point override, because a
+    different probe at each stage would measure the probes rather than the pipeline.
+
+    ⛔ Nothing here fits anything on the generative path: the encoder, the feature
+    cache, the grouping and the store are all **loaded** from frozen artifacts.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- frozen artifacts (⛔ every one is LOADED, never fitted here) --------
+    #: ⭐ ``gen-commitment-collapse``'s per-seed cache, for its ``labels_vec`` — the
+    #: **grouping**, so the wells here are bit-identical to the ones R31 reasoned
+    #: about and no 32k-row correlation re-derive is paid.
+    commit_cache_pattern: str = (
+        "outputs/gen-commitment-collapse/runs/{dataset}_{pretext}/seed_{seed}"
+    )
+    #: ⭐ ``gen-read-compose``'s per-seed store — exactly the one R28/R29/R31/R34
+    #: measured.  ⛔ Never retrained here.
+    store_checkpoint_source: str = (
+        "outputs/gen-read-compose/runs/{dataset}_{pretext}/seed_{seed}/store_s{seed}.pkl"
+    )
+    #: Assert the loaded store's parameter hash against the commitment manifest.
+    assert_store_hash: bool = True
+    #: sha256 the feature cache before reading it (off = faster re-runs).
+    verify_cache_checksum: bool = True
+    #: ⚠ Seeds 1-2 wrote ``scope="used"`` caches, so rows outside their own train +
+    #: eval_A + eval_B are re-encoded through the **frozen** encoder in this many
+    #: rows at a time (16 GB machine).
+    encode_chunk: int = 8192
+
+    # --- the rows (⭐ SPREAD is the headline; CORNER is reported separately) --
+    #: Rows drawn from ``split.train_rows \ store_train`` — spread over the whole
+    #: factor space and ⛔ never fitted by the store.
+    n_spread_train: int = 12288
+    n_spread_test: int = 4096
+    #: Cap on the matched-seen (R16) corner companion; ``0`` -> all of them.
+    max_matched_seen: int = 256
+    row_seed_mult: int = 7_919
+    row_seed_offset: int = 20_260_914
+
+    # --- ⛔ THE ONE PROBE, shared by all three points and the control ---------
+    probe_steps: int = 3000
+    probe_batch: int = 512
+    probe_lr: float = 3e-3
+    #: PRNG offset for the probe init; the SAME key is used at every point.
+    probe_seed_offset: int = 20_260_914
+    #: Draw seed for the random-code control.
+    random_code_seed: int = 20_260_914
+    #: ⭐ The non-parametric code-tuple lookup upper bound — strictly more
+    #: expressive than a linear head on the one-hot, so it bounds the
+    #: probe-capacity objection rather than arguing about it.
+    lookup_bound: bool = True
+
+    # --- ⭐ the pre-registered verdict rule (PREREG §4) ----------------------
+    #: "encoder has it" bar.
+    world_a_encoder_floor: float = 0.90
+    #: "code is at chance" slack above ``max(majority, random-code)``.
+    world_a_code_slack: float = 0.05
+    #: "the encoder lacks it" threshold is the midpoint of chance and the floor.
+    world_b_midpoint: bool = True
+    #: The factors the verdict is rendered on (⛔ the others are context).
+    verdict_factors: List[str] = field(default_factory=lambda: ["scale", "orientation"])
+
+    make_plots: bool = True
+    out_root: Optional[str] = None
+    claude_root: Optional[str] = None
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ----
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_spread_train: int = 512
+    quick_n_spread_test: int = 256
+    quick_probe_steps: int = 30
+    quick_max_matched_seen: int = 32
+    quick_verify_cache_checksum: bool = False
+
+
+def gen_attribution_config(
+    config: Optional["CHLUConfig"] = None, **overrides
+) -> GenAttributionConfig:
+    """Return (and memoise on ``config``) the attribution block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field, for the same reason
+    :func:`gen_navigate_config` is not: the merge rule for this file's tail is
+    "take the peer's whole file and re-apply your block", which only holds if the
+    block is one contiguous region with zero house wiring sites.
+    """
+    cfg = getattr(config, "gen_attribution", None) if config is not None else None
+    if cfg is None:
+        cfg = GenAttributionConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_attribution", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+# --- END gen-loss-attribution -----------------------------------------------
