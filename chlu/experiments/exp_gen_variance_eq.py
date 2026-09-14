@@ -876,6 +876,11 @@ def summarize(records: list, config: CHLUConfig) -> dict:
     return out
 
 
+def recs_n_corner(records: list) -> int:
+    """How many held-out ``B`` requests the distinct count is over (⛔ 72, not 4,096)."""
+    return int(records[0]["rows"]["CORNER_B"])
+
+
 def _falsifiers(out: dict, records: list, names, base: str, prim: str, c) -> dict:
     """⭐ PREREG §7, applied mechanically and answered in the pre-registered words."""
     es = "SPREAD"
@@ -892,7 +897,12 @@ def _falsifiers(out: dict, records: list, names, base: str, prim: str, c) -> dic
             "rose_beyond_spread": bool(float(b["mean"] - a["mean"]) > spread),
         }
     a_rose = all(v["rose_beyond_spread"] for v in per.values())
-    da, db = A["distinct_request_side"], B["distinct_request_side"]
+    # ⛔ PREREG §7(b) names the REQUEST-SIDE count on the 72 held-out CORNER_B
+    # requests -- the programme's "nine answers to seventy-two questions". Reading it
+    # off the SPREAD row instead would compare 4,096-request counts and is wrong.
+    CA = out["by_eval_set"]["CORNER_B"][base]
+    CB = out["by_eval_set"]["CORNER_B"][prim]
+    da, db = CA["distinct_request_side"], CB["distinct_request_side"]
     dspread = max(float(da["std"]), float(db["std"]))
     b_rose = bool(float(db["mean"] - da["mean"]) > dspread)
     fa, fb = A["distinct_feature_side"], B["distinct_feature_side"]
@@ -909,7 +919,9 @@ def _falsifiers(out: dict, records: list, names, base: str, prim: str, c) -> dic
         },
         "falsifier_b_distinct_rises": {
             "answer": "YES" if b_rose else "NO",
-            "primary": "request-side distinct code configurations on CORNER_B",
+            "primary": ("request-side distinct code configurations on the 72 held-out "
+                        "CORNER_B requests (PREREG §7(b))"),
+            "n_requests": int(recs_n_corner(records)),
             "unwhitened": da, "whitened": db, "seed_spread_used": dspread,
             "delta": float(db["mean"] - da["mean"]),
             "secondary_feature_side_on_SPREAD": {"unwhitened": fa, "whitened": fb,
