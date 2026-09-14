@@ -5977,6 +5977,18 @@ class GenDynamicalReadConfig:
     #: Divide each pair's coupling by its own leading singular value, so the strength
     #: is dimensionless and one wide well cannot silently own the whole term.
     coupling_normalise: bool = True
+    #: ⛔⭐ A bilinear coupling is an INDEFINITE quadratic form and an unbounded-below
+    #: landscape does not settle, it DIVERGES — measured at ``E = -1.6e28`` with a
+    #: per-step displacement of ``8e11`` on this spoke's first smoke.  With this on,
+    #: the strength actually used is ``min(coupling_strength,
+    #: coupling_safety_frac x λ*)`` where ``λ*`` is
+    #: :func:`chlu.core.gen_landscape.coupling_stability`'s closed-form coercivity
+    #: bound, computed from the ATOMS.  ⛔ The clip is always reported, never silent.
+    enforce_coupling_certificate: bool = True
+    coupling_safety_frac: float = 0.9
+    #: A settled state further than this many atom-radii from the atom centre is
+    #: reported DIVERGED.  ⛔ A diverged chain's energy trace measures nothing.
+    divergence_radius_mult: float = 50.0
     #: Rows the coupling is fitted on.  ⛔ TRAIN features only, label-free.
     n_coupling_fit: int = 8192
     launch_mode: str = "clamp_atom"

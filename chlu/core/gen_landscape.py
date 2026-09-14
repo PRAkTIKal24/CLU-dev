@@ -100,7 +100,6 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from .gen_store import GenStore
 
 #: How the ``N`` atoms per well are chosen out of the train rows.  ⛔ Both options
 #: select **rows**; neither ever averages anything (that would be a centre).
@@ -114,7 +113,14 @@ READ_MODES = ("state", "atom_mixture")
 #: :func:`assert_request_only` to demonstrate the assertion **failing**.
 BYPASS_STAGES = ("none", "launch", "settle", "read")
 #: Launch rules.  Every one of them is a function of ``(request, store)`` ONLY.
-LAUNCH_MODES = ("clamp_atom", "posterior_mean", "prior_atom")
+#: ``clamp_atom``             the posterior **argmax** atom, always (the default).
+#: ``clamp_atom_thresholded`` dreaming's rule — argmax only where the posterior
+#:                            concentrates above the threshold, the prior's argmax
+#:                            elsewhere.  ⚠ Measured on the real store: it clamps
+#:                            **0.00 of 5 wells** at threshold 0.5 over 64 atoms, so
+#:                            the launch carries NO request information at all.  ⛔ It
+#:                            is kept only as a control, never as the default.
+LAUNCH_MODES = ("clamp_atom", "clamp_atom_thresholded", "posterior_mean", "prior_atom")
 #: The arms this module owns.  ⭐ ``request_off`` and ``coupling_off`` are the two
 #: mandatory controls; ``zero_step`` decodes the launch itself (dreaming's
 #: laundering control, which took *all* of its apparent gain).
@@ -138,6 +144,8 @@ __all__ = [
     "check_no_feature_signature",
     "convergence_report",
     "coupling_byte_ledger",
+    "coupling_spectral_norms",
+    "coupling_stability",
     "decode_width",
     "dynamical_read",
     "fit_atom_address_book",
@@ -147,6 +155,7 @@ __all__ = [
     "read_settled",
     "select_atom_rows",
     "settle_chain",
+    "safe_coupling_strength",
     "settled_state_spread",
     "store_byte_ledger",
     "total_energy",
@@ -585,6 +594,103 @@ def fit_low_rank_coupling(
     return LowRankCoupling(us, vs, pairs, cen, rad, r)
 
 
+def coupling_spectral_norms(coupling: LowRankCoupling) -> np.ndarray:
+    """``‖W_kl‖₂`` per pair, computed on ``r x r`` matrices.
+
+    ``W = UᵀV`` with ``U (r, d_k)``, ``V (r, d_l)``.  The non-zero eigenvalues of
+    ``WᵀW = Vᵀ(UUᵀ)V`` are those of ``(UUᵀ)(VVᵀ)`` — both ``r x r`` — so this costs
+    ``O(r³)`` and not ``O(d_k d_l)``.  ⚠ At ``r = 128`` the explicit ``W`` would be
+    283x744 floats **per pair** and this is the difference between a build and a
+    swap-death on a 16 GB box.
+    """
+    out = []
+    for U, V in zip(coupling.u, coupling.v, strict=True):
+        Un, Vn = np.asarray(U, np.float64), np.asarray(V, np.float64)
+        ev = np.linalg.eigvals((Un @ Un.T) @ (Vn @ Vn.T))
+        out.append(float(np.sqrt(max(float(np.max(ev.real)), 0.0))))
+    return np.asarray(out, np.float64)
+
+
+def coupling_stability(land: AtomLandscape) -> dict:
+    """⛔⭐ **Is the total energy bounded below?**  A certificate, not a hope.
+
+    ⚠ **Measured failure this exists to prevent.**  A bilinear coupling is an
+    *indefinite* quadratic form: on the first real smoke the ``λ = 1`` chain ran to
+    ``E = −1.6e28`` with a per-step displacement of ``8e11``.  ⛔ That is a diverged
+    chain, and a diverged chain's "energy trace" is not a measurement of anything.
+
+    **The certificate.**  Write ``x̃_k = (x_k − m_k)/s_k`` and ``u_k = ‖x̃_k‖``.  The
+    kernel energy obeys ``E_k ≥ min_i‖x_k − a_ki‖²/2 − σ_k² log N``, whose quadratic
+    coefficient in ``u_k`` is ``s_k²/2``; and ``|x̃_kᵀW_kl x̃_l| ≤ ‖W_kl‖₂ u_k u_l``.
+    So ``E ≥ uᵀ C u − const`` with
+
+        ``C_kk = s_k²/2``,  ``C_kl = −λ‖W_kl‖₂/2``  (``k ≠ l``),
+
+    and the energy is **coercive** iff ``C ⪰ 0``.  Since ``C(λ) = D − λS`` with
+    ``D ≻ 0`` diagonal, the largest safe strength is
+    ``λ* = 1 / ρ(D^{−1/2} S D^{−1/2})`` in closed form.
+
+    ⭐ This is the atoms' own geometry setting the coupling's budget — ⛔ not a
+    hand-tuned constant, and it is reported on every run.
+    """
+    c = land.coupling
+    K = int(land.n_wells)
+    if c is None or land.coupling_strength == 0.0:
+        return {"coupling_present": c is not None,
+                "coupling_strength": float(land.coupling_strength),
+                "bounded_below": True,
+                "max_safe_coupling_strength": float("inf"),
+                "rule": "no coupling term: the energy is the (coercive) kernel energy"}
+    norms = coupling_spectral_norms(c)
+    rad = np.asarray(c.radii, np.float64)
+    d = (rad**2) / 2.0
+    S = np.zeros((K, K), np.float64)
+    for (k, lo), w in zip(c.pairs, norms, strict=True):
+        S[k, lo] = S[lo, k] = float(w) / 2.0
+    dinv = 1.0 / np.sqrt(np.maximum(d, 1e-300))
+    rho = float(np.max(np.abs(np.linalg.eigvalsh(dinv[:, None] * S * dinv[None, :]))))
+    lam_safe = float("inf") if rho <= 0 else 1.0 / rho
+    C = np.diag(d) - float(land.coupling_strength) * S
+    min_eig = float(np.min(np.linalg.eigvalsh(C)))
+    return {
+        "coupling_present": True,
+        "coupling_strength": float(land.coupling_strength),
+        "rank": int(c.rank),
+        "pair_spectral_norms": [float(x) for x in norms],
+        "well_radii": [float(x) for x in rad],
+        "certificate_min_eigenvalue": min_eig,
+        "bounded_below": bool(min_eig >= 0.0),
+        "max_safe_coupling_strength": lam_safe,
+        "rule": ("E >= u^T C u - const with C_kk = s_k^2/2 and C_kl = "
+                 "-lambda*||W_kl||_2/2; coercive iff C >= 0, so "
+                 "lambda* = 1/rho(D^-1/2 S D^-1/2)"),
+        "note": ("⛔ An unbounded-below landscape does not settle, it diverges — "
+                 "measured at E = -1.6e28 on the first smoke. The certificate is "
+                 "computed from the ATOMS, never hand-tuned."),
+    }
+
+
+def safe_coupling_strength(land: AtomLandscape, declared: float,
+                           safety_frac: float = 0.9) -> dict:
+    """⭐ ``min(declared, safety_frac x λ*)`` — and **say when it bound**.
+
+    ⛔ The declared strength is never silently honoured past the certificate: a
+    quietly-diverging arm is worse than a clipped one, and the clip is reported.
+    """
+    cert = coupling_stability(land.with_strengths(coupling_strength=float(declared)))
+    lam_star = float(cert["max_safe_coupling_strength"])
+    cap = lam_star * float(safety_frac)
+    used = float(min(float(declared), cap)) if np.isfinite(cap) else float(declared)
+    return {
+        "declared_coupling_strength": float(declared),
+        "max_safe_coupling_strength": lam_star,
+        "safety_frac": float(safety_frac),
+        "coupling_strength_used": used,
+        "certificate_bound_the_strength": bool(used < float(declared)),
+        "certificate": cert,
+    }
+
+
 # ---------------------------------------------------------------------------
 # 5. ⭐ The request address book — over ATOMS, not over centres
 # ---------------------------------------------------------------------------
@@ -885,10 +991,19 @@ def launch_state(land: AtomLandscape, book: AtomAddressBook, requests: np.ndarra
     ⛔ **There is no argument through which a feature tensor could enter**, and the
     signature is checked structurally by :func:`check_no_feature_signature`.
 
-    ``clamp_atom``     the argmax atom where the posterior concentrates above
-                       ``clamp_threshold``; the prior's argmax atom elsewhere.
-    ``posterior_mean`` the posterior-weighted mean of the well's atoms.
-    ``prior_atom``     ⛔ the request is ignored — the *launch-off* control.
+    ``clamp_atom``             the posterior **argmax** atom, in every well.
+    ``clamp_atom_thresholded`` argmax only where the confidence clears
+                               ``clamp_threshold``; the prior's argmax elsewhere.
+    ``posterior_mean``         the posterior-weighted mean of the well's atoms.
+    ``prior_atom``             ⛔ the request is ignored — the *launch-off* control.
+
+    ⚠ **Why the threshold is REPORTING-ONLY by default, and it is a measurement.**
+    Dreaming needed a clamp/relax split because it **froze** the clamped wells.
+    Nothing is frozen here, so the threshold decides nothing — and on the real store
+    it decides badly: over ``N = 64`` atoms the naive-Bayes posterior clears 0.5 in
+    **0.00 of 5 wells**, so ``clamp_atom_thresholded`` degenerates to ``prior_atom``
+    and the launch carries **no request information at all**.  ``mean_n_clamped`` is
+    still reported on every run as the diagnostic it now is.
 
     ⭐ The clamp is the launch, **not** the steering: the steering is the request
     ENERGY (non-negotiable 2).  Dreaming clamped and then froze the clamped wells,
@@ -913,9 +1028,11 @@ def launch_state(land: AtomLandscape, book: AtomAddressBook, requests: np.ndarra
             x0[:, cols] = (P[:, k, :] @ A).astype(np.float32)
         elif launch_mode == "prior_atom":
             x0[:, cols] = A[int(np.argmax(prior[k]))][None, :]
-        else:
+        elif launch_mode == "clamp_atom_thresholded":
             take = np.where(clamped[:, k], idx[:, k], int(np.argmax(prior[k])))
             x0[:, cols] = A[take]
+        else:
+            x0[:, cols] = A[idx[:, k]]
     return {
         "x0": x0,
         "atom_index": idx.astype(np.int64),
@@ -1216,14 +1333,11 @@ def settled_state_spread(x, store: Optional[AtomStore] = None) -> dict:
         ),
     }
     if store is not None:
-        A = np.concatenate(
-            [np.asarray(a, np.float64) for a in store.atoms], axis=1)
+        A = np.concatenate([np.asarray(a, np.float64) for a in store.atoms], axis=1)
+        al = (np.linalg.svd(A - A.mean(axis=0, keepdims=True), compute_uv=False) ** 2)
+        al = al / max(A.shape[0] - 1, 1)
         out["atom_participation_ratio"] = float(
-            (lambda l: (l.sum() ** 2) / max(float((l**2).sum()), 1e-300))(
-                (np.linalg.svd(A - A.mean(axis=0, keepdims=True), compute_uv=False) ** 2)
-                / max(A.shape[0] - 1, 1)
-            )
-        )
+            (al.sum() ** 2) / max(float((al**2).sum()), 1e-300))
     return out
 
 

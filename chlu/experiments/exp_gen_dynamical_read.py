@@ -76,6 +76,7 @@ from ..core.gen_landscape import (  # noqa: E402
     fit_atom_address_book,
     fit_low_rank_coupling,
     landscape_byte_ledger,
+    safe_coupling_strength,
     save_trace,
     settled_state_spread,
 )
@@ -194,6 +195,24 @@ def build_landscape(config: CHLUConfig, budget: str, X_train: np.ndarray,
                                      bool(c.coupling_normalise))
     land = AtomLandscape(store, sigma, coupling, float(c.request_strength),
                          float(c.coupling_strength))
+    # ⛔⭐ THE COERCIVITY CERTIFICATE.  A bilinear coupling is an indefinite
+    # quadratic form: on this spoke's first smoke the lambda = 1 chain ran to
+    # E = -1.6e28 with a per-step displacement of 8e11.  The strength actually used
+    # is capped by the atoms' own geometry, and the cap is REPORTED.
+    cert = safe_coupling_strength(land, float(c.coupling_strength),
+                                  float(c.coupling_safety_frac))
+    if bool(c.enforce_coupling_certificate):
+        land = land.with_strengths(coupling_strength=float(cert["coupling_strength_used"]))
+    if cert["certificate_bound_the_strength"]:
+        log(f"    [{spec['label']}] ⚠ coupling strength CAPPED BY THE CERTIFICATE: "
+            f"declared {cert['declared_coupling_strength']:g} -> used "
+            f"{cert['coupling_strength_used']:.4g} (lambda* = "
+            f"{cert['max_safe_coupling_strength']:.4g})")
+    else:
+        log(f"    [{spec['label']}] coupling certificate: lambda* = "
+            f"{cert['max_safe_coupling_strength']:.4g}, using "
+            f"{cert['coupling_strength_used']:g} (bounded below="
+            f"{cert['certificate']['bounded_below']})")
     ledger = landscape_byte_ledger(int(spec["n_atoms"]), store.well_sizes,
                                    int(spec["rank"]), int(spec["budget_bytes"]),
                                    label=f"budget {spec['label']} ({spec['role']})")
@@ -234,6 +253,7 @@ def build_landscape(config: CHLUConfig, budget: str, X_train: np.ndarray,
         "spec": spec, "store": store, "book": book, "coupling": coupling,
         "land": land, "sigma": [float(s) for s in sigma],
         "atoms_are_train_rows": atoms_ok,
+        "coupling_certificate": cert,
         "byte_ledger": ledger,
         "byte_ledger_measured": measured,
         "byte_ledger_matches_prereg": ledger_matches,
@@ -308,6 +328,13 @@ def run_arm(config: CHLUConfig, built: dict, arm: str, requests: np.ndarray,
         "n_wells": int(launches[0]["n_wells"]),
     }
     x0, xs, rd = merge("x0"), merge("x_settled"), merge("read")
+    # ⛔ A diverged chain's energy trace measures nothing — say so explicitly.
+    radii = np.asarray([np.asarray(a).std() for a in built["store"].atoms], np.float64)
+    ref = float(np.sqrt(np.mean(radii**2))) or 1.0
+    rms_state = float(np.sqrt(np.mean(xs**2)))
+    diverged = bool(
+        (not np.isfinite(rms_state))
+        or rms_state > float(c.divergence_radius_mult) * ref)
     rec = {
         "arm": arm,
         "request_strength": float(land.request_strength),
@@ -315,6 +342,16 @@ def run_arm(config: CHLUConfig, built: dict, arm: str, requests: np.ndarray,
         "settle_cfg": cfg.as_dict(),
         "launch": lau,
         "dynamics": conv,
+        "stability": {
+            "settled_rms": rms_state,
+            "atom_rms_radius": ref,
+            "radius_ratio": rms_state / ref if ref else float("nan"),
+            "divergence_radius_mult": float(c.divergence_radius_mult),
+            "diverged": diverged,
+            "verdict": ("⛔ DIVERGED — the landscape is not bounded below at this "
+                        "coupling strength and NO number from this arm is quotable"
+                        if diverged else "bounded"),
+        },
         "displacement_from_launch": {
             "rms": float(np.sqrt(np.mean((xs - x0) ** 2))),
             "max": float(np.max(np.abs(xs - x0))) if xs.size else float("nan"),
@@ -327,7 +364,8 @@ def run_arm(config: CHLUConfig, built: dict, arm: str, requests: np.ndarray,
         f"E {conv['energy_first']:.3f}->{conv['energy_final']:.3f} "
         f"acc={conv['accepted_fraction']} "
         f"disp[1]={conv['displacement_step_1']} disp[T]={conv['displacement_final_step']} "
-        f"still_descending={conv['frac_still_descending']} · {conv['verdict']}")
+        f"still_descending={conv['frac_still_descending']} · {conv['verdict']}"
+        + ("  ⛔ DIVERGED" if diverged else ""))
     return rec, {"x0": x0, "x_settled": xs, "read": rd, "trace": trace}
 
 
