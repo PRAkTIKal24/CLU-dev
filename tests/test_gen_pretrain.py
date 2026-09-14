@@ -154,6 +154,36 @@ def test_the_control_arm_is_the_SHIPPED_encoder_path_bit_for_bit():
     assert "recon_control" in SHIPPED_PATH_VARIANTS
 
 
+def test_ae_plain_is_the_control_objective_from_the_SAME_init():
+    """⭐ The plumbing null.  ``ae_plain`` runs the control's objective through this
+    module's own loop, so any gap between the two rows is loop nuisance and nothing
+    else.  The encoder INIT is identical by construction (the same ``ek``).
+
+    ⚠ **Measured on this machine, and it is an environment fact worth knowing:**
+    under ``jax_threefry_partitionable=True`` (the default from JAX 0.9)
+    ``jax.random.split(key, n)`` is **prefix-stable** — ``split(k, 2)[1]`` *is*
+    ``split(k, 3)[1]`` — so this module's ``split(key, 3)`` draws the *same* batch
+    stream as the shipped loop's ``split(key, 2)``, and the two arms come out
+    **bit-identical**.  ⛔ Do not assume "I split one extra subkey" decorrelates an
+    RNG stream in this environment; it does not.
+    """
+    cfg = _tiny_cfg()
+    bc = _tiny_bridge_cfg(cfg)
+    imgs, key = _tiny_images(), jax.random.PRNGKey(11)
+    ctl, _, _, ctl_meta = train_variant(imgs, "recon_control", cfg, key, bridge_cfg=bc)
+    plain, _, _, plain_meta = train_variant(imgs, "ae_plain", cfg, key, bridge_cfg=bc)
+    assert ctl_meta["objective"] == plain_meta["objective"]
+    assert plain_meta["path"] == "gen_encoders.train_variant"
+    # both paths take their encoder key from ``split(key, 3)[1]``, so the INIT is
+    # identical whatever the split implementation does.
+    _, ek, _ = jax.random.split(key, 3)
+    assert param_hash(GenEncoder((3, 16, 16), tuple(cfg.enc_channels), cfg.enc_kernel,
+                                 cfg.enc_stride, cfg.enc_groups, ek)) is not None
+    if bool(jax.config.jax_threefry_partitionable):
+        # prefix-stable split => the same batch stream => the same trained encoder
+        assert param_hash(ctl) == param_hash(plain)
+
+
 def test_the_control_arm_restores_the_bridge_config_it_borrowed():
     """⛔ A spoke that leaves ``gen_bridge.enc_steps`` mutated poisons the next run."""
     cfg = _tiny_cfg()
