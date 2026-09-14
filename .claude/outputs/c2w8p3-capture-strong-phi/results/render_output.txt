@@ -1,0 +1,93 @@
+==============================================================================
+JOINT DIAL: {"addr_dim": 12, "priced_atom_budget": 32768, "rule": "n_atoms >= round(512 * sqrt(2)**d)", "note": "ONE dial \u2014 d and its atom budget are never quoted apart"}
+SEEDS: [0, 1, 2]  ARMS: ['simclr', 'randconv', 'pca']  WALL(s): 27043
+==============================================================================
+
+## FIRST-10-LINES (R1): the store's WELL DEPTH, reported FIRST
+arm        depth_raw_median by seed                     INERT?   n_atoms
+simclr     [0.94214, 0.88514, 0.73249]                  False    [32768]
+randconv   [0.96536, 0.76919, 0.85656]                  False    [32768]
+pca        [0.74911, 0.47025, 0.60117]                  False    [32768]
+
+## THE COMPLETED GATE — all four legs, per seed
+arm        seed  G-CAP            G-DEC                  G-DRIFT              A1               A2             A3a                  A3b                  GATE
+simclr     0     0.062 False      0.0625v0.0625 False    2.0143 False         0.0000 False     1.0000 False   -0.3438±0.1148 False -0.0469±0.1755 True  False
+simclr     1     0.375 False      0.2422v0.0625 True     0.6358 True          0.1484 False     0.6875 False   -0.2031±0.1060 False -0.0625±0.1757 True  False
+simclr     2     0.500 False      0.1875v0.0625 True     0.2858 True          0.1406 False     0.6875 False   -0.2109±0.1000 False -0.2031±0.1729 False False
+           -> gate_pass=False all_four_same_seed=0/3
+randconv   0     0.688 True       0.1797v0.0625 True     0.1431 True          0.2422 False     0.3750 True    -0.0781±0.0797 True  -0.0312±0.1745 True  False
+randconv   1     0.812 True       0.1875v0.0625 True     0.1055 True          0.2422 False     0.4375 True    -0.1328±0.0812 False 0.0312±0.1767 True   False
+randconv   2     0.562 True       0.2109v0.0625 True     0.1993 True          0.2266 False     0.5000 True    -0.2188±0.1105 False 0.0469±0.1717 True   False
+           -> gate_pass=False all_four_same_seed=0/3
+pca        0     0.250 False      0.1094v0.0625 True     1.7772 False         0.0469 False     0.8750 False   -0.1953±0.0950 False -0.0469±0.1755 True  False
+pca        1     0.812 True       0.2734v0.0625 True     0.0421 True          0.2422 False     0.4375 True    -0.0859±0.0950 True  -0.0156±0.1767 True  False
+pca        2     1.000 True       0.2656v0.0625 True     0.0464 True          0.3828 True      0.1250 True    -0.0859±0.0898 True  -0.0156±0.1757 True  True
+           -> gate_pass=False all_four_same_seed=1/3
+
+## G-ADDR headline legs (A1/A2/A3), with the 'some basin' non-leg beside them
+arm        A1 (correct-basin)         voronoi_only               any_basin (NOT the leg)    launder rate              
+simclr     [0.0, 0.1484, 0.1406]      [0.0625, 0.1562, 0.2109]   [0.0, 0.9844, 0.2891]      [0.4062, 0.3594, 0.4219]  
+randconv   [0.2422, 0.2422, 0.2266]   [0.3281, 0.2656, 0.2266]   [0.5156, 0.9766, 1.0]      [0.4062, 0.3984, 0.4453]  
+pca        [0.0469, 0.2422, 0.3828]   [0.0781, 0.2812, 0.3828]   [0.4453, 0.875, 1.0]       [0.2734, 0.3672, 0.4688]  
+
+## THE CUE, as a dimensionless ratio (PREREG §4 / my PREREG §1)
+arm        kappa_q   cue_sigma/codebook_spacing   cue_displacement/spacing   codebook_spacing    
+simclr     1.00      0.8753                       3.0322                     0.65227             
+randconv   1.00      0.7102                       2.4602                     0.72863             
+pca        1.00      0.9270                       3.2112                     0.39136             
+
+## ⭐ THE BRANCH (computed by `daylight_verdict`, never argued)
+simclr     (b) NO DAYLIGHT    A3a+beyond2SE=0/3 A3b+beyond2SE=0/3
+randconv   (b) NO DAYLIGHT    A3a+beyond2SE=0/3 A3b+beyond2SE=0/3
+pca        (b) NO DAYLIGHT    A3a+beyond2SE=0/3 A3b+beyond2SE=0/3
+  rule: (a) iff a launder margin is POSITIVE beyond 2 SE on >= 3 seeds (A3a McNemar / A3b pooled binomial); (b) otherwise
+
+## ⚠ THE D2a DIAGNOSTIC — two-sided, never a target
+arm        agreement_rate (chance)        median|settle-launder key|/spacing   G-DRIFT ratio           
+simclr     [0.0547, 0.1641, 0.25] (0.0625) [2.0046, 1.4469, 1.587]              [2.0143, 0.6358, 0.2858]
+randconv   [0.5156, 0.4844, 0.2656] (0.0625) [0.4354, 1.2415, 1.6012]             [0.1431, 0.1055, 0.1993]
+pca        [0.0703, 0.4844, 0.5469] (0.0625) [1.9643, 0.6534, 0.1431]             [1.7772, 0.0421, 0.0464]
+  simclr: best_is_also_lowest_drift = False (best=1, lowest_drift=2)
+  randconv: best_is_also_lowest_drift = False (best=0, lowest_drift=1)
+  pca: best_is_also_lowest_drift = False (best=2, lowest_drift=1)
+
+## THE BYTE LEDGER — φ + map on EVERY arm INCLUDING the launder
+arm        enc floats   map floats   clu bytes    launder bytes  ratio (addr only)   ratio (with φ) 
+simclr     225536       3328         1966848      416            4728.0              3.1471         
+randconv   225536       3328         1966848      416            4728.0              3.1471         
+pca        39936        0            1966848      416            4728.0              13.2779        
+  matching: matched-ITEMS (same keys, same queries, same φ) | matched_bytes: False
+
+## R2(b) LAUNDER AUDIT (asserted in code, re-read here)
+  9/9 cells: launder_reads_projected_phi = bit_identical_to_store_addresses = true
+  simclr: launder_key_dim=12 store_address_dim=12 phi_dim_before_map=256
+  randconv: launder_key_dim=12 store_address_dim=12 phi_dim_before_map=256
+  pca: launder_key_dim=12 store_address_dim=12 phi_dim_before_map=12
+
+## PAIRING EVIDENCE — the stream fingerprint, per seed, per arm
+  simclr: ['318a2b8590716f68', 'e7505727a7a2be65', '41945861de7ae566']
+  randconv: ['318a2b8590716f68', 'e7505727a7a2be65', '41945861de7ae566']
+  pca: ['318a2b8590716f68', 'e7505727a7a2be65', '41945861de7ae566']
+
+## THE GEOMETRY EACH CELL MEASURED (spacing, d_safe, scale)
+arm        median_nn_task1                    d_safe                         phi_scale               
+simclr     [0.57094, 0.5519, 0.55787]         [0.50243, 0.48567, 0.49093]    [1.1743, 1.1819, 1.1929]
+randconv   [0.51746, 0.52301, 0.51779]        [0.45537, 0.46025, 0.45565]    [1.0592, 1.0627, 1.0726]
+pca        [0.36279, 0.34643, 0.32278]        [0.31925, 0.30486, 0.28405]    [0.0544, 0.0537, 0.054] 
+
+## THE STREAM (admission / refusal — monitor #3)
+arm        n_admitted       n_refused      refusal_rate             overdig          n_live
+simclr     [16, 16, 16]     [0, 1, 0]      [0.0, 0.0588, 0.0]       [2.0, 2.0, 2.0]  [16, 16, 16]
+randconv   [16, 16, 16]     [1, 0, 1]      [0.0588, 0.0, 0.0588]    [2.0, 2.0, 2.0]  [16, 16, 16]
+pca        [16, 16, 16]     [0, 1, 2]      [0.0, 0.0588, 0.1111]    [2.0, 2.0, 2.0]  [16, 16, 16]
+
+## SELF-PROBE (G-DEC's ingredient) and the store flags actually used
+  simclr: acq=[0.1328, 0.4141, 0.5938] strict=[0.1328, 0.4141, 0.5938] decode=[0.0625, 0.2422, 0.1875]
+  randconv: acq=[0.7734, 0.7734, 0.5] strict=[0.7109, 0.7656, 0.5] decode=[0.1797, 0.1875, 0.2109]
+  pca: acq=[0.1328, 0.5859, 0.7344] strict=[0.1328, 0.5859, 0.7344] decode=[0.1094, 0.2734, 0.2656]
+  store flags (seed 0, first arm): {"addr_dim": 12, "capacity": 16, "atom_width": 0.8564151517264178, "atom_kernel": "wendland", "atom_site_local_init": true, "atom_site_local_radius": 0.8564151517264178, "d_safe_override": 0.5024302223461651, "budget": 16, "leak": 0.02, "stage_lifetimes": true}
+
+## WALL, per arm
+  simclr: 12359 s  (per cell: [4003, 4172, 4184])
+  randconv: 7008 s  (per cell: [1864, 2479, 2665])
+  pca: 7676 s  (per cell: [2532, 2485, 2659])

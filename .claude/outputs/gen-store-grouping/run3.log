@@ -1,0 +1,100 @@
+[gen-store] shapes3d/recon seed=0 -> /Users/user/Desktop/CHLU/.claude/outputs/gen-store-grouping/runs/shapes3d_recon/seed_0
+  frozen bridge: /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0
+  ⭐ no-leak: 32768 store-training rows checked, 72/72 held-out excluded, 0 leaked
+  feature cache verified: 480000 rows, D=2048, float16
+  rows: store_train=32768 eval_a=1024 eval_b=72 matched_seen=198 probe_train=8192 corr=16384
+  C set: 72 factor-space records (⛔ diagnostic mapping only)
+  channel correlation over 16384 train rows (D=2048) …
+  ⚠ 71/2048 coordinates are DEAD (constant post-ReLU); they are clustered around and placed deterministically
+  ⭐ K = 5  (argmax_k (lambda_{k+1} - lambda_k) of the symmetric normalised Laplacian of |corr|, over the pre-registered candidate range)
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ceiling (real cached features, no store): aggregate=0.9476 shape=0.9043
+  [correlation] method=ward (requested auto) well sizes [303, 305, 573, 501, 366]  in-block |corr|^2 = 0.4692
+  [correlation] training the modes (1200 steps, store-only objective) …
+    step 1/1200  loss=47.49073  tau=1.000
+    step 240/1200  loss=35.83178  tau=0.632
+    step 480/1200  loss=33.76172  tau=0.399
+    step 720/1200  loss=32.54734  tau=0.251
+    step 960/1200  loss=31.38681  tau=0.159
+    step 1200/1200  loss=31.64705  tau=0.100
+  [correlation] ⭐ no-bypass: pure codebook gather, 30 bits/read
+  [correlation] READ: aggregate=0.5973 shape=0.5674 rel_mse=0.2827 modes_used=64.0
+  [correlation] ⭐ DELETE(zero): aggregate 0.5973 -> 0.1260 (Δ=+0.4714)  shape Δ=+0.3154  read-output RMS Δ=0.6709
+  [correlation] ⭐ DELETE(mean): aggregate 0.5973 -> 0.1237 (Δ=+0.4736)  shape Δ=+0.3154  read-output RMS Δ=0.4097
+  [correlation] ⭐ DELETE(scramble): aggregate 0.5973 -> 0.1629 (Δ=+0.4344)  shape Δ=+0.2588  read-output RMS Δ=0.6947
+  [correlation] MIG=0.1898 DCI-D=0.3046 pooled leakage=-0.1592 C intra-well=0.000
+  [random] method=ward (requested auto) well sizes [303, 305, 573, 501, 366]  in-block |corr|^2 = 0.2127
+  [random] training the modes (1200 steps, store-only objective) …
+    step 1/1200  loss=66.09073  tau=1.000
+    step 240/1200  loss=55.10220  tau=0.632
+    step 480/1200  loss=50.27494  tau=0.399
+    step 720/1200  loss=47.56828  tau=0.251
+    step 960/1200  loss=47.35173  tau=0.159
+    step 1200/1200  loss=46.37937  tau=0.100
+  [random] ⭐ no-bypass: pure codebook gather, 30 bits/read
+  [random] READ: aggregate=0.4492 shape=0.3574 rel_mse=0.4185 modes_used=64.0
+  [random] ⭐ DELETE(zero): aggregate 0.4492 -> 0.1260 (Δ=+0.3232)  shape Δ=+0.1055  read-output RMS Δ=0.6515
+  [random] ⭐ DELETE(mean): aggregate 0.4492 -> 0.1273 (Δ=+0.3219)  shape Δ=+0.1055  read-output RMS Δ=0.3759
+  [random] ⭐ DELETE(scramble): aggregate 0.4492 -> 0.1493 (Δ=+0.3000)  shape Δ=+0.0830  read-output RMS Δ=0.6823
+  [random] MIG=0.0269 DCI-D=0.3226 pooled leakage=0.1823 C intra-well=0.000
+  ⭐ store plan pinned -> /Users/user/Desktop/CHLU/.claude/outputs/gen-store-grouping/runs/shapes3d_recon/store_plan.json
+[gen-store] shapes3d/recon seed=1 -> /Users/user/Desktop/CHLU/.claude/outputs/gen-store-grouping/runs/shapes3d_recon/seed_1
+  frozen bridge: /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1
+  ⭐ no-leak: 32768 store-training rows checked, 72/72 held-out excluded, 0 leaked
+  feature cache verified: 9288 rows, D=2048, float16
+  rows: store_train=32768 eval_a=1024 eval_b=72 matched_seen=199 probe_train=8192 corr=16384
+Traceback (most recent call last):
+  File "<string>", line 5, in <module>
+  File "/Users/user/Desktop/CHLU-gen-store/chlu/experiments/exp_gen_store.py", line 829, in run_experiment_gen_store
+    man = run_seed(dataset, pretext, seed, d, config, k_pin=k_pin, log=log)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/user/Desktop/CHLU-gen-store/chlu/experiments/exp_gen_store.py", line 459, in run_seed
+    "X_store": gather(rows["store_train"]),
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/user/Desktop/CHLU-gen-store/chlu/experiments/exp_gen_store.py", line 451, in gather
+    return features_for_rows(crows, feats, r).reshape((len(r), -1))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/user/Desktop/CHLU-gen-store/chlu/core/gen_bridge.py", line 684, in features_for_rows
+    raise KeyError(
+KeyError: '32199 requested row(s) are not in the feature cache (first: 1) — the cache scope is too narrow'

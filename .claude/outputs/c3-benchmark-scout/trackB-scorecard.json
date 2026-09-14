@@ -1,0 +1,285 @@
+{
+  "_schema_note": "Per task 2.4. crit4_tripwire has NO verdict field by design. Ranked best-first. All numbers carry primary-source provenance in the sibling report c3-benchmark-scout.md.",
+  "_generated": "2026-08-12",
+  "_agent": "c3-benchmark-scout (web-scout)",
+  "_state_byte_budget_convention": "1,966,080 B = the CLU d=12 store as computed in .claude/outputs/c2w10-benchmark-gate.md section 5 (n_atoms = 512*sqrt(2^12) = 32768; 32768*(12+1)*4). MUST be re-derived from the actual C3 block config before any tripwire runs; it is used here only so cost/exemplar-count arithmetic is concrete.",
+  "_methodology_reused_from": [
+    ".claude/outputs/c2w10-benchmark-gate.md (INSECTS: B1 loader positive control -> B2 matched-bytes exemplar tripwire -> B3 temporal-dependence -> B4 byte ledger; anti-hobbling raw+std, window ladder, No-Change mandatory in every table)",
+    ".claude/outputs/c2w10-metro-gate.md (Metro: hidden-clock protocol, 24-h label embargo A(t), relative-margin gate m2_margin_rel, drift map + shuffled-order null)"
+  ],
+
+  "rows": [
+    {
+      "rank": 1,
+      "venue": "CAMELS-US rainfall-runoff (531-basin ML benchmark subset; Caravan as the global scale-up)",
+      "modality": "long-horizon multivariate geophysical time series (5 daily meteorological forcings + 27 static catchment attributes -> daily discharge)",
+      "task_form": "sequence-to-sequence SIMULATION, not autoregressive forecasting: the model receives meteorological forcings only and must emit discharge. Discharge is NEVER an input, so persistence/AR baselines are structurally unavailable inside the protocol. Horizon = decades of daily steps; standard split train 1999-10-01..2008-09-30, test 1989-10-01..1999-09-30 (test precedes train, by convention).",
+      "size_on_disk": "Full NCAR CAMELS ascii package incl. shipped benchmark-model outputs: reported as ~15 GB compressed / ~130 GB uncompressed by a SECONDARY source only (hyper.ai) -- NOT VERIFIED against NCAR, do not quote. DERIVED (ours, arithmetic shown in report section 2.3): the forcing+discharge time series alone for 671 basins x ~12,784 days x 6 float32 = ~206 MB; with all Daymet/Maurer/NLDAS forcing sets ~0.6 GB. Caravan (netCDF, 6,830 basins core / 22,732 with extensions): size NOT VERIFIED.",
+      "license": "CAMELS: distributed openly by NCAR/UCAR (Addor et al. 2017, HESS 21:5293); explicit SPDX identifier NOT CONFIRMED -- Head/engineer must verify redistribution terms before any mirror is created. Caravan: reported CC-BY-4.0, SINGLE-SOURCED (Nature Scientific Data page was behind an IdP redirect and could not be fetched). Underlying USGS streamflow is US-Gov public domain. NO credentials, NO EULA, NO login required for either.",
+      "splits_canonical": true,
+
+      "crit1_baselines": {
+        "verdict": "PASS",
+        "best_deep": "EA-LSTM ensemble, median NSE 0.74 (Kratzert et al. 2019, HESS 23:5089, Table 3, 447 basins common to all benchmarks); LSTM-with-static-inputs ensemble 0.72",
+        "best_naive": "Per-basin mean flow = NSE 0.00 BY DEFINITION (NSE's normaliser is the observed variance). Non-trivial classical competition: basin-calibrated process models -- HBV upper bound ~0.67, mHM basin-calibrated ~0.64, VIC basin-calibrated ~0.60, FUSE ~0.55-0.60; regionally calibrated mHM 0.53, VIC 0.31.",
+        "source": "Kratzert, Klotz, Shalev, Klambauer, Hochreiter, Nearing (2019), 'Towards learning universal, regional, and local hydrological behaviors via machine learning applied to large-sample datasets', HESS 23:5089-5110, Table 3. https://hess.copernicus.org/articles/23/5089/2019/",
+        "note": "Both sides of criterion 1 are satisfied in the unusual and desirable direction: the classical competition is a decades-tuned, physically-grounded, basin-calibrated model family that does WELL (0.60-0.67), and deep sequence models beat it (0.72-0.74). This is not a venue where the competition is absent by construction."
+      },
+
+      "crit2_headroom": {
+        "verdict": "PASS",
+        "evidence": "Gap best-deep minus best-calibrated-process = 0.74 - 0.67 = +0.07 median NSE (>10% relative on the 1-NSE residual: residual 0.26 vs 0.33, a 21% reduction in unexplained variance). Nothing is at ceiling: median NSE 0.74 leaves 26% of variance unexplained, and the LOW-NSE tail (arid/ephemeral basins) is far worse. Contrast the two venues that killed C2W10: Metro's best strong baseline beat the one-line weekly naive by only 2.17% relative MAE, and INSECTS' band-4 was at 97-99% for every arm. Neither pathology is present here."
+      },
+
+      "crit3_memory_is_the_difficulty": {
+        "verdict": "PASS (strongest of any candidate screened)",
+        "evidence": "The physics of the task IS memory management: catchment storage (soil moisture, groundwater, snowpack) integrates forcings over weeks-to-months and releases them with state-dependent, non-linear timing. Snow basins require multi-month retention with a scheduled release. Published mechanistic evidence that the difficulty is carried in a sequence model's MEMORY specifically: Lees, Reece, Kratzert, Klotz, Gauch, De Bruijn, Kumar Sahu, Greve, Slater, Dadson (2022), 'Hydrological concept formation inside long short-term memory (LSTM) networks', HESS 26:3079-3101 -- linear probes recover soil-moisture and snow-water-equivalent stores from the LSTM CELL STATE despite the network never seeing those variables. That is a published demonstration that the winning method's advantage lives in its memory, which is exactly criterion 3. NOT single-shot lookup: the answer at day t is a function of an accumulated, decaying, capacity-limited store."
+      },
+
+      "crit4_tripwire": {
+        "SPEC_ONLY": true,
+        "query_repr": "Causally standardised (per-basin z-score from training-period statistics only) 365-day trailing window of the 5 Daymet forcings (prcp, tmin, tmax, srad, vp) for the target basin, concatenated with the 27 static catchment attributes -> 365*5 + 27 = 1,852 dims. Run a SECOND, cheaper variant at a 30-day window -> 30*5 + 27 = 177 dims. Both variants are mandatory (the C2W10 window-ladder lesson: a single store size cannot represent the family; kNN_S on INSECTS went 76.03% at L=500 to 59.75% at L=14,782 on identical data).",
+        "key_repr": "Identical construction over training-period days. Two store arms: (a) REGIONAL -- exemplars pooled across all 531 basins (this is the arm that matches how the LSTM is trained, one model for all basins); (b) LOCAL -- same-basin-only exemplars. Report both; the regional arm is the registered primary.",
+        "shared_metric_space_hypothesis": "STATED AS A HYPOTHESIS TO BE TESTED, NOT A CONCLUSION. Structural reason it might hold: our block's read-in phi would consume the same trailing forcing window, so if phi is close to an isometry on that window then queries and stored keys occupy one metric space and a classical store is the provable ceiling (the criterion-4 theorem). Structural reason it might FAIL (why this venue is worth the run): the target is a function of an UNOBSERVED accumulated state (storage), not of the forcing window itself -- two identical 365-day forcing windows in basins with different antecedent storage produce different discharge, and the static attributes only partially disambiguate. If that non-identifiability is material, no metric over the observable window can be the ceiling. This is precisely the asymmetry the six previous confirmations did not have.",
+        "exemplar_baseline": "Distance-weighted k-NN regression, k in {1,3,5,10,25}, over a store of L exemplars; L ladder {250, 500, 1000, 2000, 5000, at-budget}; run RAW and CAUSALLY-STANDARDISED and consume the max (anti-hobbling, c2w10-benchmark-gate section 3.4 -- on INSECTS, running raw-only would have flipped criterion4_cleared to true). Plus a dual-memory (SAM-kNN-style) arm reusing the port at .claude/outputs/c2w10-benchmark-gate/code/. MANDATORY companion rows in every table: per-basin mean flow (NSE = 0), per-basin day-of-year climatology, and 1-day persistence reported SEPARATELY and explicitly labelled a DIFFERENT TASK (persistence needs discharge as an input, which the simulation protocol forbids -- quoting it as an in-protocol baseline would be the Metro leak error repeated).",
+        "state_byte_budget": "1,966,080 B (CLU d=12 convention). Arithmetic: 365-day variant, (1852+1)*4 = 7,412 B/exemplar -> floor(1966080/7412) = 265 exemplars (1,964,180 B used, 1,900 B slack). 30-day variant, (177+1)*4 = 712 B/exemplar -> floor(1966080/712) = 2,761 exemplars (1,965,832 B used, 248 B slack). Report the byte ledger for every arm including phi, per the standing rule.",
+        "loader_positive_control_first": "MANDATORY BEFORE ANY TRIPWIRE NUMBER IS QUOTED (the B1/M1 precedent). CAMELS ships the calibrated benchmark models' own daily output. Recompute median NSE for SAC-SMA+SNOW-17 (and one other shipped benchmark) on the 447-basin common set over the published test window and require it to land within tolerance of Kratzert 2019 Table 3. Any mismatch = defective loader/split/basin-list, hard stop. Also assert the exact 531-basin (Newman et al.) and 447-basin lists and the exact split dates as file-level contracts with sha256s, mirroring .claude/data/c2w10-streams/.",
+        "dies_if": "Let S = median NSE over the test period of the best STRONG reference (our re-trained LSTM/EA-LSTM; sanity anchor 0.74 from Kratzert 2019 Table 3) and E = median NSE of the best exemplar arm at or under the byte budget, maximised over {k, L, raw|std, regional|local}. Compute margin_abs = E - S and margin_rel = (E - S)/S. THE VENUE DIES IF margin_abs >= -0.02 (equivalently the classical store gets within 0.02 median NSE of the learned model at matched bytes), OR IF margin_rel >= -0.02. Report BOTH, and report the margin against EVERY strong reference available (ours, and each shipped calibrated process model) exactly as the INSECTS gate reported five ARF references -- the INSECTS verdict landed 0.10 points inside its threshold and only survived scrutiny because all five references were printed. Additionally report the FLOW-REGIME-RESOLVED margin (high-flow / low-flow / snowmelt-recession slices): a store that wins only on baseflow recession is a different finding from one that wins everywhere.",
+        "extra_null_leg": "Reuse the Metro shuffled-order null: destroy the temporal order of the forcing window and re-run the exemplar store. On Metro this null showed shuffling HELPED the store (320.98 ordered -> 311.75 shuffled), proving the stream's ordering carried no exploitable information at those budgets. If shuffling does not hurt the CAMELS store, the venue has no retention signal to sell and the tripwire result is moot.",
+        "cost_estimate": "CPU-only, single machine. Data staging < 1 GB. Full ladder (2 window variants x 6 L x 5 k x 2 scalings x 2 store arms = 240 arms) over ~531 basins x ~3,650 test days ~= 1.9M queries; with float32 blocked distance computation this is hours, not days. Comparable to the ~4 h (INSECTS) and ~1 h (Metro) precedents. Budget ONE short CPU job; no GPU, no CSF3 allocation strictly required."
+      },
+
+      "crit5_all_levers": {
+        "verdict": "PASS",
+        "evidence": "Learned phi: the forcing encoder must earn its decomposition from raw meteorology (this is the C2-Add.16 blocker -- phi's decomposition -- being tested where phi cannot be handed its features). Learned psi: the discharge read-out is a genuine regression head, not a handcrafted argmax. Lifetimes: catchment storage residence times are literally per-item decay constants with a physical referent, so 'lifetime is a dial you set' has an external check for the first time. Controller: admit/place/evict under seasonal capacity pressure (snow accumulation season = monotonic capacity load, melt = scheduled release). Retry / anytime read: flood peaks are the rare, high-value, compute-worthy events and the anytime accuracy-vs-compute curve has a natural operational reading. All five levers are simultaneously load-bearing."
+      },
+
+      "csf3": {
+        "available": true,
+        "how_obtained": "CAMELS: direct HTTP download from NCAR/UCAR (no credentials, no EULA, no login). Caravan: Zenodo + HuggingFace mirrors. Both fit the download-once, serial-staging, atomic-rename pattern of chlu/data/industrial/base.py::download_file exactly as chlu/data/enwik8.py documents it.",
+        "staging_notes": "Stage serially once before any sweep; freeze a single consolidated .npy/.npz per basin-set with a sha256 contract file (the c2w10 .claude/data/ precedent) so every arm provably reads identical bytes. CAMELS ships as many small ascii files -> consolidate to one memmap-able array at stage time; do NOT let N array tasks parse ascii concurrently. VERIFY THE LICENCE STRING before mirroring anything to CSF3 -- this is the one open blocker on this row and it is a 10-minute check, not a research task."
+      },
+
+      "overall": {
+        "verdict": "RECOMMEND-IF-TRIPWIRE-CLEARS",
+        "one_line_reason": "The only screened venue that passes criteria 1, 2, 3 and 5 simultaneously with primary-source numbers, and the only one where the difficulty is a published, probe-verified MEMORY of an unobserved accumulated state -- which is also the one structural reason it might be the first venue to survive the criterion-4 theorem."
+      }
+    },
+
+    {
+      "rank": 2,
+      "venue": "N-CMAPSS (Arias Chao et al. 2021), DS02 subset -- turbofan RUL prognostics",
+      "modality": "long-horizon multivariate sensor time series (20 channels + flight-condition descriptors) over whole flight cycles, multi-unit",
+      "task_form": "remaining-useful-life regression across an entire degradation history; test units are unseen engines (~60/40 unit-wise split; train units {2,5,10,16,18,20}, test units {11,14,15} per Chao et al.)",
+      "size_on_disk": "'several GB' per the dataset documentation as relayed by secondary sources -- NOT VERIFIED against the NASA PCoE repository. Engineer must measure at stage time.",
+      "license": "NASA Prognostics Center of Excellence data repository; US-Government work, no credentials or EULA reported -- NOT INDEPENDENTLY VERIFIED, check before mirroring.",
+      "splits_canonical": true,
+
+      "crit1_baselines": {
+        "verdict": "LIKELY PASS but UNDER-EVIDENCED",
+        "best_deep": "A DS02 RMSE of 5.04 is attributed to a deep model in the literature; I could NOT reach the originating paper's table and therefore do NOT quote it as established. TREAT AS NOT-VERIFIED.",
+        "best_naive": "NOT PUBLISHED at this venue in any source I reached. This is the row's central weakness: prognostics papers routinely omit a trivial baseline. What it would cost US: minutes of CPU -- fit (i) mean-RUL, (ii) RUL as an affine function of cycle index, (iii) per-unit linear extrapolation of a health index. ⚠ (ii) is historically dangerously strong on CMAPSS-family data because RUL is defined as a piecewise-linear function of cycle count.",
+        "source": "Arias Chao, Kulkarni, Goebel, Fink (2021), 'Aircraft Engine Run-to-Failure Dataset under Real Flight Conditions for Prognostics and Diagnostics', Data 6(1):5 -- dataset of record. Baseline numbers above relayed from secondary sources and explicitly NOT adopted."
+      },
+
+      "crit2_headroom": {
+        "verdict": "UNKNOWN -- CANNOT BE SCORED WITHOUT RUNNING THE TRIVIAL BASELINE",
+        "evidence": "No published naive baseline was found at this venue, so the criterion-2 pairing that this scorecard requires DOES NOT EXIST in the literature. Per hard rule 3 this is a NOT-PUBLISHED, not a pass and not a fail. The affine-in-cycle-index baseline must be run before this venue can be scored at all."
+      },
+
+      "crit3_memory_is_the_difficulty": {
+        "verdict": "PLAUSIBLE PASS",
+        "evidence": "Degradation is a monotone accumulation over hundreds of flight cycles under varying flight conditions; the informative signal is the drift of sensor responses relative to their own history under matched operating conditions, which requires retaining a condition-indexed baseline over very long horizons. That is retention under capacity pressure, not single-shot lookup. NOT backed here by a probe-style publication of the Lees-et-al. kind."
+      },
+
+      "crit4_tripwire": {
+        "SPEC_ONLY": true,
+        "query_repr": "Down-sampled window of the 20 sensor channels concatenated with the 4 flight-condition descriptors (altitude, Mach, TRA, T2), causally standardised; window length swept in {1 flight cycle, 5, 20 cycles}.",
+        "key_repr": "Identical construction over training units. This venue's criterion-4 hazard is UNUSUALLY HIGH and must be stated up front: SIMILARITY-BASED RUL ESTIMATION -- match the query trajectory against a library of stored run-to-failure trajectories and read off the residual life -- is a classical, published, competitive method on the CMAPSS family. That is a nearest-neighbour store by another name, i.e. the venue arrives with a pre-existing reason to be metric-native.",
+        "exemplar_baseline": "(a) distance-weighted k-NN regression over stored (window -> RUL) pairs, k in {1,3,5,10,25}, raw and standardised, L ladder as in row 1; (b) classical trajectory-similarity RUL matching (DTW or Euclidean over health-index curves) at the same byte budget. Mandatory companion rows: mean-RUL, affine-in-cycle-index.",
+        "state_byte_budget": "1,966,080 B. Arithmetic: a 24-dim frame at float32 = 96 B; a 20-frame window = 1,920 B + 4 B target = 1,924 B/exemplar -> floor(1966080/1924) = 1,021 exemplars. A 1-frame (100 B) representation buys 19,660 exemplars. Report the ladder; do not pick one.",
+        "dies_if": "RMSE_exemplar_at_budget <= RMSE_best_strong * 1.02 (i.e. the classical store is within 2% relative RMSE of the best learned model, the Metro relative convention). Also report the NASA s-score under the same rule, and report the margin against EVERY strong reference.",
+        "cost_estimate": "CPU-only, hours. Data staging a few GB. One short job.",
+        "EMBARGO": "⛔ NO CAFE-DERIVED C-MAPSS NUMBER IS EXTERNALLY COMPARABLE (the banked label-bug report). Nothing from our CAFE prognostics work may be quoted for or against this venue, in either direction. N-CMAPSS is a DIFFERENT, externally published dataset -- but any of our own numbers that flow through CAFE-derived preprocessing inherit the embargo."
+      },
+
+      "crit5_all_levers": {
+        "verdict": "PARTIAL",
+        "evidence": "Learned phi/psi and lifetimes map cleanly (degradation state, per-unit histories). The controller has less to do: the stream is a single monotone regime per unit, with no revisit and no re-identification, so admission/eviction pressure is weak and 'selective recall under load' has no natural instance. Criterion 5 is the reason this is the FALLBACK and not the primary."
+      },
+
+      "csf3": {
+        "available": true,
+        "how_obtained": "NASA PCoE prognostics data repository, direct download.",
+        "staging_notes": "HDF5; stage once serially, freeze with sha256 contract. Verify licence/terms text before mirroring."
+      },
+
+      "overall": {
+        "verdict": "RECOMMEND-IF-TRIPWIRE-CLEARS (FALLBACK ONLY)",
+        "one_line_reason": "Head-named prognostics leg, real and public, memory-over-long-histories is plausibly the difficulty -- but it arrives with NO published trivial baseline (criterion 2 unscoreable as published), a weak criterion-5 story, and the highest criterion-4 prior of any row because similarity-based RUL matching is already a competitive classical method on this family."
+      }
+    },
+
+    {
+      "rank": 3,
+      "venue": "Spatio-temporal traffic forecasting: METR-LA / PEMS-BAY (and LargeST)",
+      "modality": "multivariate sensor network time series (207 / 325 loop detectors, 5-min sampling, 34,272 / 52,116 steps)",
+      "task_form": "12-step-in / 12-step-out forecasting; the field's 'long' horizon is 60 minutes",
+      "size_on_disk": "< 1 GB",
+      "license": "METR-LA (LA Metro) and PEMS-BAY (Caltrans PeMS) redistributed via the DCRNN release; open, no credentials reported.",
+      "splits_canonical": true,
+      "crit1_baselines": {
+        "verdict": "PASS",
+        "best_deep": "Graph WaveNet, METR-LA 60-min MAE 3.53 / RMSE 7.37 / MAPE 10.01%; PEMS-BAY 60-min MAE 1.95 / RMSE 4.52 / MAPE 4.63%",
+        "best_naive": "Historical Average (day-of-week x time-of-day mean): METR-LA 60-min MAE 4.16; PEMS-BAY 60-min MAE 2.88. ARIMA METR-LA 60-min 6.90; FC-LSTM 4.37.",
+        "source": "Wu, Pan, Long, Jiang, Zhang (2019), 'Graph WaveNet for Deep Spatial-Temporal Graph Modeling', IJCAI 2019, arXiv:1906.00121, Table 2 (verbatim rows retrieved)."
+      },
+      "crit2_headroom": {
+        "verdict": "MARGINAL PASS",
+        "evidence": "(4.16 - 3.53)/4.16 = 15.1% relative MAE over Historical Average at 60 min on METR-LA; (2.88-1.95)/2.88 = 32.3% on PEMS-BAY. Healthily above the 2.17% that killed Metro Interstate. But the gap is against HA specifically, and progress since 2019 has been incremental."
+      },
+      "crit3_memory_is_the_difficulty": {
+        "verdict": "FAIL -- THIS IS THE KILL",
+        "evidence": "The published difficulty is SPATIAL correlation structure plus one hour of short-range temporal dynamics. There is no retention-over-long-horizons requirement, no capacity pressure, no interference, no selective recall under load. A 12-step input window is single-shot context, not memory management. Criterion 3 as written ('memory management over time is the difficulty -- NOT single-shot lookup') is not satisfied."
+      },
+      "crit4_tripwire": {
+        "SPEC_ONLY": true,
+        "query_repr": "12-step x N-sensor standardised window (optionally restricted to the target sensor + its graph neighbours).",
+        "key_repr": "Identical windows drawn from the training period. ⚠ Structural hypothesis to be TESTED: the Historical Average baseline already IS an exemplar store keyed on (day-of-week, time-of-day), and it sits only 15% behind SOTA -- so a learned-embedding kNN has an unusually direct route to the frontier here.",
+        "exemplar_baseline": "distance-weighted k-NN over standardised windows, k in {1,3,5,10,25}, L ladder {250,...,at-budget}, raw and standardised, plus HA and last-observation as mandatory companion rows.",
+        "state_byte_budget": "1,966,080 B. Arithmetic: target-sensor-only 12-step window = 12 float32 = 48 B + 12 targets (48 B) = 96 B/exemplar -> 20,480 exemplars. Full 207-sensor 12-step window = 12*207*4 = 9,936 B + targets -> ~99 exemplars. Report both ends of the representation ladder; they differ by 200x in store capacity and the verdict will move.",
+        "dies_if": "MAE_exemplar_at_budget <= MAE_best_strong * 1.02 at the 60-min horizon (Metro relative convention), reported against every strong reference including our own re-trained Graph WaveNet.",
+        "cost_estimate": "CPU, ~1 hour. Data < 1 GB."
+      },
+      "crit5_all_levers": {
+        "verdict": "PARTIAL",
+        "evidence": "Lifetimes and admission have no natural instance at a 1-hour horizon; retry/anytime is plausible; phi/psi are learnable. Not all five are simultaneously load-bearing."
+      },
+      "csf3": {"available": true, "how_obtained": "DCRNN release mirrors (Google Drive / GitHub)", "staging_notes": "tiny; trivial to stage; sha256-freeze the .h5 files."},
+      "overall": {
+        "verdict": "REJECT",
+        "one_line_reason": "Passes criteria 1 and 2 but fails criterion 3 outright -- a 12-step input window at a 60-minute horizon is single-shot context, and the published difficulty is spatial structure, not memory management."
+      }
+    },
+
+    {
+      "rank": 4,
+      "venue": "Standard LTSF suite: ETTh1/h2, ETTm1/m2, Weather, Electricity(ECL), Traffic, Exchange, ILI",
+      "modality": "long-horizon multivariate forecasting (the field's default 'long-horizon multivariate time series' benchmark)",
+      "task_form": "look-back 96-720 -> horizon 96/192/336/720, MSE/MAE",
+      "size_on_disk": "< 1 GB total",
+      "license": "open, redistributed by the Informer/Autoformer releases",
+      "splits_canonical": true,
+      "crit1_baselines": {
+        "verdict": "PASS (trivially -- everything is competitive, which is the problem)",
+        "best_deep": "PatchTST / iTransformer / FEDformer / TimesNet families",
+        "best_naive": "CLOSED-FORM ORDINARY LEAST SQUARES. Toner & Darlow (2024) prove DLinear, FITS, RLinear and NLinear are all functionally equivalent to unconstrained linear regression on an augmented feature set, admit closed-form solutions under MSE, and report that the closed-form OLS solution OUTPERFORMS the gradient-descent-trained variants in 23 of 32 settings (72%). Zeng et al. (2023) report LTSF-Linear beating FEDformer by 20-50% on multivariate forecasting.",
+        "source": "Toner & Darlow (2024), 'An Analysis of Linear Time Series Forecasting Models', ICML 2024, PMLR 235, arXiv:2403.14587, Table 2 (ETTm1/m2, ETTh1/h2, ECL, Traffic, Weather, Exchange; horizons 96/192/336/720). Zeng, Chen, Zhang, Xu (2023), 'Are Transformers Effective for Time Series Forecasting?', AAAI 2023, arXiv:2205.13504."
+      },
+      "crit2_headroom": {
+        "verdict": "FAIL -- THIS IS THE KILL",
+        "evidence": "A closed-form least-squares fit -- no gradient descent, no hyperparameters, a one-line method -- sits at or above the frontier across the suite. This is Metro Interstate's 2.17%-headroom pathology generalised to the entire standard suite, and it is the hazard the task file warned would kill long-horizon forecasting candidates. Verbatim from Toner & Darlow: 'Despite their simplicity, linear models perform well at time series forecasting, even when pitted against deeper and more expensive models.'"
+      },
+      "crit3_memory_is_the_difficulty": {"verdict": "FAIL", "evidence": "A closed-form linear map from a fixed look-back window is at the frontier; therefore, by construction, no memory management is required to be competitive."},
+      "crit4_tripwire": {
+        "SPEC_ONLY": true,
+        "query_repr": "standardised look-back window (L in {96, 336, 720}) of all channels",
+        "key_repr": "identical windows from the training split; shared metric space is near-certain here because the OLS solution is itself a linear functional of the same window -- stated as the hypothesis, still to be measured",
+        "exemplar_baseline": "distance-weighted k-NN over look-back windows, k and L ladders as above, raw and standardised; mandatory companion rows: closed-form OLS, seasonal-naive, last-value.",
+        "state_byte_budget": "1,966,080 B. Arithmetic: ETTh1, 7 channels, look-back 336 -> 336*7*4 = 9,408 B + horizon-96 target 96*7*4 = 2,688 B = 12,096 B/exemplar -> floor(1966080/12096) = 162 exemplars.",
+        "dies_if": "MSE_exemplar_at_budget <= MSE_best_strong * 1.02 on the standard horizon grid.",
+        "cost_estimate": "CPU, minutes. NOTE: this venue is already dead on criterion 2, so the tripwire is specified for completeness only and should NOT be run."
+      },
+      "crit5_all_levers": {"verdict": "FAIL", "evidence": "No admission pressure, no lifetimes, no revisit; a fixed-window map suffices."},
+      "csf3": {"available": true, "how_obtained": "Autoformer/Informer GitHub releases", "staging_notes": "trivial"},
+      "overall": {"verdict": "REJECT", "one_line_reason": "Criterion 2 fails at the level of the whole suite: closed-form OLS is at the frontier, so the venue cannot support a primary claim about memory."}
+    },
+
+    {
+      "rank": 5,
+      "venue": "Time-series anomaly detection suite: SMD, SMAP, MSL, SWaT, PSM",
+      "modality": "multivariate sensor streams",
+      "task_form": "unsupervised anomaly detection, F1 under the point-adjust protocol",
+      "size_on_disk": "< 10 GB",
+      "license": "mixed; SWaT requires a request form (BLOCKER: needs Head clearance, not an engineering fix)",
+      "splits_canonical": true,
+      "crit1_baselines": {"verdict": "FAIL", "best_deep": "the published SOTA F1 scores on these sets", "best_naive": "A RANDOM ANOMALY SCORE. Kim et al. show the point-adjust protocol 'has a great possibility of overestimating detection performance, with even a random anomaly score easily turning into a state-of-the-art TAD method', and that an UNTRAINED model matches existing methods even when PA is forbidden.", "source": "Kim, Choi, Choi, Lee, Yoon (2022), 'Towards a Rigorous Evaluation of Time-series Anomaly Detection', AAAI 2022, arXiv:2109.05257."},
+      "crit2_headroom": {"verdict": "FAIL -- THIS IS THE KILL", "evidence": "The headline metric is broken at the protocol level: the trivial method is AT ceiling. Replacement metrics (PA%K, range-based P/R, affiliation, VUS) exist but the venue's published leaderboards do not, so there is no usable published pairing."},
+      "crit3_memory_is_the_difficulty": {"verdict": "NOT REACHED", "evidence": "dead on criterion 2"},
+      "crit4_tripwire": {"SPEC_ONLY": true, "query_repr": "standardised sliding window of all channels", "key_repr": "identical windows from the nominal-operation training split; nearest-neighbour distance to the nominal store IS the classical anomaly detector, so shared-metric-space is the hypothesis in its most direct form", "exemplar_baseline": "kNN distance-to-nominal-store as the anomaly score, k and L ladders, raw and standardised; mandatory companion rows: random score, and a constant score.", "state_byte_budget": "1,966,080 B; arithmetic depends on channel count -- SMD 38 channels x 100-step window x 4 B = 15,200 B/exemplar -> 129 exemplars.", "dies_if": "the kNN store's score under a NON-point-adjust metric (VUS-PR or affiliation-F1) is within 2% relative of the best strong learned model at matched bytes.", "cost_estimate": "CPU, hours -- but do not run: dead on criterion 2."},
+      "crit5_all_levers": {"verdict": "NOT REACHED", "evidence": "dead on criterion 2"},
+      "csf3": {"available": "PARTIAL", "how_obtained": "SMD/SMAP/MSL open; SWaT/WADI require an iTrust request form", "staging_notes": "⛔ SWaT/WADI are a credentials blocker for the Head, not an engineering task."},
+      "overall": {"verdict": "REJECT", "one_line_reason": "The venue's own community has shown a random score reaches SOTA under its standard protocol -- criterion 2 fails before any of our machinery is involved."}
+    },
+
+    {
+      "rank": 6,
+      "venue": "PDE / physics-simulation rollout: The Well (16 datasets, 15 TB), PDEBench, PDEArena",
+      "modality": "spatio-temporal fields (the Head's 'multi-step rollout' leg, physical-AI native)",
+      "task_form": "one-step prediction + autoregressive rollout, VRMSE",
+      "size_on_disk": "The Well: 15 TB total, individual datasets 6.9 GB to 5.1 TB",
+      "license": "The Well: CC BY 4.0. Hosted on HuggingFace (polymathic-ai/*) and via the the-well-download CLI; streamable from the hub.",
+      "splits_canonical": true,
+      "crit1_baselines": {
+        "verdict": "FAIL (in the unusual direction: the competition does NOT do well)",
+        "best_deep": "FNO, TFNO, U-net, CNextU-net (The Well, Table 2 one-step; Table 3 rollout over windows (6-12) and (13-30))",
+        "best_naive": "Predicting the mean of the target field = VRMSE 1.0 BY CONSTRUCTION (the metric is normalised so that this is exactly 1).",
+        "source": "Ohana, McCabe, Meyer, Morel, Agocs, Beneitez, Berger, Burkhart, Dalziel, Fielding, Fortunato, Goldberg, Hirashima, Jiang, Kerswell, Maddu, Miller, Mukhopadhyay, Nixon, Shen, Watteaux, Blancard, Rozet, Parker, Cranmer, Ho (2024), 'The Well: a Large-Scale Collection of Diverse Physics Simulations for Machine Learning', NeurIPS 2024 Datasets & Benchmarks, arXiv:2412.00568, Tables 2-3."
+      },
+      "crit2_headroom": {"verdict": "PASS (enormous -- too much)", "evidence": "On several datasets ALL four model classes score VRMSE > 1, i.e. worse than predicting the field mean; on rayleigh_taylor_instability all four are >> 10. Headroom is not the problem; the problem is that criterion 1 requires the competition to DO WELL, and here it frequently does not."},
+      "crit3_memory_is_the_difficulty": {"verdict": "FAIL -- THIS IS THE KILL", "evidence": "These are fully-observed Markovian field-evolution problems: the state at t is (nearly) sufficient for t+1. The published difficulty is spatial-operator approximation and error accumulation under autoregressive rollout, not retention, interference, capacity pressure, or selective recall. A memory primitive has no distinctive job."},
+      "crit4_tripwire": {"SPEC_ONLY": true, "query_repr": "flattened/patch-embedded current field snapshot (optionally k-frame stack)", "key_repr": "identical snapshots from training trajectories; the structural hypothesis is strong because analog forecasting (nearest-neighbour over past states) is a classical method for exactly this problem class", "exemplar_baseline": "kNN over patch-level snapshots predicting the next-step patch delta, k and L ladders; mandatory companion rows: field-mean (VRMSE = 1) and identity/persistence.", "state_byte_budget": "1,966,080 B; arithmetic: a 128x128 single-channel float32 patchless snapshot = 65,536 B -> 30 exemplars, so the store must be patch-local (16x16 patch = 1,024 B -> 1,920 patch exemplars). State the patch scheme before running.", "dies_if": "VRMSE_exemplar_at_budget <= VRMSE_best_strong * 1.02 on both one-step and the (13-30) rollout window.", "cost_estimate": "GPU/CPU, one job per dataset; data staging dominates (choose a 6.9-GB dataset, not a 5.1-TB one). Do not run unless criterion 3 is re-argued."},
+      "crit5_all_levers": {"verdict": "PARTIAL", "evidence": "phi/psi and retry map well; lifetimes and admission have no natural instance in a Markovian field problem."},
+      "csf3": {"available": true, "how_obtained": "the-well-download CLI or HuggingFace hf:// streaming", "staging_notes": "Pick ONE small dataset (6.9 GB end of the range). ⛔ Do not attempt the 15 TB collection on CSF3."},
+      "overall": {"verdict": "REJECT (as a PRIMARY memory venue)", "one_line_reason": "Fails criterion 3 -- fully-observed Markovian dynamics give a memory primitive no distinctive job -- and simultaneously strains criterion 1, since the published baselines lose to a field-mean predictor on several datasets."}
+    },
+
+    {
+      "rank": 7,
+      "venue": "Classic streaming / concept-drift: INSECTS (USP), Metro Interstate, ELEC2",
+      "modality": "non-stationary multivariate streams with recurring regimes (the Head's 'regime re-identification' leg)",
+      "task_form": "prequential classification (INSECTS) / 24-h-horizon regression (Metro)",
+      "size_on_disk": "INSECTS 21 MB/stream (600 MB USP archive of record); Metro 3.2 MB",
+      "license": "INSECTS/USP CC BY 4.0 (no password needed); Metro from UCI",
+      "splits_canonical": true,
+      "crit1_baselines": {"verdict": "PASS", "best_deep": "ARF-100 78.8139% (INSECTS incr-reoccurring bal., ours, 3 seeds) / gbdt_tuned MAE 335.203 (Metro)", "best_naive": "No-Change 40.4526% (INSECTS) / weekly seasonal-naive MAE 342.651 (Metro)", "source": "OUR OWN measured gates: .claude/outputs/c2w10-benchmark-gate.md sections 2-3 and .claude/outputs/c2w10-metro-gate.md sections 2-3, both against Souza et al.'s published Table 5 as the loader positive control."},
+      "crit2_headroom": {"verdict": "FAIL on Metro; PASS-with-a-degenerate-band on INSECTS", "evidence": "Metro: best strong baseline beats the one-line weekly naive by 2.17% relative MAE (335.203 vs 342.651). INSECTS: passes globally (ARF kappa_per 0.644) but band 4 of every cycle is persistence-trivial (No-Change 91.25/71.32/90.78%, every arm 97-99%)."},
+      "crit3_memory_is_the_difficulty": {"verdict": "FAIL as measured", "evidence": "On INSECTS, exemplar accuracy is MONOTONICALLY DECREASING in store size above L~500 (kNN_S std: 75.56/76.03/75.36/73.39/68.15/59.75 at L=250/500/1000/2000/5000/14782); the CLU-byte-matched store is the WORST arm. ARF ends the pass with 78/100 trees holding one node. The winning strategy is FORGET FAST, which is the opposite of a retention venue. On Metro, destroying the stream order HELPED the store (320.98 -> 311.75), so the ordering carries no exploitable information at these budgets."},
+      "crit4_tripwire": {"SPEC_ONLY": true, "query_repr": "ALREADY RUN -- 33-feature INSECTS instance / 32-feature Metro lag vector", "key_repr": "ALREADY RUN -- same, from the causal past", "exemplar_baseline": "ALREADY RUN -- SAM-kNN port + sliding-window kNN_S, raw and std, full L ladder", "state_byte_budget": "ALREADY RUN -- 665,000 B and 1,966,006 B (INSECTS, 133 B/exemplar); 664,884 B and 1,966,080-budget 14,894 exemplars (Metro, 132 B/exemplar)", "dies_if": "N/A -- the specified run has already been executed; see the two gate reports for the arithmetic.", "cost_estimate": "N/A -- spent (~4 h INSECTS, ~1 h Metro)."},
+      "crit5_all_levers": {"verdict": "FAIL", "evidence": "Lifetimes and admission are inert where the optimal store size is ~500 recent examples."},
+      "csf3": {"available": true, "how_obtained": "already frozen at .claude/data/c2w10-streams/ and .claude/data/c2w10-metro/ with sha256 contracts", "staging_notes": "done"},
+      "overall": {"verdict": "REJECT (closed, not re-litigable)", "one_line_reason": "Both venues were measured, not argued, and both fired: they are two of the six confirmations of the criterion-4 theorem and are filed as registered admissibility findings."}
+    }
+  ],
+
+  "appendix_noted_not_recommended": [
+    {
+      "venue": "WeatherBench 2 / ERA5 medium-range forecasting",
+      "why_not": "Criteria 1 and 2 are excellent (IFS-HRES, GraphCast and persistence/climatology are all published side by side, and deep models beat the physical baselines at multi-day lead). GraphCast is 36.7M parameters -- literally our weight class. BUT it fails criterion 3 (near-Markovian atmospheric state) and the training cost is far outside a 2xA100/4-day envelope. NOTED ONLY.",
+      "in_head_direction": true
+    },
+    {
+      "venue": "Agentic / LLM long-horizon memory benchmarks (LongMemEval-RR, AMA-Bench, DynamicMem, SubtleMemory, EMBER, 2026 vintage)",
+      "why_not": "⛔ OUTSIDE the Head's ratified Track-B direction (charter section 3: long-horizon multivariate time series first, long video later). Criterion 3 is satisfied by construction, which is exactly why they are not a fair test. Recorded so the Hub knows the 2026 'long-horizon memory benchmark' literature is almost entirely agentic/LLM, NOT time-series -- which is itself the reason no off-the-shelf multivariate-TS retention venue exists.",
+      "in_head_direction": false
+    },
+    {
+      "venue": "Battery degradation (Severson et al. 2019, 124 cells)",
+      "why_not": "Criterion 2 risk is decisive: an elastic-net on a handful of early-cycle features is the published frontier. NOT SCORED further.",
+      "in_head_direction": true
+    }
+  ],
+
+  "summary": {
+    "primary_recommendation": "CAMELS-US rainfall-runoff (531-basin ML benchmark), RECOMMEND-IF-TRIPWIRE-CLEARS",
+    "fallback_recommendation": "N-CMAPSS DS02 prognostics, RECOMMEND-IF-TRIPWIRE-CLEARS, with an explicit criterion-2 NOT-PUBLISHED and a high criterion-4 prior",
+    "venues_rejected": 5,
+    "causes_of_death": {
+      "ltsf_suite": "criterion 2 (closed-form OLS at the frontier)",
+      "tsad_suite": "criterion 2 (random score = SOTA under point-adjust)",
+      "traffic": "criterion 3 (single-shot 12-step window; spatial, not temporal, difficulty)",
+      "pde_rollout": "criterion 3 (fully-observed Markovian) + criterion 1 strain (baselines lose to the field mean)",
+      "streaming_drift": "criterion 4 MEASURED and fired on both INSECTS and Metro; plus criterion 2 on Metro and criterion 3 on both"
+    }
+  }
+}

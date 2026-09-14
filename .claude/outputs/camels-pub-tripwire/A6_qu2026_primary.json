@@ -1,0 +1,46 @@
+{
+ "task_item": "A6 - retrieve Qu et al. 2026 arXiv:2601.01558 and confirm/refute its PUB rows against the primary",
+ "status": "RETRIEVED AND READ (primary, v2)",
+ "artefact": {
+  "url": "https://arxiv.org/pdf/2601.01558v2",
+  "local": ".claude/scratch/camels-pub-tripwire/qu2026.pdf",
+  "bytes": 8569509,
+  "sha256": "115f9e4b987f0e74db890bcdcd2dde7173e4b017e5e30e3beffdd920bb6a44bb",
+  "text": ".claude/scratch/camels-pub-tripwire/qu2026.txt",
+  "title": "Utilizing Earth Foundation Models to Enhance the Simulation Performance of Hydrological Models with AlphaEarth Embeddings",
+  "corresponding_author": "Wenyu Ouyang",
+  "first_author": "Pengfei Qu",
+  "versions": {"v1": "2026-01-04", "v2": "2026-07-01"},
+  "venue_note": "running head reads 'manuscript submitted to Water Resources Research' (preprint, not yet a WRR paper)"
+ },
+ "numbers_CONFIRMED_from_primary": {
+  "qu2026_CAMELSattributes_OOS": 0.553,
+  "qu2026_ALPHAEARTH_OOS": 0.612,
+  "qu2026_CAMELSattributes_IS": 0.706,
+  "qu2026_ALPHAEARTH_IS": 0.708,
+  "verbatim": "Although both types of static features performed similarly in-sample, with median NSE values of 0.708 for the AEF embeddings and 0.706 for the model using CAMELS attributes, their behavior differed noticeably once they were evaluated in spatial out-of-sample settings. For these more challenging conditions, the median NSE of the AEF embeddings rose to 0.612, while the model relying on CAMELS attributes reached only 0.553.",
+  "verdict": "CONFIRMED to 3 dp. The refs output's two 'secondary' rows R18/R20 are numerically correct; the 'via Heudorfer 2026' provenance can be upgraded to PRIMARY."
+ },
+ "protocol_CORRECTION_to_the_frozen_set": {
+  "severity": "MATERIAL - the frozen set's metadata for R18/R20 is wrong on three axes",
+  "frozen_set_said": "basin_set '531 (stated)', folds 'not verified', period 'not verified'",
+  "primary_actually_says": {
+   "basin_set": "671 CAMELS-US basins (NOT 531)",
+   "verbatim_basins": "We used all 671 catchments from the CAMELS dataset as experimental data.",
+   "folds": "five random seeds x five-fold cross-validation, 80% train / 20% spatially-held-out test per fold",
+   "verbatim_folds": "Model training and evaluation were conducted using five random seeds and a five-fold cross-validation scheme across the 671 CAMELS-US basins. In each fold, 80% of the basins were used for training, and the remaining 20% were held out as spatially independent test basins.",
+   "train_period": "1980-01 to 2004-12",
+   "val_period": "2005-01 to 2009-12",
+   "test_period": "2010-01 to 2014-12  (NOT 1995-1999)",
+   "metric_convention": "basin-level NSE pooled over 5 seeds x 5 folds, then 5000x bootstrap resampling of 80% of the pooled sample, empirical CDF on a common NSE grid, median CDF across realizations (the Heudorfer et al. 2025 convention) - NOT a plain median over a fixed basin set",
+   "model": "single-layer LSTM, 128 hidden, dropout 0.4, batch 256, seq_length 365"
+  },
+  "consequence": "R20=0.553 and R18=0.612 are genuine published CAMELS-US spatial-out-of-sample numbers, but they are NOT on the pinned Li-2025 PUB protocol: different basin set (671 vs 531), different test period (2010-2014 vs 1995-1999), different fold count (5 vs 10) and a bootstrap-CDF metric convention rather than a plain median. They remain in the reference set and the kill rule is still evaluated against them, but they must be annotated as PROTOCOL-MISMATCHED, not quoted as like-for-like."
+ },
+ "why_this_paper_is_the_closest_published_analogue_to_our_dangerous_arm": {
+  "verbatim_experiment_B": "To conduct this analysis, we rank all basins in the CAMELS dataset with respect to a given target basin using three similarity measures defined in Section 2.3. Based on these rankings, we construct seven training sets by selecting the top k most similar basins, where k in {100,200,300,400,500,600}, as well as a baseline using all 670 basins except the target basin.",
+  "target_basins": "150 basins, stratified by Koppen climate zone (~25% of CAMELS)",
+  "key_finding": "AEF-similarity donor selection peaks at k=400 donors and does not improve beyond; CAMELS-attribute similarity scales more monotonically with pool size, which the authors attribute to attribute equifinality.",
+  "note": "Qu's donor selection chooses which basins to TRAIN an LSTM on. Our donor arm transfers the donor's observed discharge directly with no training. Same similarity object, different downstream consumer."
+ }
+}

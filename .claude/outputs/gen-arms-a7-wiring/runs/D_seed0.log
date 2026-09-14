@@ -1,0 +1,107 @@
+[gen-baselines] dataset=shapes3d pretext=recon condition=recomb2element stage=baselines arm=knn seed=0 out=/Users/user/Desktop/CHLU/.claude/outputs/gen-arms-a7-wiring/runs/deployed_524288/seed_0
+[gen-baselines] ⛔ no CLU number and no kill-rule verdict is produced here; ⭐ these arms are built to WIN if they can.
+== seed 0 · shapes3d/recon/recomb2element · out /Users/user/Desktop/CHLU/.claude/outputs/gen-arms-a7-wiring/runs/deployed_524288/seed_0
+  ⭐ byte-match target: 524288 B = store 524288 + coupling 0 (K(K-1)/2 * M^2 * 4). ⛔ The read channel is UNCHANGED at K*log2(M) bits.  [asserted == 524288 B]
+  ⭐ no-leak: 32768 fit/val rows checked, 0 leaked (of 72 held-out)
+  ⭐ decoder: v1_capacity_schedule (gen-decoder-lift winner) param_hash=01ef91f75eeaae7b… params=1516227 — asserted
+  cache: 480000 rows (scope=full), D=2048, float16
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+  rows: fit=32256 val=512 A=1024 B=72 matched_seen=198
+  ⭐ DECODER ceiling (real features): A aggregate=0.9893 · in-corner shape balacc=0.9223 (AUROC 0.9720)
+  ⭐ STORE ceiling (R22/R23, quoted): 0.6866 balanced accuracy
+  C set: 72 records read VERBATIM from /Users/user/Desktop/CHLU/.claude/data/gen/shapes3d/c_invalid.json (⛔ never regenerated)
+  ⭐ A7 controls: {'duplicate_factor': 'a7_redundant', 'out_of_range': 'base'} — A7=72 records, 7 terms, A7D=72 records, 6 terms
+  ⭐ R8 embedding: 57 prototypes (475136 B); C has 36/468 off-grid terms, max 17.14 outside the range
+  [knn] store fp32: 64 entries, 524288 B of 524288 B (slack 0)
+  [knn] store fp16: 128 entries, 524288 B of 524288 B (slack 0)
+  [knn] store int8: 248 entries, 524288 B of 524288 B (slack 0)
+  [knn] tuning budget: 36 trials
+  [knn] trial 1/36 k=1 euclidean none fp32: val agg=0.1745 (AUROC(B vs C)=0.6516, oracle-only)
+  [knn] trial 2/36 k=3 euclidean none fp32: val agg=0.4102 (AUROC(B vs C)=0.6516, oracle-only)
+  [knn] trial 3/36 k=5 euclidean none fp32: val agg=0.3867 (AUROC(B vs C)=0.6516, oracle-only)
+  [knn] trial 4/36 k=1 cosine none fp32: val agg=0.1742 (AUROC(B vs C)=0.5779, oracle-only)
+  [knn] trial 5/36 k=3 cosine none fp32: val agg=0.4079 (AUROC(B vs C)=0.5779, oracle-only)
+  [knn] trial 6/36 k=5 cosine none fp32: val agg=0.3864 (AUROC(B vs C)=0.5779, oracle-only)
+  [knn] trial 7/36 k=1 euclidean zscore fp32: val agg=0.1745 (AUROC(B vs C)=0.6844, oracle-only)
+  [knn] trial 8/36 k=3 euclidean zscore fp32: val agg=0.4183 (AUROC(B vs C)=0.6844, oracle-only)
+  [knn] trial 9/36 k=5 euclidean zscore fp32: val agg=0.4202 (AUROC(B vs C)=0.6844, oracle-only)
+  [knn] trial 10/36 k=1 cosine zscore fp32: val agg=0.1745 (AUROC(B vs C)=0.4277, oracle-only)
+  [knn] trial 11/36 k=3 cosine zscore fp32: val agg=0.4128 (AUROC(B vs C)=0.4277, oracle-only)
+  [knn] trial 12/36 k=5 cosine zscore fp32: val agg=0.4170 (AUROC(B vs C)=0.4277, oracle-only)
+  [knn] trial 13/36 k=1 euclidean none fp16: val agg=0.2393 (AUROC(B vs C)=0.6474, oracle-only)
+  [knn] trial 14/36 k=3 euclidean none fp16: val agg=0.4261 (AUROC(B vs C)=0.6474, oracle-only)
+  [knn] trial 15/36 k=5 euclidean none fp16: val agg=0.4492 (AUROC(B vs C)=0.6474, oracle-only)
+  [knn] trial 16/36 k=1 cosine none fp16: val agg=0.2393 (AUROC(B vs C)=0.6206, oracle-only)
+  [knn] trial 17/36 k=3 cosine none fp16: val agg=0.4222 (AUROC(B vs C)=0.6206, oracle-only)
+  [knn] trial 18/36 k=5 cosine none fp16: val agg=0.4495 (AUROC(B vs C)=0.6206, oracle-only)
+  [knn] trial 19/36 k=1 euclidean zscore fp16: val agg=0.2249 (AUROC(B vs C)=0.6327, oracle-only)
+  [knn] trial 20/36 k=3 euclidean zscore fp16: val agg=0.4277 (AUROC(B vs C)=0.6327, oracle-only)
+  [knn] trial 21/36 k=5 euclidean zscore fp16: val agg=0.4313 (AUROC(B vs C)=0.6327, oracle-only)
+  [knn] trial 22/36 k=1 cosine zscore fp16: val agg=0.2428 (AUROC(B vs C)=0.4419, oracle-only)
+  [knn] trial 23/36 k=3 cosine zscore fp16: val agg=0.4443 (AUROC(B vs C)=0.4419, oracle-only)
+  [knn] trial 24/36 k=5 cosine zscore fp16: val agg=0.4508 (AUROC(B vs C)=0.4419, oracle-only)
+  [knn] trial 25/36 k=1 euclidean none int8: val agg=0.2790 (AUROC(B vs C)=0.6483, oracle-only)
+  [knn] trial 26/36 k=3 euclidean none int8: val agg=0.4417 (AUROC(B vs C)=0.6483, oracle-only)
+  [knn] trial 27/36 k=5 euclidean none int8: val agg=0.5016 (AUROC(B vs C)=0.6483, oracle-only)
+  [knn] trial 28/36 k=1 cosine none int8: val agg=0.2803 (AUROC(B vs C)=0.6142, oracle-only)
+  [knn] trial 29/36 k=3 cosine none int8: val agg=0.4460 (AUROC(B vs C)=0.6142, oracle-only)
+  [knn] trial 30/36 k=5 cosine none int8: val agg=0.4980 (AUROC(B vs C)=0.6142, oracle-only)
+  [knn] trial 31/36 k=1 euclidean zscore int8: val agg=0.3063 (AUROC(B vs C)=0.6510, oracle-only)
+  [knn] trial 32/36 k=3 euclidean zscore int8: val agg=0.4404 (AUROC(B vs C)=0.6510, oracle-only)
+  [knn] trial 33/36 k=5 euclidean zscore int8: val agg=0.4837 (AUROC(B vs C)=0.6510, oracle-only)
+  [knn] trial 34/36 k=1 cosine zscore int8: val agg=0.3219 (AUROC(B vs C)=0.4228, oracle-only)
+  [knn] trial 35/36 k=3 cosine zscore int8: val agg=0.4629 (AUROC(B vs C)=0.4228, oracle-only)
+  [knn] trial 36/36 k=5 cosine zscore int8: val agg=0.5088 (AUROC(B vs C)=0.4228, oracle-only)
+  ⭐ [knn] SELECTED (pre-registered, validation aggregate): k=5 cosine zscore int8 — val agg 0.5088 val shape 0.2559
+  ⭐ [knn] SELECTED (declared 2nd rule, validation `shape`): k=5 cosine none fp16 — val agg 0.4495 val shape 0.2910
+  [knn] refusal-reduction sensitivity (declared, not tuned): min=0.4228 mean=0.3760
+  ⭐ [knn] in-corner shape balacc=0.4893 (AUROC 0.5377) · B aggregate=0.4676 · refusal AUROC(B vs C)=0.4228
+      ⭐ A7 duplicate_factor: 0.2006(vs B) -> 0.4495(vs a7_redundant) · out_of_range: 0.6451(vs B) -> 0.6451(vs base)
+  ⭐ [knn_compsel] in-corner shape balacc=0.5436 (AUROC 0.5394) · B aggregate=0.4537 · refusal AUROC(B vs C)=0.6206
+      ⭐ A7 duplicate_factor: 0.4062(vs B) -> 0.2948(vs a7_redundant) · out_of_range: 0.8349(vs B) -> 0.8349(vs base)
+  ⭐ [knn_proto] in-corner shape balacc=0.8763 (AUROC 0.9945) · B aggregate=0.7963 · refusal AUROC(B vs C)=0.4228
+      ⭐ A7 duplicate_factor: 0.2006(vs B) -> 0.4495(vs a7_redundant) · out_of_range: 0.6451(vs B) -> 0.6451(vs base)
+  ⭐ per-request refusal scores persisted: 3 variants -> /Users/user/Desktop/CHLU/.claude/outputs/gen-arms-a7-wiring/runs/deployed_524288/seed_0/refusal_scores.json
+== seed 0 done in 146 s

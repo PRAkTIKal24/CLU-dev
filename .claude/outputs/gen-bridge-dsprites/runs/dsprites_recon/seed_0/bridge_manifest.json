@@ -1,0 +1,152 @@
+{
+  "D": 2048,
+  "condition": "recomb2element",
+  "dataset": "dsprites",
+  "decoder_param_count": 1515073,
+  "decoder_param_hash": "ccc6635b460cb56d5c07a5b7e62e9d03f417acc3fe202beb8c3b85b54a6dd403",
+  "encoder_dir": "/Users/user/Desktop/CHLU/.claude/outputs/gen-bridge-dsprites/runs/dsprites_recon/seed_0",
+  "encoder_param_hash": "e15cfe0266f8f330d8328dcf7be4694c05e56ba2b16671049a588bec973e8cb4",
+  "feature_cache": {
+    "D": 2048,
+    "dataset": "dsprites",
+    "dtype": "float16",
+    "encoder_param_hash": "e15cfe0266f8f330d8328dcf7be4694c05e56ba2b16671049a588bec973e8cb4",
+    "feat_shape": [
+      128,
+      4,
+      4
+    ],
+    "features_bytes": 63520896,
+    "features_file": "features.npy",
+    "features_sha256": "55abddfe3becc1facf34db2e5bd2569213db3afcf1498ebadd81b557006ee32d",
+    "n_rows": 15508,
+    "rows_file": "feature_rows.npy",
+    "rows_sha256": "d6f4e1064ce43063c2ec3b7c7b3f54671fb2db197a5da65250a916c7cbca43ac",
+    "schema": "chlu-gen-feature-cache/1",
+    "scope": "used"
+  },
+  "no_leak": {
+    "n_checked": 8192,
+    "n_holdout_excluded": 6292,
+    "n_holdout_leaked": 0,
+    "n_holdout_total": 6292,
+    "n_train_rows_used": 8192
+  },
+  "no_leak_per_cell": null,
+  "pretext": "recon",
+  "probe_param_count": 1090833,
+  "probe_param_hash": "7499bd52c5f6e956cc03c41460238853a2d24a6ad32380a48fb440eb8854c568",
+  "result": {
+    "gate": {
+      "ceiling_A": 0.5154296875,
+      "ceiling_B": 0.5307056579783852,
+      "floor": 0.8,
+      "note": "ceiling_B >= 0.8 x ceiling_A: the decoder can render held-out combinations, so kill rule (i) can be read on the store.",
+      "ratio": 1.0296373508333962,
+      "verdict": "PROCEED"
+    },
+    "per_split": {
+      "A": {
+        "ceiling": {
+          "aggregate": 0.5154296875,
+          "decoded_mean": 0.043188706040382385,
+          "exact_match": 0.029296875,
+          "n": 1024,
+          "per_factor": {
+            "orientation": 0.1650390625,
+            "posX": 0.4775390625,
+            "posY": 0.48828125,
+            "scale": 0.6005859375,
+            "shape": 0.845703125
+          }
+        },
+        "decode_mse": 0.0009713958716019988,
+        "n": 1024,
+        "probe_on_real": {
+          "aggregate": 0.5556640625,
+          "exact_match": 0.0341796875,
+          "n": 1024,
+          "per_factor": {
+            "orientation": 0.158203125,
+            "posX": 0.5234375,
+            "posY": 0.521484375,
+            "scale": 0.6318359375,
+            "shape": 0.943359375
+          }
+        }
+      },
+      "B": {
+        "ceiling": {
+          "aggregate": 0.5307056579783852,
+          "decoded_mean": 0.053435068577528,
+          "exact_match": 0.0071519389701207884,
+          "n": 6292,
+          "per_factor": {
+            "orientation": 0.06150667514303878,
+            "posX": 0.41004450095359185,
+            "posY": 0.6085505403687221,
+            "scale": 0.5734265734265734,
+            "shape": 1.0
+          }
+        },
+        "decode_mse": 0.0005179322906769812,
+        "n": 6292,
+        "probe_on_real": {
+          "aggregate": 0.5322314049586777,
+          "exact_match": 0.008741258741258742,
+          "n": 6292,
+          "per_factor": {
+            "orientation": 0.06214240305149396,
+            "posX": 0.40654799745708836,
+            "posY": 0.6134774316592498,
+            "scale": 0.5791481246026701,
+            "shape": 0.9998410680228862
+          }
+        }
+      }
+    }
+  },
+  "rows": {
+    "eval_a": 1024,
+    "eval_b": 6292,
+    "train": 8192
+  },
+  "schema": "chlu-gen-bridge/1",
+  "seed": 0,
+  "training": {
+    "dec_loss_final": 0.0008670570678077638,
+    "dec_loss_first": 0.18181848526000977,
+    "dec_recipe": {
+      "batch": 128,
+      "blocks_per_stage": 2,
+      "channels": [
+        256,
+        128,
+        64
+      ],
+      "edge_blur": 5,
+      "edge_weight": 8.0,
+      "grad_weight": 1.0,
+      "groups": 8,
+      "loss": "mse",
+      "lr": 0.001,
+      "lr_schedule": "cosine",
+      "name": "v1_capacity_schedule",
+      "steps": 1800,
+      "warmup_frac": 0.05
+    },
+    "dec_steps": 1200,
+    "probe_loss_final": 0.04592406749725342,
+    "probe_loss_first": 2.7636804580688477,
+    "probe_steps": 1500
+  },
+  "whitening": {
+    "D": 2048,
+    "N_train_features": 8192,
+    "full_whitening_feasible": true,
+    "lace_option": "1 \u2014 feature width chosen so LACE whitens natively (full D x D shrinkage covariance over the cached train features)",
+    "limit": 20000,
+    "note": "D=2048 <= 20000: a full D x D eigendecomposition is feasible, so the LACE arm runs in fully whitened coordinates and is NOT pushed onto channel-only whitening.",
+    "shrinkage_mandatory": false
+  }
+}

@@ -1,0 +1,93 @@
+  ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+  ⭐ external classifier c8741ac417d88ebf… (978873 params) — THE instrument, identical across every arm in this seed
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+  ⭐ [lace] inheriting the SELECTED configuration from disk: sigma=0.1 form=both shrinkage=1e-3 (gate fired=True, 36 trials inherited, ⛔ not re-selected)
+  [lace] whitening shrinkage=1e-3: |diag-1|=0.2382 |offdiag|=0.006037
+  [lace] classifier: 12600 steps, loss 2.3559 -> 0.0012; its own val per-factor mean 0.9098
+refit 0: ode=0.6326/0.6174 ld_published=0.6313/0.6269 ld_corrected=0.6086/0.5777  best=ode (0.6326)
+  [lace] whitening shrinkage=1e-3: |diag-1|=0.2382 |offdiag|=0.006037
+  [lace] classifier: 12600 steps, loss 2.3444 -> 0.0071; its own val per-factor mean 0.9814
+refit 1: ode=0.6679/0.6465 ld_published=0.6288/0.5972 ld_corrected=0.6414/0.6345  best=ode (0.6679)
+  [lace] whitening shrinkage=1e-3: |diag-1|=0.2382 |offdiag|=0.006037
+  [lace] classifier: 12600 steps, loss 2.3732 -> 0.0019; its own val per-factor mean 0.9681
+refit 2: ode=0.6660/0.6383 ld_published=0.6995/0.6105 ld_corrected=0.5846/0.5871  best=ld_published (0.6995)
+{
+  "ode": {
+    "mean": 0.6555134680134681,
+    "sd": 0.016237829733889264,
+    "values": [
+      0.6325757575757576,
+      0.6679292929292929,
+      0.6660353535353536
+    ]
+  },
+  "ld_published": {
+    "mean": 0.6531986531986531,
+    "sd": 0.03275265397027564,
+    "values": [
+      0.6313131313131313,
+      0.6287878787878788,
+      0.6994949494949495
+    ]
+  },
+  "ld_corrected": {
+    "mean": 0.6115319865319865,
+    "sd": 0.023289285071139625,
+    "values": [
+      0.6085858585858586,
+      0.6414141414141414,
+      0.5845959595959596
+    ]
+  },
+  "best_of_family": {
+    "mean": 0.6666666666666666,
+    "sd": 0.027334230439611987,
+    "values": [
+      0.6325757575757576,
+      0.6679292929292929,
+      0.6994949494949495
+    ]
+  }
+}

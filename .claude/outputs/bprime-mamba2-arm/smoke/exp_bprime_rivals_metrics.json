@@ -1,0 +1,2925 @@
+{
+  "experiment": "bprime_rivals",
+  "question": "B\u2032 TIER i: when does test-time dynamics buy anything over a table at matched bytes? One protocol, applied uniformly to the CLU and to the TTT / delta-rule families.",
+  "family_set_ruling": "\u00a7A14.2: `aggregate` is the SOLE reader-discrimination family; `overload@load1x_shipped` runs ONLY as a labelled byte-frontier column (secondary reading S_excl = 0.6500); `recency` and `manifold` are NOT RUN (substitute-saturated \u21d2 protocol-invalid).",
+  "thinness": "\u26a0 OWNED, VERBATIM: two rival families audited against ONE surviving synthetic family is a THIN cross-family audit. This belongs in the paper's Limitations unsoftened.",
+  "reimplementation_caption": "minimal FAITHFUL reimplementations on the gym harness \u2014 faithful to the update equation and the state size, minimal in everything else (n_head=1, no conv branch, no SWA hybrid, no chunkwise kernel, no backbone). NOT a vendored training stack.",
+  "equations_implemented": {
+    "ttt_linear/ttt_mlp": "arXiv:2407.04620 Eqs. 1, 2, 4, 5; \u00a72.4 mini-batch (b=16, in the tuning grid); \u00a72.7 f_res = x + LN(f(x)), learnable W_0 and eta, f_MLP = 2 layers / 4x hidden / GELU",
+    "deltanet": "arXiv:2605.22791 Eq. 5 (= Yang et al. 2024)",
+    "gdn": "arXiv:2605.22791 Eq. 6 (= Yang et al. 2025, the ABLATION)",
+    "mamba2": "Dao & Gu, **ICML 2024**, arXiv:2405.21060 \u2014 the SSD recurrence h_t = a_t h_{t-1} + B_t (Delta_t v_t)^T with the paper's scalar-identity restriction A_t = a_t I, input-dependent Delta_t = softplus(w.x + bias), B_t = theta_K x_t, C_t = theta_Q x_t, a_t = exp(Delta_t A) with A = -exp(A_log); the CHUNKED SSD state pass (\u00a76) at the rig-matched chunk 16 (reference default 256), asserted EXACTLY equal to the sequential recurrence and to the quadratic/dual read. Reference-implementation init A ~ U(1,16), Delta ~ exp(U(log 1e-3, log 1e-1)). \u26a0 NO conv branch, no z-gate/norm, n_head = ngroups = 1 \u2014 the same minimality caption every other arm carries; dropping conv_state is IN THE RIVAL'S FAVOUR at an iso-state budget. \u26a0 Citation venue/year/id from `rival-recon` \u00a71.4's pinned record, NOT re-verified this session.",
+    "gdn2": "arXiv:2605.22791 **Eq. 10** (boxed) with Eqs. 8, 9, 11, 12 and \u00a73.1's negative-eigenvalue erase range [0,2]^{d_k}; \u00a73.5 block design (L2 on q/k, SiLU on v). \u2b50 STATE-SIZE CONVENTION VERIFIED FROM ITS OWN Eq. 90 (H*d_k*d_v = 16*128*128 = 262,144 floats per layer): the -2 revision PRESERVES the DeltaNet/GDN accounting."
+  },
+  "byte_law": "corrected: ratio = [A(D+2) + d]/(d+m); floor 2.20x (n_spec=0) / 2.40x (n_spec=1). \u26d4 the published 'verified to 1e-9 in all 28 cells' is 24/28 \u2014 the 4 n_spectator=1 cells miss by +8.6667. The error was CONSERVATIVE.",
+  "banked_not_remeasured": [
+    "aggregate/base",
+    "overload/load1x_shipped"
+  ],
+  "plan": [
+    {
+      "family": "aggregate",
+      "arm": "base",
+      "seeds": [
+        0
+      ]
+    }
+  ],
+  "rivals": [
+    "mamba2",
+    "gdn2"
+  ],
+  "quick": true,
+  "frontier_rivals": [
+    "ttt_linear",
+    "gdn2"
+  ],
+  "tuning_grid_requested": {
+    "lrs": [
+      0.0001,
+      0.000316,
+      0.0005,
+      0.001,
+      0.00316,
+      0.01
+    ],
+    "wds": [
+      0.0,
+      0.1
+    ],
+    "steps": 12,
+    "n_val": 1,
+    "rule": "`rival-recon` F3 / standing rule 5 (N78's operational form) when lrs = 6 x wds = 2; C2W4's declared F3-lite otherwise"
+  },
+  "sd_convention": "sample sd (ddof=1); SE = sd/sqrt(n); n = 1 (seeds [0])",
+  "prereg": ".claude/outputs/bprime-rivals/PREREG.md \u2014 filed before any run",
+  "cells": [
+    {
+      "cell": "aggregate/base@s0",
+      "family": "aggregate",
+      "arm": "base",
+      "seed": 0,
+      "degenerate": false,
+      "metric": "neg_mae",
+      "frontier_only": false,
+      "label": "reader-discrimination family (S = 0.5068) \u2014 the sole dividend family",
+      "n_live": 6,
+      "n_queries": 26,
+      "admissible_coverage": {
+        "admissible": 26,
+        "attempted": 45,
+        "fraction": 0.5777777777777777,
+        "n_offered": 6,
+        "n_admitted_by_store": 6,
+        "store_admission_fraction": 1.0
+      },
+      "clu_reproduction": {
+        "full": -0.3748598373134481,
+        "launder": -0.36820046942555523,
+        "blank": -0.3748703192849104,
+        "all_launder_scores": {
+          "settle_deleted": -0.36820046942555523,
+          "same_keys_null": -0.560780631956354,
+          "knn2_mean_+0B": -0.17382456877613206,
+          "knn2_idw_+0B": -0.14784357638642315,
+          "raw_table_mean_+0B": -0.37485864739591085
+        },
+        "banked": {
+          "metric": "neg_mae",
+          "full": [
+            -0.682608,
+            -0.384693,
+            -0.511032
+          ],
+          "launder": [
+            -0.496261,
+            -0.413103,
+            -0.432255
+          ],
+          "blank": [
+            -0.438906,
+            -0.404201,
+            -0.423079
+          ],
+          "best_zero_byte_substitute": {
+            "name": "knn2_idw_+0B",
+            "mean": -0.2081
+          },
+          "S": 0.5068,
+          "byte_ledger": {
+            "full_bytes": 5456,
+            "launder_bytes": 100,
+            "ratio": 54.56
+          }
+        },
+        "note": "the CLU column is BANKED (PREREG-Bprime \u00a77); this is a fidelity reproduction, never a re-derivation"
+      },
+      "clu_byte_ledger": {
+        "full_bytes": 2784,
+        "launder_bytes": 120,
+        "ratio": 23.2,
+        "matched": false,
+        "breakdown": {
+          "V_theta": 2688,
+          "codebook_addresses": 96,
+          "launder_keys": 96,
+          "launder_payloads": 24
+        },
+        "identity_T1": {
+          "n_atoms": 96,
+          "D": 5,
+          "K": 6,
+          "d": 4,
+          "m": 1,
+          "floats_per_atom": 7,
+          "A_atoms_per_item": 16.0,
+          "full_expected": 2784,
+          "launder_expected": 120,
+          "v_theta_expected": 2688,
+          "codebook_expected": 96,
+          "full_measured": 2784,
+          "v_theta_measured": 2688,
+          "ratio_corrected": 23.2,
+          "ok": true,
+          "ratio_measured": 23.2
+        },
+        "two_sided_learned_init_rule": {
+          "arm": "clu",
+          "param_floats": 672,
+          "state_floats": 696,
+          "param_bytes": 2688,
+          "state_bytes": 2784,
+          "state_over_param": 1.0357142857142858,
+          "param_breakdown": {
+            "V_theta_init": 672
+          },
+          "state_breakdown": {
+            "V_theta_leaf0(96, 5)": 480,
+            "V_theta_leaf1(96,)": 96,
+            "V_theta_leaf2(96,)": 96,
+            "codebook_addresses": 24
+          },
+          "state_convention": "floats moved by the masked write (measured leaf-diff) + K*addr_dim live codebook",
+          "note": "learned-initial-state rule applied to the CLU in the same table as the rivals: V_theta's INIT is parameters, only the write-time deviation is state"
+        }
+      },
+      "stream": {
+        "n_tokens": 8,
+        "n_delete_rows_skipped": 1,
+        "note": "delete rows are skipped for the rival arms (no rival family has a deletion verb); this is an asymmetry IN THE RIVALS' FAVOUR"
+      },
+      "fit_streams": {
+        "fit_stream_seeds": [
+          101,
+          102
+        ],
+        "n_tokens": 8,
+        "n_queries": 25,
+        "val_stream_seeds": [
+          103
+        ],
+        "guard": "F2a \u2014 outer parameters never see the eval cell's items",
+        "val_guard": "held-out auxiliary streams: never differentiated, used only for the declared secondary best-of-grid selection; \u26d4 never the eval split"
+      },
+      "phi_id": "a283260e546b4f0e",
+      "rivals": {
+        "mamba2": {
+          "rival": "mamba2",
+          "d_head": 36,
+          "arms": {
+            "full": -0.37635786291855755,
+            "blank": -1.189506665566128,
+            "launder": -0.5938342277423686,
+            "same_keys_null": -0.5406252937873357,
+            "knn2_mean_+0B": -0.5766321378435072,
+            "knn2_idw_+0B": -0.5779929505694363,
+            "table_mean_+0B": -0.38872128454006194
+          },
+          "dividend_vs_own_table": 0.21747636482381105,
+          "zero_byte_margin": {
+            "name": "table_mean_+0B",
+            "value": -0.38872128454006194,
+            "signed_margin_full_minus_sub": 0.012363421621504389,
+            "incl_argmin_name": "table_mean_+0B",
+            "incl_argmin_value": -0.38872128454006194,
+            "signed_margin_incl_argmin": 0.012363421621504389,
+            "convention": "primary = the EXCLUSIVE +0 B reader set (as registered in PREREG R5); the inclusive set adds the arg-min launder, FB4's own convention"
+          },
+          "raw_table_control": {
+            "note": "the SAME state budget spent on the gym's raw (address, payload) rows and read by the same +0 B readers in the raw metric \u2014 strictly stronger than the registered projected-table launder, and identical to the CLU's own launder set on these queries",
+            "rows_affordable": 259,
+            "table_is_lossless": true,
+            "best_reader": "knn2_idw_+0B",
+            "best_reader_score": -0.14784357638642315,
+            "signed_margin_full_minus_raw": -0.2285142865321344,
+            "all_raw_readers": {
+              "settle_deleted": -0.36820046942555523,
+              "knn2_mean_+0B": -0.17382456877613206,
+              "knn2_idw_+0B": -0.14784357638642315,
+              "raw_table_mean_+0B": -0.37485864739591085
+            }
+          },
+          "byte_ledger": {
+            "rival": {
+              "arm": "mamba2",
+              "param_floats": 2095,
+              "state_floats": 1296,
+              "param_bytes": 8380,
+              "state_bytes": 5184,
+              "state_over_param": 0.6186157517899762,
+              "param_breakdown": {
+                "theta_K(B_t)": 180,
+                "theta_Q(C_t)": 180,
+                "theta_V(x_t)": 180,
+                "theta_O": 36,
+                "S0_init": 1296,
+                "w_dt": 5,
+                "dt_bias": 1,
+                "A_log": 1,
+                "D(unused)": 36,
+                "W_z(unused)": 180
+              },
+              "state_breakdown": {
+                "ssm_state_deviation": 1296
+              },
+              "state_convention": "n_head*head_dim*d_state \u2014 the reference implementation's own ssm_state shape (B, nheads, headdim, d_state) with n_head = ngroups = 1 and d_state = head_dim = d, so the state is d^2, BYTE-IDENTICAL to the delta arms' n_head*d_k*d_v. \u26a0 conv_state ((d_inner + 2*ngroups*d_state)*d_conv) is EXCLUDED because this minimal arm has no conv branch \u2014 a declared deviation that is IN THE RIVAL'S FAVOUR under an iso-state budget (every byte goes to the SSM state).",
+              "note": "S_0 is PARAMETERS (Mamba-2's published h_0 is the zero state; it is learnable here exactly as the delta arms' S_0 is); only the per-stream deviation is STATE; measured moved floats = 1296"
+            },
+            "matched_table": {
+              "arm": "table_launder",
+              "param_floats": 2095,
+              "state_floats": 1296,
+              "param_bytes": 8380,
+              "state_bytes": 5184,
+              "state_over_param": 0.6186157517899762,
+              "param_breakdown": {
+                "theta_K(B_t)": 180,
+                "theta_Q(C_t)": 180,
+                "theta_V(x_t)": 180,
+                "theta_O": 36,
+                "S0_init": 1296,
+                "w_dt": 5,
+                "dt_bias": 1,
+                "A_log": 1,
+                "D(unused)": 36,
+                "W_z(unused)": 180
+              },
+              "state_breakdown": {
+                "table_keys": 648,
+                "table_values": 648
+              },
+              "state_convention": "n_rows*(d_k+d_v) = 18*(36+36)",
+              "note": ""
+            },
+            "state_floats_declared": 1296,
+            "state_floats_measured_moved": 1296,
+            "table_rows_affordable": 18,
+            "table_rows_used": 8,
+            "table_is_lossless": true,
+            "state_over_own_table_bytes": 1.0,
+            "state_bytes_vs_clu_full_bytes": 1.8620689655172413,
+            "phi_family": "identity_launch",
+            "phi_id": "a283260e546b4f0e",
+            "phi_params": 0,
+            "phi_bytes": 0
+          },
+          "metric_native": {
+            "verdict": "metric-native (unnormalised)",
+            "argument": "SSD's scalar-identity restriction A_t = a_t I makes the read a 1-semiseparable masked attention: expanding h_t = a_t h_{t-1} + B_t (Delta_t v_t)^T gives o_q = sum_j gamma_j (C_q . B_j) Delta_j v_j with gamma_j = prod_{r>j} a_r in (0,1] \u2014 a DOT-PRODUCT kernel smoother over the stored (B, v) pairs with an exponential recency weighting. That is a metric operation on its own state, so criterion 4 closes in the same sense it does for DeltaNet (Eq. 5) and Gated DeltaNet (Eq. 6) \u2014 of which Mamba-2 IS the erase-free degenerate case, per the Gated DeltaNet paper's own presentation of it as S_t = alpha_t S_{t-1} + v_t k_t^T. \u26a0 BUT it closes WEAKLY: unlike GDN-2 \u00a73.5, Mamba-2 does NOT L2-normalise its B/C paths, so arg-min ||q - k|| and arg-max q.k do NOT coincide in its own key space \u2014 the key-norm term survives. Its byte-matched table is therefore read by a WORSE-MATCHED arg-min reader than the delta arms', which inflates its dividend and its +0 B margin against that table while leaving the RAW-metric control (which does not use its projections at all) untouched. This is exactly the \u00a74 projected-versus-raw finding, appearing again on a new family.",
+            "measured_against": "its own byte-matched (theta_K x, theta_V x) table",
+            "citation": "Dao & Gu, ICML 2024, arXiv:2405.21060 (SSD); the 'Mamba2 as S_t = alpha_t S_{t-1} + v_t k_t^T' reading is Gated DeltaNet's own, Yang, Kautz & Hatamizadeh, ICLR 2025, arXiv:2412.06464"
+          },
+          "fit": {
+            "best": {
+              "lr": 0.01,
+              "wd": 0.0,
+              "steps": 12,
+              "final": 0.38687148690223694,
+              "diverged": false,
+              "val_final": 0.38286474347114563,
+              "mini_batch": 16
+            },
+            "grid": [
+              {
+                "lr": 0.0001,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.39717891812324524,
+                "diverged": false,
+                "val_final": 0.3975335955619812,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.000316,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.39697974920272827,
+                "diverged": false,
+                "val_final": 0.3975886404514313,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.0005,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.396841824054718,
+                "diverged": false,
+                "val_final": 0.39763903617858887,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.001,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.396591454744339,
+                "diverged": false,
+                "val_final": 0.39777591824531555,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.00316,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.3961864709854126,
+                "diverged": false,
+                "val_final": 0.3974725902080536,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.01,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.38687148690223694,
+                "diverged": false,
+                "val_final": 0.38286474347114563,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.0001,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.3971787989139557,
+                "diverged": false,
+                "val_final": 0.39753371477127075,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.000316,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.39697954058647156,
+                "diverged": false,
+                "val_final": 0.3975890278816223,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.0005,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.39684149622917175,
+                "diverged": false,
+                "val_final": 0.39763960242271423,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.001,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.3965911865234375,
+                "diverged": false,
+                "val_final": 0.3977768123149872,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.00316,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.396186888217926,
+                "diverged": false,
+                "val_final": 0.39747312664985657,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.01,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.3868769407272339,
+                "diverged": false,
+                "val_final": 0.38295266032218933,
+                "mini_batch": 16
+              }
+            ],
+            "selection": {
+              "label": "f3",
+              "on": "the FIT split's own loss (C2W4's rule)",
+              "lrs": null,
+              "wds": null,
+              "n_points": 12
+            },
+            "note": "best-of-grid on the FIT split (auxiliary streams from different seeds), never on the eval split"
+          },
+          "grid_wall_s": 4.081599950790405,
+          "wall_s": 4.666640996932983,
+          "selections_scored": [
+            "f3",
+            "f3_lite_control",
+            "f3_val"
+          ]
+        },
+        "gdn2": {
+          "rival": "gdn2",
+          "d_head": 36,
+          "arms": {
+            "full": -0.40159726529017087,
+            "blank": -1.1376477356746786,
+            "launder": -0.6533589764863797,
+            "same_keys_null": -0.39262447923400334,
+            "knn2_mean_+0B": -0.5595368853229437,
+            "knn2_idw_+0B": -0.5667897071650089,
+            "table_mean_+0B": -0.3934790476415663
+          },
+          "dividend_vs_own_table": 0.2517617111962089,
+          "zero_byte_margin": {
+            "name": "table_mean_+0B",
+            "value": -0.3934790476415663,
+            "signed_margin_full_minus_sub": -0.008118217648604542,
+            "incl_argmin_name": "table_mean_+0B",
+            "incl_argmin_value": -0.3934790476415663,
+            "signed_margin_incl_argmin": -0.008118217648604542,
+            "convention": "primary = the EXCLUSIVE +0 B reader set (as registered in PREREG R5); the inclusive set adds the arg-min launder, FB4's own convention"
+          },
+          "raw_table_control": {
+            "note": "the SAME state budget spent on the gym's raw (address, payload) rows and read by the same +0 B readers in the raw metric \u2014 strictly stronger than the registered projected-table launder, and identical to the CLU's own launder set on these queries",
+            "rows_affordable": 259,
+            "table_is_lossless": true,
+            "best_reader": "knn2_idw_+0B",
+            "best_reader_score": -0.14784357638642315,
+            "signed_margin_full_minus_raw": -0.2537536889037477,
+            "all_raw_readers": {
+              "settle_deleted": -0.36820046942555523,
+              "knn2_mean_+0B": -0.17382456877613206,
+              "knn2_idw_+0B": -0.14784357638642315,
+              "raw_table_mean_+0B": -0.37485864739591085
+            }
+          },
+          "byte_ledger": {
+            "rival": {
+              "arm": "gdn2",
+              "param_floats": 2489,
+              "state_floats": 1296,
+              "param_bytes": 9956,
+              "state_bytes": 5184,
+              "state_over_param": 0.5206910405785456,
+              "param_breakdown": {
+                "theta_K": 180,
+                "theta_Q": 180,
+                "theta_V": 180,
+                "theta_O": 36,
+                "S0_init": 1296,
+                "W_b(Eq11)": 180,
+                "W_w(Eq11)": 180,
+                "W_f(Eq12)": 180,
+                "a(Eq12)": 36,
+                "delta(Eq12)": 36,
+                "w_beta(unused)": 5
+              },
+              "state_breakdown": {
+                "S_deviation": 1296
+              },
+              "state_convention": "n_head*d_k*d_v \u2014 VERIFIED for GDN-2 from its own Eq. 90 (H*d_k*d_v = 16*128*128 = 262,144 floats per layer), i.e. the -2 revision preserves the DeltaNet/GDN accounting",
+              "note": "S_0 is PARAMETERS (shared across streams); only the per-stream deviation is STATE; measured moved floats = 1296"
+            },
+            "matched_table": {
+              "arm": "table_launder",
+              "param_floats": 2489,
+              "state_floats": 1296,
+              "param_bytes": 9956,
+              "state_bytes": 5184,
+              "state_over_param": 0.5206910405785456,
+              "param_breakdown": {
+                "theta_K": 180,
+                "theta_Q": 180,
+                "theta_V": 180,
+                "theta_O": 36,
+                "S0_init": 1296,
+                "W_b(Eq11)": 180,
+                "W_w(Eq11)": 180,
+                "W_f(Eq12)": 180,
+                "a(Eq12)": 36,
+                "delta(Eq12)": 36,
+                "w_beta(unused)": 5
+              },
+              "state_breakdown": {
+                "table_keys": 648,
+                "table_values": 648
+              },
+              "state_convention": "n_rows*(d_k+d_v) = 18*(36+36)",
+              "note": ""
+            },
+            "state_floats_declared": 1296,
+            "state_floats_measured_moved": 1296,
+            "table_rows_affordable": 18,
+            "table_rows_used": 8,
+            "table_is_lossless": true,
+            "state_over_own_table_bytes": 1.0,
+            "state_bytes_vs_clu_full_bytes": 1.8620689655172413,
+            "phi_family": "identity_launch",
+            "phi_id": "a283260e546b4f0e",
+            "phi_params": 0,
+            "phi_bytes": 0
+          },
+          "metric_native": {
+            "verdict": "metric-native",
+            "argument": "the read is o = S^T q (Eq. 1). Every variant's S is a sum of outer products k_s z_s^T with data-dependent left/right factors, so o = sum_s z_s (k_s . q) up to the erase corrections: a **linear kernel smoother over the stored (k, v) pairs under the dot-product metric**, with q and k L2-normalised (\u00a73.5) so arg-min ||q - k|| and arg-max q.k coincide EXACTLY. This is `rival-recon` F9's 'the rivals' reads are metric-native too', at equation level. Eq. 10 makes erase (b_t, on the key side) and write (w_t, on the value side) CHANNEL-WISE, so the effective metric is a learned diagonal reweighting of the key space rather than the identity. It is still a metric \u2014 a Mahalanobis one with a diagonal, token-dependent shape \u2014 so criterion 4 still closes, and the byte-matched table it is audited against is entitled to the same shape (which is why the +0 B readers are run on the SAME projected keys).",
+            "measured_against": "its own byte-matched (theta_K x, theta_V x) table"
+          },
+          "fit": {
+            "best": {
+              "lr": 0.01,
+              "wd": 0.0,
+              "steps": 12,
+              "final": 0.31637847423553467,
+              "diverged": false,
+              "val_final": 0.3396860957145691,
+              "mini_batch": 16
+            },
+            "grid": [
+              {
+                "lr": 0.0001,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.39702439308166504,
+                "diverged": false,
+                "val_final": 0.3985074460506439,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.000316,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.39667651057243347,
+                "diverged": false,
+                "val_final": 0.398334801197052,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.0005,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.39639997482299805,
+                "diverged": false,
+                "val_final": 0.39821571111679077,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.001,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.3955351710319519,
+                "diverged": false,
+                "val_final": 0.39789190888404846,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.00316,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.3872932493686676,
+                "diverged": false,
+                "val_final": 0.3938537836074829,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.01,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.31637847423553467,
+                "diverged": false,
+                "val_final": 0.3396860957145691,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.0001,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.3970241844654083,
+                "diverged": false,
+                "val_final": 0.398507297039032,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.000316,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.3966762125492096,
+                "diverged": false,
+                "val_final": 0.3983345627784729,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.0005,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.3963997960090637,
+                "diverged": false,
+                "val_final": 0.3982153832912445,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.001,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.3955360949039459,
+                "diverged": false,
+                "val_final": 0.3978919982910156,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.00316,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.38732433319091797,
+                "diverged": false,
+                "val_final": 0.3938724398612976,
+                "mini_batch": 16
+              },
+              {
+                "lr": 0.01,
+                "wd": 0.1,
+                "steps": 12,
+                "final": 0.3171302378177643,
+                "diverged": false,
+                "val_final": 0.3402869999408722,
+                "mini_batch": 16
+              }
+            ],
+            "selection": {
+              "label": "f3",
+              "on": "the FIT split's own loss (C2W4's rule)",
+              "lrs": null,
+              "wds": null,
+              "n_points": 12
+            },
+            "note": "best-of-grid on the FIT split (auxiliary streams from different seeds), never on the eval split"
+          },
+          "grid_wall_s": 5.842057943344116,
+          "wall_s": 7.06206488609314,
+          "selections_scored": [
+            "f3",
+            "f3_lite_control",
+            "f3_val"
+          ]
+        }
+      },
+      "tuning_grid": {
+        "lrs": [
+          0.0001,
+          0.000316,
+          0.0005,
+          0.001,
+          0.00316,
+          0.01
+        ],
+        "wds": [
+          0.0,
+          0.1
+        ],
+        "steps": 12,
+        "b_grid": "TTT arms: (1, 16); delta arms: (16,) \u2014 b is inert for them",
+        "n_points_per_ttt_arm": 24,
+        "n_points_per_delta_arm": 12,
+        "is_full_F3": true,
+        "optimizer": "optax.adam for wd = 0 (\u26d4 byte-identical to C2W4's optimiser); optax.adamw (decoupled) for wd > 0. \u26a0 `rival-recon` F3's beta = (0.9, 0.98) and cosine decay are NOT adopted \u2014 declared deviation, one variable moves.",
+        "init_key_scheme": "one init per (arm, seed, mini_batch b), shared across all (lr, wd) \u2014 \u26a0 CHANGED from C2W4's sequential split, which made the init depend on the grid's length; priced by the `f3_lite_control` selection"
+      },
+      "rivals_by_selection": {
+        "f3": {
+          "mamba2": {
+            "rival": "mamba2",
+            "d_head": 36,
+            "arms": {
+              "full": -0.37635786291855755,
+              "blank": -1.189506665566128,
+              "launder": -0.5938342277423686,
+              "same_keys_null": -0.5406252937873357,
+              "knn2_mean_+0B": -0.5766321378435072,
+              "knn2_idw_+0B": -0.5779929505694363,
+              "table_mean_+0B": -0.38872128454006194
+            },
+            "dividend_vs_own_table": 0.21747636482381105,
+            "zero_byte_margin": {
+              "name": "table_mean_+0B",
+              "value": -0.38872128454006194,
+              "signed_margin_full_minus_sub": 0.012363421621504389,
+              "incl_argmin_name": "table_mean_+0B",
+              "incl_argmin_value": -0.38872128454006194,
+              "signed_margin_incl_argmin": 0.012363421621504389,
+              "convention": "primary = the EXCLUSIVE +0 B reader set (as registered in PREREG R5); the inclusive set adds the arg-min launder, FB4's own convention"
+            },
+            "raw_table_control": {
+              "note": "the SAME state budget spent on the gym's raw (address, payload) rows and read by the same +0 B readers in the raw metric \u2014 strictly stronger than the registered projected-table launder, and identical to the CLU's own launder set on these queries",
+              "rows_affordable": 259,
+              "table_is_lossless": true,
+              "best_reader": "knn2_idw_+0B",
+              "best_reader_score": -0.14784357638642315,
+              "signed_margin_full_minus_raw": -0.2285142865321344,
+              "all_raw_readers": {
+                "settle_deleted": -0.36820046942555523,
+                "knn2_mean_+0B": -0.17382456877613206,
+                "knn2_idw_+0B": -0.14784357638642315,
+                "raw_table_mean_+0B": -0.37485864739591085
+              }
+            },
+            "byte_ledger": {
+              "rival": {
+                "arm": "mamba2",
+                "param_floats": 2095,
+                "state_floats": 1296,
+                "param_bytes": 8380,
+                "state_bytes": 5184,
+                "state_over_param": 0.6186157517899762,
+                "param_breakdown": {
+                  "theta_K(B_t)": 180,
+                  "theta_Q(C_t)": 180,
+                  "theta_V(x_t)": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "w_dt": 5,
+                  "dt_bias": 1,
+                  "A_log": 1,
+                  "D(unused)": 36,
+                  "W_z(unused)": 180
+                },
+                "state_breakdown": {
+                  "ssm_state_deviation": 1296
+                },
+                "state_convention": "n_head*head_dim*d_state \u2014 the reference implementation's own ssm_state shape (B, nheads, headdim, d_state) with n_head = ngroups = 1 and d_state = head_dim = d, so the state is d^2, BYTE-IDENTICAL to the delta arms' n_head*d_k*d_v. \u26a0 conv_state ((d_inner + 2*ngroups*d_state)*d_conv) is EXCLUDED because this minimal arm has no conv branch \u2014 a declared deviation that is IN THE RIVAL'S FAVOUR under an iso-state budget (every byte goes to the SSM state).",
+                "note": "S_0 is PARAMETERS (Mamba-2's published h_0 is the zero state; it is learnable here exactly as the delta arms' S_0 is); only the per-stream deviation is STATE; measured moved floats = 1296"
+              },
+              "matched_table": {
+                "arm": "table_launder",
+                "param_floats": 2095,
+                "state_floats": 1296,
+                "param_bytes": 8380,
+                "state_bytes": 5184,
+                "state_over_param": 0.6186157517899762,
+                "param_breakdown": {
+                  "theta_K(B_t)": 180,
+                  "theta_Q(C_t)": 180,
+                  "theta_V(x_t)": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "w_dt": 5,
+                  "dt_bias": 1,
+                  "A_log": 1,
+                  "D(unused)": 36,
+                  "W_z(unused)": 180
+                },
+                "state_breakdown": {
+                  "table_keys": 648,
+                  "table_values": 648
+                },
+                "state_convention": "n_rows*(d_k+d_v) = 18*(36+36)",
+                "note": ""
+              },
+              "state_floats_declared": 1296,
+              "state_floats_measured_moved": 1296,
+              "table_rows_affordable": 18,
+              "table_rows_used": 8,
+              "table_is_lossless": true,
+              "state_over_own_table_bytes": 1.0,
+              "state_bytes_vs_clu_full_bytes": 1.8620689655172413,
+              "phi_family": "identity_launch",
+              "phi_id": "a283260e546b4f0e",
+              "phi_params": 0,
+              "phi_bytes": 0
+            },
+            "metric_native": {
+              "verdict": "metric-native (unnormalised)",
+              "argument": "SSD's scalar-identity restriction A_t = a_t I makes the read a 1-semiseparable masked attention: expanding h_t = a_t h_{t-1} + B_t (Delta_t v_t)^T gives o_q = sum_j gamma_j (C_q . B_j) Delta_j v_j with gamma_j = prod_{r>j} a_r in (0,1] \u2014 a DOT-PRODUCT kernel smoother over the stored (B, v) pairs with an exponential recency weighting. That is a metric operation on its own state, so criterion 4 closes in the same sense it does for DeltaNet (Eq. 5) and Gated DeltaNet (Eq. 6) \u2014 of which Mamba-2 IS the erase-free degenerate case, per the Gated DeltaNet paper's own presentation of it as S_t = alpha_t S_{t-1} + v_t k_t^T. \u26a0 BUT it closes WEAKLY: unlike GDN-2 \u00a73.5, Mamba-2 does NOT L2-normalise its B/C paths, so arg-min ||q - k|| and arg-max q.k do NOT coincide in its own key space \u2014 the key-norm term survives. Its byte-matched table is therefore read by a WORSE-MATCHED arg-min reader than the delta arms', which inflates its dividend and its +0 B margin against that table while leaving the RAW-metric control (which does not use its projections at all) untouched. This is exactly the \u00a74 projected-versus-raw finding, appearing again on a new family.",
+              "measured_against": "its own byte-matched (theta_K x, theta_V x) table",
+              "citation": "Dao & Gu, ICML 2024, arXiv:2405.21060 (SSD); the 'Mamba2 as S_t = alpha_t S_{t-1} + v_t k_t^T' reading is Gated DeltaNet's own, Yang, Kautz & Hatamizadeh, ICLR 2025, arXiv:2412.06464"
+            },
+            "fit": {
+              "best": {
+                "lr": 0.01,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.38687148690223694,
+                "diverged": false,
+                "val_final": 0.38286474347114563,
+                "mini_batch": 16
+              },
+              "grid": [
+                {
+                  "lr": 0.0001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39717891812324524,
+                  "diverged": false,
+                  "val_final": 0.3975335955619812,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39697974920272827,
+                  "diverged": false,
+                  "val_final": 0.3975886404514313,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.396841824054718,
+                  "diverged": false,
+                  "val_final": 0.39763903617858887,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.396591454744339,
+                  "diverged": false,
+                  "val_final": 0.39777591824531555,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.3961864709854126,
+                  "diverged": false,
+                  "val_final": 0.3974725902080536,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.38687148690223694,
+                  "diverged": false,
+                  "val_final": 0.38286474347114563,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3971787989139557,
+                  "diverged": false,
+                  "val_final": 0.39753371477127075,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.39697954058647156,
+                  "diverged": false,
+                  "val_final": 0.3975890278816223,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.39684149622917175,
+                  "diverged": false,
+                  "val_final": 0.39763960242271423,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3965911865234375,
+                  "diverged": false,
+                  "val_final": 0.3977768123149872,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.396186888217926,
+                  "diverged": false,
+                  "val_final": 0.39747312664985657,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3868769407272339,
+                  "diverged": false,
+                  "val_final": 0.38295266032218933,
+                  "mini_batch": 16
+                }
+              ],
+              "selection": {
+                "label": "f3",
+                "on": "the FIT split's own loss (C2W4's rule)",
+                "lrs": null,
+                "wds": null,
+                "n_points": 12
+              },
+              "note": "best-of-grid on the FIT split (auxiliary streams from different seeds), never on the eval split"
+            }
+          },
+          "gdn2": {
+            "rival": "gdn2",
+            "d_head": 36,
+            "arms": {
+              "full": -0.40159726529017087,
+              "blank": -1.1376477356746786,
+              "launder": -0.6533589764863797,
+              "same_keys_null": -0.39262447923400334,
+              "knn2_mean_+0B": -0.5595368853229437,
+              "knn2_idw_+0B": -0.5667897071650089,
+              "table_mean_+0B": -0.3934790476415663
+            },
+            "dividend_vs_own_table": 0.2517617111962089,
+            "zero_byte_margin": {
+              "name": "table_mean_+0B",
+              "value": -0.3934790476415663,
+              "signed_margin_full_minus_sub": -0.008118217648604542,
+              "incl_argmin_name": "table_mean_+0B",
+              "incl_argmin_value": -0.3934790476415663,
+              "signed_margin_incl_argmin": -0.008118217648604542,
+              "convention": "primary = the EXCLUSIVE +0 B reader set (as registered in PREREG R5); the inclusive set adds the arg-min launder, FB4's own convention"
+            },
+            "raw_table_control": {
+              "note": "the SAME state budget spent on the gym's raw (address, payload) rows and read by the same +0 B readers in the raw metric \u2014 strictly stronger than the registered projected-table launder, and identical to the CLU's own launder set on these queries",
+              "rows_affordable": 259,
+              "table_is_lossless": true,
+              "best_reader": "knn2_idw_+0B",
+              "best_reader_score": -0.14784357638642315,
+              "signed_margin_full_minus_raw": -0.2537536889037477,
+              "all_raw_readers": {
+                "settle_deleted": -0.36820046942555523,
+                "knn2_mean_+0B": -0.17382456877613206,
+                "knn2_idw_+0B": -0.14784357638642315,
+                "raw_table_mean_+0B": -0.37485864739591085
+              }
+            },
+            "byte_ledger": {
+              "rival": {
+                "arm": "gdn2",
+                "param_floats": 2489,
+                "state_floats": 1296,
+                "param_bytes": 9956,
+                "state_bytes": 5184,
+                "state_over_param": 0.5206910405785456,
+                "param_breakdown": {
+                  "theta_K": 180,
+                  "theta_Q": 180,
+                  "theta_V": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "W_b(Eq11)": 180,
+                  "W_w(Eq11)": 180,
+                  "W_f(Eq12)": 180,
+                  "a(Eq12)": 36,
+                  "delta(Eq12)": 36,
+                  "w_beta(unused)": 5
+                },
+                "state_breakdown": {
+                  "S_deviation": 1296
+                },
+                "state_convention": "n_head*d_k*d_v \u2014 VERIFIED for GDN-2 from its own Eq. 90 (H*d_k*d_v = 16*128*128 = 262,144 floats per layer), i.e. the -2 revision preserves the DeltaNet/GDN accounting",
+                "note": "S_0 is PARAMETERS (shared across streams); only the per-stream deviation is STATE; measured moved floats = 1296"
+              },
+              "matched_table": {
+                "arm": "table_launder",
+                "param_floats": 2489,
+                "state_floats": 1296,
+                "param_bytes": 9956,
+                "state_bytes": 5184,
+                "state_over_param": 0.5206910405785456,
+                "param_breakdown": {
+                  "theta_K": 180,
+                  "theta_Q": 180,
+                  "theta_V": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "W_b(Eq11)": 180,
+                  "W_w(Eq11)": 180,
+                  "W_f(Eq12)": 180,
+                  "a(Eq12)": 36,
+                  "delta(Eq12)": 36,
+                  "w_beta(unused)": 5
+                },
+                "state_breakdown": {
+                  "table_keys": 648,
+                  "table_values": 648
+                },
+                "state_convention": "n_rows*(d_k+d_v) = 18*(36+36)",
+                "note": ""
+              },
+              "state_floats_declared": 1296,
+              "state_floats_measured_moved": 1296,
+              "table_rows_affordable": 18,
+              "table_rows_used": 8,
+              "table_is_lossless": true,
+              "state_over_own_table_bytes": 1.0,
+              "state_bytes_vs_clu_full_bytes": 1.8620689655172413,
+              "phi_family": "identity_launch",
+              "phi_id": "a283260e546b4f0e",
+              "phi_params": 0,
+              "phi_bytes": 0
+            },
+            "metric_native": {
+              "verdict": "metric-native",
+              "argument": "the read is o = S^T q (Eq. 1). Every variant's S is a sum of outer products k_s z_s^T with data-dependent left/right factors, so o = sum_s z_s (k_s . q) up to the erase corrections: a **linear kernel smoother over the stored (k, v) pairs under the dot-product metric**, with q and k L2-normalised (\u00a73.5) so arg-min ||q - k|| and arg-max q.k coincide EXACTLY. This is `rival-recon` F9's 'the rivals' reads are metric-native too', at equation level. Eq. 10 makes erase (b_t, on the key side) and write (w_t, on the value side) CHANNEL-WISE, so the effective metric is a learned diagonal reweighting of the key space rather than the identity. It is still a metric \u2014 a Mahalanobis one with a diagonal, token-dependent shape \u2014 so criterion 4 still closes, and the byte-matched table it is audited against is entitled to the same shape (which is why the +0 B readers are run on the SAME projected keys).",
+              "measured_against": "its own byte-matched (theta_K x, theta_V x) table"
+            },
+            "fit": {
+              "best": {
+                "lr": 0.01,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.31637847423553467,
+                "diverged": false,
+                "val_final": 0.3396860957145691,
+                "mini_batch": 16
+              },
+              "grid": [
+                {
+                  "lr": 0.0001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39702439308166504,
+                  "diverged": false,
+                  "val_final": 0.3985074460506439,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39667651057243347,
+                  "diverged": false,
+                  "val_final": 0.398334801197052,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39639997482299805,
+                  "diverged": false,
+                  "val_final": 0.39821571111679077,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.3955351710319519,
+                  "diverged": false,
+                  "val_final": 0.39789190888404846,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.3872932493686676,
+                  "diverged": false,
+                  "val_final": 0.3938537836074829,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.31637847423553467,
+                  "diverged": false,
+                  "val_final": 0.3396860957145691,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3970241844654083,
+                  "diverged": false,
+                  "val_final": 0.398507297039032,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3966762125492096,
+                  "diverged": false,
+                  "val_final": 0.3983345627784729,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3963997960090637,
+                  "diverged": false,
+                  "val_final": 0.3982153832912445,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3955360949039459,
+                  "diverged": false,
+                  "val_final": 0.3978919982910156,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.38732433319091797,
+                  "diverged": false,
+                  "val_final": 0.3938724398612976,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3171302378177643,
+                  "diverged": false,
+                  "val_final": 0.3402869999408722,
+                  "mini_batch": 16
+                }
+              ],
+              "selection": {
+                "label": "f3",
+                "on": "the FIT split's own loss (C2W4's rule)",
+                "lrs": null,
+                "wds": null,
+                "n_points": 12
+              },
+              "note": "best-of-grid on the FIT split (auxiliary streams from different seeds), never on the eval split"
+            }
+          }
+        },
+        "f3_lite_control": {
+          "mamba2": {
+            "rival": "mamba2",
+            "d_head": 36,
+            "arms": {
+              "full": -0.37635786291855755,
+              "blank": -1.189506665566128,
+              "launder": -0.5938342277423686,
+              "same_keys_null": -0.5406252937873357,
+              "knn2_mean_+0B": -0.5766321378435072,
+              "knn2_idw_+0B": -0.5779929505694363,
+              "table_mean_+0B": -0.38872128454006194
+            },
+            "dividend_vs_own_table": 0.21747636482381105,
+            "zero_byte_margin": {
+              "name": "table_mean_+0B",
+              "value": -0.38872128454006194,
+              "signed_margin_full_minus_sub": 0.012363421621504389,
+              "incl_argmin_name": "table_mean_+0B",
+              "incl_argmin_value": -0.38872128454006194,
+              "signed_margin_incl_argmin": 0.012363421621504389,
+              "convention": "primary = the EXCLUSIVE +0 B reader set (as registered in PREREG R5); the inclusive set adds the arg-min launder, FB4's own convention"
+            },
+            "raw_table_control": {
+              "note": "the SAME state budget spent on the gym's raw (address, payload) rows and read by the same +0 B readers in the raw metric \u2014 strictly stronger than the registered projected-table launder, and identical to the CLU's own launder set on these queries",
+              "rows_affordable": 259,
+              "table_is_lossless": true,
+              "best_reader": "knn2_idw_+0B",
+              "best_reader_score": -0.14784357638642315,
+              "signed_margin_full_minus_raw": -0.2285142865321344,
+              "all_raw_readers": {
+                "settle_deleted": -0.36820046942555523,
+                "knn2_mean_+0B": -0.17382456877613206,
+                "knn2_idw_+0B": -0.14784357638642315,
+                "raw_table_mean_+0B": -0.37485864739591085
+              }
+            },
+            "byte_ledger": {
+              "rival": {
+                "arm": "mamba2",
+                "param_floats": 2095,
+                "state_floats": 1296,
+                "param_bytes": 8380,
+                "state_bytes": 5184,
+                "state_over_param": 0.6186157517899762,
+                "param_breakdown": {
+                  "theta_K(B_t)": 180,
+                  "theta_Q(C_t)": 180,
+                  "theta_V(x_t)": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "w_dt": 5,
+                  "dt_bias": 1,
+                  "A_log": 1,
+                  "D(unused)": 36,
+                  "W_z(unused)": 180
+                },
+                "state_breakdown": {
+                  "ssm_state_deviation": 1296
+                },
+                "state_convention": "n_head*head_dim*d_state \u2014 the reference implementation's own ssm_state shape (B, nheads, headdim, d_state) with n_head = ngroups = 1 and d_state = head_dim = d, so the state is d^2, BYTE-IDENTICAL to the delta arms' n_head*d_k*d_v. \u26a0 conv_state ((d_inner + 2*ngroups*d_state)*d_conv) is EXCLUDED because this minimal arm has no conv branch \u2014 a declared deviation that is IN THE RIVAL'S FAVOUR under an iso-state budget (every byte goes to the SSM state).",
+                "note": "S_0 is PARAMETERS (Mamba-2's published h_0 is the zero state; it is learnable here exactly as the delta arms' S_0 is); only the per-stream deviation is STATE; measured moved floats = 1296"
+              },
+              "matched_table": {
+                "arm": "table_launder",
+                "param_floats": 2095,
+                "state_floats": 1296,
+                "param_bytes": 8380,
+                "state_bytes": 5184,
+                "state_over_param": 0.6186157517899762,
+                "param_breakdown": {
+                  "theta_K(B_t)": 180,
+                  "theta_Q(C_t)": 180,
+                  "theta_V(x_t)": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "w_dt": 5,
+                  "dt_bias": 1,
+                  "A_log": 1,
+                  "D(unused)": 36,
+                  "W_z(unused)": 180
+                },
+                "state_breakdown": {
+                  "table_keys": 648,
+                  "table_values": 648
+                },
+                "state_convention": "n_rows*(d_k+d_v) = 18*(36+36)",
+                "note": ""
+              },
+              "state_floats_declared": 1296,
+              "state_floats_measured_moved": 1296,
+              "table_rows_affordable": 18,
+              "table_rows_used": 8,
+              "table_is_lossless": true,
+              "state_over_own_table_bytes": 1.0,
+              "state_bytes_vs_clu_full_bytes": 1.8620689655172413,
+              "phi_family": "identity_launch",
+              "phi_id": "a283260e546b4f0e",
+              "phi_params": 0,
+              "phi_bytes": 0
+            },
+            "metric_native": {
+              "verdict": "metric-native (unnormalised)",
+              "argument": "SSD's scalar-identity restriction A_t = a_t I makes the read a 1-semiseparable masked attention: expanding h_t = a_t h_{t-1} + B_t (Delta_t v_t)^T gives o_q = sum_j gamma_j (C_q . B_j) Delta_j v_j with gamma_j = prod_{r>j} a_r in (0,1] \u2014 a DOT-PRODUCT kernel smoother over the stored (B, v) pairs with an exponential recency weighting. That is a metric operation on its own state, so criterion 4 closes in the same sense it does for DeltaNet (Eq. 5) and Gated DeltaNet (Eq. 6) \u2014 of which Mamba-2 IS the erase-free degenerate case, per the Gated DeltaNet paper's own presentation of it as S_t = alpha_t S_{t-1} + v_t k_t^T. \u26a0 BUT it closes WEAKLY: unlike GDN-2 \u00a73.5, Mamba-2 does NOT L2-normalise its B/C paths, so arg-min ||q - k|| and arg-max q.k do NOT coincide in its own key space \u2014 the key-norm term survives. Its byte-matched table is therefore read by a WORSE-MATCHED arg-min reader than the delta arms', which inflates its dividend and its +0 B margin against that table while leaving the RAW-metric control (which does not use its projections at all) untouched. This is exactly the \u00a74 projected-versus-raw finding, appearing again on a new family.",
+              "measured_against": "its own byte-matched (theta_K x, theta_V x) table",
+              "citation": "Dao & Gu, ICML 2024, arXiv:2405.21060 (SSD); the 'Mamba2 as S_t = alpha_t S_{t-1} + v_t k_t^T' reading is Gated DeltaNet's own, Yang, Kautz & Hatamizadeh, ICLR 2025, arXiv:2412.06464"
+            },
+            "fit": {
+              "best": {
+                "lr": 0.01,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.38687148690223694,
+                "diverged": false,
+                "val_final": 0.38286474347114563,
+                "mini_batch": 16
+              },
+              "grid": [
+                {
+                  "lr": 0.0001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39717891812324524,
+                  "diverged": false,
+                  "val_final": 0.3975335955619812,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39697974920272827,
+                  "diverged": false,
+                  "val_final": 0.3975886404514313,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.396841824054718,
+                  "diverged": false,
+                  "val_final": 0.39763903617858887,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.396591454744339,
+                  "diverged": false,
+                  "val_final": 0.39777591824531555,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.3961864709854126,
+                  "diverged": false,
+                  "val_final": 0.3974725902080536,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.38687148690223694,
+                  "diverged": false,
+                  "val_final": 0.38286474347114563,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3971787989139557,
+                  "diverged": false,
+                  "val_final": 0.39753371477127075,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.39697954058647156,
+                  "diverged": false,
+                  "val_final": 0.3975890278816223,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.39684149622917175,
+                  "diverged": false,
+                  "val_final": 0.39763960242271423,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3965911865234375,
+                  "diverged": false,
+                  "val_final": 0.3977768123149872,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.396186888217926,
+                  "diverged": false,
+                  "val_final": 0.39747312664985657,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3868769407272339,
+                  "diverged": false,
+                  "val_final": 0.38295266032218933,
+                  "mini_batch": 16
+                }
+              ],
+              "selection": {
+                "label": "f3_lite_control",
+                "on": "the FIT split's own loss (C2W4's rule)",
+                "lrs": [
+                  0.001,
+                  0.00316,
+                  0.01
+                ],
+                "wds": [
+                  0.0
+                ],
+                "n_points": 3
+              },
+              "note": "best-of-grid on the FIT split (auxiliary streams from different seeds), never on the eval split"
+            }
+          },
+          "gdn2": {
+            "rival": "gdn2",
+            "d_head": 36,
+            "arms": {
+              "full": -0.40159726529017087,
+              "blank": -1.1376477356746786,
+              "launder": -0.6533589764863797,
+              "same_keys_null": -0.39262447923400334,
+              "knn2_mean_+0B": -0.5595368853229437,
+              "knn2_idw_+0B": -0.5667897071650089,
+              "table_mean_+0B": -0.3934790476415663
+            },
+            "dividend_vs_own_table": 0.2517617111962089,
+            "zero_byte_margin": {
+              "name": "table_mean_+0B",
+              "value": -0.3934790476415663,
+              "signed_margin_full_minus_sub": -0.008118217648604542,
+              "incl_argmin_name": "table_mean_+0B",
+              "incl_argmin_value": -0.3934790476415663,
+              "signed_margin_incl_argmin": -0.008118217648604542,
+              "convention": "primary = the EXCLUSIVE +0 B reader set (as registered in PREREG R5); the inclusive set adds the arg-min launder, FB4's own convention"
+            },
+            "raw_table_control": {
+              "note": "the SAME state budget spent on the gym's raw (address, payload) rows and read by the same +0 B readers in the raw metric \u2014 strictly stronger than the registered projected-table launder, and identical to the CLU's own launder set on these queries",
+              "rows_affordable": 259,
+              "table_is_lossless": true,
+              "best_reader": "knn2_idw_+0B",
+              "best_reader_score": -0.14784357638642315,
+              "signed_margin_full_minus_raw": -0.2537536889037477,
+              "all_raw_readers": {
+                "settle_deleted": -0.36820046942555523,
+                "knn2_mean_+0B": -0.17382456877613206,
+                "knn2_idw_+0B": -0.14784357638642315,
+                "raw_table_mean_+0B": -0.37485864739591085
+              }
+            },
+            "byte_ledger": {
+              "rival": {
+                "arm": "gdn2",
+                "param_floats": 2489,
+                "state_floats": 1296,
+                "param_bytes": 9956,
+                "state_bytes": 5184,
+                "state_over_param": 0.5206910405785456,
+                "param_breakdown": {
+                  "theta_K": 180,
+                  "theta_Q": 180,
+                  "theta_V": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "W_b(Eq11)": 180,
+                  "W_w(Eq11)": 180,
+                  "W_f(Eq12)": 180,
+                  "a(Eq12)": 36,
+                  "delta(Eq12)": 36,
+                  "w_beta(unused)": 5
+                },
+                "state_breakdown": {
+                  "S_deviation": 1296
+                },
+                "state_convention": "n_head*d_k*d_v \u2014 VERIFIED for GDN-2 from its own Eq. 90 (H*d_k*d_v = 16*128*128 = 262,144 floats per layer), i.e. the -2 revision preserves the DeltaNet/GDN accounting",
+                "note": "S_0 is PARAMETERS (shared across streams); only the per-stream deviation is STATE; measured moved floats = 1296"
+              },
+              "matched_table": {
+                "arm": "table_launder",
+                "param_floats": 2489,
+                "state_floats": 1296,
+                "param_bytes": 9956,
+                "state_bytes": 5184,
+                "state_over_param": 0.5206910405785456,
+                "param_breakdown": {
+                  "theta_K": 180,
+                  "theta_Q": 180,
+                  "theta_V": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "W_b(Eq11)": 180,
+                  "W_w(Eq11)": 180,
+                  "W_f(Eq12)": 180,
+                  "a(Eq12)": 36,
+                  "delta(Eq12)": 36,
+                  "w_beta(unused)": 5
+                },
+                "state_breakdown": {
+                  "table_keys": 648,
+                  "table_values": 648
+                },
+                "state_convention": "n_rows*(d_k+d_v) = 18*(36+36)",
+                "note": ""
+              },
+              "state_floats_declared": 1296,
+              "state_floats_measured_moved": 1296,
+              "table_rows_affordable": 18,
+              "table_rows_used": 8,
+              "table_is_lossless": true,
+              "state_over_own_table_bytes": 1.0,
+              "state_bytes_vs_clu_full_bytes": 1.8620689655172413,
+              "phi_family": "identity_launch",
+              "phi_id": "a283260e546b4f0e",
+              "phi_params": 0,
+              "phi_bytes": 0
+            },
+            "metric_native": {
+              "verdict": "metric-native",
+              "argument": "the read is o = S^T q (Eq. 1). Every variant's S is a sum of outer products k_s z_s^T with data-dependent left/right factors, so o = sum_s z_s (k_s . q) up to the erase corrections: a **linear kernel smoother over the stored (k, v) pairs under the dot-product metric**, with q and k L2-normalised (\u00a73.5) so arg-min ||q - k|| and arg-max q.k coincide EXACTLY. This is `rival-recon` F9's 'the rivals' reads are metric-native too', at equation level. Eq. 10 makes erase (b_t, on the key side) and write (w_t, on the value side) CHANNEL-WISE, so the effective metric is a learned diagonal reweighting of the key space rather than the identity. It is still a metric \u2014 a Mahalanobis one with a diagonal, token-dependent shape \u2014 so criterion 4 still closes, and the byte-matched table it is audited against is entitled to the same shape (which is why the +0 B readers are run on the SAME projected keys).",
+              "measured_against": "its own byte-matched (theta_K x, theta_V x) table"
+            },
+            "fit": {
+              "best": {
+                "lr": 0.01,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.31637847423553467,
+                "diverged": false,
+                "val_final": 0.3396860957145691,
+                "mini_batch": 16
+              },
+              "grid": [
+                {
+                  "lr": 0.0001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39702439308166504,
+                  "diverged": false,
+                  "val_final": 0.3985074460506439,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39667651057243347,
+                  "diverged": false,
+                  "val_final": 0.398334801197052,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39639997482299805,
+                  "diverged": false,
+                  "val_final": 0.39821571111679077,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.3955351710319519,
+                  "diverged": false,
+                  "val_final": 0.39789190888404846,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.3872932493686676,
+                  "diverged": false,
+                  "val_final": 0.3938537836074829,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.31637847423553467,
+                  "diverged": false,
+                  "val_final": 0.3396860957145691,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3970241844654083,
+                  "diverged": false,
+                  "val_final": 0.398507297039032,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3966762125492096,
+                  "diverged": false,
+                  "val_final": 0.3983345627784729,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3963997960090637,
+                  "diverged": false,
+                  "val_final": 0.3982153832912445,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3955360949039459,
+                  "diverged": false,
+                  "val_final": 0.3978919982910156,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.38732433319091797,
+                  "diverged": false,
+                  "val_final": 0.3938724398612976,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3171302378177643,
+                  "diverged": false,
+                  "val_final": 0.3402869999408722,
+                  "mini_batch": 16
+                }
+              ],
+              "selection": {
+                "label": "f3_lite_control",
+                "on": "the FIT split's own loss (C2W4's rule)",
+                "lrs": [
+                  0.001,
+                  0.00316,
+                  0.01
+                ],
+                "wds": [
+                  0.0
+                ],
+                "n_points": 3
+              },
+              "note": "best-of-grid on the FIT split (auxiliary streams from different seeds), never on the eval split"
+            }
+          }
+        },
+        "f3_val": {
+          "mamba2": {
+            "rival": "mamba2",
+            "d_head": 36,
+            "arms": {
+              "full": -0.37635786291855755,
+              "blank": -1.189506665566128,
+              "launder": -0.5938342277423686,
+              "same_keys_null": -0.5406252937873357,
+              "knn2_mean_+0B": -0.5766321378435072,
+              "knn2_idw_+0B": -0.5779929505694363,
+              "table_mean_+0B": -0.38872128454006194
+            },
+            "dividend_vs_own_table": 0.21747636482381105,
+            "zero_byte_margin": {
+              "name": "table_mean_+0B",
+              "value": -0.38872128454006194,
+              "signed_margin_full_minus_sub": 0.012363421621504389,
+              "incl_argmin_name": "table_mean_+0B",
+              "incl_argmin_value": -0.38872128454006194,
+              "signed_margin_incl_argmin": 0.012363421621504389,
+              "convention": "primary = the EXCLUSIVE +0 B reader set (as registered in PREREG R5); the inclusive set adds the arg-min launder, FB4's own convention"
+            },
+            "raw_table_control": {
+              "note": "the SAME state budget spent on the gym's raw (address, payload) rows and read by the same +0 B readers in the raw metric \u2014 strictly stronger than the registered projected-table launder, and identical to the CLU's own launder set on these queries",
+              "rows_affordable": 259,
+              "table_is_lossless": true,
+              "best_reader": "knn2_idw_+0B",
+              "best_reader_score": -0.14784357638642315,
+              "signed_margin_full_minus_raw": -0.2285142865321344,
+              "all_raw_readers": {
+                "settle_deleted": -0.36820046942555523,
+                "knn2_mean_+0B": -0.17382456877613206,
+                "knn2_idw_+0B": -0.14784357638642315,
+                "raw_table_mean_+0B": -0.37485864739591085
+              }
+            },
+            "byte_ledger": {
+              "rival": {
+                "arm": "mamba2",
+                "param_floats": 2095,
+                "state_floats": 1296,
+                "param_bytes": 8380,
+                "state_bytes": 5184,
+                "state_over_param": 0.6186157517899762,
+                "param_breakdown": {
+                  "theta_K(B_t)": 180,
+                  "theta_Q(C_t)": 180,
+                  "theta_V(x_t)": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "w_dt": 5,
+                  "dt_bias": 1,
+                  "A_log": 1,
+                  "D(unused)": 36,
+                  "W_z(unused)": 180
+                },
+                "state_breakdown": {
+                  "ssm_state_deviation": 1296
+                },
+                "state_convention": "n_head*head_dim*d_state \u2014 the reference implementation's own ssm_state shape (B, nheads, headdim, d_state) with n_head = ngroups = 1 and d_state = head_dim = d, so the state is d^2, BYTE-IDENTICAL to the delta arms' n_head*d_k*d_v. \u26a0 conv_state ((d_inner + 2*ngroups*d_state)*d_conv) is EXCLUDED because this minimal arm has no conv branch \u2014 a declared deviation that is IN THE RIVAL'S FAVOUR under an iso-state budget (every byte goes to the SSM state).",
+                "note": "S_0 is PARAMETERS (Mamba-2's published h_0 is the zero state; it is learnable here exactly as the delta arms' S_0 is); only the per-stream deviation is STATE; measured moved floats = 1296"
+              },
+              "matched_table": {
+                "arm": "table_launder",
+                "param_floats": 2095,
+                "state_floats": 1296,
+                "param_bytes": 8380,
+                "state_bytes": 5184,
+                "state_over_param": 0.6186157517899762,
+                "param_breakdown": {
+                  "theta_K(B_t)": 180,
+                  "theta_Q(C_t)": 180,
+                  "theta_V(x_t)": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "w_dt": 5,
+                  "dt_bias": 1,
+                  "A_log": 1,
+                  "D(unused)": 36,
+                  "W_z(unused)": 180
+                },
+                "state_breakdown": {
+                  "table_keys": 648,
+                  "table_values": 648
+                },
+                "state_convention": "n_rows*(d_k+d_v) = 18*(36+36)",
+                "note": ""
+              },
+              "state_floats_declared": 1296,
+              "state_floats_measured_moved": 1296,
+              "table_rows_affordable": 18,
+              "table_rows_used": 8,
+              "table_is_lossless": true,
+              "state_over_own_table_bytes": 1.0,
+              "state_bytes_vs_clu_full_bytes": 1.8620689655172413,
+              "phi_family": "identity_launch",
+              "phi_id": "a283260e546b4f0e",
+              "phi_params": 0,
+              "phi_bytes": 0
+            },
+            "metric_native": {
+              "verdict": "metric-native (unnormalised)",
+              "argument": "SSD's scalar-identity restriction A_t = a_t I makes the read a 1-semiseparable masked attention: expanding h_t = a_t h_{t-1} + B_t (Delta_t v_t)^T gives o_q = sum_j gamma_j (C_q . B_j) Delta_j v_j with gamma_j = prod_{r>j} a_r in (0,1] \u2014 a DOT-PRODUCT kernel smoother over the stored (B, v) pairs with an exponential recency weighting. That is a metric operation on its own state, so criterion 4 closes in the same sense it does for DeltaNet (Eq. 5) and Gated DeltaNet (Eq. 6) \u2014 of which Mamba-2 IS the erase-free degenerate case, per the Gated DeltaNet paper's own presentation of it as S_t = alpha_t S_{t-1} + v_t k_t^T. \u26a0 BUT it closes WEAKLY: unlike GDN-2 \u00a73.5, Mamba-2 does NOT L2-normalise its B/C paths, so arg-min ||q - k|| and arg-max q.k do NOT coincide in its own key space \u2014 the key-norm term survives. Its byte-matched table is therefore read by a WORSE-MATCHED arg-min reader than the delta arms', which inflates its dividend and its +0 B margin against that table while leaving the RAW-metric control (which does not use its projections at all) untouched. This is exactly the \u00a74 projected-versus-raw finding, appearing again on a new family.",
+              "measured_against": "its own byte-matched (theta_K x, theta_V x) table",
+              "citation": "Dao & Gu, ICML 2024, arXiv:2405.21060 (SSD); the 'Mamba2 as S_t = alpha_t S_{t-1} + v_t k_t^T' reading is Gated DeltaNet's own, Yang, Kautz & Hatamizadeh, ICLR 2025, arXiv:2412.06464"
+            },
+            "fit": {
+              "best": {
+                "lr": 0.01,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.38687148690223694,
+                "diverged": false,
+                "val_final": 0.38286474347114563,
+                "mini_batch": 16
+              },
+              "grid": [
+                {
+                  "lr": 0.0001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39717891812324524,
+                  "diverged": false,
+                  "val_final": 0.3975335955619812,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39697974920272827,
+                  "diverged": false,
+                  "val_final": 0.3975886404514313,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.396841824054718,
+                  "diverged": false,
+                  "val_final": 0.39763903617858887,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.396591454744339,
+                  "diverged": false,
+                  "val_final": 0.39777591824531555,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.3961864709854126,
+                  "diverged": false,
+                  "val_final": 0.3974725902080536,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.38687148690223694,
+                  "diverged": false,
+                  "val_final": 0.38286474347114563,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3971787989139557,
+                  "diverged": false,
+                  "val_final": 0.39753371477127075,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.39697954058647156,
+                  "diverged": false,
+                  "val_final": 0.3975890278816223,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.39684149622917175,
+                  "diverged": false,
+                  "val_final": 0.39763960242271423,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3965911865234375,
+                  "diverged": false,
+                  "val_final": 0.3977768123149872,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.396186888217926,
+                  "diverged": false,
+                  "val_final": 0.39747312664985657,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3868769407272339,
+                  "diverged": false,
+                  "val_final": 0.38295266032218933,
+                  "mini_batch": 16
+                }
+              ],
+              "selection": {
+                "label": "f3_val",
+                "on": "held-out fit-validation stream (never the eval split)",
+                "lrs": null,
+                "wds": null,
+                "n_points": 12
+              },
+              "note": "best-of-grid on the FIT split (auxiliary streams from different seeds), never on the eval split"
+            }
+          },
+          "gdn2": {
+            "rival": "gdn2",
+            "d_head": 36,
+            "arms": {
+              "full": -0.40159726529017087,
+              "blank": -1.1376477356746786,
+              "launder": -0.6533589764863797,
+              "same_keys_null": -0.39262447923400334,
+              "knn2_mean_+0B": -0.5595368853229437,
+              "knn2_idw_+0B": -0.5667897071650089,
+              "table_mean_+0B": -0.3934790476415663
+            },
+            "dividend_vs_own_table": 0.2517617111962089,
+            "zero_byte_margin": {
+              "name": "table_mean_+0B",
+              "value": -0.3934790476415663,
+              "signed_margin_full_minus_sub": -0.008118217648604542,
+              "incl_argmin_name": "table_mean_+0B",
+              "incl_argmin_value": -0.3934790476415663,
+              "signed_margin_incl_argmin": -0.008118217648604542,
+              "convention": "primary = the EXCLUSIVE +0 B reader set (as registered in PREREG R5); the inclusive set adds the arg-min launder, FB4's own convention"
+            },
+            "raw_table_control": {
+              "note": "the SAME state budget spent on the gym's raw (address, payload) rows and read by the same +0 B readers in the raw metric \u2014 strictly stronger than the registered projected-table launder, and identical to the CLU's own launder set on these queries",
+              "rows_affordable": 259,
+              "table_is_lossless": true,
+              "best_reader": "knn2_idw_+0B",
+              "best_reader_score": -0.14784357638642315,
+              "signed_margin_full_minus_raw": -0.2537536889037477,
+              "all_raw_readers": {
+                "settle_deleted": -0.36820046942555523,
+                "knn2_mean_+0B": -0.17382456877613206,
+                "knn2_idw_+0B": -0.14784357638642315,
+                "raw_table_mean_+0B": -0.37485864739591085
+              }
+            },
+            "byte_ledger": {
+              "rival": {
+                "arm": "gdn2",
+                "param_floats": 2489,
+                "state_floats": 1296,
+                "param_bytes": 9956,
+                "state_bytes": 5184,
+                "state_over_param": 0.5206910405785456,
+                "param_breakdown": {
+                  "theta_K": 180,
+                  "theta_Q": 180,
+                  "theta_V": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "W_b(Eq11)": 180,
+                  "W_w(Eq11)": 180,
+                  "W_f(Eq12)": 180,
+                  "a(Eq12)": 36,
+                  "delta(Eq12)": 36,
+                  "w_beta(unused)": 5
+                },
+                "state_breakdown": {
+                  "S_deviation": 1296
+                },
+                "state_convention": "n_head*d_k*d_v \u2014 VERIFIED for GDN-2 from its own Eq. 90 (H*d_k*d_v = 16*128*128 = 262,144 floats per layer), i.e. the -2 revision preserves the DeltaNet/GDN accounting",
+                "note": "S_0 is PARAMETERS (shared across streams); only the per-stream deviation is STATE; measured moved floats = 1296"
+              },
+              "matched_table": {
+                "arm": "table_launder",
+                "param_floats": 2489,
+                "state_floats": 1296,
+                "param_bytes": 9956,
+                "state_bytes": 5184,
+                "state_over_param": 0.5206910405785456,
+                "param_breakdown": {
+                  "theta_K": 180,
+                  "theta_Q": 180,
+                  "theta_V": 180,
+                  "theta_O": 36,
+                  "S0_init": 1296,
+                  "W_b(Eq11)": 180,
+                  "W_w(Eq11)": 180,
+                  "W_f(Eq12)": 180,
+                  "a(Eq12)": 36,
+                  "delta(Eq12)": 36,
+                  "w_beta(unused)": 5
+                },
+                "state_breakdown": {
+                  "table_keys": 648,
+                  "table_values": 648
+                },
+                "state_convention": "n_rows*(d_k+d_v) = 18*(36+36)",
+                "note": ""
+              },
+              "state_floats_declared": 1296,
+              "state_floats_measured_moved": 1296,
+              "table_rows_affordable": 18,
+              "table_rows_used": 8,
+              "table_is_lossless": true,
+              "state_over_own_table_bytes": 1.0,
+              "state_bytes_vs_clu_full_bytes": 1.8620689655172413,
+              "phi_family": "identity_launch",
+              "phi_id": "a283260e546b4f0e",
+              "phi_params": 0,
+              "phi_bytes": 0
+            },
+            "metric_native": {
+              "verdict": "metric-native",
+              "argument": "the read is o = S^T q (Eq. 1). Every variant's S is a sum of outer products k_s z_s^T with data-dependent left/right factors, so o = sum_s z_s (k_s . q) up to the erase corrections: a **linear kernel smoother over the stored (k, v) pairs under the dot-product metric**, with q and k L2-normalised (\u00a73.5) so arg-min ||q - k|| and arg-max q.k coincide EXACTLY. This is `rival-recon` F9's 'the rivals' reads are metric-native too', at equation level. Eq. 10 makes erase (b_t, on the key side) and write (w_t, on the value side) CHANNEL-WISE, so the effective metric is a learned diagonal reweighting of the key space rather than the identity. It is still a metric \u2014 a Mahalanobis one with a diagonal, token-dependent shape \u2014 so criterion 4 still closes, and the byte-matched table it is audited against is entitled to the same shape (which is why the +0 B readers are run on the SAME projected keys).",
+              "measured_against": "its own byte-matched (theta_K x, theta_V x) table"
+            },
+            "fit": {
+              "best": {
+                "lr": 0.01,
+                "wd": 0.0,
+                "steps": 12,
+                "final": 0.31637847423553467,
+                "diverged": false,
+                "val_final": 0.3396860957145691,
+                "mini_batch": 16
+              },
+              "grid": [
+                {
+                  "lr": 0.0001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39702439308166504,
+                  "diverged": false,
+                  "val_final": 0.3985074460506439,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39667651057243347,
+                  "diverged": false,
+                  "val_final": 0.398334801197052,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.39639997482299805,
+                  "diverged": false,
+                  "val_final": 0.39821571111679077,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.3955351710319519,
+                  "diverged": false,
+                  "val_final": 0.39789190888404846,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.3872932493686676,
+                  "diverged": false,
+                  "val_final": 0.3938537836074829,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.0,
+                  "steps": 12,
+                  "final": 0.31637847423553467,
+                  "diverged": false,
+                  "val_final": 0.3396860957145691,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3970241844654083,
+                  "diverged": false,
+                  "val_final": 0.398507297039032,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.000316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3966762125492096,
+                  "diverged": false,
+                  "val_final": 0.3983345627784729,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.0005,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3963997960090637,
+                  "diverged": false,
+                  "val_final": 0.3982153832912445,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.001,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3955360949039459,
+                  "diverged": false,
+                  "val_final": 0.3978919982910156,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.00316,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.38732433319091797,
+                  "diverged": false,
+                  "val_final": 0.3938724398612976,
+                  "mini_batch": 16
+                },
+                {
+                  "lr": 0.01,
+                  "wd": 0.1,
+                  "steps": 12,
+                  "final": 0.3171302378177643,
+                  "diverged": false,
+                  "val_final": 0.3402869999408722,
+                  "mini_batch": 16
+                }
+              ],
+              "selection": {
+                "label": "f3_val",
+                "on": "held-out fit-validation stream (never the eval split)",
+                "lrs": null,
+                "wds": null,
+                "n_points": 12
+              },
+              "note": "best-of-grid on the FIT split (auxiliary streams from different seeds), never on the eval split"
+            }
+          }
+        }
+      },
+      "selection_plan": [
+        {
+          "label": "f3",
+          "lrs": null,
+          "wds": null,
+          "on": "fit"
+        },
+        {
+          "label": "f3_lite_control",
+          "lrs": [
+            0.001,
+            0.00316,
+            0.01
+          ],
+          "wds": [
+            0.0
+          ],
+          "on": "fit"
+        },
+        {
+          "label": "f3_val",
+          "lrs": null,
+          "wds": null,
+          "on": "val"
+        }
+      ],
+      "gym_config_non_default": {
+        "family": "aggregate",
+        "n_offer": 6,
+        "reference_capacity": 3,
+        "capacity": 6,
+        "consolidate_every": 2,
+        "min_consolidations": 4,
+        "n_query_per_item": 2,
+        "n_query_per_pair": 3,
+        "clu_overrides": {
+          "stage_admission": true,
+          "write_steps": 30,
+          "address_steps": 80,
+          "read_steps": 120,
+          "n_query_per_item": 2,
+          "quick": true,
+          "atoms_per_item": 32
+        }
+      },
+      "clu_config_non_default": {
+        "capacity": 6,
+        "atoms_per_item": 16,
+        "min_atoms": 96,
+        "min_atoms_base": 96,
+        "min_atoms_c": 1.0,
+        "write_steps": 30,
+        "address_steps": 80,
+        "read_steps": 120,
+        "budget": 6,
+        "stage_admission": true,
+        "n_query_per_item": 2,
+        "quick": true
+      },
+      "n_admitted": 7,
+      "wall_write_s": 16.493858098983765,
+      "wall_s": 29.243074893951416
+    }
+  ],
+  "frontier": [],
+  "audit_table": {
+    "aggregate": {
+      "is_dividend_family": true,
+      "label": "reader-discrimination family (S = 0.5068) \u2014 the sole dividend family",
+      "rivals": {
+        "gdn2": {
+          "n_seeds": 1,
+          "d_head": 36,
+          "full": -0.40159726529017087,
+          "full_se": 0.0,
+          "launder": -0.6533589764863797,
+          "launder_se": 0.0,
+          "dividend_vs_own_table": 0.2517617111962089,
+          "dividend_se": 0.0,
+          "zero_byte_substitute": "table_mean_+0B",
+          "zero_byte_margin": -0.008118217648604542,
+          "zero_byte_margin_se": 0.0,
+          "zero_byte_margin_incl_argmin": -0.008118217648604542,
+          "beats_own_plus0B": false,
+          "raw_table_reader": "knn2_idw_+0B",
+          "raw_table_margin": -0.2537536889037477,
+          "raw_table_margin_se": 0.0,
+          "beats_raw_table_plus0B": false,
+          "p5_vs_raw_gap": 0.5055154000999567,
+          "p5_vs_raw_gap_se": 0.0,
+          "same_keys_null": -0.39262447923400334,
+          "blank": -1.1376477356746786,
+          "lift_over_own_blank": 0.7360504703845077,
+          "lift_se": 0.0,
+          "RESCUED_above_own_blank_2se": true,
+          "state_bytes": 5184,
+          "param_bytes": 9956,
+          "table_bytes": 5184,
+          "state_over_own_table_bytes": 1.0,
+          "table_is_lossless": true,
+          "metric_native": "metric-native"
+        },
+        "mamba2": {
+          "n_seeds": 1,
+          "d_head": 36,
+          "full": -0.37635786291855755,
+          "full_se": 0.0,
+          "launder": -0.5938342277423686,
+          "launder_se": 0.0,
+          "dividend_vs_own_table": 0.21747636482381105,
+          "dividend_se": 0.0,
+          "zero_byte_substitute": "table_mean_+0B",
+          "zero_byte_margin": 0.012363421621504389,
+          "zero_byte_margin_se": 0.0,
+          "zero_byte_margin_incl_argmin": 0.012363421621504389,
+          "beats_own_plus0B": true,
+          "raw_table_reader": "knn2_idw_+0B",
+          "raw_table_margin": -0.2285142865321344,
+          "raw_table_margin_se": 0.0,
+          "beats_raw_table_plus0B": false,
+          "p5_vs_raw_gap": 0.44599065135594546,
+          "p5_vs_raw_gap_se": 0.0,
+          "same_keys_null": -0.5406252937873357,
+          "blank": -1.189506665566128,
+          "lift_over_own_blank": 0.8131488026475704,
+          "lift_se": 0.0,
+          "RESCUED_above_own_blank_2se": true,
+          "state_bytes": 5184,
+          "param_bytes": 8380,
+          "table_bytes": 5184,
+          "state_over_own_table_bytes": 1.0,
+          "table_is_lossless": true,
+          "metric_native": "metric-native (unnormalised)"
+        }
+      },
+      "clu_banked": {
+        "metric": "neg_mae",
+        "full": [
+          -0.682608,
+          -0.384693,
+          -0.511032
+        ],
+        "launder": [
+          -0.496261,
+          -0.413103,
+          -0.432255
+        ],
+        "blank": [
+          -0.438906,
+          -0.404201,
+          -0.423079
+        ],
+        "best_zero_byte_substitute": {
+          "name": "knn2_idw_+0B",
+          "mean": -0.2081
+        },
+        "S": 0.5068,
+        "byte_ledger": {
+          "full_bytes": 5456,
+          "launder_bytes": 100,
+          "ratio": 54.56
+        }
+      },
+      "clu_reproduced": {
+        "full": -0.3748598373134481,
+        "full_se": 0.0,
+        "launder": -0.36820046942555523,
+        "launder_se": 0.0,
+        "dividend": -0.006659367887892842
+      },
+      "admissible_coverage": [
+        {
+          "admissible": 26,
+          "attempted": 45,
+          "fraction": 0.5777777777777777,
+          "n_offered": 6,
+          "n_admitted_by_store": 6,
+          "store_admission_fraction": 1.0
+        }
+      ]
+    }
+  },
+  "audit_table_by_selection": {
+    "f3": {
+      "aggregate": {
+        "is_dividend_family": true,
+        "label": "reader-discrimination family (S = 0.5068) \u2014 the sole dividend family",
+        "rivals": {
+          "gdn2": {
+            "n_seeds": 1,
+            "d_head": 36,
+            "full": -0.40159726529017087,
+            "full_se": 0.0,
+            "launder": -0.6533589764863797,
+            "launder_se": 0.0,
+            "dividend_vs_own_table": 0.2517617111962089,
+            "dividend_se": 0.0,
+            "zero_byte_substitute": "table_mean_+0B",
+            "zero_byte_margin": -0.008118217648604542,
+            "zero_byte_margin_se": 0.0,
+            "zero_byte_margin_incl_argmin": -0.008118217648604542,
+            "beats_own_plus0B": false,
+            "raw_table_reader": "knn2_idw_+0B",
+            "raw_table_margin": -0.2537536889037477,
+            "raw_table_margin_se": 0.0,
+            "beats_raw_table_plus0B": false,
+            "p5_vs_raw_gap": 0.5055154000999567,
+            "p5_vs_raw_gap_se": 0.0,
+            "same_keys_null": -0.39262447923400334,
+            "blank": -1.1376477356746786,
+            "lift_over_own_blank": 0.7360504703845077,
+            "lift_se": 0.0,
+            "RESCUED_above_own_blank_2se": true,
+            "state_bytes": 5184,
+            "param_bytes": 9956,
+            "table_bytes": 5184,
+            "state_over_own_table_bytes": 1.0,
+            "table_is_lossless": true,
+            "metric_native": "metric-native"
+          },
+          "mamba2": {
+            "n_seeds": 1,
+            "d_head": 36,
+            "full": -0.37635786291855755,
+            "full_se": 0.0,
+            "launder": -0.5938342277423686,
+            "launder_se": 0.0,
+            "dividend_vs_own_table": 0.21747636482381105,
+            "dividend_se": 0.0,
+            "zero_byte_substitute": "table_mean_+0B",
+            "zero_byte_margin": 0.012363421621504389,
+            "zero_byte_margin_se": 0.0,
+            "zero_byte_margin_incl_argmin": 0.012363421621504389,
+            "beats_own_plus0B": true,
+            "raw_table_reader": "knn2_idw_+0B",
+            "raw_table_margin": -0.2285142865321344,
+            "raw_table_margin_se": 0.0,
+            "beats_raw_table_plus0B": false,
+            "p5_vs_raw_gap": 0.44599065135594546,
+            "p5_vs_raw_gap_se": 0.0,
+            "same_keys_null": -0.5406252937873357,
+            "blank": -1.189506665566128,
+            "lift_over_own_blank": 0.8131488026475704,
+            "lift_se": 0.0,
+            "RESCUED_above_own_blank_2se": true,
+            "state_bytes": 5184,
+            "param_bytes": 8380,
+            "table_bytes": 5184,
+            "state_over_own_table_bytes": 1.0,
+            "table_is_lossless": true,
+            "metric_native": "metric-native (unnormalised)"
+          }
+        },
+        "clu_banked": {
+          "metric": "neg_mae",
+          "full": [
+            -0.682608,
+            -0.384693,
+            -0.511032
+          ],
+          "launder": [
+            -0.496261,
+            -0.413103,
+            -0.432255
+          ],
+          "blank": [
+            -0.438906,
+            -0.404201,
+            -0.423079
+          ],
+          "best_zero_byte_substitute": {
+            "name": "knn2_idw_+0B",
+            "mean": -0.2081
+          },
+          "S": 0.5068,
+          "byte_ledger": {
+            "full_bytes": 5456,
+            "launder_bytes": 100,
+            "ratio": 54.56
+          }
+        },
+        "clu_reproduced": {
+          "full": -0.3748598373134481,
+          "full_se": 0.0,
+          "launder": -0.36820046942555523,
+          "launder_se": 0.0,
+          "dividend": -0.006659367887892842
+        },
+        "admissible_coverage": [
+          {
+            "admissible": 26,
+            "attempted": 45,
+            "fraction": 0.5777777777777777,
+            "n_offered": 6,
+            "n_admitted_by_store": 6,
+            "store_admission_fraction": 1.0
+          }
+        ]
+      }
+    },
+    "f3_lite_control": {
+      "aggregate": {
+        "is_dividend_family": true,
+        "label": "reader-discrimination family (S = 0.5068) \u2014 the sole dividend family",
+        "rivals": {
+          "gdn2": {
+            "n_seeds": 1,
+            "d_head": 36,
+            "full": -0.40159726529017087,
+            "full_se": 0.0,
+            "launder": -0.6533589764863797,
+            "launder_se": 0.0,
+            "dividend_vs_own_table": 0.2517617111962089,
+            "dividend_se": 0.0,
+            "zero_byte_substitute": "table_mean_+0B",
+            "zero_byte_margin": -0.008118217648604542,
+            "zero_byte_margin_se": 0.0,
+            "zero_byte_margin_incl_argmin": -0.008118217648604542,
+            "beats_own_plus0B": false,
+            "raw_table_reader": "knn2_idw_+0B",
+            "raw_table_margin": -0.2537536889037477,
+            "raw_table_margin_se": 0.0,
+            "beats_raw_table_plus0B": false,
+            "p5_vs_raw_gap": 0.5055154000999567,
+            "p5_vs_raw_gap_se": 0.0,
+            "same_keys_null": -0.39262447923400334,
+            "blank": -1.1376477356746786,
+            "lift_over_own_blank": 0.7360504703845077,
+            "lift_se": 0.0,
+            "RESCUED_above_own_blank_2se": true,
+            "state_bytes": 5184,
+            "param_bytes": 9956,
+            "table_bytes": 5184,
+            "state_over_own_table_bytes": 1.0,
+            "table_is_lossless": true,
+            "metric_native": "metric-native"
+          },
+          "mamba2": {
+            "n_seeds": 1,
+            "d_head": 36,
+            "full": -0.37635786291855755,
+            "full_se": 0.0,
+            "launder": -0.5938342277423686,
+            "launder_se": 0.0,
+            "dividend_vs_own_table": 0.21747636482381105,
+            "dividend_se": 0.0,
+            "zero_byte_substitute": "table_mean_+0B",
+            "zero_byte_margin": 0.012363421621504389,
+            "zero_byte_margin_se": 0.0,
+            "zero_byte_margin_incl_argmin": 0.012363421621504389,
+            "beats_own_plus0B": true,
+            "raw_table_reader": "knn2_idw_+0B",
+            "raw_table_margin": -0.2285142865321344,
+            "raw_table_margin_se": 0.0,
+            "beats_raw_table_plus0B": false,
+            "p5_vs_raw_gap": 0.44599065135594546,
+            "p5_vs_raw_gap_se": 0.0,
+            "same_keys_null": -0.5406252937873357,
+            "blank": -1.189506665566128,
+            "lift_over_own_blank": 0.8131488026475704,
+            "lift_se": 0.0,
+            "RESCUED_above_own_blank_2se": true,
+            "state_bytes": 5184,
+            "param_bytes": 8380,
+            "table_bytes": 5184,
+            "state_over_own_table_bytes": 1.0,
+            "table_is_lossless": true,
+            "metric_native": "metric-native (unnormalised)"
+          }
+        },
+        "clu_banked": {
+          "metric": "neg_mae",
+          "full": [
+            -0.682608,
+            -0.384693,
+            -0.511032
+          ],
+          "launder": [
+            -0.496261,
+            -0.413103,
+            -0.432255
+          ],
+          "blank": [
+            -0.438906,
+            -0.404201,
+            -0.423079
+          ],
+          "best_zero_byte_substitute": {
+            "name": "knn2_idw_+0B",
+            "mean": -0.2081
+          },
+          "S": 0.5068,
+          "byte_ledger": {
+            "full_bytes": 5456,
+            "launder_bytes": 100,
+            "ratio": 54.56
+          }
+        },
+        "clu_reproduced": {
+          "full": -0.3748598373134481,
+          "full_se": 0.0,
+          "launder": -0.36820046942555523,
+          "launder_se": 0.0,
+          "dividend": -0.006659367887892842
+        },
+        "admissible_coverage": [
+          {
+            "admissible": 26,
+            "attempted": 45,
+            "fraction": 0.5777777777777777,
+            "n_offered": 6,
+            "n_admitted_by_store": 6,
+            "store_admission_fraction": 1.0
+          }
+        ]
+      }
+    },
+    "f3_val": {
+      "aggregate": {
+        "is_dividend_family": true,
+        "label": "reader-discrimination family (S = 0.5068) \u2014 the sole dividend family",
+        "rivals": {
+          "gdn2": {
+            "n_seeds": 1,
+            "d_head": 36,
+            "full": -0.40159726529017087,
+            "full_se": 0.0,
+            "launder": -0.6533589764863797,
+            "launder_se": 0.0,
+            "dividend_vs_own_table": 0.2517617111962089,
+            "dividend_se": 0.0,
+            "zero_byte_substitute": "table_mean_+0B",
+            "zero_byte_margin": -0.008118217648604542,
+            "zero_byte_margin_se": 0.0,
+            "zero_byte_margin_incl_argmin": -0.008118217648604542,
+            "beats_own_plus0B": false,
+            "raw_table_reader": "knn2_idw_+0B",
+            "raw_table_margin": -0.2537536889037477,
+            "raw_table_margin_se": 0.0,
+            "beats_raw_table_plus0B": false,
+            "p5_vs_raw_gap": 0.5055154000999567,
+            "p5_vs_raw_gap_se": 0.0,
+            "same_keys_null": -0.39262447923400334,
+            "blank": -1.1376477356746786,
+            "lift_over_own_blank": 0.7360504703845077,
+            "lift_se": 0.0,
+            "RESCUED_above_own_blank_2se": true,
+            "state_bytes": 5184,
+            "param_bytes": 9956,
+            "table_bytes": 5184,
+            "state_over_own_table_bytes": 1.0,
+            "table_is_lossless": true,
+            "metric_native": "metric-native"
+          },
+          "mamba2": {
+            "n_seeds": 1,
+            "d_head": 36,
+            "full": -0.37635786291855755,
+            "full_se": 0.0,
+            "launder": -0.5938342277423686,
+            "launder_se": 0.0,
+            "dividend_vs_own_table": 0.21747636482381105,
+            "dividend_se": 0.0,
+            "zero_byte_substitute": "table_mean_+0B",
+            "zero_byte_margin": 0.012363421621504389,
+            "zero_byte_margin_se": 0.0,
+            "zero_byte_margin_incl_argmin": 0.012363421621504389,
+            "beats_own_plus0B": true,
+            "raw_table_reader": "knn2_idw_+0B",
+            "raw_table_margin": -0.2285142865321344,
+            "raw_table_margin_se": 0.0,
+            "beats_raw_table_plus0B": false,
+            "p5_vs_raw_gap": 0.44599065135594546,
+            "p5_vs_raw_gap_se": 0.0,
+            "same_keys_null": -0.5406252937873357,
+            "blank": -1.189506665566128,
+            "lift_over_own_blank": 0.8131488026475704,
+            "lift_se": 0.0,
+            "RESCUED_above_own_blank_2se": true,
+            "state_bytes": 5184,
+            "param_bytes": 8380,
+            "table_bytes": 5184,
+            "state_over_own_table_bytes": 1.0,
+            "table_is_lossless": true,
+            "metric_native": "metric-native (unnormalised)"
+          }
+        },
+        "clu_banked": {
+          "metric": "neg_mae",
+          "full": [
+            -0.682608,
+            -0.384693,
+            -0.511032
+          ],
+          "launder": [
+            -0.496261,
+            -0.413103,
+            -0.432255
+          ],
+          "blank": [
+            -0.438906,
+            -0.404201,
+            -0.423079
+          ],
+          "best_zero_byte_substitute": {
+            "name": "knn2_idw_+0B",
+            "mean": -0.2081
+          },
+          "S": 0.5068,
+          "byte_ledger": {
+            "full_bytes": 5456,
+            "launder_bytes": 100,
+            "ratio": 54.56
+          }
+        },
+        "clu_reproduced": {
+          "full": -0.3748598373134481,
+          "full_se": 0.0,
+          "launder": -0.36820046942555523,
+          "launder_se": 0.0,
+          "dividend": -0.006659367887892842
+        },
+        "admissible_coverage": [
+          {
+            "admissible": 26,
+            "attempted": 45,
+            "fraction": 0.5777777777777777,
+            "n_offered": 6,
+            "n_admitted_by_store": 6,
+            "store_admission_fraction": 1.0
+          }
+        ]
+      }
+    }
+  },
+  "before_after": {
+    "thresholds": "PREREG-f3 \u00a72: T1 rescue flip \u00b7 T2 R5 sign flip (> 2 SE) \u00b7 T3 raw-table margin positive by > 2 SE \u00b7 T4 the R5 count (3 of 5 <= 0) changes \u00b7 T5 the P5-vs-raw gap collapses below 2 SE of 0",
+    "adjudicated_on": "the `f3` column; `f3_lite_control` is carried so an init-redraw effect is never read as a tuning effect",
+    "rows": {
+      "mamba2": {
+        "verdict": "NEW ARM \u2014 no C2W4 incumbent, so no before/after verdict",
+        "thresholds_fired": [],
+        "d_head": {
+          "C2W4": null,
+          "f3": 36
+        },
+        "rescued": {
+          "C2W4": null,
+          "f3": true,
+          "f3_lite_control": true,
+          "f3_val": true
+        },
+        "full": {
+          "f3": -0.37635786291855755,
+          "f3_se": 0.0,
+          "f3_lite_control": -0.37635786291855755,
+          "f3_val": -0.37635786291855755
+        },
+        "zero_byte_margin_R5": {
+          "f3": 0.012363421621504389,
+          "f3_se": 0.0,
+          "f3_lite_control": 0.012363421621504389,
+          "f3_val": 0.012363421621504389
+        },
+        "raw_table_margin": {
+          "f3": -0.2285142865321344,
+          "f3_se": 0.0,
+          "f3_lite_control": -0.2285142865321344,
+          "f3_val": -0.2285142865321344
+        },
+        "p5_vs_raw_gap": {
+          "f3": 0.44599065135594546,
+          "f3_se": 0.0
+        },
+        "lift_over_own_blank": {
+          "f3": 0.8131488026475704,
+          "f3_se": 0.0
+        },
+        "tuning_effect_f3_minus_control": {
+          "full": 0.0,
+          "raw_table_margin": 0.0
+        },
+        "held_out_selection_effect_val_minus_f3": {
+          "full": 0.0,
+          "raw_table_margin": 0.0,
+          "rescue_verdict_agrees": true
+        }
+      },
+      "ttt_linear": {
+        "status": "\u26d4 NOT-RUN in this pass (declared, never a null)"
+      },
+      "ttt_mlp": {
+        "status": "\u26d4 NOT-RUN in this pass (declared, never a null)"
+      },
+      "deltanet": {
+        "status": "\u26d4 NOT-RUN in this pass (declared, never a null)"
+      },
+      "gdn": {
+        "status": "\u26d4 NOT-RUN in this pass (declared, never a null)"
+      },
+      "gdn2": {
+        "verdict": "CHANGED",
+        "thresholds_fired": [
+          "T2_R5_sign_flip"
+        ],
+        "d_head": {
+          "C2W4": 36,
+          "f3": 36
+        },
+        "chosen_config_f3": [
+          {
+            "seed": 0,
+            "lr": 0.01,
+            "wd": 0.0,
+            "steps": 12,
+            "final": 0.31637847423553467,
+            "val_final": 0.3396860957145691,
+            "mini_batch": 16
+          }
+        ],
+        "rescued": {
+          "C2W4": true,
+          "f3": true,
+          "f3_lite_control": true
+        },
+        "full": {
+          "C2W4": -0.3964,
+          "f3": -0.40159726529017087,
+          "f3_se": 0.0,
+          "f3_lite_control": -0.40159726529017087
+        },
+        "dividend_vs_own_table": {
+          "C2W4": 0.8771,
+          "f3": 0.2517617111962089,
+          "f3_lite_control": 0.2517617111962089
+        },
+        "zero_byte_margin_R5": {
+          "C2W4": 0.0445,
+          "f3": -0.008118217648604542,
+          "f3_se": 0.0,
+          "f3_lite_control": -0.008118217648604542
+        },
+        "raw_table_margin": {
+          "C2W4": -0.1883,
+          "f3": -0.2537536889037477,
+          "f3_se": 0.0,
+          "f3_lite_control": -0.2537536889037477
+        },
+        "p5_vs_raw_gap": {
+          "C2W4": 1.0654,
+          "f3": 0.5055154000999567,
+          "f3_se": 0.0
+        },
+        "lift_over_own_blank": {
+          "C2W4": 1.2654,
+          "C2W4_se": 0.4968,
+          "f3": 0.7360504703845077,
+          "f3_se": 0.0
+        },
+        "tuning_effect_f3_minus_control": {
+          "full": 0.0,
+          "raw_table_margin": 0.0
+        },
+        "init_redraw_effect_control_minus_C2W4": {
+          "full": -0.005197265290170894,
+          "raw_table_margin": -0.06545368890374773
+        }
+      }
+    },
+    "R5_count_le_zero": {
+      "C2W4": 3,
+      "f3": 1
+    },
+    "rescued_set": {
+      "C2W4": [
+        "gdn",
+        "gdn2",
+        "ttt_linear"
+      ],
+      "f3": [
+        "gdn2",
+        "mamba2"
+      ]
+    },
+    "thresholds_fired": [
+      "gdn2:T2_R5_sign_flip",
+      "ALL:T4_R5_count_changed (3 -> 1)"
+    ],
+    "OUTCOME": "\u2b50 CHANGED \u2014 see thresholds_fired"
+  },
+  "prereg_scorecard": {
+    "rows": [
+      {
+        "id": "P2 (measured half)",
+        "registered": ">= 2 of the 3 measured (k,v)-shaped-state families (DeltaNet, GDN, GDN-2) lose to their own byte-matched table's strongest +0 B reader",
+        "measured": "1 of 1",
+        "verdict": "REFUTED",
+        "second_reading_raw_metric_table": "1 of 1 lose to the RAW-metric +0 B table at the same bytes (the strictly stronger control, reported beside the registered one and pre-committed to)",
+        "scope": "\u26a0 FIRST HALF ONLY. The real-data-LM half (0 of 4 lose on bpc) belongs to `cluformer-pilot` and is NOT tested here. Mamba-2 and SDM are adjudicated from their equations only, never blurred with the measured three."
+      },
+      {
+        "id": "P3",
+        "registered": "the two FUNCTION-VALUED memories (TTT-MLP, Titans L_M>=2) show the largest positive dividend",
+        "measured": "\u2014",
+        "verdict": "\u26d4 NOT-RUN",
+        "scope": "no Titans arm (D5 Hub ruling: no official code, chunk size never numeric, no seeds), so the PAIR cannot be formed. TTT-MLP alone is reported as a single-arm datum. \u26d4 NOT-RUN is NOT refuted."
+      },
+      {
+        "id": "P5",
+        "registered": "the launder transfers to all five rival state types; predicted failures 0 of 5",
+        "measured": "2 state types carry a byte-matched table (gdn2, mamba2); 0 failures",
+        "verdict": "PARTIAL \u2014 only 2 of the 5 registered arms in this run (a subset run is NOT a failure of P5)",
+        "scope": "state types run: d_head^2 (TTT-Linear), 8*d_head^2 (TTT-MLP), n_head*d_k*d_v x3 (DeltaNet, GDN, GDN-2), n_head*head_dim*d_state (Mamba-2/SSD \u2014 the C2W5 addition, byte-identical to the delta arms' state)"
+      },
+      {
+        "id": "R4 (mine): dividend vs own ARG-MIN table = +0.27 [+0.05,+0.45]",
+        "registered": "+0.27",
+        "measured": "gdn2 +0.2518, mamba2 +0.2175",
+        "verdict": "mean +0.2346 \u2014 IN BAND"
+      },
+      {
+        "id": "R5 (mine): signed +0 B margin = -0.02 [-0.15,+0.08], >=3 of 5 <= 0",
+        "registered": "-0.02; >=3 of 5 arms <= 0",
+        "measured": "gdn2 -0.0081, mamba2 +0.0124; 1 of 2 <= 0",
+        "verdict": "mean +0.0021 \u2014 IN BAND"
+      },
+      {
+        "id": "R5-raw (the stronger control, reported beside R5)",
+        "registered": "not separately banded \u2014 the raw-metric table was added after the PREREG's R5 band was fixed and is reported as a SECOND READING, never substituted for it",
+        "measured": "gdn2 -0.2538, mamba2 -0.2285",
+        "verdict": "2 of 2 arms <= 0"
+      }
+    ],
+    "not_run": {
+      "Titans": "D5 Hub ruling \u2014 NeurIPS 2025, peer-reviewed (\u26d4 never 'a preprint'); no official code, chunk size b never given a numeric value, no seeds reported. Positioning only. Its 2*|M_theta| momentum accounting remains OUR reconstruction and stays \u26a0 UNPINNED.",
+      "Sparse Delta Memory": "D5 \u2014 official code needs Torch>=2.8, Triton>=3.4, SM 80+; cannot run on this machine. Positioning only. \u26d4 quote NONE of its Table 1 state/param ratios.",
+      "recency / manifold families": "\u26d4 substitute-saturated at +0 B (S = 1.0000) \u21d2 struck as protocol-invalid by FB4.",
+      "GRU / sliding-window attention": "not in \u00a7A14.2's ruled family set."
+    },
+    "state_types_measured": [
+      "gdn2",
+      "mamba2"
+    ],
+    "note": "\u2b50 `mamba2` (Dao & Gu, ICML 2024) closes the referee's missing-experiment 5: the survey sentence names SSMs and none was measured. The '5 state types' in P5 above is the C2W4 registration; with the SSD arm the audit measures 2."
+  },
+  "falsifiers": {
+    "rescue_gate": {
+      "rule": "`rival-recon` F3's sanity gate, applied per (family, rival): an arm within 2 SE of its OWN blank-store control is NOT RESCUED and \u26d4 no margin against it is quotable. Only rescued arms enter the FB2/FB3 adjudications below.",
+      "rescued_on_aggregate": [
+        "gdn2",
+        "mamba2"
+      ],
+      "not_rescued_on_aggregate": []
+    },
+    "FB1": {
+      "verdict": "DOES NOT FIRE",
+      "evidence": "inherited from `bprime-fb1-recon` (14 candidates: 0 HIT, 2 PARTIAL both out-of-family, 7 NEAR-MISS, 5 NO) and nothing seen from inside these implementations changes it. \u2b50 The surviving claim is the NARROWED one: seven independent groups built the adjacent instrument and none closed the loop. The audit-at-equal-bits discipline IS standard OUTSIDE the family (learned Bloom filters, learned indexes, SOSD) \u2014 cited as B\u2032's methodological ancestry, never suppressed \u2014 and a token-matched trivial control was published 7 days before filing (arXiv:2607.21962). The substitute-audit IDEA in general form is Poliak et al. 2018 / Feng, Wallace & Boyd-Graber ACL 2019: conceded."
+    },
+    "FB2": {
+      "verdict": "DOES NOT FIRE",
+      "measured_families": [
+        "gdn2",
+        "mamba2"
+      ],
+      "reasoned_from_equations_only": [
+        "Sparse Delta Memory",
+        "Titans"
+      ],
+      "evidence": "a byte-matched table is definable WITHOUT an arbitrary modelling choice for every state type measured: each has an explicit float state and an explicit (theta_K x, theta_V x) stream, so n_rows = floor(state_floats/(d_k+d_v)) is forced, not chosen. \u26a0 The \u00a72 families NOT adjudicated by measurement are stated as such above \u2014 at C2W5 that set is 2 of 5 (Mamba-2 was measured, Head ruling 5), at C2W4 it was 3 of 5."
+    },
+    "FB3": {
+      "verdict": "DOES NOT FIRE in the strong form",
+      "rivals_with_positive_dividend_vs_argmin_table": [
+        "gdn2",
+        "mamba2"
+      ],
+      "rivals_beating_their_own_plus0B_reader": [
+        "mamba2"
+      ],
+      "rivals_beating_the_RAW-metric +0B table at the same bytes": [],
+      "clu_banked_dividend_vs_argmin_table": -0.07890466666666673,
+      "evidence": "\u2b50 We pre-committed IN WRITING to saying so rather than re-framing. The distinction that decides it was registered BEFORE measurement (PREREG R4 vs R5): a dividend against the ARG-MIN control is not the same claim as a dividend against the family's own +0 B reader, and only the latter would make B\u2032 a different paper."
+    },
+    "FB5": {
+      "verdict": "DOES NOT FIRE",
+      "evidence": "arXiv:2501.12352 (test-time regression) is purely theoretical \u2014 softmax attention appears as the nonparametric special case ANALYTICALLY, with no experiments and no baselines. They unify mechanisms; B\u2032 prices them."
+    }
+  },
+  "figures": [
+    "/Users/user/Desktop/CHLU/.claude/outputs/bprime-mamba2-arm/smoke/exp_bprime_rivals.png"
+  ]
+}

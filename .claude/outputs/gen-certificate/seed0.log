@@ -1,0 +1,110 @@
+[gen-cert] dataset=shapes3d pretext=recon stage=certificate arm=all seed=0 condition=recomb2element out=/Users/user/Desktop/CHLU/.claude/outputs/gen-certificate/runs/shapes3d_recon
+[gen-cert] ⭐ the distance-to-store laundering control runs in this job and is reported beside every certificate number; ⛔ it is never optional.
+[10:57:32 +    0.7s] ⭐ structural guard: the certificate is a function of the request, the store's modes and the store's own addressing over valid train rows; nothing is decoded, so no decoder recipe can change a number here
+  split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+[10:57:46 +   14.8s] frozen encoder 98d326028316ae2c · condition=recomb2element · bridge=/Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[10:57:57 +   26.0s] features: store_train=(32768, 2048)
+[10:57:59 +   27.4s] requests: A=1024 A7=1024 B=72 C=72 (C kinds: ['duplicate_factor', 'out_of_range'])
+[10:58:12 +   41.2s] [correlation] wells [303, 305, 573, 501, 366] — training the store (1200 steps)
+[11:20:55 + 1403.4s] [correlation] ⭐ BIT-IDENTICAL re-materialisation (rel_mse 0.28266923706753433)
+[11:20:57 + 1405.9s] [correlation] term statistics over 32768 valid train rows; mean used modes 64.0/64
+    scored 256/1024 requests
+    scored 512/1024 requests
+    scored 768/1024 requests
+    scored 1024/1024 requests
+[11:21:00 + 1408.9s] [correlation] scored A: 1024 requests
+[11:21:03 + 1411.9s] [correlation] scored A7: 1024 requests
+[11:21:03 + 1412.3s] [correlation] scored B: 72 requests
+[11:21:04 + 1412.5s] [correlation] scored C: 72 requests
+[11:21:04 + 1412.6s] [correlation] clu             B-vs-C 0.9660 (dup 0.9321 / oor 1.0000) · A-vs-C 0.9495 · bal 0.9578 · AURC(B∪C) 0.1778 · ⭐A7-vs-Cdup 0.9093
+[11:21:04 + 1412.6s] [correlation] clu_pair_reach  B-vs-C 0.9279 (dup 0.8557 / oor 1.0000) · A-vs-C 0.9681 · bal 0.9480 · AURC(B∪C) 0.2120 · ⭐A7-vs-Cdup 0.9363
+[11:21:04 + 1412.6s] [correlation] reach           B-vs-C 0.7500 (dup 0.5000 / oor 1.0000) · A-vs-C 0.7500 · bal 0.7500 · AURC(B∪C) 0.3600 · ⭐A7-vs-Cdup 0.5000
+[11:21:04 + 1412.6s] [correlation] pair            B-vs-C 0.5505 (dup 0.8557 / oor 0.2454) · A-vs-C 0.6974 · bal 0.6240 · AURC(B∪C) 0.5279 · ⭐A7-vs-Cdup 0.9363
+[11:21:04 + 1412.6s] [correlation] curv            B-vs-C 0.5827 (dup 0.6034 / oor 0.5619) · A-vs-C 0.5225 · bal 0.5526 · AURC(B∪C) 0.4565 · ⭐A7-vs-Cdup 0.5511
+[11:21:04 + 1412.6s] [correlation] energy          B-vs-C 0.9539 (dup 0.9726 / oor 0.9352) · A-vs-C 0.5801 · bal 0.7670 · AURC(B∪C) 0.1903 · ⭐A7-vs-Cdup 0.6773
+[11:21:04 + 1412.7s] [correlation] distance        B-vs-C 0.7928 (dup 0.8866 / oor 0.6991) · A-vs-C 0.5306 · bal 0.6617 · AURC(B∪C) 0.3894 · ⭐A7-vs-Cdup 0.6007
+[11:21:04 + 1412.7s] [correlation] distance_reach  B-vs-C 0.9433 (dup 0.8866 / oor 1.0000) · A-vs-C 0.8059 · bal 0.8746 · AURC(B∪C) 0.2493 · ⭐A7-vs-Cdup 0.6007
+[11:21:04 + 1412.7s] [correlation] count           B-vs-C 0.7500 (dup 1.0000 / oor 0.5000) · A-vs-C 0.7500 · bal 0.7500 · AURC(B∪C) 0.3750 · ⭐A7-vs-Cdup 0.5000
+[11:21:04 + 1412.7s] [correlation] ⭐ AUDIT PASSED: 15 fits, 78848 ids, 0 of 72 C ids found in any fit
+[11:21:04 + 1412.8s] [correlation] written -> /Users/user/Desktop/CHLU/.claude/outputs/gen-certificate/runs/shapes3d_recon/seed_0
+[11:21:12 + 1420.4s] [random] wells [303, 305, 573, 501, 366] — training the store (1200 steps)
+E0912 11:29:49.151602   71812 slow_operation_alarm.cc:73] 
+********************************
+[Compiling module jit_step for CPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+E0912 11:31:08.772577   68758 slow_operation_alarm.cc:140] The operation took 3m19.744198s
+
+********************************
+[Compiling module jit_step for CPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+[12:01:18 + 3827.0s] [random] ⭐ BIT-IDENTICAL re-materialisation (rel_mse 0.4185249337141173)
+[12:01:19 + 3827.8s] [random] term statistics over 32768 valid train rows; mean used modes 64.0/64
+    scored 256/1024 requests
+    scored 512/1024 requests
+    scored 768/1024 requests
+    scored 1024/1024 requests
+[12:01:21 + 3829.8s] [random] scored A: 1024 requests
+[12:01:23 + 3831.7s] [random] scored A7: 1024 requests
+[12:01:23 + 3831.9s] [random] scored B: 72 requests
+[12:01:23 + 3832.0s] [random] scored C: 72 requests
+[12:01:23 + 3832.0s] [random] clu             B-vs-C 0.8760 (dup 0.7519 / oor 1.0000) · A-vs-C 0.8688 · bal 0.8724 · AURC(B∪C) 0.3067 · ⭐A7-vs-Cdup 0.7540
+[12:01:23 + 3832.0s] [random] clu_pair_reach  B-vs-C 0.9253 (dup 0.8507 / oor 1.0000) · A-vs-C 0.9005 · bal 0.9129 · AURC(B∪C) 0.2270 · ⭐A7-vs-Cdup 0.8010
+[12:01:23 + 3832.0s] [random] reach           B-vs-C 0.7500 (dup 0.5000 / oor 1.0000) · A-vs-C 0.7500 · bal 0.7500 · AURC(B∪C) 0.3600 · ⭐A7-vs-Cdup 0.5000
+[12:01:23 + 3832.0s] [random] pair            B-vs-C 0.6901 (dup 0.8507 / oor 0.5295) · A-vs-C 0.6258 · bal 0.6579 · AURC(B∪C) 0.3965 · ⭐A7-vs-Cdup 0.8010
+[12:01:23 + 3832.0s] [random] curv            B-vs-C 0.5203 (dup 0.5548 / oor 0.4857) · A-vs-C 0.5044 · bal 0.5124 · AURC(B∪C) 0.4892 · ⭐A7-vs-Cdup 0.5453
+[12:01:23 + 3832.0s] [random] energy          B-vs-C 0.4705 (dup 0.5012 / oor 0.4398) · A-vs-C 0.5436 · bal 0.5071 · AURC(B∪C) 0.6101 · ⭐A7-vs-Cdup 0.5968
+[12:01:23 + 3832.0s] [random] distance        B-vs-C 0.6889 (dup 0.7585 / oor 0.6192) · A-vs-C 0.5922 · bal 0.6405 · AURC(B∪C) 0.4577 · ⭐A7-vs-Cdup 0.6442
+[12:01:23 + 3832.0s] [random] distance_reach  B-vs-C 0.8792 (dup 0.7585 / oor 1.0000) · A-vs-C 0.8294 · bal 0.8543 · AURC(B∪C) 0.2940 · ⭐A7-vs-Cdup 0.6442
+[12:01:23 + 3832.1s] [random] count           B-vs-C 0.7500 (dup 1.0000 / oor 0.5000) · A-vs-C 0.7500 · bal 0.7500 · AURC(B∪C) 0.3750 · ⭐A7-vs-Cdup 0.5000
+[12:01:23 + 3832.1s] [random] ⭐ AUDIT PASSED: 15 fits, 78848 ids, 0 of 72 C ids found in any fit
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/user/Desktop/CHLU-gen-cert/chlu/experiments/exp_gen_certificate.py", line 779, in <module>
+  File "/Users/user/Desktop/CHLU-gen-cert/chlu/experiments/exp_gen_certificate.py", line 764, in main
+  File "/Users/user/Desktop/CHLU-gen-cert/chlu/experiments/exp_gen_certificate.py", line 488, in run_seed
+  File "/Users/user/Desktop/CHLU-gen-cert/chlu/experiments/exp_gen_store.py", line 150, in _write_json
+PermissionError: [Errno 1] Operation not permitted: '/Users/user/Desktop/CHLU/.claude/outputs/gen-certificate/runs/shapes3d_recon/seed_0/cert_manifest.json'

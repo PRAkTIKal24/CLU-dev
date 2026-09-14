@@ -1,0 +1,47 @@
+[seed 0] stream built in 1.2s; fit_task1=2027 fit_generic=3000
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+{"seed": 0, "arm": "randconv", "phi_dim": 64, "regime": "task1_only", "acc_ring": 0.198, "acc_full_stream": 0.3396, "fit_seconds": 3.0581469535827637}
+{"seed": 0, "arm": "simclr", "phi_dim": 64, "regime": "task1_only", "acc_ring": 0.246, "acc_full_stream": 0.39, "fit_seconds": 448.3328649997711}
+{"seed": 0, "arm": "convae", "phi_dim": 64, "regime": "task1_only", "acc_ring": 0.2384, "acc_full_stream": 0.3572, "fit_seconds": 374.40441608428955}
+wrote /Users/user/Desktop/CHLU/.claude/scratch/cl-encoder/stageB_seed0.json

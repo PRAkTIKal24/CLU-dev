@@ -1,0 +1,322 @@
+[10:26:02] seed 1: encoder fc05e2c5f39694b2 probe fb16109ded84c908 cache used n=9288 sha 484b446c4dbb9fc4 — FROZEN, verified
+[10:26:02]   R3.3 no-leak: 8192 rows checked, 72/72 excluded, 0 leaked
+[10:26:02]   streaming 9502 images (one pass) …
+[10:28:33]   streamed in 151s
+[10:28:35]   encoding train features with the FROZEN encoder …
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[10:28:43]   M: not in the 'used' cache — re-encoded through the frozen encoder (float16 round-trip)
+[10:28:43]   prep done: {'train': 8192, 'eval_a': 1024, 'eval_b': 72, 'matched': 214}
+[10:30:39] seed 1: encoder fc05e2c5f39694b2 probe fb16109ded84c908 cache used n=9288 sha 484b446c4dbb9fc4 — FROZEN, verified
+[10:30:39]   R3.3 no-leak: 8192 rows checked, 72/72 excluded, 0 leaked
+[10:30:39]   SHIPPED baseline decoder 12981786fb809060 (250467 params)
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[10:30:52]     A_random: n=1024 agg=0.9367 shape=0.8945 scale=0.7871 mse=0.00322 real=1.0000
+[10:30:54]     B: n=72 agg=0.8171 shape=0.5694 scale=0.3750 mse=0.00364 real=1.0000
+[10:30:58]     A_matched: n=214 agg=0.9252 shape=0.8598 scale=0.7009 mse=0.00387 real=1.0000
+[10:31:38] seed 1: encoder fc05e2c5f39694b2 probe fb16109ded84c908 cache used n=9288 sha 484b446c4dbb9fc4 — FROZEN, verified
+[10:31:38]   R3.3 no-leak: 8192 rows checked, 72/72 excluded, 0 leaked
+[10:31:43]     step 1/1500  loss=2.25195
+[10:31:47]     step 300/1500  loss=0.36148
+[10:31:51]     step 600/1500  loss=0.26104
+[10:31:56]     step 900/1500  loss=0.19221
+[10:32:00]     step 1200/1500  loss=0.16944
+[10:32:03]     step 1500/1500  loss=0.13474
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[10:32:04]     D[linear] A_random: shape=0.9834 agg=0.9564
+[10:32:04]     D[linear] B: shape=1.0000 agg=0.9282
+[10:32:04]     D[linear] A_matched: shape=0.9907 agg=0.9735
+[10:32:05]     D[linear] train: shape=0.9908 agg=0.9738
+[10:32:07]     step 1/1500  loss=2.19231
+[10:32:14]     step 300/1500  loss=0.19795
+[10:32:20]     step 600/1500  loss=0.09034
+[10:32:27]     step 900/1500  loss=0.05062
+[10:32:34]     step 1200/1500  loss=0.03278
+[10:32:40]     step 1500/1500  loss=0.01758
+[10:32:41]     D[mlp512] A_random: shape=0.9941 agg=0.9924
+[10:32:41]     D[mlp512] B: shape=1.0000 agg=0.9954
+[10:32:42]     D[mlp512] A_matched: shape=0.9953 agg=0.9945
+[10:32:42]     D[mlp512] train: shape=0.9984 agg=0.9982
+[10:34:18] seed 2: encoder 154d498610648fac probe 5cdaa90a6b67f1b3 cache used n=9288 sha 8c0a69e88beb46b8 — FROZEN, verified
+[10:34:18]   R3.3 no-leak: 8192 rows checked, 72/72 excluded, 0 leaked
+[10:34:18]   streaming 9501 images (one pass) …
+[10:36:39]   streamed in 142s
+[10:36:42]   encoding train features with the FROZEN encoder …
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[10:36:49]   M: not in the 'used' cache — re-encoded through the frozen encoder (float16 round-trip)
+[10:36:49]   prep done: {'train': 8192, 'eval_a': 1024, 'eval_b': 72, 'matched': 213}
+[10:37:20] seed 2: encoder 154d498610648fac probe 5cdaa90a6b67f1b3 cache used n=9288 sha 8c0a69e88beb46b8 — FROZEN, verified
+[10:37:20]   R3.3 no-leak: 8192 rows checked, 72/72 excluded, 0 leaked
+[10:37:21]   SHIPPED baseline decoder 3713b777da7a2a85 (250467 params)
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[10:37:31]     A_random: n=1024 agg=0.9678 shape=0.9238 scale=0.9199 mse=0.00265 real=1.0000
+[10:37:32]     B: n=72 agg=0.8565 shape=0.7083 scale=0.6806 mse=0.00254 real=1.0000
+[10:37:36]     A_matched: n=213 agg=0.9163 shape=0.8122 scale=0.8216 mse=0.00307 real=1.0000
+[10:38:09] seed 2: encoder 154d498610648fac probe 5cdaa90a6b67f1b3 cache used n=9288 sha 8c0a69e88beb46b8 — FROZEN, verified
+[10:38:09]   R3.3 no-leak: 8192 rows checked, 72/72 excluded, 0 leaked
+[10:38:15]     step 1/1500  loss=2.26342
+[10:38:20]     step 300/1500  loss=0.30534
+[10:38:25]     step 600/1500  loss=0.22426
+[10:38:29]     step 900/1500  loss=0.17991
+[10:38:32]     step 1200/1500  loss=0.14554
+[10:38:36]     step 1500/1500  loss=0.11809
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[10:38:36]     D[linear] A_random: shape=0.9863 agg=0.9686
+[10:38:37]     D[linear] B: shape=1.0000 agg=0.9375
+[10:38:37]     D[linear] A_matched: shape=0.8357 agg=0.9225
+[10:38:38]     D[linear] train: shape=0.9919 agg=0.9810
+[10:38:40]     step 1/1500  loss=2.20500
+[10:38:47]     step 300/1500  loss=0.16296
+[10:38:52]     step 600/1500  loss=0.07072
+[10:38:58]     step 900/1500  loss=0.03746
+[10:39:03]     step 1200/1500  loss=0.02243
+[10:39:08]     step 1500/1500  loss=0.01786
+[10:39:08]     D[mlp512] A_random: shape=0.9873 agg=0.9964
+[10:39:08]     D[mlp512] B: shape=1.0000 agg=1.0000
+[10:39:09]     D[mlp512] A_matched: shape=0.9859 agg=0.9953
+[10:39:09]     D[mlp512] train: shape=0.9977 agg=0.9991

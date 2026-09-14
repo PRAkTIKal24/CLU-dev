@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cafe-bench"
+version = "0.1.0"
+description = "Unified benchmark suite for time-series foundation models"
+requires-python = ">=3.10,<3.12"
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scikit-learn>=1.4",
+    "torch>=2.1",
+    "aeon>=0.9",
+    "wfdb>=4.1",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+    "typer>=0.12",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+moment = [
+    "momentfm",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
+    "lifelines>=0.27",
+]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+]
+
+# UniTS must be installed from source:
+#   uv pip install git+https://github.com/mims-harvard/UniTS.git
+
+[project.scripts]
+cafe-bench = "cafe_bench.__main__:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cafe_bench*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts  = "-v --tb=short"
+
+[tool.uv]
+# uv workflow:
+#   uv sync                    — install core deps
+#   uv sync --extra dev        — + pytest, lifelines
+#   uv sync --extra moment     — + MOMENT
+#   uv run cafe-bench ls       — run CLI
+#   uv run pytest              — run test suite

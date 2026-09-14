@@ -1,0 +1,112 @@
+[cl-entry] overrides: {'phi_arm': 'randconv', 'phi_dim': 256, 'phi_regimes': ['task1_only'], 'n_fit_region': 25000, 'n_fit_pool': 6000, 'seeds': [0, 1, 2, 3, 4]}
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+{
+  "baseline_table": [
+    {
+      "method": "knn_phi_ringbuffer_task1_only",
+      "class": "launder",
+      "ACC": 0.23536,
+      "ACC_sd": 0.010271825543689887,
+      "BWT": -0.2244,
+      "BWT_sd": 0.01610714127336071,
+      "forgetting": 0.2244,
+      "forgetting_sd": 0.01610714127336071,
+      "memory_items": 200,
+      "memory_floats": 51200,
+      "phi_param_floats": 225536,
+      "fixed_state_floats": 0,
+      "total_floats": 276736,
+      "n_seeds": 5
+    },
+    {
+      "method": "clu_entry_task1_only",
+      "class": "rehearsal-free",
+      "ACC": 0.21295999999999998,
+      "ACC_sd": 0.012630376083078446,
+      "BWT": -0.22159999999999996,
+      "BWT_sd": 0.010664895686315928,
+      "forgetting": 0.22159999999999996,
+      "forgetting_sd": 0.010664895686315928,
+      "memory_items": 199,
+      "memory_floats": 52735,
+      "phi_param_floats": 225536,
+      "fixed_state_floats": 0,
+      "total_floats": 278271,
+      "n_seeds": 5
+    },
+    {
+      "method": "knn_phi_same_keys_task1_only",
+      "class": "launder",
+      "ACC": 0.21264,
+      "ACC_sd": 0.013132189459492285,
+      "BWT": -0.22149999999999997,
+      "BWT_sd": 0.010099504938362081,
+      "forgetting": 0.22149999999999997,
+      "forgetting_sd": 0.010099504938362081,
+      "memory_items": 199,
+      "memory_floats": 52735,
+      "phi_param_floats": 225536,
+      "fixed_state_floats": 0,
+      "total_floats": 278271,
+      "n_seeds": 5
+    }
+  ],
+  "verdict": {
+    "clu_ACC": 0.21295999999999998,
+    "best_rehearsal_free_baseline": null,
+    "margin_over_rehearsal_free_class": null,
+    "wins_rehearsal_free_class": false,
+    "best_replay_method": null,
+    "deficit_vs_replay": null,
+    "offline_upper_bound": null,
+    "best_launder": "knn_phi_ringbuffer_task1_only",
+    "clu_minus_launder": -0.02240000000000003,
+    "strict_phi_cost": null,
+    "laundered": true,
+    "filing_rule": "CM-23(n): winning the rehearsal-free class while sitting below replay IS a publishable success. 'Beats replay' is NEVER claimed.",
+    "laundering_rule": "N89/CM-22(i): if kNN-in-\u03c6 at matched memory ties or beats the entry, the win is \u03c6's and the buffer's, not the store's \u2014 and the report says so."
+  },
+  "frontier_verdict": {},
+  "metrics_path": "/Users/user/Desktop/CHLU/.claude/scratch/c2w8-cifar-strong-phi/randconv/results/exp_cl_entry_cifar10_metrics.json"
+}

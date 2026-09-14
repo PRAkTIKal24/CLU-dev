@@ -1,0 +1,666 @@
+{
+  "_meta": {
+    "task": "gen-montero-splits-spec",
+    "produced": "2026-09-09",
+    "paper": {
+      "id": "Montero, Ludwig, Ponte Costa, Malhotra, Bowers (2021), 'The role of Disentanglement in Generalisation', ICLR 2021 (conference paper, peer-reviewed)",
+      "openreview": "https://openreview.net/forum?id=qbH974jKUVy",
+      "pdf": "https://openreview.net/pdf?id=qbH974jKUVy",
+      "version_read": "Published as a conference paper at ICLR 2021 (camera-ready PDF, 10 pp + appendices)",
+      "status": "PINNED"
+    },
+    "official_code": {
+      "repo": "https://github.com/mmrl/disent-and-gen",
+      "default_branch": "master",
+      "commit_pinned": "bff35a7570d08fdef0d10c21b093b9a24d98dde6",
+      "commit_date": "2022-05-28",
+      "commit_message": "Add license.",
+      "prior_commit": "9b34e902471b452b50855b1b84422a14d16beeeb (ICLR camera-ready version code, 2021-02-08)",
+      "split_file": "scripts/configs/datasplits.py",
+      "split_file_size_bytes": 11666,
+      "split_file_git_blob_sha1": "a59ef1be14d1fa46c850f7d93b9e6d74568a692f",
+      "split_file_sha256": "NOT OBTAINED",
+      "split_file_sha256_note": "I am a read-only web agent with no shell; I cannot hash a file I am forbidden to download. The git blob SHA-1 above is from the GitHub contents API at the pinned commit and uniquely identifies the blob. Engineer should record sha256 on first download.",
+      "dispatch_file": "scripts/ingredients/dataset.py (function get_data_spliters)",
+      "loader_files": [
+        "src/dataset/sprites.py",
+        "src/dataset/shapes3d.py"
+      ],
+      "status": "PINNED"
+    },
+    "PRIMACY_RULE_APPLIED": "Task \u00a7'What would prove this spoke wrong' requires code over prose. The code and the paper prose DISAGREE materially for BOTH datasets' recombination-to-element rule. Every 'condition' field below is transcribed from scripts/configs/datasplits.py at the pinned commit; the paper prose is recorded alongside as 'paper_prose_quote' with the discrepancy stated explicitly and NOT reconciled by bending either reading.",
+    "split_mechanics": {
+      "description": "Splits are pure deterministic boolean masks over the full factor grid. get_data_spliters(dataset, condition, variant) returns a (train_filter, test_filter) pair of callables f(latent_values, latent_classes) -> bool mask. Both datasets are exhaustive grids, so train and test are complements over the SAME image set; there is no held-out random sample and no third validation split.",
+      "code_quote": "if condition is None:\n    return None, None\nif dataset == 'dsprites':\n    return splits.Dsprites.get_splits(condition, variant)\nelif dataset == 'shapes3d':\n    return splits.Shapes3D.get_splits(condition, variant)",
+      "code_quote_locator": "scripts/ingredients/dataset.py, get_data_spliters",
+      "status": "PINNED"
+    }
+  },
+  "dsprites": {
+    "dataset_id": "dSprites (Matthey et al., 2017)",
+    "factors": {
+      "status": "PINNED",
+      "source": "src/dataset/sprites.py at pinned commit, cross-checked against google-deepmind/dsprites-dataset README",
+      "CRITICAL_COLUMN_NOTE": "load_sprites DROPS the leading 'color' column at load time: latent_values = data_zip['latents_values'][:, 1:] and latent_classes = data_zip['latents_classes'][:, 1:]. Filters therefore receive 5-column arrays. The index constants in datasplits.py (shp,scl,rot,tx,ty = 0,1,2,3,4) are valid ONLY after this slice. Applying them to the raw 6-column npz arrays silently shifts every factor by one and yields a DIFFERENT (and for recomb2element, empty) split.",
+      "npz_keys": [
+        "imgs",
+        "latents_values",
+        "latents_classes",
+        "metadata"
+      ],
+      "ordered": [
+        {
+          "index": 0,
+          "name": "shape",
+          "cardinality": 3,
+          "values_latent_values": [
+            1.0,
+            2.0,
+            3.0
+          ],
+          "values_latent_classes": [
+            0,
+            1,
+            2
+          ],
+          "semantics": "1.0/class0 = square, 2.0/class1 = ellipse, 3.0/class2 = heart"
+        },
+        {
+          "index": 1,
+          "name": "scale",
+          "cardinality": 6,
+          "values": [
+            0.5,
+            0.6,
+            0.7,
+            0.8,
+            0.9,
+            1.0
+          ],
+          "grid_expr": "np.linspace(0.5, 1.0, 6)"
+        },
+        {
+          "index": 2,
+          "name": "orientation",
+          "cardinality": 40,
+          "grid_expr": "np.linspace(0.0, 2*np.pi, 40)",
+          "step_rad": 0.161107,
+          "step_deg": 9.230769,
+          "range": "[0, 2*pi]"
+        },
+        {
+          "index": 3,
+          "name": "posX",
+          "cardinality": 32,
+          "grid_expr": "np.linspace(0.0, 1.0, 32)",
+          "step": 0.032258
+        },
+        {
+          "index": 4,
+          "name": "posY",
+          "cardinality": 32,
+          "grid_expr": "np.linspace(0.0, 1.0, 32)",
+          "step": 0.032258
+        }
+      ],
+      "dropped_factor": {
+        "name": "color",
+        "cardinality": 1,
+        "values": [
+          1.0
+        ]
+      },
+      "grid_total_images": 737280,
+      "grid_total_check": "3 * 6 * 40 * 32 * 32 = 737280"
+    },
+    "condition": {
+      "name": "recombination-to-element",
+      "code_condition_key": "recomb2element",
+      "code_variant_key": "leave1out",
+      "status": "PINNED",
+      "source_locator": "scripts/configs/datasplits.py, class Dsprites, leave1out_comb_test / leave1out_comb_train",
+      "code_verbatim_test_filter": "((latent_classes[:, cls.shp] == 1) &\n (latent_values[:, cls.scl] > 0.6) &\n (latent_values[:, cls.rot] > 0.0) &\n (latent_values[:, cls.rot] < cls.a120) &\n (latent_values[:, cls.rot] > cls.a240) &\n (latent_values[:, cls.tx] > 0.66) &\n (latent_values[:, cls.ty] > 0.66))",
+      "code_verbatim_index_constants": "shp, scl, rot, tx, ty = 0, 1, 2, 3, 4",
+      "code_verbatim_angle_constants": "a90, a120, a180, a240 = np.pi / 2, 4 * np.pi / 3, np.pi, 2 * np.pi / 3",
+      "ANGLE_CONSTANT_TRAP": {
+        "status": "PINNED (verified by two independent fetches of the same line via different CDNs)",
+        "explanation": "The angle constant NAMES are bound to SWAPPED values in the source. a120 = 4*pi/3 = 4.18879 rad = 240 degrees; a240 = 2*pi/3 = 2.09440 rad = 120 degrees. Read naively, the clause '(rot < a120) & (rot > a240)' looks logically impossible; with the actual bound values it means 120deg < rotation < 240deg, which MATCHES the paper's section 2.1 prose. Do not 'fix' the names.",
+        "effective_rotation_rule": "2*np.pi/3 < orientation < 4*np.pi/3, i.e. 120 deg < theta < 240 deg, strict on both ends"
+      },
+      "train_filter": "logical NOT of the test filter (train = complement of test over the full 737280-image grid)",
+      "machine_readable": {
+        "held_out_over": "factor-value COMBINATION (a single conjunctive cell), not whole factor values",
+        "terms": [
+          {
+            "factor": "shape",
+            "array": "latent_classes",
+            "op": "==",
+            "value": 1,
+            "meaning": "ellipse",
+            "n_values_selected": 1
+          },
+          {
+            "factor": "scale",
+            "array": "latent_values",
+            "op": ">",
+            "value": 0.6,
+            "n_values_selected": 4,
+            "selected": [
+              0.7,
+              0.8,
+              0.9,
+              1.0
+            ]
+          },
+          {
+            "factor": "orientation",
+            "array": "latent_values",
+            "op": "in_open_interval",
+            "value": [
+              2.0943951023931953,
+              4.188790204786391
+            ],
+            "n_values_selected": 12,
+            "selected_indices": "14..25 inclusive of np.linspace(0,2*pi,40)"
+          },
+          {
+            "factor": "orientation",
+            "array": "latent_values",
+            "op": ">",
+            "value": 0.0,
+            "note": "redundant term, subsumed by the interval above"
+          },
+          {
+            "factor": "posX",
+            "array": "latent_values",
+            "op": ">",
+            "value": 0.66,
+            "n_values_selected": 11,
+            "selected_indices": "21..31 inclusive of np.linspace(0,1,32)"
+          },
+          {
+            "factor": "posY",
+            "array": "latent_values",
+            "op": ">",
+            "value": 0.66,
+            "n_values_selected": 11,
+            "selected_indices": "21..31 inclusive of np.linspace(0,1,32)"
+          }
+        ],
+        "combination_rule": "AND of all terms"
+      },
+      "paper_prose_quote": "\"In the dSprites dataset, for testing the Recombination-to-element case, we split each range of values of a generative factor into three bins, so that we had 3 x 3 x 3 x 3 x 3 = 243 such combinations of bins for all five generative factors. We then remove one of these 243 combinations during training, namely those that satisfied [shape=ellipsis, position-x >= 0.6, , position-y >= 0.6, 120 <= rotation <= 240 , scale < 0.6].\"",
+      "paper_prose_locator": "Section 2.1 'Image reconstruction with dSprites dataset', p.4",
+      "paper_prose_secondary_quotes": [
+        {
+          "quote": "\"In dSprites, an example of this case would be excluding the combination: [shape=ellipse, scale=1, orientation< 120, position-x>0.5, position-y>0.5] from the training set - i.e. the model has never seen a large ellipse at < 120 in the bottom-right corner, though it has seen all other combinations.\"",
+          "locator": "Section 2, Recombination-to-Element bullet, p.3"
+        },
+        {
+          "quote": "\"Left) Recombination-to-Element condition where the models did not see [shape = ellipse, scale = 1, orientation < 120 , position-x > 0.5, position-y > 0.5]\"",
+          "locator": "Figure 2 caption, p.5"
+        }
+      ],
+      "PROSE_VS_CODE_DISCREPANCIES": [
+        {
+          "term": "scale",
+          "code": "scale > 0.6 (selects 0.7,0.8,0.9,1.0)",
+          "prose_sec2.1": "scale < 0.6 (would select only 0.5)",
+          "verdict": "DIRECT CONTRADICTION in sign. Code and the p.3 narrative gloss ('a LARGE ellipse') and Fig.2 caption ('scale = 1') all point to the LARGE end; the sec 2.1 'scale < 0.6' is almost certainly a typo in the paper. Code is authoritative. NOT reconciled by adjusting the code reading."
+        },
+        {
+          "term": "orientation",
+          "code": "120 deg < theta < 240 deg",
+          "prose_sec2.1": "120 <= rotation <= 240 (agrees, modulo strict vs non-strict)",
+          "prose_p3_and_fig2": "orientation < 120 deg (CONTRADICTS both the code and sec 2.1)",
+          "verdict": "The paper contradicts ITSELF on rotation: sec 2.1 says 120-240, p.3 and Fig.2 say <120. Code agrees with sec 2.1. Code is authoritative."
+        },
+        {
+          "term": "posX/posY",
+          "code": "> 0.66",
+          "prose_sec2.1": ">= 0.6",
+          "prose_p3_and_fig2": "> 0.5",
+          "verdict": "Three different thresholds across the paper; code uses 0.66. Code is authoritative."
+        },
+        {
+          "term": "binning story",
+          "code": "thresholds are NOT exact tertiles: scale > 0.6 selects 4 of 6 values (two thirds), not one third",
+          "prose": "'three bins ... 243 combinations ... remove one of these 243'",
+          "verdict": "The implemented cell is NOT 1/243 of the grid. 737280/243 = 3034.9 expected under the prose; the code's cell contains 5808 images (~1.9x). The '243 bins' framing is a post-hoc description that the shipped code does not implement exactly."
+        }
+      ],
+      "expected_counts": {
+        "status": "PINNED (computed by me from the code filter + the factor grid; the paper reports NO train/test image counts for either dataset)",
+        "computed_by": "web-scout, arithmetic over the factor grid",
+        "n_total": 737280,
+        "n_test": 5808,
+        "n_test_derivation": "1 (shape=ellipse) * 4 (scale in {0.7,0.8,0.9,1.0}) * 12 (orientation idx 14..25) * 11 (posX idx 21..31) * 11 (posY idx 21..31) = 5808",
+        "n_train": 731472,
+        "n_train_derivation": "737280 - 5808",
+        "paper_reported_counts": "NOT REPORTED \u2014 the paper gives no n_train/n_test for dSprites. No discrepancy can be computed against the authors' numbers.",
+        "FLOAT_BOUNDARY_HAZARD": {
+          "severity": "HIGH \u2014 affects n_test by up to +17%",
+          "scale_term": "'scale > 0.6' sits EXACTLY on a stored grid value. Whether the stored float64 for 0.6 compares strictly greater than the literal 0.6 decides 4 vs 5 scale values, i.e. n_test 5808 vs 7260. My count assumes stored 0.6 is NOT > 0.6 (the mathematically intended reading).",
+          "orientation_terms": "The 120deg/240deg bounds land EXACTLY on grid indices 13 and 26 of np.linspace(0,2*pi,40) in exact arithmetic. Strict inequalities exclude them, giving 12 values; float64 round-off in linspace vs 2*np.pi/3 could admit one or both, giving 13 or 14 values (n_test 6292 or 6776).",
+          "MANDATORY_INSTRUCTION_TO_ENGINEER": "Do NOT regenerate the factor grid and reason about nominal values. Evaluate the filter expression verbatim against the ACTUAL latents_values array loaded from the official npz (after the [:, 1:] color slice). Then report the realised n_train/n_test as ground truth and reconcile against the 5808 predicted here."
+        }
+      },
+      "randomised": {
+        "status": "PINNED",
+        "value": false,
+        "note": "No seed, no sampling, no shuffling enters the split. The filters are deterministic boolean masks. The Sacred 'seed' config governs model init / data-loader shuffling only, not split membership."
+      }
+    },
+    "secondary_conditions_NOT_YET_NEEDED": {
+      "recombination_to_range": {
+        "status": "PINNED",
+        "code_condition_key": "recomb2range",
+        "code_variant_key": "shape2tx",
+        "code_verbatim_train_filter": "((latent_values[:, cls.shp] != 1) | (latent_values[:, cls.tx] < 0.5))",
+        "code_verbatim_test_filter": "((latent_values[:, cls.shp] == 1) & (latent_values[:, cls.tx] > 0.5))",
+        "SHAPE_ARRAY_TRAP": "This condition indexes latent_VALUES for shape (values 1.0/2.0/3.0), so '== 1' means SQUARE. The recomb2element condition indexes latent_CLASSES (values 0/1/2), so '== 1' there means ELLIPSE. Same literal, different shape. This is not a bug \u2014 it correctly reproduces the paper, which uses square for recomb-to-range and ellipse for recomb-to-element. Getting this wrong silently swaps the held-out shape.",
+        "paper_prose_quote": "\"First, we excluded all combinations where [shape=square, position-x>0.5]. The model sees other shapes at those positions during training and it sees squares on the left-hand side of the screen.\"",
+        "paper_prose_locator": "Section 2.1, p.4",
+        "other_variants_in_paper_not_reported": "\"In the second case, we excluded all combinations where [shape=square, scale>0.5]. In the third case, we excluded all combinations where [shape=square, rotation > 90 ]. We observed very similar results for all three cases and below we report the results for the first variant.\" (Section 2.1, p.4). Only shape2tx was found in the pinned datasplits.py under recomb2range for Dsprites; the scale and rotation variants were NOT located in code \u2014 status NOT OBTAINED for those two.",
+        "expected_counts": {
+          "n_total": 737280,
+          "n_test": 122880,
+          "n_train": 614400,
+          "derivation": "test = 1 (square) * 6 (scale) * 40 (rot) * 16 (posX idx 16..31) * 32 (posY) = 122880"
+        }
+      },
+      "extrapolation": {
+        "status": "PINNED",
+        "code_condition_key": "extrp",
+        "code_variant_key": "blank_side",
+        "code_verbatim_train_filter": "(latent_values[:, cls.tx] < 0.5)",
+        "code_verbatim_test_filter": "(latent_values[:, cls.tx] > 0.5)",
+        "paper_prose_quote": "\"Finally, for the Extrapolation case, we excluded all combinations of generative factors where [position-x > x]. We chose a set of different values for x: x in 0.16, 0.25, 0.50, 0.75, where x is normalised in the range [0, 1] (results shown in Figure 2 for x = 0.50).\"",
+        "paper_prose_locator": "Section 2.1, p.4",
+        "note": "Only the x = 0.5 variant is present in the pinned code; the 0.16/0.25/0.75 variants are NOT OBTAINED from code.",
+        "expected_counts": {
+          "n_total": 737280,
+          "n_test": 368640,
+          "n_train": 368640,
+          "derivation": "posX grid has no value exactly at 0.5 (0.5*31 = 15.5), so the two strict filters partition the grid exactly: 16 of 32 posX values each side."
+        }
+      }
+    },
+    "provenance": {
+      "status": "PINNED",
+      "canonical_repo": "https://github.com/google-deepmind/dsprites-dataset",
+      "files": [
+        {
+          "name": "dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz",
+          "bytes": 19318135,
+          "note": "this is the file the Montero loader expects (npz keys latents_values / latents_classes)"
+        },
+        {
+          "name": "dsprites_ndarray_co1sh3sc6or40x32y32_64x64.hdf5",
+          "bytes": 28024106
+        }
+      ],
+      "download_url": "https://github.com/google-deepmind/dsprites-dataset/raw/master/dsprites_ndarray_co1sh3sc6or40x32y32_64x64.npz",
+      "expected_local_path_in_montero_repo": "data/raw/dsprites/ (repo convention, cf. ../data/raw/<name>/ hardcoded in src/dataset/mpi.py)",
+      "published_checksum": "NOT OBTAINED \u2014 the dsprites-dataset repo publishes no md5/sha for the archives. Byte size above (from the GitHub contents API) is the only integrity anchor.",
+      "n_images": 737280,
+      "image_shape": "64 x 64, uint8, binary/greyscale",
+      "licence": "zlib/libpng licence (per dsprites-dataset README; repo LICENSE file is 11358 bytes \u2014 engineer should read it before redistribution)",
+      "citation_bibtex": "@misc{dsprites17,\n  author = {Loic Matthey and Irina Higgins and Demis Hassabis and Alexander Lerchner},\n  title = {dSprites: Disentanglement testing Sprites dataset},\n  howpublished = {https://github.com/deepmind/dsprites-dataset/},\n  year = {2017}\n}"
+    }
+  },
+  "shapes3d": {
+    "dataset_id": "3D Shapes / Shapes3D (Burgess & Kim, 2018)",
+    "factors": {
+      "status": "PINNED",
+      "source": "src/dataset/shapes3d.py at pinned commit, cross-checked against google-deepmind/3d-shapes README and TFDS catalog",
+      "hdf5_keys": {
+        "images": "(480000, 64, 64, 3) uint8",
+        "labels": "(480000, 6) float64"
+      },
+      "COLUMN_NOTE": "No column is dropped for Shapes3D. The 6 label columns are used directly, in the order below. Filters read the float64 'labels' array as loaded from the h5 file.",
+      "ordered": [
+        {
+          "index": 0,
+          "name": "floor_hue",
+          "cardinality": 10,
+          "grid_expr": "np.linspace(0.0, 0.9, 10)",
+          "values": [
+            0.0,
+            0.1,
+            0.2,
+            0.3,
+            0.4,
+            0.5,
+            0.6,
+            0.7,
+            0.8,
+            0.9
+          ]
+        },
+        {
+          "index": 1,
+          "name": "wall_hue",
+          "cardinality": 10,
+          "grid_expr": "np.linspace(0.0, 0.9, 10)",
+          "values": [
+            0.0,
+            0.1,
+            0.2,
+            0.3,
+            0.4,
+            0.5,
+            0.6,
+            0.7,
+            0.8,
+            0.9
+          ]
+        },
+        {
+          "index": 2,
+          "name": "object_hue",
+          "cardinality": 10,
+          "grid_expr": "np.linspace(0.0, 0.9, 10)",
+          "values": [
+            0.0,
+            0.1,
+            0.2,
+            0.3,
+            0.4,
+            0.5,
+            0.6,
+            0.7,
+            0.8,
+            0.9
+          ]
+        },
+        {
+          "index": 3,
+          "name": "scale",
+          "cardinality": 8,
+          "grid_expr": "np.linspace(0.75, 1.25, 8)",
+          "values": [
+            0.75,
+            0.82142857,
+            0.89285714,
+            0.96428571,
+            1.03571429,
+            1.10714286,
+            1.17857143,
+            1.25
+          ]
+        },
+        {
+          "index": 4,
+          "name": "shape",
+          "cardinality": 4,
+          "values": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "semantics": "0 = square/cube, 1 = cylinder, 2 = sphere, 3 = pill/oblong"
+        },
+        {
+          "index": 5,
+          "name": "orientation",
+          "cardinality": 15,
+          "grid_expr": "np.linspace(-30.0, 30.0, 15)",
+          "values": [
+            -30.0,
+            -25.71428571,
+            -21.42857143,
+            -17.14285714,
+            -12.85714286,
+            -8.57142857,
+            -4.28571429,
+            0.0,
+            4.28571429,
+            8.57142857,
+            12.85714286,
+            17.14285714,
+            21.42857143,
+            25.71428571,
+            30.0
+          ]
+        }
+      ],
+      "grid_total_images": 480000,
+      "grid_total_check": "10 * 10 * 10 * 8 * 4 * 15 = 480000"
+    },
+    "condition": {
+      "name": "recombination-to-element",
+      "code_condition_key": "recomb2element",
+      "code_variant_key": "leave1out",
+      "status": "PINNED",
+      "source_locator": "scripts/configs/datasplits.py, class Shapes3D, leave1out train/test filters",
+      "code_verbatim_index_constants": "fh, wh, oh, scl, shp, rot = 0, 1, 2, 3, 4, 5",
+      "code_verbatim_test_filter": "((latent_values[:, cls.oh] >= 0.8) &\n (latent_values[:, cls.wh] >= 0.8) &\n (latent_values[:, cls.fh] >= 0.8) &\n (latent_values[:, cls.scl] >= 1.1) &\n (latent_values[:, cls.shp] == 1) &\n (latent_values[:, cls.rot] > 20))",
+      "train_filter": "logical NOT of the test filter (train = complement of test over the full 480000-image grid)",
+      "ARRAY_NOTE": "All six terms read latent_VALUES (not latent_classes). shape == 1 on the raw label values means CYLINDER, matching the paper.",
+      "machine_readable": {
+        "held_out_over": "factor-value COMBINATION (a single conjunctive cell), not whole factor values",
+        "terms": [
+          {
+            "factor": "floor_hue",
+            "op": ">=",
+            "value": 0.8,
+            "n_values_selected": 2,
+            "selected": [
+              0.8,
+              0.9
+            ]
+          },
+          {
+            "factor": "wall_hue",
+            "op": ">=",
+            "value": 0.8,
+            "n_values_selected": 2,
+            "selected": [
+              0.8,
+              0.9
+            ]
+          },
+          {
+            "factor": "object_hue",
+            "op": ">=",
+            "value": 0.8,
+            "n_values_selected": 2,
+            "selected": [
+              0.8,
+              0.9
+            ]
+          },
+          {
+            "factor": "scale",
+            "op": ">=",
+            "value": 1.1,
+            "n_values_selected": 3,
+            "selected": [
+              1.10714286,
+              1.17857143,
+              1.25
+            ]
+          },
+          {
+            "factor": "shape",
+            "op": "==",
+            "value": 1,
+            "n_values_selected": 1,
+            "selected": [
+              "cylinder"
+            ]
+          },
+          {
+            "factor": "orientation",
+            "op": ">",
+            "value": 20,
+            "n_values_selected": 3,
+            "selected": [
+              21.42857143,
+              25.71428571,
+              30.0
+            ]
+          }
+        ],
+        "combination_rule": "AND of all terms"
+      },
+      "paper_prose_quote": "\"For the Recombination-to-Element condition, we excluded one combination from training: [floor-hue > 0.5, wall-hue > 0.5, object-hue > 0.5, object-shape=cylinder, object-scale=1, object-orientation=0].\"",
+      "paper_prose_locator": "Section 2.2 'Image Reconstruction with 3D Shapes dataset', p.6",
+      "paper_prose_secondary_quote": {
+        "quote": "\"For the first condition, the model has not seen magenta floors with purple cylinders, yet it is able to reconstruct them properly.\"",
+        "locator": "Figure 4 caption, p.7"
+      },
+      "PROSE_VS_CODE_DISCREPANCIES": [
+        {
+          "term": "the three hues",
+          "code": ">= 0.8 (2 of 10 values each)",
+          "prose": "> 0.5 (4 of 10 values each)",
+          "verdict": "MATERIAL DISAGREEMENT. Taking the prose literally gives a 64x larger hue sub-block. The Figure 4 caption ('magenta floors with purple cylinders') describes hues at the 0.8-0.9 end, corroborating the CODE, not the prose. Code is authoritative."
+        },
+        {
+          "term": "scale",
+          "code": ">= 1.1 (3 of 8 values)",
+          "prose": "object-scale = 1",
+          "verdict": "The prose rule is NOT EXECUTABLE: there is no value exactly equal to 1 in the scale grid (nearest are 0.96428571 and 1.03571429). This alone proves the prose is a loose gloss, not the implemented rule. Code is authoritative."
+        },
+        {
+          "term": "orientation",
+          "code": "> 20 (3 of 15 values, the +21.4/+25.7/+30 end)",
+          "prose": "object-orientation = 0",
+          "verdict": "DIRECT CONTRADICTION: the prose names the CENTRE of the orientation range, the code selects the TOP end. Code is authoritative."
+        }
+      ],
+      "expected_counts": {
+        "status": "PINNED (computed by me from the code filter + the factor grid; the paper reports NO train/test image counts)",
+        "computed_by": "web-scout, arithmetic over the factor grid",
+        "n_total": 480000,
+        "n_test": 72,
+        "n_test_derivation": "2 (floor_hue) * 2 (wall_hue) * 2 (object_hue) * 3 (scale) * 1 (shape=cylinder) * 3 (orientation) = 72",
+        "n_train": 479928,
+        "n_train_derivation": "480000 - 72",
+        "paper_reported_counts": "NOT REPORTED \u2014 the paper gives no n_train/n_test for Shapes3D. No discrepancy can be computed against the authors' numbers.",
+        "note_on_one_combination": "The paper says it 'excluded one combination'. In images this is 72 grid cells, because four of the six terms are inequalities spanning 2-3 grid values rather than equalities.",
+        "FLOAT_BOUNDARY_HAZARD": {
+          "severity": "LOW",
+          "detail": "The >= 0.8 hue terms sit exactly on stored grid values, but the comparison literal 0.8 and the stored float64 0.8 are the same double, so >= is satisfied. The scale (1.1 vs 1.10714) and orientation (20 vs 21.43) thresholds sit comfortably between grid values with no boundary risk.",
+          "MANDATORY_INSTRUCTION_TO_ENGINEER": "Still evaluate the filter against the ACTUAL 'labels' array from 3dshapes.h5 and report the realised counts; reconcile against the 72 predicted here."
+        }
+      },
+      "randomised": {
+        "status": "PINNED",
+        "value": false,
+        "note": "No seed, no sampling. Deterministic boolean mask."
+      }
+    },
+    "secondary_conditions_NOT_YET_NEEDED": {
+      "recombination_to_range": {
+        "status": "PINNED",
+        "code_condition_key": "recomb2range",
+        "variants_found_in_code": [
+          "ohue+whue2fhue",
+          "shape2fhue",
+          "shape2ohue"
+        ],
+        "variant_matching_the_paper": "shape2ohue",
+        "code_verbatim_test_filters": {
+          "shape2ohue": "((latent_values[:, cls.shp] == 3.0) & (latent_values[:, cls.oh] >= 0.5))",
+          "shape2fhue": "((latent_values[:, cls.shp] == 3.0) & (latent_values[:, cls.fh] >= 0.5))",
+          "ohue+whue2fhue": "((latent_values[:, cls.oh] >= 0.8) & (latent_values[:, cls.wh] <= 0.2))"
+        },
+        "train_filter": "logical NOT of the corresponding test filter",
+        "paper_prose_quote": "\"For the Recombination-to-Range condition, we excluded all combinations where [object-hue >= 0.5 (cyan), object-shape = oblong] and trained all other combinations. This means that the models saw several combinations where object-hue was >= 0.5 and where object-shape was oblong but never the combination together.\"",
+        "paper_prose_locator": "Section 2.2, p.6",
+        "prose_code_agreement": "AGREES. shape == 3.0 is the pill/oblong shape and object_hue >= 0.5 matches exactly.",
+        "expected_counts": {
+          "n_total": 480000,
+          "n_test": 60000,
+          "n_train": 420000,
+          "derivation": "10 (fh) * 10 (wh) * 5 (oh >= 0.5) * 8 (scl) * 1 (shp=3) * 15 (rot) = 60000"
+        }
+      },
+      "extrapolation": {
+        "status": "PINNED",
+        "code_condition_key": "extrp",
+        "code_variant_key": "fhue_gt50",
+        "code_verbatim_train_filter": "(latent_values[:, cls.fh] < 0.5)",
+        "code_verbatim_test_filter": "logical NOT of the train filter, i.e. floor_hue >= 0.5",
+        "paper_prose_quote": "\"For the Extrapolation condition, we excluded all combinations where [floor-hue >= 0.5].\"",
+        "paper_prose_locator": "Section 2.2, p.6",
+        "prose_code_agreement": "AGREES exactly.",
+        "expected_counts": {
+          "n_total": 480000,
+          "n_test": 240000,
+          "n_train": 240000,
+          "derivation": "floor_hue splits 5/5 at 0.5, so the grid halves exactly."
+        }
+      }
+    },
+    "provenance": {
+      "status": "PINNED (except checksum)",
+      "canonical_repo": "https://github.com/google-deepmind/3d-shapes",
+      "file_name": "3dshapes.h5",
+      "download_url": "https://storage.googleapis.com/3d-shapes/3dshapes.h5",
+      "download_url_status": "RECONSTRUCTED \u2014 the 3d-shapes README links the GCS browser rather than printing a flat URL; the gs://3d-shapes/3dshapes.h5 bucket path is the standard form. Engineer must confirm the URL resolves before relying on it.",
+      "gcs_bucket_path": "gs://3d-shapes/3dshapes.h5",
+      "download_size": "255.18 MiB (per TensorFlow Datasets catalog entry for shapes3d)",
+      "uncompressed_dataset_size": "1.68 GiB (per TFDS catalog)",
+      "exact_bytes": "NOT OBTAINED \u2014 neither the DeepMind repo nor TFDS publishes an exact byte count for 3dshapes.h5; TFDS reports 255.18 MiB rounded.",
+      "expected_local_path_in_montero_repo": "data/raw/shapes3d/3dshapes.h5",
+      "published_checksum": "NOT OBTAINED \u2014 the 3d-shapes repo publishes no md5/sha256. TFDS maintains internal checksums but they were not surfaced on the catalog page I read.",
+      "n_images": 480000,
+      "image_shape": "64 x 64 x 3, uint8 RGB",
+      "licence": "Apache License 2.0 (the 3d-shapes repo ships a LICENSE file; the README itself does not restate the licence \u2014 engineer should read github.com/google-deepmind/3d-shapes/blob/master/LICENSE to confirm it covers the DATA and not merely the loader code). Status: RECONSTRUCTED.",
+      "citation_bibtex": "@misc{3dshapes18,\n  title = {3D Shapes Dataset},\n  author = {Burgess, Chris and Kim, Hyunjik},\n  howpublished = {https://github.com/deepmind/3dshapes-dataset/},\n  year = {2018}\n}"
+    }
+  },
+  "field_status_summary": {
+    "PINNED": [
+      "both datasets: factors, cardinalities, value grids",
+      "both datasets: recombination-to-element condition (verbatim code + verbatim paper quote + locator)",
+      "both datasets: randomised = false",
+      "both datasets: expected_counts computed by me",
+      "both datasets: recomb-to-range and extrapolation secondary conditions",
+      "official code repo, commit hash, split file path, blob SHA-1, byte size"
+    ],
+    "RECONSTRUCTED": [
+      "shapes3d download URL (flat GCS form inferred, not printed in README)",
+      "shapes3d licence attribution to Apache-2.0 (LICENSE file exists but not read in full)"
+    ],
+    "NOT_OBTAINED": [
+      "sha256 of scripts/configs/datasplits.py (no shell; git blob SHA-1 given instead)",
+      "published checksums for BOTH datasets (none exist upstream)",
+      "exact byte size of 3dshapes.h5",
+      "dSprites recomb2range scale and rotation variants (described in paper prose, not found in pinned code)",
+      "dSprites extrapolation variants at x = 0.16, 0.25, 0.75 (described in paper prose, only x=0.5 in code)",
+      "author-reported n_train / n_test for either dataset (the paper reports none)"
+    ]
+  },
+  "_hub_corrections": {
+    "date": "2026-09-09",
+    "by": "Hub, from gen-data-splits realised measurement, independently re-verified against the raw files",
+    "dsprites.expected_counts": {
+      "SUPERSEDED_nominal_n_test": 5808,
+      "SUPERSEDED_nominal_n_train": 731472,
+      "REALISED_n_test": 6292,
+      "REALISED_n_train": 730988,
+      "why": "float boundary admits 13 rotation values, not the nominal 12: grid_rot[13]=2.0943951023931957 > a240=2.0943951023931953 (ADMITTED) while grid_rot[26]=4.188790204786391 < a120=4.1887902047863905 is False (EXCLUDED). Scale 0.6>0.6 is False, so 4 scale values. 1*4*13*11*11 = 6292.",
+      "status": "REALISED \u2014 measured verbatim against the actual npz post [:,1:] slice. The 5808 was a good-faith nominal estimate and is RETIRED."
+    },
+    "shapes3d.expected_counts": {
+      "REALISED_n_test": 72,
+      "REALISED_n_train": 479928,
+      "status": "CONFIRMED \u2014 matches the spec exactly. Hub-recomputed independently."
+    },
+    "provenance_backfill": {
+      "3dshapes_h5_exact_bytes": 267573662,
+      "3dshapes_gcs_url_status": "CONFIRMED (was RECONSTRUCTED) \u2014 HTTP 200, x-goog-stored-content-length 267573662",
+      "sha256_now_exist_none_upstream": {
+        "3dshapes.h5": "0a0f6ed98baff276a50f3a081a7434d788da63cb135a98189b2a5b5769be1785",
+        "dsprites...npz": "857dc001287e8efa226e0025fac6b29e5745c621b380b0d3363e4e33f4e28fa2",
+        "dsprites...hdf5": "729fa22e884c9c500e1f17415d580746b4c5894fbbb780a1319bbcfa39a745bb"
+      }
+    }
+  }
+}

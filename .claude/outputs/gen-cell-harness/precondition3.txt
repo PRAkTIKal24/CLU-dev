@@ -1,0 +1,20 @@
+PRECONDITION 3 — R27.3: both legs run on seeds 0 and 2, the STRONGER quoted per axis
+(mechanical, from gen-arms-a7-wiring's own manifests)
+
+seed 0: gate fired=True selected shrinkage=1e-3 |diag-1|=0.2382 exact=False
+   pre-registered leg samplers: {'ld_corrected': 0.6446, 'ld_published': 0.7418, 'ode': 0.7077}
+   _wexact fallback leg:        {'ld_corrected': 0.6023, 'ld_published': 0.6913, 'ode': 0.637}
+   BOTH LEGS RUN: yes. best composition pre-reg 0.7418 (ld_published) vs _wexact 0.6913 (ld_published) -> STRONGER = PRE-REGISTERED
+   quoted `ode` (the published composition row) = 0.7077
+seed 1: gate fired=False selected shrinkage=none |diag-1|=0.0567 exact=True
+   pre-registered leg samplers: {'ld_corrected': 0.6612, 'ld_published': 0.5052, 'ode': 0.6732}
+   _wexact fallback leg:        — (gate passes, no fallback needed)
+   quoted `ode` (the published composition row) = 0.6732
+seed 2: gate fired=True selected shrinkage=ledoit_wolf |diag-1|=0.1438 exact=False
+   pre-registered leg samplers: {'ld_corrected': 0.6146, 'ld_published': 0.5314, 'ode': 0.6582}
+   _wexact fallback leg:        {'ld_corrected': 0.6563, 'ld_published': 0.5192, 'ode': 0.6517}
+   BOTH LEGS RUN: yes. best composition pre-reg 0.6582 (ode) vs _wexact 0.6563 (ld_corrected) -> STRONGER = PRE-REGISTERED
+   quoted `ode` (the published composition row) = 0.6582
+
+published LACE composition row `ode` = 0.6797 +/- 0.0207  (report quotes 0.6797 +/- 0.0207)  -> MATCH
+VERDICT: both legs run on BOTH gated seeds (0 and 2); on the COMPOSITION axis the pre-registered leg is the stronger on both; it is the one quoted and the one inherited by this harness. Precondition 3 SATISFIED.

@@ -1,0 +1,68 @@
+=== gen-cell-harness: shapes3d/recon stage=cell quick=False ===
+  ⭐ PRECONDITION 1/2: classifier_gate.json gate=PASS (floor 0.95, 3 seeds)
+  ⭐ PRECONDITION 2/2: refusal_scores.json status=complete (not_run=[])
+[     0.0s] seed 1 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1
+[     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (hash + recipe asserted)
+[     0.0s]   ⭐ external classifier aa69b436989b2de5… (978873 params) — THE instrument, identical across every arm in this seed
+[     0.4s] rows: store_train=32768 B=72 MS=199 fit=32256 val=512
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     1.4s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     1.4s] cache 9288 rows (scope=used), D=2048; re-encode check bit-identical on 64 rows
+[     1.4s]     extending cache coverage: 32199 row(s) encoded through the frozen encoder
+[    76.1s]     extending cache coverage: 196 row(s) encoded through the frozen encoder
+[    78.4s]     extending cache coverage: 31695 row(s) encoded through the frozen encoder
+[   157.1s]     extending cache coverage: 504 row(s) encoded through the frozen encoder
+[   161.1s]   ⚠ this seed's encoder differs from the plan's (fc05e2c5f396… vs 98d326028316…), so the grouping is re-derived on its own channels — ⛔ the plan's label vector would be a size-matched RANDOM partition here
+[   161.1s]   ⭐ store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_1/store_s1.pkl (⛔ not re-trained)
+[   162.1s] ⭐ byte ledger: store 524288 B + addressing head 74240 B (⛔ coupling 163840 B EXCLUDED; ⛔ not 688128)
+[   163.6s] ⭐ no-bypass: pure codebook gather, 30 bits/read (R20's declared design constant) · ⭐ request-only path asserted on all four legs (⛔ no feature argument on ANY CLU call; gen_store.soft_read NOT imported)
+[   168.0s] ⭐ DECODER ceiling on IMAGES: external in-corner balacc=0.9472 · probe=0.9365
+[   168.0s]   ⭐ [lace] inheriting the SELECTED configuration from disk: sigma=0.03 form=both shrinkage=none (gate fired=False, 36 trials inherited, ⛔ not re-selected)
+[   171.2s]   [lace] whitening shrinkage=none: |diag-1|=0.05672 |offdiag|=0.007469
+[   543.3s]   [lace] classifier: 12600 steps, loss 2.3761 -> 0.0008; its own val per-factor mean 0.9495
+[   640.9s]   ⭐ [lace] IMAGE-space in-corner shape balacc=0.6324 (AUROC 0.7139, TPR 0.431 / TNR 0.834) · distinct on B: 72 vectors / 72 factor-tuples of 72 · probe companion 0.6423
+[   645.5s]   ⭐ [lace/ld_published] IMAGE-space in-corner shape balacc=0.5544 (AUROC 0.8173, TPR 0.139 / TNR 0.970) · distinct on B: 72 vectors / 61 factor-tuples of 72 · probe companion 0.5133
+[   649.8s]   ⭐ [lace/ld_corrected] IMAGE-space in-corner shape balacc=0.6669 (AUROC 0.7040, TPR 0.444 / TNR 0.889) · distinct on B: 72 vectors / 72 factor-tuples of 72 · probe companion 0.6253
+[   649.9s] seed 1 done in 650s
+=== done in 650s ===

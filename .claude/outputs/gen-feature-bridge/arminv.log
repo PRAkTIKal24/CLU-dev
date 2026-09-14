@@ -1,0 +1,114 @@
+[gen-bridge] dataset=shapes3d pretext=recon stage=encoder arm=clu seed=0 out=/Users/user/Desktop/CHLU/.claude/scratch/gen-feature-bridge/arminv_clu
+[gen-bridge] ⛔ arm is metadata only: the bridge is arm-independent.
+  split shapes3d: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+  ⭐ R3.3 no-leak: 256 training rows checked, 72/72 held-out images excluded, 0 leaked
+  streaming 256 train images …
+  fitting encoder (pretext=recon, 30 steps) …
+    step 1/30  loss=0.19074
+    step 6/30  loss=0.13454
+    step 12/30  loss=0.11110
+    step 18/30  loss=0.09427
+    step 24/30  loss=0.09104
+    step 30/30  loss=0.08077
+  caching penultimate features: scope=used, 392 rows …
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cached 392/392
+  ⭐ D = 2048 ((128, 4, 4)) — D=2048 <= 20000: a full D x D eigendecomposition is feasible, so the LACE arm runs in fully whitened coordinates and is NOT pushed onto channel-only whitening.
+[gen-bridge] dataset=shapes3d pretext=recon stage=encoder arm=lace seed=0 out=/Users/user/Desktop/CHLU/.claude/scratch/gen-feature-bridge/arminv_lace
+[gen-bridge] ⛔ arm is metadata only: the bridge is arm-independent.
+  split shapes3d: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+  ⭐ R3.3 no-leak: 256 training rows checked, 72/72 held-out images excluded, 0 leaked
+  streaming 256 train images …
+  fitting encoder (pretext=recon, 30 steps) …
+    step 1/30  loss=0.19074
+    step 6/30  loss=0.13454
+    step 12/30  loss=0.11110
+    step 18/30  loss=0.09427
+    step 24/30  loss=0.09104
+    step 30/30  loss=0.08077
+  caching penultimate features: scope=used, 392 rows …
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+    cached 392/392
+  ⭐ D = 2048 ((128, 4, 4)) — D=2048 <= 20000: a full D x D eigendecomposition is feasible, so the LACE arm runs in fully whitened coordinates and is NOT pushed onto channel-only whitening.

@@ -1,0 +1,145 @@
+====================================================================================================
+SUBSTRATE: cifar10 | seeds: [0, 1, 2] | stream fingerprints: {'0': '318a2b8590716f68', '1': 'e7505727a7a2be65', '2': '41945861de7ae566'}
+geometry_go = True | d_favoured_by_geometry = 16 | d_recommended_operational = 12
+store inert by d: {'8': False, '12': False, '16': True}
+launder reads projected phi: True | bit-identical to store addresses: True
+====================================================================================================
+
+### 1. sigma_q / spacing  (mean +/- SE over seeds), n_keys = 16
+arm                                 d=8  (atoms    8192)  d=12 (atoms   32768)  d=16 (atoms  131072)
+pca256->pca                             0.370+- 0.030      0.334+- 0.025      0.313+- 0.022
+pca@d                                   0.370+- 0.030      0.334+- 0.025      0.313+- 0.022
+randconv->pca                           0.234+- 0.005      0.201+- 0.004      0.190+- 0.003
+simclr->gaussian                        0.248+- 0.008      0.235+- 0.011      0.210+- 0.005
+simclr->pca                             0.248+- 0.005      0.210+- 0.010      0.186+- 0.003
+simclr->truncate                        0.241+- 0.007      0.213+- 0.013      0.186+- 0.003
+
+### 2. median-NN key spacing (unit-r95 address ball), n_keys = 16
+pca256->pca                            0.4110+-0.0331     0.4536+-0.0319     0.4831+-0.0319
+pca@d                                  0.4110+-0.0331     0.4536+-0.0319     0.4831+-0.0319
+randconv->pca                          0.6409+-0.0124     0.7476+-0.0138     0.7885+-0.0124
+simclr->gaussian                       0.6056+-0.0202     0.6425+-0.0302     0.7148+-0.0166
+simclr->pca                            0.6061+-0.0126     0.7183+-0.0341     0.8056+-0.0114
+simclr->truncate                       0.6236+-0.0181     0.7093+-0.0418     0.8088+-0.0112
+
+### 3. spacing / uniform-ball spacing   (1.0 = fills the ball uniformly)
+pca256->pca                             0.516+- 0.042      0.491+- 0.035      0.475+- 0.031
+pca@d                                   0.516+- 0.042      0.491+- 0.035      0.475+- 0.031
+randconv->pca                           0.805+- 0.016      0.810+- 0.015      0.775+- 0.012
+simclr->gaussian                        0.761+- 0.025      0.696+- 0.033      0.703+- 0.016
+simclr->pca                             0.761+- 0.016      0.778+- 0.037      0.792+- 0.011
+simclr->truncate                        0.783+- 0.023      0.768+- 0.045      0.795+- 0.011
+
+### 4. participation ratio / d   (effective fraction of address dims used)
+pca256->pca                             0.354+- 0.044      0.269+- 0.037      0.216+- 0.031
+pca@d                                   0.354+- 0.044      0.269+- 0.037      0.216+- 0.031
+randconv->pca                           0.544+- 0.028      0.407+- 0.027      0.326+- 0.019
+simclr->gaussian                        0.561+- 0.008      0.436+- 0.035      0.369+- 0.024
+simclr->pca                             0.587+- 0.037      0.471+- 0.022      0.407+- 0.011
+simclr->truncate                        0.592+- 0.039      0.474+- 0.022      0.408+- 0.012
+
+### 5. d_safe / spacing (rig pricing), n_keys = 16
+pca256->pca                             0.617+- 0.064      0.678+- 0.072      0.701+- 0.068
+pca@d                                   0.617+- 0.064      0.678+- 0.072      0.701+- 0.068
+randconv->pca                           0.593+- 0.010      0.612+- 0.009      0.631+- 0.005
+simclr->gaussian                        0.571+- 0.020      0.687+- 0.026      0.692+- 0.007
+simclr->pca                             0.632+- 0.016      0.690+- 0.040      0.682+- 0.023
+simclr->truncate                        0.609+- 0.014      0.696+- 0.049      0.679+- 0.018
+
+### 6. sigma_q/spacing vs n (the (n,d) geometry check), strong arm
+  simclr->pca
+    d=8     n=16:   0.248   n=40:   0.295
+    d=12    n=16:   0.210   n=40:   0.250
+    d=16    n=16:   0.186   n=40:   0.219
+  pca@d
+    d=8     n=16:   0.370   n=40:   0.450
+    d=12    n=16:   0.334   n=40:   0.392
+    d=16    n=16:   0.313   n=40:   0.361
+
+### 7. THE REGISTERED READING (mechanical)
+   GO iff strong φ improves σ_q/spacing (i.e. LOWERS it) over the PCA reference at the same d, beyond noise (mean > 2.0·SE) on >= 3 paired seeds
+  d=  8 atoms=    8192  strong=[0.2552, 0.238, 0.25]  ref=[0.4227, 0.3669, 0.3195]
+        paired improvement +0.1220 +- 0.0285 SE, 3/3 seeds positive, ratio strong/ref=0.6782  ->  GO=True
+  d= 12 atoms=   32768  strong=[0.23, 0.2035, 0.1959]  ref=[0.3833, 0.3174, 0.3019]
+        paired improvement +0.1244 +- 0.0146 SE, 3/3 seeds positive, ratio strong/ref=0.6300  ->  GO=True
+  d= 16 atoms=  131072  strong=[0.1894, 0.1883, 0.1811]  ref=[0.357, 0.2964, 0.2867]
+        paired improvement +0.1271 +- 0.0203 SE, 3/3 seeds positive, ratio strong/ref=0.5991  ->  GO=True
+
+### 8. RIDER (a) — the (d, atom-budget) depth cells
+  d=8   n_atoms=   8192 (honoured=True) writes=6 admitted=6 depth_median=0.1479 depth_max=0.31430178528649344 INERT=False self_probe_strict=0.500 [63s]
+        depths=[0.314302, 0.011063, 0.285171, 0.28479, 0.004736, 0.0]
+  d=12  n_atoms=  32768 (honoured=True) writes=6 admitted=6 depth_median=0.01859 depth_max=0.36189378677916034 INERT=False self_probe_strict=0.333 [184s]
+        depths=[0.032866, 0.0, 0.35336, 0.361894, 0.00431, 0.004128]
+  d=16  n_atoms= 131072 (honoured=True) writes=6 admitted=6 depth_median=5.438e-07 depth_max=0.006467740820258315 INERT=True self_probe_strict=0.312 [441s]
+        depths=[0.0, 1e-06, 0.0, 0.0, 0.006468, 2e-06]
+
+### 9. RIDER (b) — d_safe pricing + the MEASURED refusal rate
+  pca@d                          d=8   d_safe_rig/pop_spacing=0.617  refusal(rig)=0.042  refusal(repriced @0.88)=0.083
+  simclr->pca                    d=8   d_safe_rig/pop_spacing=0.632  refusal(rig)=0.042  refusal(repriced @0.88)=0.146
+  pca@d                          d=12  d_safe_rig/pop_spacing=0.678  refusal(rig)=0.042  refusal(repriced @0.88)=0.146
+  simclr->pca                    d=12  d_safe_rig/pop_spacing=0.690  refusal(rig)=0.021  refusal(repriced @0.88)=0.104
+  pca@d                          d=16  d_safe_rig/pop_spacing=0.701  refusal(rig)=0.021  refusal(repriced @0.88)=0.146
+  simclr->pca                    d=16  d_safe_rig/pop_spacing=0.682  refusal(rig)=0.042  refusal(repriced @0.88)=0.125
+
+### 10. BYTE LEDGER (floats; the map rides on EVERY arm incl. the launder)
+  pca@d                          d=8   encoder=  27648 map=     0 phi_total=  27648 launder_total=  27792
+  pca@d                          d=12  encoder=  39936 map=     0 phi_total=  39936 launder_total=  40144
+  pca@d                          d=16  encoder=  52224 map=     0 phi_total=  52224 launder_total=  52496
+  simclr->pca                    d=8   encoder= 225536 map=  2304 phi_total= 227840 launder_total= 227984
+  simclr->pca                    d=12  encoder= 225536 map=  3328 phi_total= 228864 launder_total= 229072
+  simclr->pca                    d=16  encoder= 225536 map=  4352 phi_total= 229888 launder_total= 230160
+
+### 11. JOINT DIAL (d, atom budget)
+  d=   4  n_atoms=        2048
+  d=   8  n_atoms=        8192
+  d=  12  n_atoms=       32768
+  d=  16  n_atoms=      131072
+  d=  20  n_atoms=      524288
+  d=  24  n_atoms=     2097152
+  d= 256  n_atoms=174224571863523549457719784787618981478400
+
+### 12. FLAGS
+{
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "dataset": "cifar10",
+  "addr_dims": [
+    8,
+    12,
+    16
+  ],
+  "phi_arm_strong": "simclr",
+  "phi_arm_control": "randconv",
+  "phi_arm_reference": "pca",
+  "phi_dim_strong": 256,
+  "phi_regime": "task1_only",
+  "enc_steps": 8000,
+  "n_fit_region": 25000,
+  "n_fit_pool": 6000,
+  "projection": "pca",
+  "projection_controls": [
+    "truncate",
+    "gaussian"
+  ],
+  "n_keys_primary": 16,
+  "n_keys_grid": [
+    16,
+    64,
+    200
+  ],
+  "query_sigma": 0.15,
+  "d_safe_frac": 0.88,
+  "d_safe_sizing_n": 200,
+  "depth_probe_writes": 6,
+  "write_steps": 300,
+  "read_steps": 800,
+  "address_steps": 400,
+  "capacity": 16,
+  "quick": false,
+  "promotable": false
+}
+
+wall_s = 6544.093579053879

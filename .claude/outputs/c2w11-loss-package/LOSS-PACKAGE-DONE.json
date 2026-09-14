@@ -1,0 +1,173 @@
+{
+  "artifact": "LOSS-PACKAGE-DONE.json",
+  "wave": "C2W11",
+  "spoke": "physics-theorist / c2w11-loss-package",
+  "charter_basis": "ADDENDUM 12 A34.9 (a)-(f); A34.5 kinetics scoping; A31.2 pricing",
+  "dial_declaration": {
+    "dial": "none - theory + scoping",
+    "laundering_control": "N/A",
+    "claim_cell": false,
+    "performance_number": false,
+    "verdict": false
+  },
+  "terms": {
+    "a_label_free_organization": {
+      "symbol": "L_org",
+      "expression": "L_org = E_{(x,x')~P_pair} [ l_metric( ||c(x)-c(x')|| / d_ref , t(x,x') ) ]  +  lambda_band * L_band(d/s)   with   c(x) = z_addr(x) + jig, l_metric = InfoNCE/NT-Xent over the PLACED atom-group centroids, t = label-free pair target (augmentation-positive / co-occurrence), L_band = relu(2.5 - d/s)^2 + relu(d/s - 2.9)^2 on MEASURED d and MEASURED s.",
+      "parameters_touched": [
+        "phi (address block, layer 0..L)",
+        "jig / placement head",
+        "atom centers c_j (directly, via the placing write)",
+        "log_width s_j (only through L_band)"
+      ],
+      "gradient_channel": "NEITHER implicit-at-settle NOR trajectory: a DIRECT ALGEBRAIC path through the placing write's assignment c = z_addr + jig. dL/dc * dc/dz_addr (= I) * dz_addr/dphi.",
+      "live_before_wells_exist": true,
+      "why": "the placement map is evaluated AT the write and does not need a settled read, an implicit solve, or a dug well. It is the ONLY term of the six that escapes the measured 1e-10..1e-9 init floor (orgdiv-cat-test 5.1), and it is therefore the package's bootstrap term.",
+      "coefficient_zero_bit_identity_requirement": "(1) the pair sampler and every augmentation draw come from a DEDICATED RNG stream, so lambda_org = 0 leaves every other draw bit-identical; (2) the shipped store write uses c = stop_gradient(z_addr) + jig, so the forward VALUE is unchanged and the accidental outer-loss path is severed; (3) L_org is computed from a second expression z_addr + jig on the LIVE z. Assert: theta_after_one_step(lambda_org=0) == theta_after_one_step(term deleted), bitwise, on 3 seeds.",
+      "designed_negative_pytest": "N-a1 SHUFFLED TARGETS: permute t within the batch -> the organization statistic (neighbourhood retrieval of the placed centroids; alignment/uniformity) must return to its shuffled-baseline value and the well-sharing statistic S_eff must not improve beyond 2 SE. N-a2 CHANNEL ATTRIBUTION (the leak/design separation):    assert grad_norm(L_org wrt phi) > 0  AND    assert grad_norm(L_org wrt phi, with stop_gradient on the placement) == 0.0 bitwise    AND assert grad_norm(L_outer wrt phi) == grad_norm(L_outer wrt phi, placement cut)    bitwise  [the last one is the ACCIDENTAL-CHANNEL-IS-DEAD assertion; its live    reference value is the banked 0.0908 vs 0.0659, i.e. 27 % of layer-0 phi gradient].",
+      "interaction_2alpha_and_band": "L_org is the ONLY term that can control d/s, because d/s is set by placement spacing and width, both write-side. It must carry the two-sided hinge: below d/s = 2.01 two equal wells MERGE (one minimum), and the axial curvature at the midpoint is exactly 2*alpha = 0.1000 at d/s = 2.00; above d/s = 4.0 the settled-point organization is EXACTLY a nearest-centroid VQ (D = 0.0000) and the tier-ii dividend is structurally zero. alpha is a CEILING: lowering it lengthens soft-mode lifetimes (tau_max = Gamma/2alpha) but removes the coercivity the write and the admission sizing depend on.",
+      "formalized": true,
+      "honesty_note": "This is NOT a physics gradient. The path c = z + jig is algebraic; the physics enters only through WHAT l_metric and L_band measure (an admissible, band-compliant, shareable placement). The 'physics-as-trainer' bet is therefore: the store's own admissibility functionals act as a regulariser on phi. Stating it any other way over-claims."
+    },
+    "b_sharing_refresh": {
+      "symbol": "L_share",
+      "expression": "depth D_w(theta) = sum_{j in group(w)} amp_j^2 . STRUCTURAL form (preferred): a refresh writes amp_j <- sqrt(amp_j^2 + delta_j), delta_j >= 0 by parameterisation => I1 holds as an IDENTITY, not as a penalty. LOSS form (sets HOW MUCH, never the sign): L_share = sum_w [ softplus(D_target - D_w) ]  +  mu * sum_w relu(D_w^- - D_w^+)         + nu * sum_w relu(log(D_w) - log(D_min_neighbour) - log R_max)   <-- the GUARD, with R_max the max admissible depth ratio to the SHALLOWEST live neighbour.",
+      "parameters_touched": [
+        "amp_j of the merged group",
+        "log_width s_j (capped)",
+        "centers c_j (frozen during a refresh: refresh deepens, never moves)"
+      ],
+      "gradient_channel": "DIRECT on theta (depth is an explicit function of theta). NOT implicit, NOT trajectory. K9 owns the merge/spawn ROUTING decision and the routing must be independent of lambda_share.",
+      "live_before_wells_exist": false,
+      "why": "needs >= 2 encounters of the same feature; live from the second write onward.",
+      "coefficient_zero_bit_identity_requirement": "K9's merge-vs-spawn decision must be a deterministic function of (query, store, K9 threshold) ONLY. Assert: the WritePlan emitted at lambda_share = 0 is equal, field by field, to the plan emitted with the term deleted; and theta after one write is bit-identical.",
+      "designed_negative_pytest": "N-b1 PRIVATE-WELL WRITER: a store configured to spawn a private well per item must FAIL M4 (monotone non-decreasing depth on rewrite at >= 90 % of events is vacuous there because no rewrite events exist; the leg must report FAIL, not SKIP) and must drive S_eff = K*F/#used_wells -> 1. N-b2 I1 DIRECT: for every rewrite event, assert D_w(theta+) >= D_w(theta-) - 0 (bitwise >=, no tolerance, since the structural form makes it an identity).",
+      "interaction_2alpha_and_band": "MEASURED HAZARD, this task, s4_depth_boundary.json: refresh manufactures depth heterogeneity, and at the registered band a deep well ANNIHILATES its shallow neighbour's minimum at depth ratio 1.60 (d/s = 2.5), 2.22 (2.7), 3.27 (2.9) -- BELOW the >= 3x heterogeneity PREREG-TierII 7 requires for Prop O4's non-VQ mass. The nu-guard above is therefore NOT optional. Widths must be capped during refresh or d/s falls toward the 2.01 merger edge.",
+      "formalized": true
+    },
+    "c_curvature_shape_defender": {
+      "symbol": "L_shape",
+      "expression": "At each written site w let H_w = grad^2 V_theta(q*_w) (analytic; q*_w carries stop_gradient), eigenvalues lam_1 <= ... <= lam_D. Use the smooth surrogates lam_soft = -(1/beta) log sum_i exp(-beta lam_i) and lam_2nd via the same softmin on {lam_i} minus the softmin mass. Then L_shape = sum_w [ (lam_soft(H_w) - (2 alpha + eps_soft))^2                  + relu(lam_stiff_target - lam_2nd(H_w))^2                  + relu(D_min - D_w)^2                  + relu(sigma_q - r_capture_w)^2 ] . The last two are what make the claim non-vacuous: without them the loss is minimised by an UNDUG site, which reports lam_min = 2 alpha for free.",
+      "parameters_touched": [
+        "centers c_j WITHIN a group (the group's second-moment tensor is what creates an anisotropic well)",
+        "log_width s_j",
+        "amp_j"
+      ],
+      "gradient_channel": "DIRECT on theta by Hellmann-Feynman: d lam_i/d theta = u_i^T (d H/d theta) u_i, valid where lam_i is simple; the softmin surrogate removes the eigenvalue-crossing non-differentiability. q*_w is stop_gradient'd (the implicit correction is available but second-order and is declared OFF).",
+      "live_before_wells_exist": false,
+      "why": "H_w at an undug site is 2*alpha*I + O(A) with A ~ 1e-4 (depth_init), so the term is numerically the vacuum and its gradient carries no site information until the write has dug. It is a DEFENDER of structure the write creates, never a creator.",
+      "coefficient_zero_bit_identity_requirement": "the eigendecomposition must be inside a lambda_shape > 0 branch or guarded by jnp.where so that a degenerate spectrum cannot inject NaN through a 0 * NaN product. Assert: store trained with lambda_shape = 0 is BIT-IDENTICAL to the shipped objective (PREREG-C2W11 M7's own designed negative), and M8 shows NO EXCESS soft directions in that arm.",
+      "designed_negative_pytest": "N-c1 COEFFICIENT-ZERO BIT-IDENTITY (above). N-c2 VACUUM CONTROL: an UNWRITTEN site must NOT be counted as a soft direction. Assert the instrument reports soft_direction=False at a site with lam_min in [2alpha-1e-3, 2alpha+1e-3] AND depth < D_min. (This is the banked trap: undug wells report lam_min ~ 0.0993 BECAUSE 2 alpha is what lam_min reports when nothing was written.) N-c3 CAPTURE CONTROL: a site whose lam_min was softened at the cost of r_capture < sigma_q must FAIL, i.e. softness bought by giving up the basin is not a pass.",
+      "interaction_2alpha_and_band": "HARD CEILING, derived and verified this task: lam_min >= 2 alpha is enforced by the confinement, so the longest-lived soft mode has tau_max = Gamma/(2 alpha) = Gamma_c*m/(2 alpha) = 205.2 STEPS at m = 1, gamma = 0.05 (80.8 steps at gamma = 0.02). The SHIPPED two-phase read is 400+800 steps = 11.85 tau_max, and the measured retention of a 2-alpha-floor offset under it is 3.49e-5 (vs 1.08e-8 for a stiff well mode). => term (c) CREATES structure that the shipped read ERASES. (c) has no consumer at the shipped budget; its consumer is (f) at a TRUNCATED read, or M8's end-of-training spectrum, which is why M8 is the right and only consumer this wave.",
+      "formalized": true,
+      "honesty_note": "A4.2's REFUTED tilt object is not re-derived and is not used. What is specified here is a spectral-shape defender with a measurable claim (M8's lam_min/participation-ratio distribution at written sites, physics vs coefficient-zero arm) and three visible failure modes (vacuum masquerade, saddle, basin sacrifice). Whether a soft direction SURVIVES superposition on a learned multi-atom store is NOT proven here and remains the Hub's Q10 = 0.25."
+    },
+    "d_set_level_compositional_read": {
+      "symbol": "L_read",
+      "expression": "u_f = [ q_N^{(f)} ; V_theta(q_N^{(f)}) ; ||grad V_theta(q_N^{(f)})|| ; captured_f ; payload_readout_f ]  for each of the k feature-factored particles. psi(S) = rho( sum_f h(u_f) )   [DeepSets, PERMUTATION-INVARIANT POOLED SUM ONLY; attention-psi is quarantined for trajectory input]. L_read = E[ l_task( psi({u_f}) , y ) ], with the likelihood weighted by captured-vs-scattered particle counts.",
+      "parameters_touched": [
+        "psi params (rho, h)",
+        "payloads v_w",
+        "store theta",
+        "phi / launch head (ONLY at finite budget)"
+      ],
+      "gradient_channel": "THREE channels with three different magnitudes, all derived: (i) psi/payloads: DIRECT, O(1). (ii) store theta: IMPLICIT-AT-SETTLE, dq*/dtheta = -(Hess V)^-1 d_theta grad V, exact and nonzero once wells exist (measured 1.4664/1.1318/1.2450 after the write vs 7.88e-10/1.52e-9/7.26e-9 before). (iii) phi / launch head: EXACTLY ZERO at the settled point (Theorem T3: Fix(T_theta) contains no q0), and ~K*exp(-C) at finite budget; C = 18.34 for the shipped read => 1.08e-8. (d) CANNOT train a launch head at the shipped budget.",
+      "live_before_wells_exist": false,
+      "why": "channels (ii) and (iii) both sit at 1e-10..1e-9 at init; staged store-then-launch is mandatory.",
+      "coefficient_zero_bit_identity_requirement": "Assert theta after one optimisation step at lambda_read = 0 is bit-identical to the term-deleted build, on 3 seeds, INCLUDING the case where psi is present but receives no gradient (psi must stay exactly at its init).",
+      "designed_negative_pytest": "N-d1 BLANK STORE at FULL psi capacity -> <= chance + 0.05 (K4 leg 1). N-d2 QUERY-ONLY READER at FULL psi capacity -> <= chance + 0.05 (K4 leg 2 = K7-CAP's psi-leak guard). N-d3 PERMUTED PAYLOADS -> <= chance + 0.05. N-d4 COLLAPSED LAUNCH SET (all k particles on one channel) -> ~ chance (M1's negative). N-d5 PARAMETER BOUND: assert every reader in the class has < N_a * m params (SP-1: an OLS fit on the true indicator scores 1.0000 exact-set on a BLANK store).",
+      "interaction_2alpha_and_band": "d/s >= 4.0 => the settled-point organization is exactly nearest-centroid VQ (D = 0.0000) => u_f collapses to a well INDEX and L_read is table-expressible, so K5 becomes trivial. d/s <= 2.01 => wells merge and the set is not identifiable. The capture flag requires SC-6 r_capture >= sigma_q, which s4 shows is the FIRST casualty of term (b)'s heterogeneity. 2 alpha enters through the residual descriptor: at an undug region ||grad V|| ~ 2 alpha ||q||, which is the vacuum reference the novelty head in (e) uses.",
+      "formalized": true
+    },
+    "e_calibration_feature_dropout": {
+      "symbol": "L_cal",
+      "expression": "Per write-episode draw a channel mask n ~ Bernoulli(p_drop)^{N_a}, INDEPENDENT of x, and HOLD OUT from the write every well w_f with n_f = 1 (the well is never written). The query is UNCHANGED and still contains feature f. Novelty head: s_f = sigma( g( u_f ) ) with u_f the same per-particle diagnostics as (d) (depth at landing, residual, capture, overlap-as-confidence). L_cal = (1/k) sum_f BCE( s_f , n_f )   [log-loss: STRICTLY PROPER]. AUROC is the REPORTED statistic and is NOT a proper scoring rule -- it is never the training objective. Set-level: L_cal2 = Brier/NLL of the set-answer confidence (V2b's ECE).",
+      "parameters_touched": [
+        "novelty head g",
+        "store theta (explicit + implicit through q*)",
+        "psi (shared trunk, if shared)"
+      ],
+      "gradient_channel": "DIRECT to g; DIRECT-plus-IMPLICIT to theta (depth and residual are explicit functions of theta at q*, and q* depends on theta implicitly).",
+      "live_before_wells_exist": false,
+      "why": "the written/unwritten CONTRAST is the signal; before any write both classes are vacuum.",
+      "coefficient_zero_bit_identity_requirement": "the dropout mask must come from a DEDICATED RNG stream, and at lambda_cal = 0 the mask must still be DRAWN AND DISCARDED (or, cleaner, not drawn at all AND the stream not advanced). Assert bit-identity of theta and of the drawn write-plan sequence.",
+      "designed_negative_pytest": "N-e1 PERMUTED PAYLOADS -> AUROC ~ 0.5 +/- tol (PREREG-C2W11 V2's registered negative). N-e2 BASE-RATE FLOOR: assert the achieved log-loss on a BLANKED store equals H(p_drop) = -p log p - (1-p) log(1-p) within tol, i.e. the head has learned the base rate and nothing else. N-e3 QUERY-ONLY HEAD -> AUROC == 0.5 within sampling error. This one is STRUCTURAL, not merely measured: the mask is drawn independently of x and acts on the WRITE, never on the query, so n_f is INDEPENDENT of the query by construction => a query-only novelty head is provably at the base rate and any AUROC > 0.5 is store information. N-e4 CHANNEL BALANCE: assert I(n_f ; f) = 0 by construction (uniform p_drop over channels), else the head can read channel identity instead of novelty.",
+      "interaction_2alpha_and_band": "CROSS-TERM CONFLICT, flagged here for the first time: the vacuum reports lam_min ~ 2 alpha and depth ~ 0. If term (c) SUCCEEDS in pushing written sites' lam_min toward 2 alpha, it destroys lam_min as a novelty feature -- written and unwritten sites become spectrally indistinguishable in lam_min. => the novelty head must key on DEPTH and lam_2nd (or the participation ratio), NEVER on lam_min. This is the same fact as M8's banked trap, seen from the other side.",
+      "formalized": true,
+      "statistical_caveat": "channel-level dropout makes the effective sample size the number of WRITE EPISODES times N_a, not the number of items; resample the held-out subset per episode and report the episode count beside every AUROC."
+    },
+    "f_kinetics_trajectory_only": {
+      "symbol": "L_kin",
+      "expression": "Per-particle friction multiplier g_f and per-address / per-direction mass M_f = L_f L_f^T (SPD by construction). L_kin = sum_{n=1}^{N} w_n * l( q_n^{(f)} , ... )  -- a TRAJECTORY loss with w_n non-degenerate over the first ~1/Gamma_c steps; or L_read evaluated at a TRUNCATED budget N << shipped. ORDERING: friction first, mass second, spectral mass third.",
+      "parameters_touched": [
+        "gamma multipliers g_f",
+        "gamma_phi(q) field",
+        "mass M_f"
+      ],
+      "gradient_channel": "TRAJECTORY / FINITE-BUDGET ONLY. At the settled point d z*/d{gamma, M} == 0 EXACTLY (Theorem T3; measured bitwise 0.0, 3/3 seeds, in the gym AND in-system). At finite budget ||d z_N/d zeta|| ~ K_zeta e^{-C}, K_zeta = O(N) for {M, gamma}.",
+      "live_before_wells_exist": false,
+      "why": "a flat landscape has no roll to modulate; and the trajectory channel itself sits at 1.67e-10..1.57e-9 before the write.",
+      "coefficient_zero_bit_identity_requirement": "g_f = 1 and M_f = I must reproduce the shipped scalar-gamma / identity-mass read BIT-IDENTICALLY (the shipped code already has this property for gamma_field=None; the same Python-level branch discipline must be kept for the per-particle multipliers).",
+      "designed_negative_pytest": "N-f1 SETTLED-POINT ZERO: assert grad(L) wrt {g_f, log M_f} is EXACTLY 0.0 BITWISE when the read is the settled-point read. A nonzero value means the read is not settled or a leak path exists. N-f2 BUDGET PRECONDITION: assert C = sum_p N_p ln(1/rho_p) <= C_max for the read the kinetics head trains through. At C = 18.34 (shipped) the gradient is ~1e-8 and the head is untrainable; C <= 7 needs N <= 273 at gamma = 0.05 or N <= 693 at gamma = 0.02. N-f3 MASS-BLINDNESS CONTROL: on a strictly convex single-minimum basin at FULL settle, assert the endpoint is invariant to M to 1e-12 (Prop F1). If it is not, the read is not settled and every mass statement is budget-scoped.",
+      "interaction_2alpha_and_band": "DERIVED THIS TASK, and it is the design rule: det(A) = (1-gamma) EXACTLY and, in the UNDERDAMPED regime, |rho| = sqrt(1-gamma) EXACTLY -- independent of lambda, m, dt. => MASS HAS NO FIRST-ORDER EFFECT ON THE CONTRACTION MODULUS when lambda > lambda_crit = Gamma_c^2 m/4; it moves only the PHASE. Mass is a monotone selector ONLY in the OVERDAMPED regime. In shipped constants lambda_crit = 0.2630*m (gamma=0.05) and 0.04082*m (gamma=0.02): the 2-alpha floor mode (lambda = 0.10) is OVERDAMPED at gamma = 0.05 for m > 0.380, while a written well mode (lambda ~ 9.87) is UNDERDAMPED for m < 37.5. => the shipped constants put SOFT directions in the mass-selective regime and STIFF directions in the mass-blind regime, which is exactly the split that makes 'kinetics select WITHIN a well' coherent. This is also the derivation of 'friction before mass'.",
+      "formalized": true,
+      "built_this_wave": false,
+      "built_note": "PREREG-C2W11 9 NOT-RUN 3: the kinetics HEAD is not built in C2W11. This is a specification for C2W12, as the task requires."
+    }
+  },
+  "loss_package_complete": true,
+  "n_terms_formalized": 6,
+  "n_terms": 6,
+  "deployment_blockers": [
+    {
+      "id": "DB1",
+      "term": "c_curvature_shape_defender",
+      "blocker": "term (c) has NO consumer at the shipped read budget: the 2-alpha floor mode's retention under 400@0.05 + 800@0.02 is 3.49e-5 (11.85 tau_max). M8's end-of-training curvature spectrum is the only consumer this wave, and it is already registered. Any READ-side consumption of (c) needs N <= ~150-200 steps.",
+      "owner": "experiment-engineer (M8 instrument) / C2W12 (read budget)"
+    },
+    {
+      "id": "DB2",
+      "term": "b_sharing_refresh",
+      "blocker": "the nu-guard (max depth ratio to the shallowest live neighbour) is MANDATORY: at d/s = 2.7 a depth ratio of 2.22 annihilates the shallow neighbour's minimum, and PREREG-TierII 7 asks for >= 3x heterogeneity. The registered operating point is internally inconsistent at the 1-D single-atom level and must be re-checked on the learned store before any refresh term is switched on.",
+      "owner": "experiment-engineer (spoke A, K1/SC-6 instrument)"
+    },
+    {
+      "id": "DB3",
+      "term": "a_label_free_organization",
+      "blocker": "the accidental write->phi leak and the designed term share ONE code path (centers[:, :addr] = z[:addr] + jig). The designed channel is only auditable if the shipped write is changed to c = stop_gradient(z_addr) + jig and L_org is computed from a second expression on the live z. Until that lands, N-a2's third assertion cannot pass and the term is entangled with the outer loss at the measured 27 %.",
+      "owner": "experiment-engineer"
+    },
+    {
+      "id": "DB4",
+      "term": "f_kinetics_trajectory_only",
+      "blocker": "C <= 7 (a <= 273-step read at gamma = 0.05) is a PRECONDITION for the kinetics head to receive usable gradient. The shipped read is C = 18.34. C2W12 must budget this.",
+      "owner": "C2W12 lead"
+    }
+  ],
+  "staging": {
+    "rule": "STAGED STORE-THEN-LAUNCH CO-TRAINING (w20).",
+    "bootstrap_terms_live_at_step_0": [
+      "a_label_free_organization"
+    ],
+    "terms_requiring_wells_first": [
+      "b_sharing_refresh",
+      "c_curvature_shape_defender",
+      "d_set_level_compositional_read",
+      "e_calibration_feature_dropout",
+      "f_kinetics_trajectory_only"
+    ],
+    "banked_basis": "orgdiv-cat-test 5.1: at init the implicit channel is 7.88e-10/1.52e-9/7.26e-9 and the trajectory channel 1.67e-10/3.17e-10/1.57e-9 (six to seven orders below the trajectory reference scale 6.421e-3); after the write both are O(1) (1.4664/1.1318/1.2450 implicit). THE WRITE IS THE PRECONDITION FOR GRADIENT TO EXIST AT ALL.",
+    "consequence": "STAGE 0 may run term (a) ALONE (it is the only term whose gradient does not route through a settled read or an implicit solve). Terms (b)-(f) are switched on only after the first write epoch has dug wells that pass K1."
+  },
+  "toy_label": "Every numerical statement backing this file is a 1-D / 2-D DESIGNED-WELL TOY with a single width s. bprime-theory 9.2's standing bracket applies: transfer to a learned multi-atom store is BRACKETED, NOT MEASURED.",
+  "scripts": [
+    "s1_damping.py",
+    "s2_spectral_mass.py",
+    "s2b_fixes.py",
+    "s3_flat_floor.py",
+    "s4_depth_boundary.py",
+    "s5_a31_geometry.py",
+    "s5b_anisotropy.py",
+    "s6_emit_gate.py"
+  ]
+}

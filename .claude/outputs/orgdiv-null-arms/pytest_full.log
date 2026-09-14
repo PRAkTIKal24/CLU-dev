@@ -1,0 +1,161 @@
+........................................................................ [  5%]
+........................................................................ [ 11%]
+........................................................................ [ 17%]
+........................................................................ [ 22%]
+........................................................................ [ 28%]
+........................................................................ [ 34%]
+........................................................................ [ 40%]
+........................................................................ [ 45%]
+........................................................................ [ 51%]
+........................................................................ [ 57%]
+........................................................................ [ 63%]
+.F...................................................................... [ 68%]
+........................................................................ [ 74%]
+........................................................................ [ 80%]
+........................................................................ [ 86%]
+........................................................................ [ 91%]
+........................................................................ [ 97%]
+..............................                                           [100%]
+=================================== FAILURES ===================================
+__________ test_n5_declares_init_as_parameters_and_deviation_as_state __________
+
+small = CatTestConfig(n_wells=16, f_subset=3, n_items=12, n_unseen=24, atoms_per_well=6, addr_dim=4, payload_dim=6, ball_radiu...s=200, organize_lr=0.003, organize_retain=40, organize_batch=32, tol_frac=0.25, seed=0, quick=False, soft_cert_B=0.542)
+
+    def test_n5_declares_init_as_parameters_and_deviation_as_state(small):
+        """prereg §1's learned-initial-state rule, mechanically enforced."""
+        S = seed_setup(small, 0, n_val=4)
+>       fit = n5_titans(small, np.asarray(S["q0_s"])[..., :small.addr_dim].mean(1),
+                        S["family"].y_seen, hidden=8, lr=1e-2, passes=1,
+                        pretrain_steps=5, seed=0)
+
+tests/test_null_arms.py:242: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+chlu/core/null_arms.py:801: in n5_titans
+    M, ls = _n5_stream_core(M0, K0, Y0, batches, lr_j,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+M = {'W1': JitTracer(float64[4,8]), 'W2': JitTracer(float64[8,6]), 'b1': JitTracer(float64[8]), 'b2': JitTracer(float64[6])}
+K0 = JitTracer(float32[12,4]), Y0 = JitTracer(float32[12,6])
+batches = JitTracer(int32[12,1]), lr = JitTracer(float32[])
+momentum = JitTracer(float32[]), decay = JitTracer(float32[])
+
+    @eqx.filter_jit
+    def _n5_stream_core(M, K0, Y0, batches, lr, momentum, decay, *, gated: bool):
+        """The online surprise-gated fast-weight pass (the arm's STATE)."""
+        def surprise(p, ib):
+            return jnp.mean(jnp.sum((_mlp(p, K0[ib]) - Y0[ib]) ** 2, -1))
+    
+        S = jax.tree_util.tree_map(jnp.zeros_like, M)
+    
+        def body(carry, ib):
+            M, S, lbar = carry
+            ll, g = jax.value_and_grad(surprise)(M, ib)
+            th = lr * jax.nn.sigmoid(ll - lbar) if gated else lr
+            S = jax.tree_util.tree_map(lambda s, gg: momentum * s - th * gg, S, g)
+            M = jax.tree_util.tree_map(lambda mm, s: (1.0 - decay) * mm + s, M, S)
+            return (M, S, 0.9 * lbar + 0.1 * ll), ll
+    
+>       (M, _, _), ls = jax.lax.scan(body, (M, S, jnp.asarray(1.0, jnp.float32)), batches)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: scan body function carry input and carry output must have equal types, but they differ:
+E       
+E       The input carry component carry[2] has type float32[] but the corresponding output carry component has type float64[], so the dtypes do not match.
+E       
+E       Revise the function so that all output types match the corresponding input types.
+E       --------------------
+E       For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+
+chlu/core/null_arms.py:760: TypeError
+=============================== warnings summary ===============================
+tests/test_cl_entry.py: 5 warnings
+tests/test_phi_encoders.py: 10 warnings
+tests/test_phi_read_in.py: 1 warning
+tests/test_phi_stream.py: 1 warning
+  /Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+  Possibly assigning a JAX-transformed callable as an attribute on
+  equinox._jit._JitWrapper. This will not have any of its parameters updated.
+  
+  For example, the following code is buggy:
+  ```python
+  class MyModule(eqx.Module):
+      vmap_linear: Callable
+  
+      def __init__(self, ...):
+          self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+  
+      def __call__(self, ...):
+          ... = self.vmap_linear(...)
+  ```
+  This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+  the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+  
+  You can most easily fix this either by applying the wrapper at `__call__` time:
+  ```python
+  class MyModule(eqx.Module):
+      linear: Callable
+  
+      def __init__(self, ...):
+          self.linear = eqx.nn.Linear(...)
+  
+      def __call__(self, ...):
+          ... = jax.vmap(self.linear)(...)
+  ```
+  or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+  ```python
+  class MyModule(eqx.Module):
+      vmap_linear: Callable
+  
+      def __init__(self, ...):
+          self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+  
+      def __call__(self, ...):
+          ... = self.vmap_linear(...)
+  ```
+  
+    jit_wrapper = _JitWrapper(
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+tests/test_eval_metrics.py::test_fast_mode_is_subset_of_full
+tests/test_eval_metrics.py::test_point_metrics_keys_and_no_point_adjust
+  /Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/sklearn/metrics/_classification.py:1833: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 due to no predicted samples. Use `zero_division` parameter to control this behavior.
+    _warn_prf(average, modifier, f"{metric.capitalize()} is", result.shape[0])
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-null-arms/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:126: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-null-arms/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:145: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-null-arms/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:178: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-null-arms/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:214: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-null-arms/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:245: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-null-arms/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:307: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_eval_metrics.py::test_vendored_matches_upstream_tsb_ad_reference
+  /Users/user/Desktop/CHLU-null-arms/chlu/eval/_tsb_vendor/affiliation/_integral_interval.py:423: DeprecationWarning: invalid escape sequence '\i'
+    """
+
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+tests/test_v1_hopfield_gate.py::test_experiment_quick_runs_and_reports_metrics
+  /Users/user/Desktop/CHLU-null-arms/chlu/experiments/exp_v1_hopfield_gate.py:232: RuntimeWarning: Mean of empty slice
+    "within_model_auroc": float(np.nanmean(per_ep)) if per_ep else float("nan"),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_null_arms.py::test_n5_declares_init_as_parameters_and_deviation_as_state
+1 failed, 1253 passed, 31 warnings in 1464.94s (0:24:24)

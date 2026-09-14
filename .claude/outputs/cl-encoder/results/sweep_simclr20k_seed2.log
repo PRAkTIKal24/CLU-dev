@@ -1,0 +1,53 @@
+fit pool = 4971 images
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+fit simclr in 3792s: {'arm': 'simclr', 'k': 32, 'h_dim': 512, 'objective': 'simclr', 'steps': 20000, 'loss_first': 5.504335403442383, 'loss_final': 3.974313259124756, 'n_fit': 4971, 'frozen': True}
+keep        pca d=128  l2=0 ring=0.3368 full=0.4760
+keep        pca d=128  l2=1 ring=0.3368 full=0.4660
+keep        pca d=256  l2=0 ring=0.3444 full=0.4812
+keep        pca d=256  l2=1 ring=0.3348 full=0.4696
+ gap        pca d=128  l2=0 ring=0.3020 full=0.4472
+ gap        pca d=128  l2=1 ring=0.3016 full=0.4352
+budget=400    ring=0.3872
+budget=1000   ring=0.4184
+BEST: {"spatial": "keep", "head": "pca", "phi_dim": 256, "l2": false, "acc_ring": 0.3444, "acc_full_stream": 0.48119999999999996}

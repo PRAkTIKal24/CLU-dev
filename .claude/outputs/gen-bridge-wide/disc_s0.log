@@ -1,0 +1,63 @@
+[20:12:01]   split shapes3d/recomb2element_wide: n_total=480000 n_train=479064 n_test=936 (hold-out assertion over 479064 train rows, 13 cells)
+[20:12:03] seed 0: enc e159c6b5257ed125 dec cedb6933c9c1da1f probe fcdd49a02c265383 cache full n=480000 — verified
+[20:12:03]   R3.3 per cell: 13 cells, 936 excluded, 0 leaked
+[20:12:03]   streaming 6066 real images (one pass) …
+[20:12:21]   streamed in 18s
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[20:12:25]   montero contrast=0.050 shape=1 n={'pos': 72, 'neg': 141, 'seen_pos': 141}  BALACC held=1.0000 seen=0.9752 ratio=1.0255  AUROC=1.0000  (detection TPR=1.0000)  real=1.0000 probe_on_real=1.0000
+[20:12:30]   wide-000 contrast=0.050 shape=0 n={'pos': 72, 'neg': 141, 'seen_pos': 141}  BALACC held=0.9514 seen=0.9043 ratio=1.0521  AUROC=1.0000  (detection TPR=0.9028)  real=1.0000 probe_on_real=1.0000
+[20:12:34]   wide-001 contrast=0.100 shape=1 n={'pos': 72, 'neg': 215, 'seen_pos': 215}  BALACC held=0.9581 seen=0.9465 ratio=1.0123  AUROC=0.9868  (detection TPR=1.0000)  real=1.0000 probe_on_real=1.0000
+[20:12:39]   wide-002 contrast=0.200 shape=2 n={'pos': 72, 'neg': 214, 'seen_pos': 214}  BALACC held=1.0000 seen=1.0000 ratio=1.0000  AUROC=1.0000  (detection TPR=1.0000)  real=1.0000 probe_on_real=1.0000
+[20:12:44]   wide-003 contrast=0.300 shape=3 n={'pos': 72, 'neg': 214, 'seen_pos': 214}  BALACC held=1.0000 seen=1.0000 ratio=1.0000  AUROC=1.0000  (detection TPR=1.0000)  real=1.0000 probe_on_real=1.0000
+[20:12:48]   wide-004 contrast=0.400 shape=0 n={'pos': 72, 'neg': 214, 'seen_pos': 214}  BALACC held=0.9813 seen=0.9720 ratio=1.0096  AUROC=1.0000  (detection TPR=1.0000)  real=1.0000 probe_on_real=1.0000
+[20:12:53]   wide-005 contrast=0.450 shape=1 n={'pos': 72, 'neg': 215, 'seen_pos': 215}  BALACC held=0.9444 seen=1.0000 ratio=0.9444  AUROC=1.0000  (detection TPR=0.8889)  real=1.0000 probe_on_real=1.0000
+[20:12:57]   wide-006 contrast=0.050 shape=2 n={'pos': 72, 'neg': 179, 'seen_pos': 179}  BALACC held=1.0000 seen=1.0000 ratio=1.0000  AUROC=1.0000  (detection TPR=1.0000)  real=1.0000 probe_on_real=1.0000
+[20:13:01]   wide-007 contrast=0.100 shape=3 n={'pos': 72, 'neg': 179, 'seen_pos': 179}  BALACC held=1.0000 seen=0.9972 ratio=1.0028  AUROC=1.0000  (detection TPR=1.0000)  real=1.0000 probe_on_real=1.0000
+[20:13:06]   wide-008 contrast=0.200 shape=0 n={'pos': 72, 'neg': 211, 'seen_pos': 211}  BALACC held=1.0000 seen=0.9645 ratio=1.0369  AUROC=1.0000  (detection TPR=1.0000)  real=1.0000 probe_on_real=1.0000
+[20:13:11]   wide-009 contrast=0.300 shape=1 n={'pos': 72, 'neg': 216, 'seen_pos': 216}  BALACC held=1.0000 seen=1.0000 ratio=1.0000  AUROC=1.0000  (detection TPR=1.0000)  real=1.0000 probe_on_real=1.0000
+[20:13:15]   wide-010 contrast=0.400 shape=2 n={'pos': 72, 'neg': 215, 'seen_pos': 215}  BALACC held=1.0000 seen=1.0000 ratio=1.0000  AUROC=1.0000  (detection TPR=1.0000)  real=1.0000 probe_on_real=1.0000
+[20:13:20]   wide-011 contrast=0.450 shape=3 n={'pos': 72, 'neg': 211, 'seen_pos': 211}  BALACC held=1.0000 seen=1.0000 ratio=1.0000  AUROC=1.0000  (detection TPR=1.0000)  real=1.0000 probe_on_real=1.0000
+[20:13:28]   4-way shape on pooled pos: balacc=0.9850 acc=0.9840 n=936
+[20:13:45]   4-way shape on pooled seen_pos: balacc=0.9755 acc=0.9770 n=2565
+[20:13:45] ⭐ seed 0: pooled balacc held=0.9873 seen=0.9815 ratio=1.0059 -> PASS  AUROC=0.9990

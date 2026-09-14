@@ -1,0 +1,59 @@
+fit pool = 6000 images
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+fit simclr in 1640s: {'arm': 'simclr', 'k': 32, 'h_dim': 512, 'objective': 'simclr', 'steps': 8000, 'loss_first': 5.48225736618042, 'loss_final': 4.134244918823242, 'n_fit': 6000, 'frozen': True}
+keep        pca d=32   l2=0 ring=0.3356 full=0.4348
+keep        pca d=32   l2=1 ring=0.3420 full=0.4320
+keep        pca d=64   l2=0 ring=0.3428 full=0.4544
+keep        pca d=64   l2=1 ring=0.3456 full=0.4512
+keep        pca d=128  l2=0 ring=0.3428 full=0.4624
+keep        pca d=128  l2=1 ring=0.3500 full=0.4596
+keep        pca d=256  l2=0 ring=0.3456 full=0.4708
+keep        pca d=256  l2=1 ring=0.3544 full=0.4640
+ gap        pca d=32   l2=0 ring=0.3304 full=0.4152
+ gap        pca d=32   l2=1 ring=0.3332 full=0.4264
+ gap        pca d=64   l2=0 ring=0.3280 full=0.4276
+ gap        pca d=64   l2=1 ring=0.3360 full=0.4260
+ gap        pca d=128  l2=0 ring=0.3260 full=0.4312
+ gap        pca d=128  l2=1 ring=0.3344 full=0.4276
+BEST: {"spatial": "keep", "head": "pca", "phi_dim": 256, "l2": true, "acc_ring": 0.35439999999999994, "acc_full_stream": 0.46399999999999997}

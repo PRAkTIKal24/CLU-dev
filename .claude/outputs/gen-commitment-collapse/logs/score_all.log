@@ -1,0 +1,64 @@
+[gen-commit] dataset=shapes3d pretext=recon stage=score seeds=[0, 1, 2] -> /Users/user/Desktop/CHLU/.claude/outputs/gen-commitment-collapse/runs/shapes3d_recon
+[     0.7s]   commit cache HIT commit_cache_s0.npz (⭐ no feature gather, no grouping re-derive)
+[     0.7s]   ⭐ store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_0/store_s0.pkl (hash 3e3424a1ea40017e…, K=5, M=64, 30 bits/read)
+[     0.7s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (hash + recipe asserted)
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[    17.7s]   [argmax|tau=1|margin=0|k=1] B distinct=9/72 (MS 35/198) · in-corner shape balacc=0.6610 (AUROC 0.7512) · A aggregate=0.6133 · width=30.0 bits ⇒ FAIL
+[    29.6s]   [sample|tau=2|margin=0|k=1] B distinct=72/72 (MS 197/198) · in-corner shape balacc=0.6092 (AUROC 0.6634) · A aggregate=0.4430 · width=30.0 bits ⇒ FAIL
+[    41.9s]   [margin|tau=2|margin=0.25|k=1] B distinct=23/72 (MS 41/198) · in-corner shape balacc=0.5644 (AUROC 0.6237) · A aggregate=0.3942 · width=30.1 bits ⛔ EXCEEDS 30 ⇒ FAIL
+[    53.8s]   [topk|tau=1|margin=0|k=8] B distinct=72/72 (MS 189/198) · in-corner shape balacc=0.7172 (AUROC 0.8045) · A aggregate=0.6455 · width=160.2 bits ⛔ EXCEEDS 30 ⇒ FAIL
+[     0.4s]   commit cache HIT commit_cache_s1.npz (⭐ no feature gather, no grouping re-derive)
+[     0.4s]   ⭐ store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_1/store_s1.pkl (hash 76827ad534ee7e6a…, K=5, M=64, 30 bits/read)
+[     0.8s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (hash + recipe asserted)
+[    14.4s]   [argmax|tau=1|margin=0|k=1] B distinct=8/72 (MS 24/199) · in-corner shape balacc=0.6809 (AUROC 0.7453) · A aggregate=0.6117 · width=30.0 bits ⇒ FAIL
+[    25.1s]   [sample|tau=2|margin=0|k=1] B distinct=71/72 (MS 198/199) · in-corner shape balacc=0.6075 (AUROC 0.6398) · A aggregate=0.4277 · width=30.0 bits ⇒ FAIL
+[    36.1s]   [margin|tau=2|margin=0.25|k=1] B distinct=19/72 (MS 42/199) · in-corner shape balacc=0.5478 (AUROC 0.6272) · A aggregate=0.3675 · width=30.1 bits ⛔ EXCEEDS 30 ⇒ FAIL
+[    46.7s]   [topk|tau=1|margin=0|k=8] B distinct=69/72 (MS 195/199) · in-corner shape balacc=0.7864 (AUROC 0.7899) · A aggregate=0.6663 · width=160.2 bits ⛔ EXCEEDS 30 ⇒ FAIL
+[     0.3s]   commit cache HIT commit_cache_s2.npz (⭐ no feature gather, no grouping re-derive)
+[     0.3s]   ⭐ store loaded from /Users/user/Desktop/CHLU/.claude/outputs/gen-read-compose/runs/shapes3d_recon/seed_2/store_s2.pkl (hash 8449e6057dacafb8…, K=5, M=64, 30 bits/read)
+[     0.3s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=2d7eea75add77044… (hash + recipe asserted)
+[    13.6s]   [argmax|tau=1|margin=0|k=1] B distinct=10/72 (MS 24/199) · in-corner shape balacc=0.6858 (AUROC 0.7321) · A aggregate=0.6273 · width=30.0 bits ⇒ FAIL
+[    23.8s]   [sample|tau=2|margin=0|k=1] B distinct=72/72 (MS 199/199) · in-corner shape balacc=0.6789 (AUROC 0.7420) · A aggregate=0.4398 · width=30.0 bits ⇒ FAIL
+[    34.5s]   [margin|tau=2|margin=0.25|k=1] B distinct=11/72 (MS 20/199) · in-corner shape balacc=0.6495 (AUROC 0.7240) · A aggregate=0.3587 · width=30.1 bits ⛔ EXCEEDS 30 ⇒ FAIL
+[    44.7s]   [topk|tau=1|margin=0|k=8] B distinct=70/72 (MS 196/199) · in-corner shape balacc=0.7188 (AUROC 0.7784) · A aggregate=0.6689 · width=160.2 bits ⛔ EXCEEDS 30 ⇒ FAIL

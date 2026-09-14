@@ -1,0 +1,56 @@
+[17:39:16] seed 1: encoder fc05e2c5f39694b2 probe fb16109ded84c908 cache used n=9288 sha 484b446c4dbb9fc4 — FROZEN, verified
+[17:39:16]   R3.3 no-leak: 8192 rows checked, 72/72 excluded, 0 leaked
+[17:39:17]   recipe v1: {'name': 'v1_capacity_schedule', 'channels': [256, 128, 64], 'groups': 8, 'blocks_per_stage': 2, 'steps': 1800, 'batch': 128, 'lr': 0.001, 'loss': 'mse', 'edge_weight': 8.0, 'edge_blur': 5, 'grad_weight': 1.0, 'lr_schedule': 'cosine', 'warmup_frac': 0.05}
+[17:39:36]     step 1/1800  loss=0.15412
+[18:21:11]     step 360/1800  loss=0.00360
+[18:36:55]     step 720/1800  loss=0.00193
+[18:49:31]     step 1080/1800  loss=0.00132
+[19:02:08]     step 1440/1800  loss=0.00111
+[19:14:45]     step 1800/1800  loss=0.00108
+[19:14:46]   fitted v1 in 5728s: 001011bc603a7cb9 (1516227 params) loss 0.15412 -> 0.00108
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[19:14:56]     A_random: n=1024 agg=0.9871 shape=0.9639 scale=0.9609 mse=0.00117 real=1.0000
+[19:14:58]     B: n=72 agg=0.9861 shape=0.9583 scale=0.9583 mse=0.00124 real=1.0000
+[19:15:01]     A_matched: n=214 agg=0.9836 shape=0.9206 scale=0.9907 mse=0.00150 real=1.0000
+

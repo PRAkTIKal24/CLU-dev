@@ -1,0 +1,34 @@
+# ⭐ THE WINNING DECODER RECIPE — gen-decoder-lift, 2026-09-10
+#
+# Drop this under `gen_bridge:` in projects/<name>/config/config.yaml, or set
+# `config.gen_bridge.dec_recipe = "v1_capacity_schedule"` in code.  It is a
+# RECIPE, not an artifact: refit it from scratch against whatever feature cache
+# a rung hands it (`chlu.core.gen_bridge.train_decoder_from_features`), and
+# score that rung against ITS OWN ceiling.
+#
+# ⛔ Nothing here is a function of the feature width D.  `dec_width_mult` scales
+# the existing channel list; the number of upsampling stages is derived from
+# `feat_shape` at construction; the loss is in pixel space.  The ONE thing that
+# tracks the encoder is `dec_channels[0]`, which the shipped encoder sets to its
+# own output width (128); on a rung with a different C, scale that entry with C
+# and leave `dec_width_mult` alone.
+#
+# Measured (Shapes3D, recon, seeds {0,1,2}, frozen encoder + frozen cache):
+#   shape on B          0.9398 +- 0.0131   (shipped baseline 0.5926 +- 0.0866)
+#   shape ratio vs random-A   0.9656        (floor 0.8)  -> CLEARS
+#   shape ratio vs matched-seen 0.9964      (floor 0.8)  -> CLEARS
+#   decode MSE on A     0.00110            (shipped baseline 0.00300)
+# Cost: 1,516,227 params (6.05x) and ~16x the baseline CPU training time.
+gen_bridge:
+  dec_recipe: v1_capacity_schedule
+  # equivalently, spelled out (these ARE what the recipe sets):
+  dec_channels: [128, 64, 32]   # unchanged; dec_width_mult does the widening
+  dec_width_mult: 2.0           # -> [256, 128, 64]
+  dec_blocks_per_stage: 2       # skip-free; 2 conv+GroupNorm+ReLU per x2 stage
+  dec_groups: 8
+  dec_steps: 1800
+  dec_batch: 128
+  dec_lr: 0.001
+  dec_lr_schedule: cosine
+  dec_warmup_frac: 0.05
+  dec_loss: mse                 # ⛔ NOT object_weighted — that variant LOST (see the report)

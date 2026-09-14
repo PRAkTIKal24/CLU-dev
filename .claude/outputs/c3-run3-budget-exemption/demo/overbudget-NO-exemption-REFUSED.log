@@ -1,0 +1,33 @@
+[rss] run_pilot/enter                    rss    0.31 GB | peak    0.31 GB | children   0.00 GB (n=0) | t 0s
+[rss] phi_gain/enter                     rss    0.35 GB | peak    0.35 GB | children   0.00 GB (n=0) | t 0s
+[rss] phi_gain/exit                      rss    0.46 GB | peak    0.46 GB | children   0.00 GB (n=0) | t 2s
+[rss] phi_gain/released                  rss    0.46 GB | peak    0.46 GB | children   0.00 GB (n=0) | t 2s
+[byte-ledger] budget 2,097,152 B (⚠ INTERIM — set in the rival-ladder prereg) | enforced=True | dtype normalisation: NONE (as deployed)
+   clu_store         2,509,696 B  occupancy 1.19672  within=False  phi=True
+   echo                      0 B  occupancy 0.00000  within=True  phi=True
+   gru_matched           1,208 B  occupancy 0.00058  within=True  phi=True
+   none                      0 B  occupancy 0.00000  within=True  phi=True
+   ttt_matched       2,508,800 B  occupancy 1.19629  within=False  phi=True
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/user/Desktop/CHLU-wt1/chlu/experiments/exp_cluformer_pilot.py", line 1308, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/Users/user/Desktop/CHLU-wt1/chlu/experiments/exp_cluformer_pilot.py", line 1296, in main
+    recs = [run_pilot(a.scale, s, a.stage, a.out, ov, a.d5, a.resume, a.slices,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/user/Desktop/CHLU-wt1/chlu/experiments/exp_cluformer_pilot.py", line 1296, in <listcomp>
+    recs = [run_pilot(a.scale, s, a.stage, a.out, ov, a.d5, a.resume, a.slices,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/user/Desktop/CHLU-wt1/chlu/experiments/exp_cluformer_pilot.py", line 717, in run_pilot
+    rec["byte_ledger"] = build_byte_ledger(
+                         ^^^^^^^^^^^^^^^^^^
+  File "/Users/user/Desktop/CHLU-wt1/chlu/eval/byte_ledger.py", line 718, in build_byte_ledger
+    raise StateByteBudgetError(
+chlu.eval.byte_ledger.StateByteBudgetError: ⛔ matched-state-byte budget violated — the tier-iii control is not byte-honest at this config, so the run stops before it trains:
+    clu_store: 2,509,696 B = 1.20x the 2,097,152 B budget  (total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) = 2 * (1254848 + 0) = 2509696 B; phi_params_bytes = 2 * 52408 = 104816 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).)
+    ttt_matched: 2,508,800 B = 1.20x the 2,097,152 B budget  (total_state_bytes = n_layers * (cell_state_bytes + phi_state_bytes) = 2 * (1254400 + 0) = 2508800 B; phi_params_bytes = 2 * 52408 = 104816 B (SHARED, bit-identical across arms); dtype = float32 (4 B/elt).)
+  Shrink the store (capacity / atoms_per_item / addr_dim+payload_dim / n_layers) until it fits, or set enforce_state_byte_budget=false to record a DECLARED, non-compliant run.
+  ⛔ The ONLY other path is a PRE-REGISTERED CONTINUATION (preregistered_continuation=journal=...,flag=...,prereg=...), and it is not a way round this check: it requires a prior journal on disk that this config is bit-identical to EXCEPT ONE registered flag, verified by the resume fingerprint machinery. If your config differs from that journal in any other way it will be refused again, by name.
+  Budget provenance: RULED Advisor+Head 2026-08-13 as '≈2 MB'; implemented as the 2 MiB ceiling 2,097,152 B on the Hub's recommendation (CLU d=12 1,966,080 B = 0.94x; TTT-Linear 1,597,440 B = 0.76x). ⚠⚠ INTERIM AND BINDS NOTHING YET (Head+Advisor 2026-08-13): the ceiling digit is set in the RIVAL-LADDER PREREG, when the C3 CLU arm's store geometry is frozen — the pilot geometry is NOT presumed to be the C3 geometry. Until that prereg is filed no rival-ladder arm may train. ⛔ NO DTYPE NORMALISATION: NONE. RULED Head+Advisor 2026-08-13: the convention is TOTAL STATE BYTES AS DEPLOYED — an fp32 store pays its real 2x cost against a bf16 rival, and our arms ARE fp32 while the published-rival table is bf16. ⛔ This is NOT a bug: harder-for-us is the defensible direction of a matched-bytes control, so dtype_bytes is a DECLARED field of every row and never a conversion factor. Do not 'fix' this by normalising widths. See chlu/eval/byte_ledger.py INTERIM_MATCHED_STATE_BYTE_BUDGET.

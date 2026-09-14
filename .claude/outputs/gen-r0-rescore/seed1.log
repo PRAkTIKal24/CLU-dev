@@ -1,0 +1,78 @@
+== seed 1 · bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1 · K pinned 5
+  frozen: enc fc05e2c5f39694b2 · dec_old 12981786fb809060 · dec_new 001011bc603a7cb9 · probe fb16109ded84c908
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+  cache scope=used rows=9288 reencode max|d|=0.0
+    extending cache coverage: 32199 row(s) encoded through the frozen encoder
+    extending cache coverage: 196 row(s) encoded through the frozen encoder
+  rows: store=32768 a=1024 b=72 ms=199
+  eval_a: 1/1024 rows inside the Montero colour corner
+  ceiling old 0.936686 (shipped 0.936686) -> new 0.987142
+  ⭐ GATE[baseline_decoder] balacc=0.7144 auroc=0.8735 tpr=0.5694 tnr=0.8593
+  ⭐ GATE[v1_decoder] balacc=0.9365 auroc=0.9939 tpr=0.9583 tnr=0.9146
+  [correlation] labels reproduced exactly; wells [397, 300, 307, 300, 744]
+  [correlation] re-materialising the store (1200 steps) …
+  [correlation] ⭐ BIT-IDENTICAL re-materialisation: rel_mse 0.26975176078844887, read agg 0.5997721354166666
+  [correlation] READ old agg 0.5998 shape 0.5723  ->  new agg 0.6141 shape 0.6025
+  [correlation] corner-store[baseline_decoder] balacc=0.5000 auroc=0.5794
+  [correlation] corner-store[v1_decoder] balacc=0.7001 auroc=0.7549
+    [correlation] well 0: OLD leak agg +0.0320 shape -0.0757  |  NEW leak agg +0.0420 shape -0.1372
+    [correlation] well 1: OLD leak agg -0.0301 shape -0.2036  |  NEW leak agg +0.2531 shape +0.1848
+    [correlation] well 2: OLD leak agg -0.0773 shape -0.2134  |  NEW leak agg -0.0160 shape +0.0646
+    [correlation] well 3: OLD leak agg -198.0000 shape -198.0000  |  NEW leak agg +0.8791 shape +0.4450
+    [correlation] well 4: OLD leak agg +0.3627 shape +1.0000  |  NEW leak agg +0.2741 shape +0.0953
+  [correlation] ⭐ POOLED corrected leakage +0.2211 (old -0.0404); cells in [-0.3656, +1.0000] (old [-198.0000, +1.0000])
+  [random] labels reproduced exactly; wells [397, 300, 307, 300, 744]
+  [random] re-materialising the store (1200 steps) …
+  [random] ⭐ BIT-IDENTICAL re-materialisation: rel_mse 0.41951284319427884, read agg 0.4501953125
+  [random] READ old agg 0.4502 shape 0.3779  ->  new agg 0.4539 shape 0.3877
+  [random] corner-store[baseline_decoder] balacc=0.5000 auroc=0.3740
+  [random] corner-store[v1_decoder] balacc=0.5684 auroc=0.5427
+    [random] well 0: OLD leak agg +0.1701 shape +0.2005  |  NEW leak agg +0.2563 shape -0.0952
+    [random] well 1: OLD leak agg +0.3306 shape +1.0000  |  NEW leak agg +0.7184 shape +0.4523
+    [random] well 2: OLD leak agg +0.3609 shape +1.0000  |  NEW leak agg +0.4410 shape -0.0284
+    [random] well 3: OLD leak agg +0.0841 shape +0.2565  |  NEW leak agg +0.3146 shape -0.3438
+    [random] well 4: OLD leak agg +0.1893 shape +1.0000  |  NEW leak agg +0.2139 shape +0.4215
+  [random] ⭐ POOLED corrected leakage +0.3836 (old +0.2083); cells in [-0.3438, +1.0000] (old [-1.7639, +1.0000])
+== seed 1 done in 5472s -> /Users/user/Desktop/CHLU/.claude/outputs/gen-r0-rescore/rescore_seed_1.json

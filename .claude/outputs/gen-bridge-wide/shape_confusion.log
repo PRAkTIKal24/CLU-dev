@@ -1,0 +1,165 @@
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+montero 0 target 1 hist {1: 72} p(target) 0.9871 p(best wrong) 0.0127
+wide-000 0 target 0 hist {0: 65, 1: 7} p(target) 0.853 p(best wrong) 0.1464
+wide-001 0 target 1 hist {1: 72} p(target) 0.9666 p(best wrong) 0.033
+wide-005 0 target 1 hist {0: 8, 1: 64} p(target) 0.866 p(best wrong) 0.1339
+montero 1 target 1 hist {1: 72} p(target) 0.9967 p(best wrong) 0.0032
+wide-000 1 target 0 hist {0: 32, 1: 40} p(target) 0.4812 p(best wrong) 0.5169
+wide-001 1 target 1 hist {1: 72} p(target) 0.9951 p(best wrong) 0.0046
+wide-005 1 target 1 hist {0: 10, 1: 62} p(target) 0.8263 p(best wrong) 0.1736
+montero 2 target 1 hist {1: 72} p(target) 0.9961 p(best wrong) 0.0038
+wide-000 2 target 0 hist {0: 56, 1: 16} p(target) 0.7567 p(best wrong) 0.242
+wide-001 2 target 1 hist {1: 72} p(target) 0.9735 p(best wrong) 0.0264
+wide-005 2 target 1 hist {1: 72} p(target) 0.9945 p(best wrong) 0.0055
+{
+  "montero": {
+    "seed0": {
+      "target": 1,
+      "pred_hist": {
+        "1": 72
+      },
+      "mean_p_target": 0.9870833787653182,
+      "mean_p_best_wrong": 0.012700233795770701
+    },
+    "seed1": {
+      "target": 1,
+      "pred_hist": {
+        "1": 72
+      },
+      "mean_p_target": 0.996687231792344,
+      "mean_p_best_wrong": 0.0031887926116067116
+    },
+    "seed2": {
+      "target": 1,
+      "pred_hist": {
+        "1": 72
+      },
+      "mean_p_target": 0.9961405562029945,
+      "mean_p_best_wrong": 0.0037736737996030773
+    }
+  },
+  "wide-000": {
+    "seed0": {
+      "target": 0,
+      "pred_hist": {
+        "0": 65,
+        "1": 7
+      },
+      "mean_p_target": 0.8529666357984146,
+      "mean_p_best_wrong": 0.14637151993242822
+    },
+    "seed1": {
+      "target": 0,
+      "pred_hist": {
+        "0": 32,
+        "1": 40
+      },
+      "mean_p_target": 0.4812072343839746,
+      "mean_p_best_wrong": 0.5169273366207361
+    },
+    "seed2": {
+      "target": 0,
+      "pred_hist": {
+        "0": 56,
+        "1": 16
+      },
+      "mean_p_target": 0.7566882493233101,
+      "mean_p_best_wrong": 0.24202793590908792
+    }
+  },
+  "wide-001": {
+    "seed0": {
+      "target": 1,
+      "pred_hist": {
+        "1": 72
+      },
+      "mean_p_target": 0.9665661462479167,
+      "mean_p_best_wrong": 0.03303597408537624
+    },
+    "seed1": {
+      "target": 1,
+      "pred_hist": {
+        "1": 72
+      },
+      "mean_p_target": 0.9951332219772868,
+      "mean_p_best_wrong": 0.00458727028663159
+    },
+    "seed2": {
+      "target": 1,
+      "pred_hist": {
+        "1": 72
+      },
+      "mean_p_target": 0.9734642828504244,
+      "mean_p_best_wrong": 0.02642468977124837
+    }
+  },
+  "wide-005": {
+    "seed0": {
+      "target": 1,
+      "pred_hist": {
+        "0": 8,
+        "1": 64
+      },
+      "mean_p_target": 0.8660068410552211,
+      "mean_p_best_wrong": 0.13392820383675522
+    },
+    "seed1": {
+      "target": 1,
+      "pred_hist": {
+        "0": 10,
+        "1": 62
+      },
+      "mean_p_target": 0.8263267103013479,
+      "mean_p_best_wrong": 0.17359748006694847
+    },
+    "seed2": {
+      "target": 1,
+      "pred_hist": {
+        "1": 72
+      },
+      "mean_p_target": 0.9945273929172092,
+      "mean_p_best_wrong": 0.005469896353525251
+    }
+  }
+}

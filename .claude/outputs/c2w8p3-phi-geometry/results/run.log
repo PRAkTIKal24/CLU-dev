@@ -1,0 +1,59 @@
+[phi-geometry] seed 0: stream 318a2b8590716f68, fit pool 4966
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+  encoder simclr @phi_dim=256 fitted in 2489s
+  encoder randconv @phi_dim=256 fitted in 3s
+  [depth probe] d=8 n_atoms=8192 writes=6 depth_median=0.1479 inert=False [63s]
+  [depth probe] d=12 n_atoms=32768 writes=6 depth_median=0.01859 inert=False [184s]
+  [depth probe] d=16 n_atoms=131072 writes=6 depth_median=5.438e-07 inert=True [441s]
+[phi-geometry] seed 1: stream e7505727a7a2be65, fit pool 4990
+  encoder simclr @phi_dim=256 fitted in 1648s
+  encoder randconv @phi_dim=256 fitted in 1s
+[phi-geometry] seed 2: stream 41945861de7ae566, fit pool 4971
+  encoder simclr @phi_dim=256 fitted in 1316s
+  encoder randconv @phi_dim=256 fitted in 1s
+
+[phi-geometry] GO iff strong φ improves σ_q/spacing (i.e. LOWERS it) over the PCA reference at the same d, beyond noise (mean > 2.0·SE) on >= 3 paired seeds
+  d_favoured=16  geometry_go=True
+  store inert by d: {'8': False, '12': False, '16': True}
+  wrote /Users/user/Desktop/CHLU/.claude/outputs/c2w8p3-phi-geometry/results/PHI-GEOMETRY.json

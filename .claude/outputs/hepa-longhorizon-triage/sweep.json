@@ -1,0 +1,2348 @@
+{
+  "_meta": {
+    "task": "hepa-lh-sweep",
+    "produced_by": "results-analyst (spoke)",
+    "date": "2026-09-07",
+    "chlu_repo_head": "7fcef501fb1aeae33a8d149b046c9b6126dcecd7",
+    "chlu_tracked_files_touched": 0,
+    "hepa_commit": "85f55f39a72a677d74c3371707baea67600020d6",
+    "hepa_licence": "CC BY-NC-SA 4.0 - imported from .claude/hepa-src at run time, never vendored",
+    "protocol_file": "hepa/utils/config.py + REPRODUCIBILITY.md (clone-actual, PREREG section 1)",
+    "deltas_from_clone_actual": [
+      "max_context is swept (PREREG 2.1)",
+      "patch size held at P=16 at every rung, so n_tokens scales with context (PREREG 2.2) -- a longer context therefore ALSO buys more tokens; no rung comparison here is a clean test of history alone.",
+      "3 seeds {42,123,456}, not the clone's 5 (PREREG section 1)."
+    ],
+    "seeds": [
+      42,
+      123,
+      456
+    ],
+    "devices": {
+      "cpu": "torch 2.14.0 CPU on Apple M1 Pro (8 cores). Reference family; reproduces REPRODUCIBILITY.md on FD001 and ETTm1 @512.",
+      "mps": "torch 2.14.0 Apple-GPU backend. ~10-40x faster at the 8192 rung; the ONLY family in which 8192 was reachable in wall-clock. Different float kernels => different numbers; see the measured cpu-vs-mps offset in the report."
+    },
+    "no_gpu_cluster": "CSF3 was NOT reachable from this machine: `ssh csf3` fails DNS resolution (nodename nor servname provided). Every number here is local Apple silicon.",
+    "runner": ".claude/scratch/hepa-lh-sweep/run_hepa.py -- imports hepa.data/hepa.model/hepa.training/hepa.evaluation; no loader, model, training loop or metric reimplemented.",
+    "command_template": "HEPA_DATA_DIR=$PWD/.claude/data/hepa PYTHONPATH=$PWD/.claude/hepa-src .claude/scratch/hepa-lh-tripwire/venv/bin/python .claude/scratch/hepa-lh-sweep/run_hepa.py --dataset <DS> --context <L> --seed <S> --device <cpu|mps> --out-json .claude/scratch/hepa-lh-sweep/runs/<DS>_L<L>_s<S>[_mps].json --preds-npz .claude/outputs/hepa-longhorizon-triage/preds/<DS>_L<L>_s<S>[_mps].npz",
+    "npz_schema": {
+      "p_surface": "(N,K) float16 cast of the float32 CDF. Recomputing h_auroc from the fp16 dump agrees with the recorded float32 value to <=2.0e-4 (measured on FD001 and GECCO).",
+      "y_surface": "(N,K) uint8, from hepa.evaluation.surface.build_label_surface",
+      "t_index": "(N,) int32, within-entity cut index t (the EventDataset start)",
+      "realised_context": "(N,) int32 = min(t_index, rung) -- the ACTUAL history seen, not the rung",
+      "entity_index": "(N,) int32 index into entity_ids",
+      "entity_ids": "object array, ConcatDataset order",
+      "horizons": "(K,) int32",
+      "cumulative_sizes": "ConcatDataset boundaries (shuffle=False)",
+      "meta": "json string: dataset, context, seed, norm_mode, hepa_commit"
+    },
+    "ceilings_max_available_context": {
+      "ETTm1": 8192,
+      "BeijingAQ": 2048,
+      "PSM": 8192,
+      "Weather": 2048
+    },
+    "conventions": [
+      "Degenerate-horizon rule: the SHIPPED CODE's (drop iff n_pos==0 or n_pos==n_total) -- inherited unchanged from hepa.evaluation.metrics.h_auroc, which is imported, not reimplemented.",
+      "Horizon conditioning: HEPA's scalar-concat predictor everywhere (PREREG 2.4).",
+      "Norm policy as shipped: RevIN for all four sweep datasets; 'none' + global z-score for FD001.",
+      "Finetune stopping as shipped: val-loss early stopping everywhere except C-MAPSS (fixed epochs)."
+    ]
+  },
+  "reproduction": {
+    "FD001": {
+      "512": {
+        "n_tokens": 32,
+        "rung": 512,
+        "cpu": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.9199735115566176,
+          "h_auroc_std_pop": 0.004582493408902993,
+          "h_auroc_std_sample": 0.005612385300739701,
+          "h_auroc_spread_max_minus_min": 0.009723303248272641,
+          "realised_context_mean": 178.23491928632114,
+          "frac_windows_at_full_rung": 0.0,
+          "n_test_windows": 2354,
+          "n_train_windows": 1167,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.9167308320600457,
+              "n_tokens": 32,
+              "wall_clock_s": 203.51,
+              "wall_breakdown_s": {
+                "pretrain": 166.62,
+                "finetune": 35.48,
+                "eval": 0.65
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/FD001_L512_s42.npz",
+              "preds_npz_bytes": 359084,
+              "pooled_auroc": 0.9677899131799841,
+              "pooled_auprc": 0.9841979752704861,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 178.23491928632114,
+              "frac_windows_at_full_rung": 0.0,
+              "n_test_windows": 2354,
+              "n_train_windows": 1167,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 29,
+              "device": "cpu",
+              "norm_mode": "none",
+              "early_stop_finetune": false,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/FD001_L512_s42.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.9167355673014886,
+              "n_tokens": 32,
+              "wall_clock_s": 196.3,
+              "wall_breakdown_s": {
+                "pretrain": 157.81,
+                "finetune": 36.95,
+                "eval": 0.76
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/FD001_L512_s123.npz",
+              "preds_npz_bytes": 360531,
+              "pooled_auroc": 0.9652697365990484,
+              "pooled_auprc": 0.9833040861298836,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 178.23491928632114,
+              "frac_windows_at_full_rung": 0.0,
+              "n_test_windows": 2354,
+              "n_train_windows": 1167,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 29,
+              "device": "cpu",
+              "norm_mode": "none",
+              "early_stop_finetune": false,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/FD001_L512_s123.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.9264541353083183,
+              "n_tokens": 32,
+              "wall_clock_s": 188.94,
+              "wall_breakdown_s": {
+                "pretrain": 149.65,
+                "finetune": 37.33,
+                "eval": 0.99
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/FD001_L512_s456.npz",
+              "preds_npz_bytes": 353848,
+              "pooled_auroc": 0.9704566698127117,
+              "pooled_auprc": 0.9855902781778857,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 178.23491928632114,
+              "frac_windows_at_full_rung": 0.0,
+              "n_test_windows": 2354,
+              "n_train_windows": 1167,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 29,
+              "device": "cpu",
+              "norm_mode": "none",
+              "early_stop_finetune": false,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/FD001_L512_s456.json"
+            }
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.9227501368718133,
+          "h_auroc_std_pop": 0.0072422723330766966,
+          "h_auroc_std_sample": 0.008869935897156882,
+          "h_auroc_spread_max_minus_min": 0.016049517098141064,
+          "realised_context_mean": 178.23491928632114,
+          "frac_windows_at_full_rung": 0.0,
+          "n_test_windows": 2354,
+          "n_train_windows": 1167,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.9329565624477841,
+              "n_tokens": 32,
+              "wall_clock_s": 207.02,
+              "wall_breakdown_s": {
+                "pretrain": 174.77,
+                "finetune": 30.26,
+                "eval": 1.21
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/FD001_L512_s42_mps.npz",
+              "preds_npz_bytes": 359281,
+              "pooled_auroc": 0.971122112785578,
+              "pooled_auprc": 0.9860146962898734,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 178.23491928632114,
+              "frac_windows_at_full_rung": 0.0,
+              "n_test_windows": 2354,
+              "n_train_windows": 1167,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 29,
+              "device": "mps",
+              "norm_mode": "none",
+              "early_stop_finetune": false,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/FD001_L512_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.9169070453496431,
+              "n_tokens": 32,
+              "wall_clock_s": 132.67,
+              "wall_breakdown_s": {
+                "pretrain": 116.8,
+                "finetune": 14.56,
+                "eval": 0.59
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/FD001_L512_s123_mps.npz",
+              "preds_npz_bytes": 356857,
+              "pooled_auroc": 0.9681044530725295,
+              "pooled_auprc": 0.9846494196702381,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 178.23491928632114,
+              "frac_windows_at_full_rung": 0.0,
+              "n_test_windows": 2354,
+              "n_train_windows": 1167,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 29,
+              "device": "mps",
+              "norm_mode": "none",
+              "early_stop_finetune": false,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/FD001_L512_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.9183868028180128,
+              "n_tokens": 32,
+              "wall_clock_s": 170.71,
+              "wall_breakdown_s": {
+                "pretrain": 139.88,
+                "finetune": 29.05,
+                "eval": 1.05
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/FD001_L512_s456_mps.npz",
+              "preds_npz_bytes": 348744,
+              "pooled_auroc": 0.9688443455168663,
+              "pooled_auprc": 0.9850495215874138,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 178.23491928632114,
+              "frac_windows_at_full_rung": 0.0,
+              "n_test_windows": 2354,
+              "n_train_windows": 1167,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 29,
+              "device": "mps",
+              "norm_mode": "none",
+              "early_stop_finetune": false,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/FD001_L512_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "_kill_rule_inputs": {
+        "cpu": {
+          "reference_rung": 512,
+          "reference_h_auroc_mean": 0.9199735115566176,
+          "reference_seed_spread_max_minus_min": 0.009723303248272641,
+          "longest_rung_run": 512,
+          "longest_h_auroc_mean": 0.9199735115566176,
+          "gap_longest_minus_512": 0.0,
+          "clause_a_gap_exceeds_seed_spread": false
+        },
+        "mps": {
+          "reference_rung": 512,
+          "reference_h_auroc_mean": 0.9227501368718133,
+          "reference_seed_spread_max_minus_min": 0.016049517098141064,
+          "longest_rung_run": 512,
+          "longest_h_auroc_mean": 0.9227501368718133,
+          "gap_longest_minus_512": 0.0,
+          "clause_a_gap_exceeds_seed_spread": false
+        }
+      },
+      "_ceiling_max_available_context": null
+    },
+    "GECCO": {
+      "512": {
+        "n_tokens": 32,
+        "rung": 512,
+        "cpu": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.8389749580213177,
+          "h_auroc_std_pop": 0.06276419870441914,
+          "h_auroc_std_sample": 0.07687013047023997,
+          "h_auroc_spread_max_minus_min": 0.1531640689004785,
+          "realised_context_mean": 509.8612967624338,
+          "frac_windows_at_full_rung": 0.9888898533113445,
+          "n_test_windows": 34563,
+          "n_train_windows": 17414,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.8466525407983887,
+              "n_tokens": 32,
+              "wall_clock_s": 367.96,
+              "wall_breakdown_s": {
+                "pretrain": 18.53,
+                "finetune": 318.17,
+                "eval": 22.62
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/GECCO_L512_s42.npz",
+              "preds_npz_bytes": 6159640,
+              "pooled_auroc": 0.8261827444243324,
+              "pooled_auprc": 0.03688721107166739,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.8612967624338,
+              "frac_windows_at_full_rung": 0.9888898533113445,
+              "n_test_windows": 34563,
+              "n_train_windows": 17414,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/GECCO_L512_s42.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.7585541321825431,
+              "n_tokens": 32,
+              "wall_clock_s": 366.05,
+              "wall_breakdown_s": {
+                "pretrain": 18.34,
+                "finetune": 316.83,
+                "eval": 21.75
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/GECCO_L512_s123.npz",
+              "preds_npz_bytes": 6707007,
+              "pooled_auroc": 0.7511386945182263,
+              "pooled_auprc": 0.010608118453338096,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.8612967624338,
+              "frac_windows_at_full_rung": 0.9888898533113445,
+              "n_test_windows": 34563,
+              "n_train_windows": 17414,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/GECCO_L512_s123.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.9117182010830216,
+              "n_tokens": 32,
+              "wall_clock_s": 367.01,
+              "wall_breakdown_s": {
+                "pretrain": 18.54,
+                "finetune": 317.64,
+                "eval": 22.11
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/GECCO_L512_s456.npz",
+              "preds_npz_bytes": 6278933,
+              "pooled_auroc": 0.9047715807050737,
+              "pooled_auprc": 0.22441122797511914,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.8612967624338,
+              "frac_windows_at_full_rung": 0.9888898533113445,
+              "n_test_windows": 34563,
+              "n_train_windows": 17414,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/GECCO_L512_s456.json"
+            }
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.8962190681682176,
+          "h_auroc_std_pop": 0.035751698233057155,
+          "h_auroc_std_sample": 0.04378670905447649,
+          "h_auroc_spread_max_minus_min": 0.07942449978700805,
+          "realised_context_mean": 509.8612967624338,
+          "frac_windows_at_full_rung": 0.9888898533113445,
+          "n_test_windows": 34563,
+          "n_train_windows": 17414,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.8458576696668473,
+              "n_tokens": 32,
+              "wall_clock_s": 224.93,
+              "wall_breakdown_s": {
+                "pretrain": 4.5,
+                "finetune": 192.06,
+                "eval": 19.27
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/GECCO_L512_s42_mps.npz",
+              "preds_npz_bytes": 6231861,
+              "pooled_auroc": 0.8450284241431627,
+              "pooled_auprc": 0.21626442190777412,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.8612967624338,
+              "frac_windows_at_full_rung": 0.9888898533113445,
+              "n_test_windows": 34563,
+              "n_train_windows": 17414,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/GECCO_L512_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.9252821694538553,
+              "n_tokens": 32,
+              "wall_clock_s": 252.51,
+              "wall_breakdown_s": {
+                "pretrain": 6.32,
+                "finetune": 213.81,
+                "eval": 21.37
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/GECCO_L512_s123_mps.npz",
+              "preds_npz_bytes": 6207690,
+              "pooled_auroc": 0.9015510791960034,
+              "pooled_auprc": 0.08159496607449146,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.8612967624338,
+              "frac_windows_at_full_rung": 0.9888898533113445,
+              "n_test_windows": 34563,
+              "n_train_windows": 17414,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/GECCO_L512_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.9175173653839502,
+              "n_tokens": 32,
+              "wall_clock_s": 228.02,
+              "wall_breakdown_s": {
+                "pretrain": 7.18,
+                "finetune": 194.89,
+                "eval": 16.27
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/GECCO_L512_s456_mps.npz",
+              "preds_npz_bytes": 5965548,
+              "pooled_auroc": 0.8727557401100611,
+              "pooled_auprc": 0.15706929277807224,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.8612967624338,
+              "frac_windows_at_full_rung": 0.9888898533113445,
+              "n_test_windows": 34563,
+              "n_train_windows": 17414,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/GECCO_L512_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "_kill_rule_inputs": {
+        "cpu": {
+          "reference_rung": 512,
+          "reference_h_auroc_mean": 0.8389749580213177,
+          "reference_seed_spread_max_minus_min": 0.1531640689004785,
+          "longest_rung_run": 512,
+          "longest_h_auroc_mean": 0.8389749580213177,
+          "gap_longest_minus_512": 0.0,
+          "clause_a_gap_exceeds_seed_spread": false
+        },
+        "mps": {
+          "reference_rung": 512,
+          "reference_h_auroc_mean": 0.8962190681682176,
+          "reference_seed_spread_max_minus_min": 0.07942449978700805,
+          "longest_rung_run": 512,
+          "longest_h_auroc_mean": 0.8962190681682176,
+          "gap_longest_minus_512": 0.0,
+          "clause_a_gap_exceeds_seed_spread": false
+        }
+      },
+      "_ceiling_max_available_context": null
+    },
+    "_reference_values": {
+      "FD001 @512": {
+        "REPRODUCIBILITY.md (5 seeds)": "0.918 +/- 0.008",
+        "paper Table 1": "0.81 +/- 0.03"
+      },
+      "GECCO @512": {
+        "REPRODUCIBILITY.md (5 seeds)": "0.888 +/- 0.024"
+      },
+      "ETTm1 @512 (in `sweep`, doubles as a third reproduction cell)": {
+        "REPRODUCIBILITY.md (5 seeds)": "0.809 +/- 0.008"
+      },
+      "wave-1 tripwire, FD001 @512, matched-byte kNN exemplar store": {
+        "h_auroc": 0.9777,
+        "std": 0.0006,
+        "source": ".claude/outputs/hepa-longhorizon-triage/tripwire_smoke.json"
+      },
+      "wave-1 tripwire, GECCO @512": {
+        "kNN chan_stats": 0.6004,
+        "zero-model seasonal table": 0.8181
+      }
+    }
+  },
+  "sweep": {
+    "ETTm1": {
+      "512": {
+        "n_tokens": 32,
+        "rung": 512,
+        "cpu": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.8108775498131316,
+          "h_auroc_std_pop": 0.00710327496107665,
+          "h_auroc_std_sample": 0.008699699578662916,
+          "h_auroc_spread_max_minus_min": 0.015801647219409354,
+          "realised_context_mean": 506.5675020210186,
+          "frac_windows_at_full_rung": 0.9717792312780187,
+          "n_test_windows": 13607,
+          "n_train_windows": 10420,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.8166758543743835,
+              "n_tokens": 32,
+              "wall_clock_s": 353.13,
+              "wall_breakdown_s": {
+                "pretrain": 5.59,
+                "finetune": 333.67,
+                "eval": 10.28
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L512_s42.npz",
+              "preds_npz_bytes": 3225181,
+              "pooled_auroc": 0.827650165233591,
+              "pooled_auprc": 0.6366263629916159,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 506.5675020210186,
+              "frac_windows_at_full_rung": 0.9717792312780187,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 17,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L512_s42.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.8150825879100373,
+              "n_tokens": 32,
+              "wall_clock_s": 315.23,
+              "wall_breakdown_s": {
+                "pretrain": 2.48,
+                "finetune": 298.35,
+                "eval": 10.55
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L512_s123.npz",
+              "preds_npz_bytes": 3223115,
+              "pooled_auroc": 0.8256613068488823,
+              "pooled_auprc": 0.5974917183668506,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 506.5675020210186,
+              "frac_windows_at_full_rung": 0.9717792312780187,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 13,
+              "ft_final_epoch": 15,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L512_s123.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.8008742071549741,
+              "n_tokens": 32,
+              "wall_clock_s": 250.43,
+              "wall_breakdown_s": {
+                "pretrain": 7.4,
+                "finetune": 229.09,
+                "eval": 10.23
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L512_s456.npz",
+              "preds_npz_bytes": 2865581,
+              "pooled_auroc": 0.8152069975818887,
+              "pooled_auprc": 0.6240587466383284,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 506.5675020210186,
+              "frac_windows_at_full_rung": 0.9717792312780187,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 11,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L512_s456.json"
+            }
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.8083638355607435,
+          "h_auroc_std_pop": 0.00511422895627593,
+          "h_auroc_std_sample": 0.006263625685321304,
+          "h_auroc_spread_max_minus_min": 0.01131737558245105,
+          "realised_context_mean": 506.5675020210186,
+          "frac_windows_at_full_rung": 0.9717792312780187,
+          "n_test_windows": 13607,
+          "n_train_windows": 10420,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.8114648588772746,
+              "n_tokens": 32,
+              "wall_clock_s": 140.02,
+              "wall_breakdown_s": {
+                "pretrain": 6.4,
+                "finetune": 123.45,
+                "eval": 6.37
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L512_s42_mps.npz",
+              "preds_npz_bytes": 3036864,
+              "pooled_auroc": 0.8195907677850766,
+              "pooled_auprc": 0.6269929424502869,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 506.5675020210186,
+              "frac_windows_at_full_rung": 0.9717792312780187,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 12,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L512_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.8011546361112525,
+              "n_tokens": 32,
+              "wall_clock_s": 186.76,
+              "wall_breakdown_s": {
+                "pretrain": 6.75,
+                "finetune": 168.3,
+                "eval": 7.73
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L512_s123_mps.npz",
+              "preds_npz_bytes": 3364349,
+              "pooled_auroc": 0.8147575186968911,
+              "pooled_auprc": 0.6004607904406434,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 506.5675020210186,
+              "frac_windows_at_full_rung": 0.9717792312780187,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 13,
+              "ft_final_epoch": 16,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L512_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.8124720116937035,
+              "n_tokens": 32,
+              "wall_clock_s": 207.25,
+              "wall_breakdown_s": {
+                "pretrain": 6.32,
+                "finetune": 191.69,
+                "eval": 5.27
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L512_s456_mps.npz",
+              "preds_npz_bytes": 3274323,
+              "pooled_auroc": 0.8213581138451271,
+              "pooled_auprc": 0.6042930159006807,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 506.5675020210186,
+              "frac_windows_at_full_rung": 0.9717792312780187,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 22,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L512_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "2048": {
+        "n_tokens": 128,
+        "rung": 2048,
+        "cpu": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.7412316789308706,
+          "h_auroc_std_pop": 0.01459224505457032,
+          "h_auroc_std_sample": 0.01787177729267428,
+          "h_auroc_spread_max_minus_min": 0.033365110313545165,
+          "realised_context_mean": 1912.4697582126846,
+          "frac_windows_at_full_rung": 0.8588961563900933,
+          "n_test_windows": 13607,
+          "n_train_windows": 10420,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.7338296272296921,
+              "n_tokens": 128,
+              "wall_clock_s": 612.52,
+              "wall_breakdown_s": {
+                "pretrain": 17.11,
+                "finetune": 566.31,
+                "eval": 25.31
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L2048_s42.npz",
+              "preds_npz_bytes": 2657257,
+              "pooled_auroc": 0.763739830506583,
+              "pooled_auprc": 0.5371053585545915,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1912.4697582126846,
+              "frac_windows_at_full_rung": 0.8588961563900933,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 11,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L2048_s42.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.7616152599382323,
+              "n_tokens": 128,
+              "wall_clock_s": 721.09,
+              "wall_breakdown_s": {
+                "pretrain": 8.57,
+                "finetune": 681.79,
+                "eval": 26.81
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L2048_s123.npz",
+              "preds_npz_bytes": 3068391,
+              "pooled_auroc": 0.7862190783921259,
+              "pooled_auprc": 0.5499146559013111,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1912.4697582126846,
+              "frac_windows_at_full_rung": 0.8588961563900933,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 13,
+              "ft_final_epoch": 13,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L2048_s123.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.7282501496246871,
+              "n_tokens": 128,
+              "wall_clock_s": 681.71,
+              "wall_breakdown_s": {
+                "pretrain": 18.14,
+                "finetune": 640.75,
+                "eval": 19.05
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L2048_s456.npz",
+              "preds_npz_bytes": 2839920,
+              "pooled_auroc": 0.7605529508374907,
+              "pooled_auprc": 0.5357328171951325,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1912.4697582126846,
+              "frac_windows_at_full_rung": 0.8588961563900933,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 12,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L2048_s456.json"
+            }
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.7420352124839839,
+          "h_auroc_std_pop": 0.020512501740009972,
+          "h_auroc_std_sample": 0.02512258130548826,
+          "h_auroc_spread_max_minus_min": 0.04753293706362283,
+          "realised_context_mean": 1912.4697582126846,
+          "frac_windows_at_full_rung": 0.8588961563900933,
+          "n_test_windows": 13607,
+          "n_train_windows": 10420,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.7514372736039218,
+              "n_tokens": 128,
+              "wall_clock_s": 263.99,
+              "wall_breakdown_s": {
+                "pretrain": 9.25,
+                "finetune": 231.79,
+                "eval": 17.53
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L2048_s42_mps.npz",
+              "preds_npz_bytes": 2759613,
+              "pooled_auroc": 0.7778746758075854,
+              "pooled_auprc": 0.5407744048217611,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1912.4697582126846,
+              "frac_windows_at_full_rung": 0.8588961563900933,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 12,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L2048_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.7611006504558263,
+              "n_tokens": 128,
+              "wall_clock_s": 289.55,
+              "wall_breakdown_s": {
+                "pretrain": 6.87,
+                "finetune": 264.14,
+                "eval": 14.81
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L2048_s123_mps.npz",
+              "preds_npz_bytes": 2753503,
+              "pooled_auroc": 0.7831064418576752,
+              "pooled_auprc": 0.5440382016287623,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1912.4697582126846,
+              "frac_windows_at_full_rung": 0.8588961563900933,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 14,
+              "ft_final_epoch": 11,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L2048_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.7135677133922035,
+              "n_tokens": 128,
+              "wall_clock_s": 243.95,
+              "wall_breakdown_s": {
+                "pretrain": 14.8,
+                "finetune": 212.37,
+                "eval": 13.45
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L2048_s456_mps.npz",
+              "preds_npz_bytes": 2519079,
+              "pooled_auroc": 0.7484741127880451,
+              "pooled_auprc": 0.517044815551663,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1912.4697582126846,
+              "frac_windows_at_full_rung": 0.8588961563900933,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L2048_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "8192": {
+        "n_tokens": 512,
+        "rung": 8192,
+        "cpu": {
+          "status": "NOT RUN",
+          "seeds_missing": [
+            42,
+            123,
+            456
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.6367031782149947,
+          "h_auroc_std_pop": 0.016599630518039074,
+          "h_auroc_std_sample": 0.02033031234396366,
+          "h_auroc_spread_max_minus_min": 0.03574659625543519,
+          "realised_context_mean": 5802.194752700816,
+          "frac_windows_at_full_rung": 0.407363856838392,
+          "n_test_windows": 13607,
+          "n_train_windows": 10420,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.6489828247613554,
+              "n_tokens": 512,
+              "wall_clock_s": 475.22,
+              "wall_breakdown_s": {
+                "pretrain": 25.64,
+                "finetune": 406.35,
+                "eval": 37.25
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L8192_s42_mps.npz",
+              "preds_npz_bytes": 2254613,
+              "pooled_auroc": 0.6965177116748044,
+              "pooled_auprc": 0.4344230387481985,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 5802.194752700816,
+              "frac_windows_at_full_rung": 0.407363856838392,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L8192_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.6478904813777083,
+              "n_tokens": 512,
+              "wall_clock_s": 477.78,
+              "wall_breakdown_s": {
+                "pretrain": 35.26,
+                "finetune": 403.64,
+                "eval": 32.48
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L8192_s123_mps.npz",
+              "preds_npz_bytes": 2401013,
+              "pooled_auroc": 0.6921765284432773,
+              "pooled_auprc": 0.4080625279161109,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 5802.194752700816,
+              "frac_windows_at_full_rung": 0.407363856838392,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 12,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L8192_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.6132362285059202,
+              "n_tokens": 512,
+              "wall_clock_s": 538.23,
+              "wall_breakdown_s": {
+                "pretrain": 28.8,
+                "finetune": 469.68,
+                "eval": 35.09
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/ETTm1_L8192_s456_mps.npz",
+              "preds_npz_bytes": 2284346,
+              "pooled_auroc": 0.6835446136250735,
+              "pooled_auprc": 0.4262100786602186,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 5802.194752700816,
+              "frac_windows_at_full_rung": 0.407363856838392,
+              "n_test_windows": 13607,
+              "n_train_windows": 10420,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/ETTm1_L8192_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "_kill_rule_inputs": {
+        "cpu": {
+          "reference_rung": 512,
+          "reference_h_auroc_mean": 0.8108775498131316,
+          "reference_seed_spread_max_minus_min": 0.015801647219409354,
+          "longest_rung_run": 2048,
+          "longest_h_auroc_mean": 0.7412316789308706,
+          "gap_longest_minus_512": -0.06964587088226104,
+          "clause_a_gap_exceeds_seed_spread": false
+        },
+        "mps": {
+          "reference_rung": 512,
+          "reference_h_auroc_mean": 0.8083638355607435,
+          "reference_seed_spread_max_minus_min": 0.01131737558245105,
+          "longest_rung_run": 8192,
+          "longest_h_auroc_mean": 0.6367031782149947,
+          "gap_longest_minus_512": -0.17166065734574887,
+          "clause_a_gap_exceeds_seed_spread": false
+        }
+      },
+      "_ceiling_max_available_context": 8192
+    },
+    "BeijingAQ": {
+      "512": {
+        "n_tokens": 32,
+        "rung": 512,
+        "cpu": {
+          "status": "NOT RUN",
+          "seeds_missing": [
+            42,
+            123,
+            456
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.7578723369550128,
+          "h_auroc_std_pop": 0.0062729684838277715,
+          "h_auroc_std_sample": 0.007682785978969135,
+          "h_auroc_spread_max_minus_min": 0.015292271522492462,
+          "realised_context_mean": 497.52574897199923,
+          "frac_windows_at_full_rung": 0.9248090855688271,
+          "n_test_windows": 61284,
+          "n_train_windows": 73248,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.7506589475857162,
+              "n_tokens": 32,
+              "wall_clock_s": 1060.82,
+              "wall_breakdown_s": {
+                "pretrain": 73.25,
+                "finetune": 936.05,
+                "eval": 35.4
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/BeijingAQ_L512_s42_mps.npz",
+              "preds_npz_bytes": 13639039,
+              "pooled_auroc": 0.7766869063208193,
+              "pooled_auprc": 0.5382876047169806,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 497.52574897199923,
+              "frac_windows_at_full_rung": 0.9248090855688271,
+              "n_test_windows": 61284,
+              "n_train_windows": 73248,
+              "pretrain_epochs_run": 14,
+              "ft_final_epoch": 16,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/BeijingAQ_L512_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.7659512191082086,
+              "n_tokens": 32,
+              "wall_clock_s": 617.31,
+              "wall_breakdown_s": {
+                "pretrain": 20.85,
+                "finetune": 560.73,
+                "eval": 21.07
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/BeijingAQ_L512_s123_mps.npz",
+              "preds_npz_bytes": 13777212,
+              "pooled_auroc": 0.7888281496680969,
+              "pooled_auprc": 0.6151698977180647,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 497.52574897199923,
+              "frac_windows_at_full_rung": 0.9248090855688271,
+              "n_test_windows": 61284,
+              "n_train_windows": 73248,
+              "pretrain_epochs_run": 13,
+              "ft_final_epoch": 11,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/BeijingAQ_L512_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.7570068441711135,
+              "n_tokens": 32,
+              "wall_clock_s": 1130.6,
+              "wall_breakdown_s": {
+                "pretrain": 11.26,
+                "finetune": 1078.82,
+                "eval": 25.84
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/BeijingAQ_L512_s456_mps.npz",
+              "preds_npz_bytes": 13151687,
+              "pooled_auroc": 0.7803563316464762,
+              "pooled_auprc": 0.5525788193652469,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 497.52574897199923,
+              "frac_windows_at_full_rung": 0.9248090855688271,
+              "n_test_windows": 61284,
+              "n_train_windows": 73248,
+              "pretrain_epochs_run": 14,
+              "ft_final_epoch": 17,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/BeijingAQ_L512_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "2048": {
+        "n_tokens": 128,
+        "rung": 2048,
+        "cpu": {
+          "status": "NOT RUN",
+          "seeds_missing": [
+            42,
+            123,
+            456
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.6995380698912929,
+          "h_auroc_std_pop": 0.037952850608411644,
+          "h_auroc_std_sample": 0.04648255913734331,
+          "h_auroc_spread_max_minus_min": 0.09287712768279721,
+          "realised_context_mean": 1686.8956334442921,
+          "frac_windows_at_full_rung": 0.6240454278441355,
+          "n_test_windows": 61284,
+          "n_train_windows": 73248,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.7448092874109052,
+              "n_tokens": 128,
+              "wall_clock_s": 2517.42,
+              "wall_breakdown_s": {
+                "pretrain": 37.36,
+                "finetune": 2414.01,
+                "eval": 50.21
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/BeijingAQ_L2048_s42_mps.npz",
+              "preds_npz_bytes": 14030431,
+              "pooled_auroc": 0.7705412353326279,
+              "pooled_auprc": 0.5327791284168047,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1686.8956334442921,
+              "frac_windows_at_full_rung": 0.6240454278441355,
+              "n_test_windows": 61284,
+              "n_train_windows": 73248,
+              "pretrain_epochs_run": 36,
+              "ft_final_epoch": 25,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/BeijingAQ_L2048_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.7018727625348656,
+              "n_tokens": 128,
+              "wall_clock_s": 2466.26,
+              "wall_breakdown_s": {
+                "pretrain": 46.69,
+                "finetune": 2351.24,
+                "eval": 49.04
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/BeijingAQ_L2048_s123_mps.npz",
+              "preds_npz_bytes": 13899064,
+              "pooled_auroc": 0.735630187111723,
+              "pooled_auprc": 0.4718466253720298,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1686.8956334442921,
+              "frac_windows_at_full_rung": 0.6240454278441355,
+              "n_test_windows": 61284,
+              "n_train_windows": 73248,
+              "pretrain_epochs_run": 41,
+              "ft_final_epoch": 24,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/BeijingAQ_L2048_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.651932159728108,
+              "n_tokens": 128,
+              "wall_clock_s": 1891.89,
+              "wall_breakdown_s": {
+                "pretrain": 29.04,
+                "finetune": 1789.34,
+                "eval": 54.41
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/BeijingAQ_L2048_s456_mps.npz",
+              "preds_npz_bytes": 11761161,
+              "pooled_auroc": 0.6839448909690486,
+              "pooled_auprc": 0.40937555589457847,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1686.8956334442921,
+              "frac_windows_at_full_rung": 0.6240454278441355,
+              "n_test_windows": 61284,
+              "n_train_windows": 73248,
+              "pretrain_epochs_run": 21,
+              "ft_final_epoch": 18,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/BeijingAQ_L2048_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "_kill_rule_inputs": {
+        "mps": {
+          "reference_rung": 512,
+          "reference_h_auroc_mean": 0.7578723369550128,
+          "reference_seed_spread_max_minus_min": 0.015292271522492462,
+          "longest_rung_run": 2048,
+          "longest_h_auroc_mean": 0.6995380698912929,
+          "gap_longest_minus_512": -0.05833426706371991,
+          "clause_a_gap_exceeds_seed_spread": false
+        }
+      },
+      "_ceiling_max_available_context": 2048
+    },
+    "PSM": {
+      "100": {
+        "n_tokens": 7,
+        "rung": 100,
+        "cpu": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.6253003303018234,
+          "h_auroc_std_pop": 0.01641487408371363,
+          "h_auroc_std_sample": 0.020104032848566974,
+          "h_auroc_spread_max_minus_min": 0.036842140825752545,
+          "realised_context_mean": 100.0,
+          "frac_windows_at_full_rung": 1.0,
+          "n_test_windows": 26024,
+          "n_train_windows": 13144,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.6115281415329599,
+              "n_tokens": 7,
+              "wall_clock_s": 487.26,
+              "wall_breakdown_s": {
+                "pretrain": 7.4,
+                "finetune": 446.24,
+                "eval": 22.84
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L100_s42.npz",
+              "preds_npz_bytes": 2045559,
+              "pooled_auroc": 0.612243861800053,
+              "pooled_auprc": 0.48901109672782295,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 100.0,
+              "frac_windows_at_full_rung": 1.0,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 16,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L100_s42.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.6160025670137981,
+              "n_tokens": 7,
+              "wall_clock_s": 465.22,
+              "wall_breakdown_s": {
+                "pretrain": 60.05,
+                "finetune": 367.21,
+                "eval": 21.7
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L100_s123.npz",
+              "preds_npz_bytes": 2182550,
+              "pooled_auroc": 0.6105193098628505,
+              "pooled_auprc": 0.49647255722693207,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 100.0,
+              "frac_windows_at_full_rung": 1.0,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 13,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L100_s123.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.6483702823587124,
+              "n_tokens": 7,
+              "wall_clock_s": 358.43,
+              "wall_breakdown_s": {
+                "pretrain": 23.18,
+                "finetune": 296.91,
+                "eval": 25.0
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L100_s456.npz",
+              "preds_npz_bytes": 2007498,
+              "pooled_auroc": 0.6350212755893263,
+              "pooled_auprc": 0.5169189480073311,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 100.0,
+              "frac_windows_at_full_rung": 1.0,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 11,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L100_s456.json"
+            }
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.6252372550892865,
+          "h_auroc_std_pop": 0.011372082464640712,
+          "h_auroc_std_sample": 0.013927899675610934,
+          "h_auroc_spread_max_minus_min": 0.024136599555376836,
+          "realised_context_mean": 100.0,
+          "frac_windows_at_full_rung": 1.0,
+          "n_test_windows": 26024,
+          "n_train_windows": 13144,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.6332657485012727,
+              "n_tokens": 7,
+              "wall_clock_s": 159.6,
+              "wall_breakdown_s": {
+                "pretrain": 7.17,
+                "finetune": 134.06,
+                "eval": 11.52
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L100_s42_mps.npz",
+              "preds_npz_bytes": 2510984,
+              "pooled_auroc": 0.6169521535495727,
+              "pooled_auprc": 0.4962256047008954,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 100.0,
+              "frac_windows_at_full_rung": 1.0,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L100_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.609154708605605,
+              "n_tokens": 7,
+              "wall_clock_s": 200.01,
+              "wall_breakdown_s": {
+                "pretrain": 5.52,
+                "finetune": 174.99,
+                "eval": 11.9
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L100_s123_mps.npz",
+              "preds_npz_bytes": 2499183,
+              "pooled_auroc": 0.6034452047095157,
+              "pooled_auprc": 0.4948473203055067,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 100.0,
+              "frac_windows_at_full_rung": 1.0,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 12,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L100_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.6332913081609819,
+              "n_tokens": 7,
+              "wall_clock_s": 147.53,
+              "wall_breakdown_s": {
+                "pretrain": 4.11,
+                "finetune": 120.56,
+                "eval": 11.25
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L100_s456_mps.npz",
+              "preds_npz_bytes": 1844048,
+              "pooled_auroc": 0.6323087955163575,
+              "pooled_auprc": 0.5055815586499863,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 100.0,
+              "frac_windows_at_full_rung": 1.0,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 13,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L100_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "512": {
+        "n_tokens": 32,
+        "rung": 512,
+        "cpu": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.5296470493201806,
+          "h_auroc_std_pop": 0.005452204633253802,
+          "h_auroc_std_sample": 0.006677559662355054,
+          "h_auroc_spread_max_minus_min": 0.01312003440969245,
+          "realised_context_mean": 509.159545035352,
+          "frac_windows_at_full_rung": 0.9852443897940363,
+          "n_test_windows": 26024,
+          "n_train_windows": 13144,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.5369272464369083,
+              "n_tokens": 32,
+              "wall_clock_s": 519.73,
+              "wall_breakdown_s": {
+                "pretrain": 43.99,
+                "finetune": 423.62,
+                "eval": 39.46
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L512_s42.npz",
+              "preds_npz_bytes": 2948370,
+              "pooled_auroc": 0.5435282979916546,
+              "pooled_auprc": 0.4382106163568027,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.159545035352,
+              "frac_windows_at_full_rung": 0.9852443897940363,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L512_s42.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.5238072120272158,
+              "n_tokens": 32,
+              "wall_clock_s": 527.43,
+              "wall_breakdown_s": {
+                "pretrain": 38.37,
+                "finetune": 435.66,
+                "eval": 39.39
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L512_s123.npz",
+              "preds_npz_bytes": 3367926,
+              "pooled_auroc": 0.5362748822241932,
+              "pooled_auprc": 0.440504318134854,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.159545035352,
+              "frac_windows_at_full_rung": 0.9852443897940363,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L512_s123.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.5282066894964176,
+              "n_tokens": 32,
+              "wall_clock_s": 534.54,
+              "wall_breakdown_s": {
+                "pretrain": 46.5,
+                "finetune": 443.38,
+                "eval": 33.26
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L512_s456.npz",
+              "preds_npz_bytes": 2978863,
+              "pooled_auroc": 0.5378773269859088,
+              "pooled_auprc": 0.4283792390115362,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.159545035352,
+              "frac_windows_at_full_rung": 0.9852443897940363,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L512_s456.json"
+            }
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.5138974455824091,
+          "h_auroc_std_pop": 0.004079697139356681,
+          "h_auroc_std_sample": 0.0049965881482580314,
+          "h_auroc_spread_max_minus_min": 0.009920198217261866,
+          "realised_context_mean": 509.159545035352,
+          "frac_windows_at_full_rung": 0.9852443897940363,
+          "n_test_windows": 26024,
+          "n_train_windows": 13144,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.5085893474527684,
+              "n_tokens": 32,
+              "wall_clock_s": 192.67,
+              "wall_breakdown_s": {
+                "pretrain": 8.91,
+                "finetune": 161.53,
+                "eval": 15.62
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L512_s42_mps.npz",
+              "preds_npz_bytes": 2826366,
+              "pooled_auroc": 0.5150852429698787,
+              "pooled_auprc": 0.41423433567512846,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.159545035352,
+              "frac_windows_at_full_rung": 0.9852443897940363,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 11,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L512_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.5145934436244286,
+              "n_tokens": 32,
+              "wall_clock_s": 204.14,
+              "wall_breakdown_s": {
+                "pretrain": 6.71,
+                "finetune": 175.42,
+                "eval": 15.24
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L512_s123_mps.npz",
+              "preds_npz_bytes": 2696583,
+              "pooled_auroc": 0.5228003623857053,
+              "pooled_auprc": 0.4338107152135727,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.159545035352,
+              "frac_windows_at_full_rung": 0.9852443897940363,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 12,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L512_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.5185095456700303,
+              "n_tokens": 32,
+              "wall_clock_s": 199.3,
+              "wall_breakdown_s": {
+                "pretrain": 6.65,
+                "finetune": 165.47,
+                "eval": 16.42
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L512_s456_mps.npz",
+              "preds_npz_bytes": 3055994,
+              "pooled_auroc": 0.5322423571130204,
+              "pooled_auprc": 0.429745536325231,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 509.159545035352,
+              "frac_windows_at_full_rung": 0.9852443897940363,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 11,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L512_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "2048": {
+        "n_tokens": 128,
+        "rung": 2048,
+        "cpu": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.37231003776835797,
+          "h_auroc_std_pop": 0.024458991349204623,
+          "h_auroc_std_sample": 0.029956024214349605,
+          "h_auroc_spread_max_minus_min": 0.05611971575043784,
+          "realised_context_mean": 1977.1361819858591,
+          "frac_windows_at_full_rung": 0.9262219489701814,
+          "n_test_windows": 26024,
+          "n_train_windows": 13144,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.4064254100107526,
+              "n_tokens": 128,
+              "wall_clock_s": 1148.35,
+              "wall_breakdown_s": {
+                "pretrain": 66.54,
+                "finetune": 994.29,
+                "eval": 76.47
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L2048_s42.npz",
+              "preds_npz_bytes": 3164293,
+              "pooled_auroc": 0.4119696107190107,
+              "pooled_auprc": 0.35002120770614775,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1977.1361819858591,
+              "frac_windows_at_full_rung": 0.9262219489701814,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L2048_s42.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.35030569426031477,
+              "n_tokens": 128,
+              "wall_clock_s": 1079.6,
+              "wall_breakdown_s": {
+                "pretrain": 61.11,
+                "finetune": 946.32,
+                "eval": 61.65
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L2048_s123.npz",
+              "preds_npz_bytes": 3364609,
+              "pooled_auroc": 0.35804747652577423,
+              "pooled_auprc": 0.3165419279200035,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1977.1361819858591,
+              "frac_windows_at_full_rung": 0.9262219489701814,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L2048_s123.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.36019900903400653,
+              "n_tokens": 128,
+              "wall_clock_s": 1044.58,
+              "wall_breakdown_s": {
+                "pretrain": 56.13,
+                "finetune": 921.15,
+                "eval": 57.98
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L2048_s456.npz",
+              "preds_npz_bytes": 2894164,
+              "pooled_auroc": 0.3665275392846585,
+              "pooled_auprc": 0.3320552902228786,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1977.1361819858591,
+              "frac_windows_at_full_rung": 0.9262219489701814,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L2048_s456.json"
+            }
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.3827283080709563,
+          "h_auroc_std_pop": 0.03429242456966026,
+          "h_auroc_std_sample": 0.041999471119274316,
+          "h_auroc_spread_max_minus_min": 0.08396633844296308,
+          "realised_context_mean": 1977.1361819858591,
+          "frac_windows_at_full_rung": 0.9262219489701814,
+          "n_test_windows": 26024,
+          "n_train_windows": 13144,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.42403593395082256,
+              "n_tokens": 128,
+              "wall_clock_s": 310.85,
+              "wall_breakdown_s": {
+                "pretrain": 10.18,
+                "finetune": 263.21,
+                "eval": 30.93
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L2048_s42_mps.npz",
+              "preds_npz_bytes": 2998830,
+              "pooled_auroc": 0.4291776362874039,
+              "pooled_auprc": 0.3570410276407292,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1977.1361819858591,
+              "frac_windows_at_full_rung": 0.9262219489701814,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L2048_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.384079394754187,
+              "n_tokens": 128,
+              "wall_clock_s": 319.71,
+              "wall_breakdown_s": {
+                "pretrain": 12.12,
+                "finetune": 270.51,
+                "eval": 30.54
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L2048_s123_mps.npz",
+              "preds_npz_bytes": 3301854,
+              "pooled_auroc": 0.3914187084853691,
+              "pooled_auprc": 0.3348120342782659,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1977.1361819858591,
+              "frac_windows_at_full_rung": 0.9262219489701814,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L2048_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.3400695955078595,
+              "n_tokens": 128,
+              "wall_clock_s": 308.42,
+              "wall_breakdown_s": {
+                "pretrain": 11.06,
+                "finetune": 261.13,
+                "eval": 29.5
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L2048_s456_mps.npz",
+              "preds_npz_bytes": 3060100,
+              "pooled_auroc": 0.3492264719733869,
+              "pooled_auprc": 0.317664414176994,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1977.1361819858591,
+              "frac_windows_at_full_rung": 0.9262219489701814,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L2048_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "8192": {
+        "n_tokens": 512,
+        "rung": 8192,
+        "cpu": {
+          "status": "NOT RUN",
+          "seeds_missing": [
+            42,
+            123,
+            456
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.4654692617062741,
+          "h_auroc_std_pop": 0.030810448394263428,
+          "h_auroc_std_sample": 0.03773493865614935,
+          "h_auroc_spread_max_minus_min": 0.0749044362766077,
+          "realised_context_mean": 6942.458038733477,
+          "frac_windows_at_full_rung": 0.6901321856747618,
+          "n_test_windows": 26024,
+          "n_train_windows": 13144,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.5055833683912216,
+              "n_tokens": 512,
+              "wall_clock_s": 739.15,
+              "wall_breakdown_s": {
+                "pretrain": 21.52,
+                "finetune": 643.24,
+                "eval": 67.32
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L8192_s42_mps.npz",
+              "preds_npz_bytes": 4474593,
+              "pooled_auroc": 0.5146297480535079,
+              "pooled_auprc": 0.40420875010005286,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 6942.458038733477,
+              "frac_windows_at_full_rung": 0.6901321856747618,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 11,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L8192_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.43067893211461394,
+              "n_tokens": 512,
+              "wall_clock_s": 745.44,
+              "wall_breakdown_s": {
+                "pretrain": 21.07,
+                "finetune": 658.66,
+                "eval": 56.52
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L8192_s123_mps.npz",
+              "preds_npz_bytes": 3396495,
+              "pooled_auroc": 0.4341300537543042,
+              "pooled_auprc": 0.3358149401444389,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 6942.458038733477,
+              "frac_windows_at_full_rung": 0.6901321856747618,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L8192_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.46014548461298665,
+              "n_tokens": 512,
+              "wall_clock_s": 1083.08,
+              "wall_breakdown_s": {
+                "pretrain": 27.79,
+                "finetune": 943.66,
+                "eval": 104.18
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/PSM_L8192_s456_mps.npz",
+              "preds_npz_bytes": 3547666,
+              "pooled_auroc": 0.46566240994328745,
+              "pooled_auprc": 0.3489610423659784,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 6942.458038733477,
+              "frac_windows_at_full_rung": 0.6901321856747618,
+              "n_test_windows": 26024,
+              "n_train_windows": 13144,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 12,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/PSM_L8192_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "_kill_rule_inputs": {
+        "cpu": {
+          "reference_rung": 512,
+          "reference_h_auroc_mean": 0.5296470493201806,
+          "reference_seed_spread_max_minus_min": 0.01312003440969245,
+          "longest_rung_run": 2048,
+          "longest_h_auroc_mean": 0.37231003776835797,
+          "gap_longest_minus_512": -0.15733701155182261,
+          "clause_a_gap_exceeds_seed_spread": false
+        },
+        "mps": {
+          "reference_rung": 512,
+          "reference_h_auroc_mean": 0.5138974455824091,
+          "reference_seed_spread_max_minus_min": 0.009920198217261866,
+          "longest_rung_run": 8192,
+          "longest_h_auroc_mean": 0.4654692617062741,
+          "gap_longest_minus_512": -0.04842818387613501,
+          "clause_a_gap_exceeds_seed_spread": false
+        }
+      },
+      "_ceiling_max_available_context": 8192
+    },
+    "Weather": {
+      "512": {
+        "n_tokens": 32,
+        "rung": 512,
+        "cpu": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.7687021792283882,
+          "h_auroc_std_pop": 0.07292554276909212,
+          "h_auroc_std_sample": 0.08931518449989355,
+          "h_auroc_spread_max_minus_min": 0.17759189112569695,
+          "realised_context_mean": 502.2428722280887,
+          "frac_windows_at_full_rung": 0.9493136219640972,
+          "n_test_windows": 7576,
+          "n_train_windows": 9190,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.8519458809850603,
+              "n_tokens": 32,
+              "wall_clock_s": 277.87,
+              "wall_breakdown_s": {
+                "pretrain": 7.37,
+                "finetune": 259.92,
+                "eval": 7.67
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L512_s42.npz",
+              "preds_npz_bytes": 1799273,
+              "pooled_auroc": 0.8570666277884961,
+              "pooled_auprc": 0.33033934476588805,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 502.2428722280887,
+              "frac_windows_at_full_rung": 0.9493136219640972,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 13,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L512_s42.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.6743539898593633,
+              "n_tokens": 32,
+              "wall_clock_s": 240.73,
+              "wall_breakdown_s": {
+                "pretrain": 12.73,
+                "finetune": 218.53,
+                "eval": 7.03
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L512_s123.npz",
+              "preds_npz_bytes": 1957433,
+              "pooled_auroc": 0.7015316657941579,
+              "pooled_auprc": 0.12897121547785362,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 502.2428722280887,
+              "frac_windows_at_full_rung": 0.9493136219640972,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 11,
+              "ft_final_epoch": 11,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L512_s123.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.7798066668407412,
+              "n_tokens": 32,
+              "wall_clock_s": 327.82,
+              "wall_breakdown_s": {
+                "pretrain": 10.58,
+                "finetune": 310.33,
+                "eval": 4.7
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L512_s456.npz",
+              "preds_npz_bytes": 2059852,
+              "pooled_auroc": 0.8007914959045587,
+              "pooled_auprc": 0.2394354631670564,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 502.2428722280887,
+              "frac_windows_at_full_rung": 0.9493136219640972,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 45,
+              "ft_final_epoch": 16,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L512_s456.json"
+            }
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.8036312497589274,
+          "h_auroc_std_pop": 0.04183726855570652,
+          "h_auroc_std_sample": 0.051239980096634156,
+          "h_auroc_spread_max_minus_min": 0.10110871271967348,
+          "realised_context_mean": 502.2428722280887,
+          "frac_windows_at_full_rung": 0.9493136219640972,
+          "n_test_windows": 7576,
+          "n_train_windows": 9190,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.8493623080304536,
+              "n_tokens": 32,
+              "wall_clock_s": 148.66,
+              "wall_breakdown_s": {
+                "pretrain": 8.05,
+                "finetune": 135.02,
+                "eval": 3.6
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L512_s42_mps.npz",
+              "preds_npz_bytes": 1607741,
+              "pooled_auroc": 0.8498610463537992,
+              "pooled_auprc": 0.2970090894704006,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 502.2428722280887,
+              "frac_windows_at_full_rung": 0.9493136219640972,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 13,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L512_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.8132778459355484,
+              "n_tokens": 32,
+              "wall_clock_s": 128.77,
+              "wall_breakdown_s": {
+                "pretrain": 2.79,
+                "finetune": 120.35,
+                "eval": 3.64
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L512_s123_mps.npz",
+              "preds_npz_bytes": 1679635,
+              "pooled_auroc": 0.8174291749507362,
+              "pooled_auprc": 0.21170241586730199,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 502.2428722280887,
+              "frac_windows_at_full_rung": 0.9493136219640972,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 11,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L512_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.7482535953107802,
+              "n_tokens": 32,
+              "wall_clock_s": 115.32,
+              "wall_breakdown_s": {
+                "pretrain": 4.33,
+                "finetune": 106.09,
+                "eval": 2.97
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L512_s456_mps.npz",
+              "preds_npz_bytes": 1906179,
+              "pooled_auroc": 0.7696729442974306,
+              "pooled_auprc": 0.16971594718647617,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 502.2428722280887,
+              "frac_windows_at_full_rung": 0.9493136219640972,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 46,
+              "ft_final_epoch": 16,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L512_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "2048": {
+        "n_tokens": 128,
+        "rung": 2048,
+        "cpu": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.6493379912741534,
+          "h_auroc_std_pop": 0.051815489423364815,
+          "h_auroc_std_sample": 0.06346075492991118,
+          "h_auroc_spread_max_minus_min": 0.1267191232015834,
+          "realised_context_mean": 1804.5786694825765,
+          "frac_windows_at_full_rung": 0.7465681098204857,
+          "n_test_windows": 7576,
+          "n_train_windows": 9190,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.6534745550703055,
+              "n_tokens": 128,
+              "wall_clock_s": 979.26,
+              "wall_breakdown_s": {
+                "pretrain": 25.2,
+                "finetune": 932.13,
+                "eval": 19.28
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L2048_s42.npz",
+              "preds_npz_bytes": 1696866,
+              "pooled_auroc": 0.6603315183914938,
+              "pooled_auprc": 0.2569306292737359,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1804.5786694825765,
+              "frac_windows_at_full_rung": 0.7465681098204857,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 15,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L2048_s42.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.5839101477752855,
+              "n_tokens": 128,
+              "wall_clock_s": 754.71,
+              "wall_breakdown_s": {
+                "pretrain": 4.1,
+                "finetune": 720.09,
+                "eval": 26.87
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L2048_s123.npz",
+              "preds_npz_bytes": 1608012,
+              "pooled_auroc": 0.6525319043730013,
+              "pooled_auprc": 0.10666006382817037,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1804.5786694825765,
+              "frac_windows_at_full_rung": 0.7465681098204857,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 11,
+              "ft_final_epoch": 11,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L2048_s123.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.7106292709768689,
+              "n_tokens": 128,
+              "wall_clock_s": 1000.88,
+              "wall_breakdown_s": {
+                "pretrain": 11.95,
+                "finetune": 961.72,
+                "eval": 23.19
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L2048_s456.npz",
+              "preds_npz_bytes": 1821746,
+              "pooled_auroc": 0.72278043518786,
+              "pooled_auprc": 0.19490672411604953,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1804.5786694825765,
+              "frac_windows_at_full_rung": 0.7465681098204857,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 33,
+              "ft_final_epoch": 15,
+              "device": "cpu",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L2048_s456.json"
+            }
+          ]
+        },
+        "mps": {
+          "status": "RUN",
+          "n_seeds": 3,
+          "seeds_missing": [],
+          "h_auroc_mean": 0.7130986789092216,
+          "h_auroc_std_pop": 0.08650886237056395,
+          "h_auroc_std_sample": 0.10595128551826902,
+          "h_auroc_spread_max_minus_min": 0.21188767418359733,
+          "realised_context_mean": 1804.5786694825765,
+          "frac_windows_at_full_rung": 0.7465681098204857,
+          "n_test_windows": 7576,
+          "n_train_windows": 9190,
+          "seeds": [
+            {
+              "seed": 42,
+              "h_auroc": 0.7116480306678311,
+              "n_tokens": 128,
+              "wall_clock_s": 254.58,
+              "wall_breakdown_s": {
+                "pretrain": 9.21,
+                "finetune": 233.6,
+                "eval": 8.95
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L2048_s42_mps.npz",
+              "preds_npz_bytes": 1446611,
+              "pooled_auroc": 0.726679257573235,
+              "pooled_auprc": 0.25021251646579445,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1804.5786694825765,
+              "frac_windows_at_full_rung": 0.7465681098204857,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 50,
+              "ft_final_epoch": 13,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L2048_s42_mps.json"
+            },
+            {
+              "seed": 123,
+              "h_auroc": 0.6078801659381181,
+              "n_tokens": 128,
+              "wall_clock_s": 203.23,
+              "wall_breakdown_s": {
+                "pretrain": 3.87,
+                "finetune": 188.11,
+                "eval": 9.12
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L2048_s123_mps.npz",
+              "preds_npz_bytes": 1482103,
+              "pooled_auroc": 0.6515999156383827,
+              "pooled_auprc": 0.09534921297408501,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1804.5786694825765,
+              "frac_windows_at_full_rung": 0.7465681098204857,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 11,
+              "ft_final_epoch": 10,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L2048_s123_mps.json"
+            },
+            {
+              "seed": 456,
+              "h_auroc": 0.8197678401217154,
+              "n_tokens": 128,
+              "wall_clock_s": 253.64,
+              "wall_breakdown_s": {
+                "pretrain": 8.47,
+                "finetune": 237.41,
+                "eval": 5.74
+              },
+              "preds_npz": ".claude/outputs/hepa-longhorizon-triage/preds/Weather_L2048_s456_mps.npz",
+              "preds_npz_bytes": 1694027,
+              "pooled_auroc": 0.8126675341437546,
+              "pooled_auprc": 0.3750799350127457,
+              "monotonicity_violation_rate": 0.0,
+              "realised_context_mean": 1804.5786694825765,
+              "frac_windows_at_full_rung": 0.7465681098204857,
+              "n_test_windows": 7576,
+              "n_train_windows": 9190,
+              "pretrain_epochs_run": 34,
+              "ft_final_epoch": 15,
+              "device": "mps",
+              "norm_mode": "revin",
+              "early_stop_finetune": true,
+              "run_json": ".claude/scratch/hepa-lh-sweep/runs/Weather_L2048_s456_mps.json"
+            }
+          ]
+        }
+      },
+      "_kill_rule_inputs": {
+        "cpu": {
+          "reference_rung": 512,
+          "reference_h_auroc_mean": 0.7687021792283882,
+          "reference_seed_spread_max_minus_min": 0.17759189112569695,
+          "longest_rung_run": 2048,
+          "longest_h_auroc_mean": 0.6493379912741534,
+          "gap_longest_minus_512": -0.11936418795423487,
+          "clause_a_gap_exceeds_seed_spread": false
+        },
+        "mps": {
+          "reference_rung": 512,
+          "reference_h_auroc_mean": 0.8036312497589274,
+          "reference_seed_spread_max_minus_min": 0.10110871271967348,
+          "longest_rung_run": 2048,
+          "longest_h_auroc_mean": 0.7130986789092216,
+          "gap_longest_minus_512": -0.09053257084970578,
+          "clause_a_gap_exceeds_seed_spread": false
+        }
+      },
+      "_ceiling_max_available_context": 2048
+    }
+  },
+  "not_run": {
+    "BeijingAQ @ 8192": "NOT RUN - NOT REACHABLE. ft_val/ft_test segments are 5236 steps (audit max_available_context = 2048). Never a null, never a zero.",
+    "Weather @ 8192": "NOT RUN - NOT REACHABLE. ft_val segment is 7704 steps (audit max_available_context = 2048).",
+    "Weather @ 8192 / BeijingAQ @ 8192 padded variant": "NOT RUN by choice - a rung above the split ceiling measures zero-padding, not history.",
+    "C-MAPSS FD001-FD004 (sweep)": "NOT RUN - DROP_ON_AUDIT (cov_512 = 0.000/0.000/0.010/0.004 vs a 0.10 bar). FD001 @512 appears ONLY in `reproduction` (task section 3) and is not in the triage table.",
+    "MBA": "NOT RUN - ceiling IS 512; no rung above the reference exists.",
+    "BATADAL": "NOT RUN - ceiling 100; 5 events total, 2 in ft_test.",
+    "GECCO (sweep rungs 2048/8192)": "NOT RUN - exactly ONE ft_test event onset; the kill rule is not measurable on it. GECCO @512 appears ONLY in `reproduction`.",
+    "SMAP / TEP / VIX": "NOT RUN - out of scope, PREREG section 6.",
+    "ETTm1 @ 8192 (cpu family)": "NOT RUN on CPU - abandoned for wall-clock after 55 min produced pretrain + 1 finetune epoch (~30 min/epoch, 2 concurrent jobs). Measured on MPS instead (475 s). Reported honestly as a device substitution, not as a null.",
+    "PSM @ 8192 (cpu family)": "NOT RUN on CPU - same reason as ETTm1 @ 8192. Measured on MPS."
+  }
+}

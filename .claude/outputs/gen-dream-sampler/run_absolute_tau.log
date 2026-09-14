@@ -1,0 +1,141 @@
+[gen-dream] dataset=shapes3d pretext=recon condition=recomb2element stage=dream seeds=[0, 1, 2] -> /Users/user/Desktop/CHLU/.claude/outputs/gen-dream-sampler/runs/shapes3d_recon
+[     0.0s] seed 0 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_0
+[     0.0s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=01ef91f75eeaae7b… (asserted)
+[     0.5s]   split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+[     2.6s] cache 480000 rows (scope=full), D=2048, float16
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     4.4s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     4.4s] rows: store_train=32768 eval_a=1024 -> 512 A-split requests (⛔ A only: no B, no C)
+[     6.4s] features gathered: store (32768, 2048) dream (512, 2048)
+[     6.5s] ⭐ store plan loaded VERBATIM: K=5 n_modes=64 well sizes [303, 305, 573, 501, 366]
+[    10.4s] training the modes (1200 steps, store-only objective) …
+[    11.7s]     step 1/1200  loss=47.49073  tau=1.000
+[   161.9s]     step 240/1200  loss=35.83178  tau=0.632
+[   301.3s]     step 480/1200  loss=33.76172  tau=0.399
+[   411.7s]     step 720/1200  loss=32.54734  tau=0.251
+[   576.5s]     step 960/1200  loss=31.38681  tau=0.159
+[   738.1s]     step 1200/1200  loss=31.64705  tau=0.100
+[   738.1s] store: 524288 B, 30 bits/read
+[   741.3s] ⭐ no-bypass: pure codebook gather, 30 bits/read
+[   742.4s] ⭐ coupling fitted from 32768 train codes (+163840 B, EXTRA to store_bytes; channel unchanged at 30 bits)
+[   753.7s] ⭐ ceilings: decoder aggregate=0.9922 shape=0.9785 | STORE aggregate=0.6195 shape=0.5840
+[   758.8s]   ⭐ step size tuned to 1.6 (target accept 0.7, 5 round(s): 0.1->0.94, 0.2->0.92, 0.4->0.92, 0.8->0.86, 1.6->0.64)
+[   758.8s] [full] mean_n_clamped=4.42/5 mean_n_relaxed=0.58 mean_confidence=0.755
+[   786.1s]   full__clu__mala__full: aggregate=0.5648 bal=0.5623 shape=0.5137 | acc_prob=0.592 ΔE=+0.7253 moved=0.05 cfgs=497
+[   791.3s]   full__clu__mala__zero_step: aggregate=0.5654 bal=0.5627 shape=0.5117 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=497
+[   796.4s]   full__clu__mala__prior_mode: aggregate=0.5540 bal=0.5527 shape=0.5273 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=497
+[   810.2s]   full__clu__ula__full: aggregate=0.5599 bal=0.5574 shape=0.5234 | acc_prob=0.800 ΔE=+0.1612 moved=0.31 cfgs=499
+[   835.3s]   full__clu__uld__full: aggregate=0.5667 bal=0.5641 shape=0.5176 | acc_prob=0.539 ΔE=+1.3176 moved=0.21 cfgs=497
+[   851.5s]   full__store_removed__mala__full: aggregate=0.1025 bal=0.1069 shape=0.2305 | acc_prob=0.539 ΔE=-0.0000 moved=0.00 cfgs=1
+[   862.7s]   full__store_removed__mala__zero_step: aggregate=0.1025 bal=0.1069 shape=0.2305 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=1
+[   871.7s]   full__store_removed__mala__prior_mode: aggregate=0.1025 bal=0.1069 shape=0.2305 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=1
+[   897.8s]   full__no_coupling__mala__full: aggregate=0.5651 bal=0.5623 shape=0.5117 | acc_prob=0.606 ΔE=-149011.5244 moved=0.01 cfgs=497
+[   908.1s]   full__no_coupling__mala__zero_step: aggregate=0.5654 bal=0.5627 shape=0.5117 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=497
+[   918.0s]   full__no_coupling__mala__prior_mode: aggregate=0.5540 bal=0.5527 shape=0.5273 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=497
+[   918.0s] [partial] mean_n_clamped=1.46/5 mean_n_relaxed=3.54 mean_confidence=0.388
+[   966.2s]   partial__clu__mala__full: aggregate=0.3315 bal=0.3309 shape=0.3449 | acc_prob=0.052 ΔE=+0.2470 moved=0.05 cfgs=283
+[   977.9s]   partial__clu__mala__zero_step: aggregate=0.3310 bal=0.3301 shape=0.3478 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=282
+[   987.7s]   partial__clu__mala__prior_mode: aggregate=0.3144 bal=0.3176 shape=0.3565 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=277
+[  1016.2s]   partial__clu__ula__full: aggregate=0.3521 bal=0.3531 shape=0.4203 | acc_prob=0.598 ΔE=+0.5926 moved=0.94 cfgs=429
+[  1053.8s]   partial__clu__uld__full: aggregate=0.3443 bal=0.3451 shape=0.3913 | acc_prob=0.002 ΔE=+0.9839 moved=0.94 cfgs=328
+[  1083.8s]   partial__store_removed__mala__full: aggregate=0.1064 bal=0.1069 shape=0.2058 | acc_prob=0.002 ΔE=-0.0000 moved=0.00 cfgs=1
+[  1094.0s]   partial__store_removed__mala__zero_step: aggregate=0.1064 bal=0.1069 shape=0.2058 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=1
+[  1103.5s]   partial__store_removed__mala__prior_mode: aggregate=0.1064 bal=0.1069 shape=0.2058 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=1
+[  1128.4s]   partial__no_coupling__mala__full: aggregate=0.3314 bal=0.3308 shape=0.3507 | acc_prob=0.217 ΔE=+0.7085 moved=0.12 cfgs=297
+[  1138.4s]   partial__no_coupling__mala__zero_step: aggregate=0.3310 bal=0.3301 shape=0.3478 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=282
+[  1150.0s]   partial__no_coupling__mala__prior_mode: aggregate=0.3144 bal=0.3176 shape=0.3565 | acc_prob=nan ΔE=+0.0000 moved=0.00 cfgs=277
+/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py:873: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.tight_layout()
+/Users/user/Desktop/CHLU-gen-dream/chlu/experiments/exp_gen_dream.py:874: UserWarning: Glyph 9940 (\N{NO ENTRY}) missing from font(s) DejaVu Sans.
+  fig.savefig(path, dpi=140)
+[  1152.6s] seed 0 done
+[     0.1s] seed 1 · condition=recomb2element · frozen bridge /Users/user/Desktop/CHLU/.claude/outputs/gen-feature-bridge/runs/shapes3d_recon/seed_1
+[     0.8s]   ⭐ decoder: winner recipe=v1_capacity_schedule hash=001011bc603a7cb9… (asserted)
+[     3.0s]   split shapes3d/recomb2element: n_total=480000 n_train=479928 n_test=72 (hold-out assertion over 479928 train rows)
+[     3.2s] cache 9288 rows (scope=used), D=2048, float16
+/Users/user/Desktop/CHLU/.venv/lib/python3.11/site-packages/equinox/_jit.py:429: UserWarning: 
+Possibly assigning a JAX-transformed callable as an attribute on
+equinox._jit._JitWrapper. This will not have any of its parameters updated.
+
+For example, the following code is buggy:
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = jax.vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+This is because the callable returned from `jax.vmap` is *not* a PyTree. This means that
+the parameters inside the `eqx.nn.Linear` layer will not receive gradient updates.
+
+You can most easily fix this either by applying the wrapper at `__call__` time:
+```python
+class MyModule(eqx.Module):
+    linear: Callable
+
+    def __init__(self, ...):
+        self.linear = eqx.nn.Linear(...)
+
+    def __call__(self, ...):
+        ... = jax.vmap(self.linear)(...)
+```
+or by using `eqx.filter_vmap` instead (which *does* return a PyTree):
+```python
+class MyModule(eqx.Module):
+    vmap_linear: Callable
+
+    def __init__(self, ...):
+        self.vmap_linear = eqx.filter_vmap(eqx.nn.Linear(...))
+
+    def __call__(self, ...):
+        ... = self.vmap_linear(...)
+```
+
+  jit_wrapper = _JitWrapper(
+[     5.6s]   ⭐ cache re-encode check: 64 rows bit-identical through the frozen encoder
+[     5.6s] rows: store_train=32768 eval_a=1024 -> 512 A-split requests (⛔ A only: no B, no C)
+[     7.0s]     extending cache coverage: 32199 row(s) encoded through the frozen encoder

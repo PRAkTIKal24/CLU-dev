@@ -1,0 +1,585 @@
+{
+  "K": 5,
+  "bits_per_read": 30.0,
+  "channel_by_arm": {
+    "deleted_mean": {
+      "arm": "deleted_mean",
+      "design_constant_bits": 30.0,
+      "exceeds_design_constant": false,
+      "informative_bits": 0.0,
+      "note": "\u26d4 R20: K*log2(M) = 30 bits is a DECLARED DESIGN CONSTANT. The linear control's per-point object is a real vector and is reported as such; its PATH information is still 2*K*log2(M)+log2(S+1), because the interpolant is a function of the two endpoint codes and t alone. A deleted store's pointers carry 0 informative bits by construction.",
+      "path_information_bits": 63.16992500144231,
+      "per_point_bits": 30.0,
+      "per_point_symbols": "one of M=64 modes per well, K=5 wells"
+    },
+    "deleted_scramble": {
+      "arm": "deleted_scramble",
+      "design_constant_bits": 30.0,
+      "exceeds_design_constant": false,
+      "informative_bits": 0.0,
+      "note": "\u26d4 R20: K*log2(M) = 30 bits is a DECLARED DESIGN CONSTANT. The linear control's per-point object is a real vector and is reported as such; its PATH information is still 2*K*log2(M)+log2(S+1), because the interpolant is a function of the two endpoint codes and t alone. A deleted store's pointers carry 0 informative bits by construction.",
+      "path_information_bits": 63.16992500144231,
+      "per_point_bits": 30.0,
+      "per_point_symbols": "one of M=64 modes per well, K=5 wells"
+    },
+    "linear": {
+      "arm": "linear",
+      "design_constant_bits": 30.0,
+      "exceeds_design_constant": true,
+      "informative_bits": 65536.0,
+      "note": "\u26d4 R20: K*log2(M) = 30 bits is a DECLARED DESIGN CONSTANT. The linear control's per-point object is a real vector and is reported as such; its PATH information is still 2*K*log2(M)+log2(S+1), because the interpolant is a function of the two endpoint codes and t alone. A deleted store's pointers carry 0 informative bits by construction.",
+      "path_information_bits": 63.16992500144231,
+      "per_point_bits": 65536.0,
+      "per_point_symbols": "real vector (float32), D = 2048"
+    },
+    "store_snap": {
+      "arm": "store_snap",
+      "design_constant_bits": 30.0,
+      "exceeds_design_constant": false,
+      "informative_bits": 30.0,
+      "note": "\u26d4 R20: K*log2(M) = 30 bits is a DECLARED DESIGN CONSTANT. The linear control's per-point object is a real vector and is reported as such; its PATH information is still 2*K*log2(M)+log2(S+1), because the interpolant is a function of the two endpoint codes and t alone. A deleted store's pointers carry 0 informative bits by construction.",
+      "path_information_bits": 63.16992500144231,
+      "per_point_bits": 30.0,
+      "per_point_symbols": "one of M=64 modes per well, K=5 wells"
+    }
+  },
+  "classifier": {
+    "classifier_hash_asserted_against_manifest": true,
+    "classifier_param_hash": "ad16c4e532731958d7f31ec7552da0cacff2702b5a806cfc14af43d19da48d63",
+    "classifier_path": "/Users/user/Desktop/CHLU/.claude/outputs/gen-external-classifier/seed_2/external_classifier.pkl",
+    "gate": "PASS",
+    "gate_path": "/Users/user/Desktop/CHLU/.claude/outputs/gen-external-classifier/classifier_gate.json"
+  },
+  "complete": true,
+  "dataset": "shapes3d",
+  "decoder": {
+    "checked": true,
+    "decoder_param_hash": "2d7eea75add770441fcd0068ffc7a3dcc0b02cd16d6a31b3e095f47b64aa2455",
+    "decoder_path": "/Users/user/Desktop/CHLU/.claude/outputs/gen-decoder-lift/winner/decoder_v1_s2.pkl",
+    "decoder_recipe": "v1_capacity_schedule",
+    "decoder_source": "winner",
+    "expected_recipe": "v1_capacity_schedule",
+    "param_count": 1516233
+  },
+  "dial": "navigation \u2014 does the store's landscape support meaningful movement BETWEEN wells/modes? (R29 pivot item 4)",
+  "laundering_control": "\u2b50 straight-line interpolation between the two endpoint READ vectors, store bypassed at every interior point, on EVERY number; plus the mean-deleted store (the fair deletion) and a scrambled store.",
+  "n_modes": 64,
+  "n_steps": 8,
+  "no_feature_tensor": {
+    "address_codes_not_imported": true,
+    "bits_per_read": 30.0,
+    "endpoints_exact": true,
+    "n_points": 9,
+    "no_feature_argument_on_the_path": true,
+    "note": "\u26d4 No arm takes a feature tensor. Every intermediate point is a deterministic function of (store.modes, code_a, code_b, t); gen_store.soft_read and gen_store.address_codes (both feature-taking) are not imported.",
+    "numeric_regression_guard": {
+      "deleted_mean_bit_identical_under_feature_replacement": true,
+      "deleted_scramble_bit_identical_under_feature_replacement": true,
+      "linear_bit_identical_under_feature_replacement": true,
+      "n_decoy_rows": 4,
+      "store_snap_bit_identical_under_feature_replacement": true
+    },
+    "path_re_derived_from_codes_bit_identical": true,
+    "signature_ok": true,
+    "signatures": {
+      "linear_path_features": [
+        "store",
+        "code_a",
+        "code_b",
+        "n_steps"
+      ],
+      "read_from_codes": [
+        "store",
+        "codes"
+      ],
+      "snap_path_codes": [
+        "store",
+        "code_a",
+        "code_b",
+        "n_steps"
+      ]
+    },
+    "soft_read_not_imported": true
+  },
+  "pools": {
+    "corner_requests": 72,
+    "n_anchors": 512,
+    "n_dropped_in_corner": 0
+  },
+  "pretext": "recon",
+  "request_only_path": {
+    "bits_per_read": 30.0,
+    "n_checked": 72,
+    "no_feature_argument_on_the_path": true,
+    "note": "\u26d4 Neither arm takes a feature tensor. The CLU-wide mixture weights are the softmax of address_requests' per-well log-scores on the REQUEST; gen_store.soft_read (same arithmetic, features as input) is not imported.",
+    "numeric_regression_guard": null,
+    "posterior_re_derived_from_requests_bit_identical": true,
+    "signature_ok": true,
+    "signatures": {
+      "address_requests": [
+        "book",
+        "requests"
+      ],
+      "clu_wide_vector": [
+        "store",
+        "posterior"
+      ],
+      "compose_codes": [
+        "posterior"
+      ],
+      "read_from_codes": [
+        "store",
+        "codes"
+      ]
+    },
+    "soft_read_not_imported": true
+  },
+  "schema": "chlu-gen-navigate/1",
+  "seed": 2,
+  "selection": [
+    {
+      "categorical": false,
+      "factor": 0,
+      "factor_name": "floor_hue",
+      "min_delta_used": 1,
+      "n_candidate_pairs": 36,
+      "n_pairs_drawn": 8,
+      "n_pool_requests": 72,
+      "n_values_realised": 2,
+      "pool": "CORNER",
+      "qualifies_monotone": false
+    },
+    {
+      "categorical": false,
+      "factor": 1,
+      "factor_name": "wall_hue",
+      "min_delta_used": 1,
+      "n_candidate_pairs": 36,
+      "n_pairs_drawn": 8,
+      "n_pool_requests": 72,
+      "n_values_realised": 2,
+      "pool": "CORNER",
+      "qualifies_monotone": false
+    },
+    {
+      "categorical": false,
+      "factor": 2,
+      "factor_name": "object_hue",
+      "min_delta_used": 1,
+      "n_candidate_pairs": 36,
+      "n_pairs_drawn": 8,
+      "n_pool_requests": 72,
+      "n_values_realised": 2,
+      "pool": "CORNER",
+      "qualifies_monotone": false
+    },
+    {
+      "categorical": false,
+      "factor": 3,
+      "factor_name": "scale",
+      "min_delta_used": 2,
+      "n_candidate_pairs": 24,
+      "n_pairs_drawn": 8,
+      "n_pool_requests": 72,
+      "n_values_realised": 3,
+      "pool": "CORNER",
+      "qualifies_monotone": true
+    },
+    {
+      "categorical": true,
+      "factor": 4,
+      "factor_name": "shape",
+      "min_delta_used": 0,
+      "n_candidate_pairs": 0,
+      "n_pairs_drawn": 0,
+      "n_pool_requests": 72,
+      "n_values_realised": 1,
+      "pool": "CORNER",
+      "qualifies_monotone": false
+    },
+    {
+      "categorical": false,
+      "factor": 5,
+      "factor_name": "orientation",
+      "min_delta_used": 2,
+      "n_candidate_pairs": 24,
+      "n_pairs_drawn": 8,
+      "n_pool_requests": 72,
+      "n_values_realised": 3,
+      "pool": "CORNER",
+      "qualifies_monotone": true
+    },
+    {
+      "categorical": false,
+      "factor": 0,
+      "factor_name": "floor_hue",
+      "min_delta_used": 2,
+      "n_candidate_pairs": 18576,
+      "n_pairs_drawn": 8,
+      "n_pool_requests": 5120,
+      "n_values_realised": 10,
+      "pool": "GRID",
+      "qualifies_monotone": true
+    },
+    {
+      "categorical": false,
+      "factor": 1,
+      "factor_name": "wall_hue",
+      "min_delta_used": 2,
+      "n_candidate_pairs": 18720,
+      "n_pairs_drawn": 8,
+      "n_pool_requests": 5120,
+      "n_values_realised": 10,
+      "pool": "GRID",
+      "qualifies_monotone": true
+    },
+    {
+      "categorical": false,
+      "factor": 2,
+      "factor_name": "object_hue",
+      "min_delta_used": 2,
+      "n_candidate_pairs": 19080,
+      "n_pairs_drawn": 8,
+      "n_pool_requests": 5120,
+      "n_values_realised": 10,
+      "pool": "GRID",
+      "qualifies_monotone": true
+    },
+    {
+      "categorical": false,
+      "factor": 3,
+      "factor_name": "scale",
+      "min_delta_used": 2,
+      "n_candidate_pairs": 11004,
+      "n_pairs_drawn": 8,
+      "n_pool_requests": 4096,
+      "n_values_realised": 8,
+      "pool": "GRID",
+      "qualifies_monotone": true
+    },
+    {
+      "categorical": true,
+      "factor": 4,
+      "factor_name": "shape",
+      "min_delta_used": 2,
+      "n_candidate_pairs": 1554,
+      "n_pairs_drawn": 8,
+      "n_pool_requests": 2048,
+      "n_values_realised": 4,
+      "pool": "GRID",
+      "qualifies_monotone": false
+    },
+    {
+      "categorical": false,
+      "factor": 5,
+      "factor_name": "orientation",
+      "min_delta_used": 2,
+      "n_candidate_pairs": 47138,
+      "n_pairs_drawn": 8,
+      "n_pool_requests": 7680,
+      "n_values_realised": 15,
+      "pool": "GRID",
+      "qualifies_monotone": true
+    }
+  ],
+  "store_param_hash": "8449e6057dacafb8023e1b12983c9cdd190f9be3cbc49f7c63c4f25040455275",
+  "summary_by_pool": {
+    "CORNER": {
+      "NAV": 0.0,
+      "both_arms_at_zero": true,
+      "linear_traverses_as_well_or_better": true,
+      "mean_off_target_stability": {
+        "deleted_mean": 0.025,
+        "deleted_scramble": 0.06944444444444445,
+        "linear": 0.6541666666666667,
+        "store_snap": 0.6555555555555556
+      },
+      "n_pairs_total": 40,
+      "n_qualifying_pairs": 16,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": 0.0,
+        "deleted_scramble": 0.0,
+        "linear": 0.0,
+        "store_snap": 0.0
+      },
+      "verdict": "\u26d4 NEITHER ARM TRAVERSES \u2014 no navigable structure found (store 0.000, linear 0.000)"
+    },
+    "GRID": {
+      "NAV": 0.0,
+      "both_arms_at_zero": true,
+      "linear_traverses_as_well_or_better": true,
+      "mean_off_target_stability": {
+        "deleted_mean": 0.1,
+        "deleted_scramble": 0.09277777777777776,
+        "linear": 0.6533333333333333,
+        "store_snap": 0.6477777777777778
+      },
+      "n_pairs_total": 48,
+      "n_qualifying_pairs": 40,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": 0.0,
+        "deleted_scramble": 0.0,
+        "linear": 0.0,
+        "store_snap": 0.0
+      },
+      "verdict": "\u26d4 NEITHER ARM TRAVERSES \u2014 no navigable structure found (store 0.000, linear 0.000)"
+    }
+  },
+  "summary_by_pool_factor": {
+    "CORNER/floor_hue": {
+      "NAV": NaN,
+      "both_arms_at_zero": false,
+      "linear_traverses_as_well_or_better": false,
+      "mean_off_target_stability": {
+        "deleted_mean": NaN,
+        "deleted_scramble": NaN,
+        "linear": NaN,
+        "store_snap": NaN
+      },
+      "n_pairs_total": 8,
+      "n_qualifying_pairs": 0,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": NaN,
+        "deleted_scramble": NaN,
+        "linear": NaN,
+        "store_snap": NaN
+      },
+      "verdict": "NOT RUN \u2014 no qualifying pair"
+    },
+    "CORNER/object_hue": {
+      "NAV": NaN,
+      "both_arms_at_zero": false,
+      "linear_traverses_as_well_or_better": false,
+      "mean_off_target_stability": {
+        "deleted_mean": NaN,
+        "deleted_scramble": NaN,
+        "linear": NaN,
+        "store_snap": NaN
+      },
+      "n_pairs_total": 8,
+      "n_qualifying_pairs": 0,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": NaN,
+        "deleted_scramble": NaN,
+        "linear": NaN,
+        "store_snap": NaN
+      },
+      "verdict": "NOT RUN \u2014 no qualifying pair"
+    },
+    "CORNER/orientation": {
+      "NAV": 0.0,
+      "both_arms_at_zero": true,
+      "linear_traverses_as_well_or_better": true,
+      "mean_off_target_stability": {
+        "deleted_mean": 0.025,
+        "deleted_scramble": 0.05,
+        "linear": 0.6499999999999999,
+        "store_snap": 0.6499999999999999
+      },
+      "n_pairs_total": 8,
+      "n_qualifying_pairs": 8,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": 0.0,
+        "deleted_scramble": 0.0,
+        "linear": 0.0,
+        "store_snap": 0.0
+      },
+      "verdict": "\u26d4 NEITHER ARM TRAVERSES \u2014 no navigable structure found (store 0.000, linear 0.000)"
+    },
+    "CORNER/scale": {
+      "NAV": 0.0,
+      "both_arms_at_zero": true,
+      "linear_traverses_as_well_or_better": true,
+      "mean_off_target_stability": {
+        "deleted_mean": 0.025,
+        "deleted_scramble": 0.08888888888888889,
+        "linear": 0.6583333333333333,
+        "store_snap": 0.6611111111111111
+      },
+      "n_pairs_total": 8,
+      "n_qualifying_pairs": 8,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": 0.0,
+        "deleted_scramble": 0.0,
+        "linear": 0.0,
+        "store_snap": 0.0
+      },
+      "verdict": "\u26d4 NEITHER ARM TRAVERSES \u2014 no navigable structure found (store 0.000, linear 0.000)"
+    },
+    "CORNER/wall_hue": {
+      "NAV": NaN,
+      "both_arms_at_zero": false,
+      "linear_traverses_as_well_or_better": false,
+      "mean_off_target_stability": {
+        "deleted_mean": NaN,
+        "deleted_scramble": NaN,
+        "linear": NaN,
+        "store_snap": NaN
+      },
+      "n_pairs_total": 8,
+      "n_qualifying_pairs": 0,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": NaN,
+        "deleted_scramble": NaN,
+        "linear": NaN,
+        "store_snap": NaN
+      },
+      "verdict": "NOT RUN \u2014 no qualifying pair"
+    },
+    "GRID/floor_hue": {
+      "NAV": 0.0,
+      "both_arms_at_zero": true,
+      "linear_traverses_as_well_or_better": true,
+      "mean_off_target_stability": {
+        "deleted_mean": 0.07500000000000001,
+        "deleted_scramble": 0.09166666666666666,
+        "linear": 0.47500000000000003,
+        "store_snap": 0.4638888888888889
+      },
+      "n_pairs_total": 8,
+      "n_qualifying_pairs": 8,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": 0.0,
+        "deleted_scramble": 0.0,
+        "linear": 0.0,
+        "store_snap": 0.0
+      },
+      "verdict": "\u26d4 NEITHER ARM TRAVERSES \u2014 no navigable structure found (store 0.000, linear 0.000)"
+    },
+    "GRID/object_hue": {
+      "NAV": 0.0,
+      "both_arms_at_zero": true,
+      "linear_traverses_as_well_or_better": true,
+      "mean_off_target_stability": {
+        "deleted_mean": 0.1,
+        "deleted_scramble": 0.033333333333333326,
+        "linear": 0.6944444444444444,
+        "store_snap": 0.6805555555555556
+      },
+      "n_pairs_total": 8,
+      "n_qualifying_pairs": 8,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": 0.0,
+        "deleted_scramble": 0.0,
+        "linear": 0.0,
+        "store_snap": 0.0
+      },
+      "verdict": "\u26d4 NEITHER ARM TRAVERSES \u2014 no navigable structure found (store 0.000, linear 0.000)"
+    },
+    "GRID/orientation": {
+      "NAV": 0.0,
+      "both_arms_at_zero": true,
+      "linear_traverses_as_well_or_better": true,
+      "mean_off_target_stability": {
+        "deleted_mean": 0.07500000000000001,
+        "deleted_scramble": 0.09722222222222221,
+        "linear": 0.6972222222222222,
+        "store_snap": 0.7
+      },
+      "n_pairs_total": 8,
+      "n_qualifying_pairs": 8,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": 0.0,
+        "deleted_scramble": 0.0,
+        "linear": 0.0,
+        "store_snap": 0.0
+      },
+      "verdict": "\u26d4 NEITHER ARM TRAVERSES \u2014 no navigable structure found (store 0.000, linear 0.000)"
+    },
+    "GRID/scale": {
+      "NAV": 0.0,
+      "both_arms_at_zero": true,
+      "linear_traverses_as_well_or_better": true,
+      "mean_off_target_stability": {
+        "deleted_mean": 0.125,
+        "deleted_scramble": 0.1388888888888889,
+        "linear": 0.7222222222222222,
+        "store_snap": 0.7277777777777779
+      },
+      "n_pairs_total": 8,
+      "n_qualifying_pairs": 8,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": 0.0,
+        "deleted_scramble": 0.0,
+        "linear": 0.0,
+        "store_snap": 0.0
+      },
+      "verdict": "\u26d4 NEITHER ARM TRAVERSES \u2014 no navigable structure found (store 0.000, linear 0.000)"
+    },
+    "GRID/shape": {
+      "NAV": NaN,
+      "both_arms_at_zero": false,
+      "linear_traverses_as_well_or_better": false,
+      "mean_off_target_stability": {
+        "deleted_mean": NaN,
+        "deleted_scramble": NaN,
+        "linear": NaN,
+        "store_snap": NaN
+      },
+      "n_pairs_total": 8,
+      "n_qualifying_pairs": 0,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": NaN,
+        "deleted_scramble": NaN,
+        "linear": NaN,
+        "store_snap": NaN
+      },
+      "verdict": "NOT RUN \u2014 no qualifying pair"
+    },
+    "GRID/wall_hue": {
+      "NAV": 0.0,
+      "both_arms_at_zero": true,
+      "linear_traverses_as_well_or_better": true,
+      "mean_off_target_stability": {
+        "deleted_mean": 0.125,
+        "deleted_scramble": 0.10277777777777777,
+        "linear": 0.6777777777777778,
+        "store_snap": 0.6666666666666666
+      },
+      "n_pairs_total": 8,
+      "n_qualifying_pairs": 8,
+      "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+      "traverse_rate": {
+        "deleted_mean": 0.0,
+        "deleted_scramble": 0.0,
+        "linear": 0.0,
+        "store_snap": 0.0
+      },
+      "verdict": "\u26d4 NEITHER ARM TRAVERSES \u2014 no navigable structure found (store 0.000, linear 0.000)"
+    }
+  },
+  "summary_overall": {
+    "NAV": 0.0,
+    "both_arms_at_zero": true,
+    "linear_traverses_as_well_or_better": true,
+    "mean_off_target_stability": {
+      "deleted_mean": 0.07857142857142858,
+      "deleted_scramble": 0.08611111111111112,
+      "linear": 0.6535714285714285,
+      "store_snap": 0.6500000000000001
+    },
+    "n_pairs_total": 88,
+    "n_qualifying_pairs": 56,
+    "note": "NAV = fraction of qualifying pairs where the store arm TRAVERSES and neither the linear control nor the mean-deleted control does (PREREG \u00a74).",
+    "traverse_rate": {
+      "deleted_mean": 0.0,
+      "deleted_scramble": 0.0,
+      "linear": 0.0,
+      "store_snap": 0.0
+    },
+    "verdict": "\u26d4 NEITHER ARM TRAVERSES \u2014 no navigable structure found (store 0.000, linear 0.000)"
+  },
+  "wall_clock_s": 40.01501989364624
+}
