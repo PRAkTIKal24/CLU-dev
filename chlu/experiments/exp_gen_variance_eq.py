@@ -495,7 +495,15 @@ def run_seed(config: CHLUConfig, dataset: str, pretext: str, seed: int,
     # ---- ⛔ LEG 1: TEST THE PREMISE BEFORE ACTING ON IT ---------------------
     ns = int(c.spectrum_rows) or X["store_train"].shape[0]
     ns = min(ns, X["store_train"].shape[0])
-    Xs, Ys = X["store_train"][:ns], Y["store_train"][:ns]
+    # ⛔ A PREFIX of store_train is NOT a subsample: the Shapes3D grid is a
+    # lexicographic bijection and the rows are sorted, so the leading rows restrict
+    # the OUTERMOST factor (measured: floor_hue realised 5 of 10 values). Every
+    # subsample here is a seeded permutation, and n_values_realised is on every row.
+    sel = np.sort(np.random.default_rng(
+        int(seed) * int(c.row_seed_mult) + int(c.row_seed_offset) + 101
+    ).permutation(X["store_train"].shape[0])[:ns])
+    Xs, Ys = X["store_train"][sel], Y["store_train"][sel]
+    spectrum_nvr = n_values_realised(Ys, names, cards)
     spectra = [well_variance_spectrum(Xs, w, Ys, names, cards) for w in wc]
     premise = premise_verdict(
         spectra, names, list(c.premise_probe_factors), list(c.premise_reference_factors),
@@ -513,6 +521,8 @@ def run_seed(config: CHLUConfig, dataset: str, pretext: str, seed: int,
 
     rec = {
         "schema": "chlu-gen-variance-eq/1",
+        "leg1_rows": {"n": int(ns), "n_values_realised": spectrum_nvr,
+                      "note": "⛔ a seeded permutation of store_train, never a prefix"},
         "seed": int(seed),
         "dataset": dataset,
         "pretext": pretext,
@@ -547,9 +557,10 @@ def run_seed(config: CHLUConfig, dataset: str, pretext: str, seed: int,
     if nb > 8:
         tr_pca = WellTransform.fit(X["store_train"], wc, "pca_whiten", float(c.whiten_eps),
                                    scale_match=bool(c.scale_match_to_raw))
-        bd_before = block_diagonality(channel_correlation(X["store_train"][:nb]), labels_vec)
+        Xb = X["store_train"][sel[:nb]]   # ⛔ a subsample, never a prefix (see above)
+        bd_before = block_diagonality(channel_correlation(Xb), labels_vec)
         bd_after = block_diagonality(
-            channel_correlation(tr_pca.forward(X["store_train"][:nb])), labels_vec)
+            channel_correlation(tr_pca.forward(Xb)), labels_vec)
         rec["order_witness"] = {
             "n_rows": int(nb),
             "block_diagonality_unwhitened": bd_before,
