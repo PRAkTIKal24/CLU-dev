@@ -5883,3 +5883,198 @@ def gen_variance_eq_config(
             setattr(cfg, k, v)
     return cfg
 # --- END gen-variance-equalisation ------------------------------------------
+
+# --- BEGIN gen-atom-mean-control (additive; owner: experiment-engineer) ------
+# ⭐ ONE block, APPENDED AT EOF, with **zero** house wiring sites (no ``CHLUConfig``
+# field, no ``load_config`` site, no ``save_config`` site) — reached through
+# :func:`gen_atom_mean_config`, exactly like ``gen_navigate`` / ``gen_variance_eq``.
+# ⛔ On a same-anchor conflict do NOT merge hunk-by-hunk: take the peer's WHOLE file
+# and re-apply this block by its BEGIN/END markers, asserting **0 deletions**.
+@dataclass
+class GenAtomMeanConfig:
+    """⭐ **Atom-mean lookup** — the like-for-like control the dynamical read must beat.
+
+    Backs ``chlu.experiments.exp_gen_atom_mean``.
+
+    **What the arm is.**  ``knn_proto``'s *query* — R8's composed per-factor prototype
+    embedding — **restricted to the stored atoms**: per well, retrieve the ``k``
+    nearest **stored train data points** in that well's channels and average them,
+    concatenate the ``K`` well slices, decode through THE one frozen decoder.
+
+    ⭐ **Why it exists.**  ``gen-dynamical-read``'s whole case is *a better EXPONENT at
+    matched bytes* — interpolation beating piecewise-constant lookup **over the same
+    stored points**.  ⛔ Without this arm a win could be bought by storing **atoms**
+    instead of **centres** rather than by settling at all.  This arm stores exactly the
+    same points and **simply does not settle**.
+
+    ⛔ **Matched bytes is the whole point.**  An atom costs ``Σ_k d_k · 4 = D · 4`` B, so
+    ``N`` atoms/well cost ``N · D · 4``:
+
+    ========  ==============  ===============  ==========================================
+    budget    atoms/well N    bytes            equals
+    ========  ==============  ===============  ==========================================
+    **A**     **64**          **524,288**      ⭐ the deployed CLU store *exactly*
+    **B**     **512**         **4,194,304**    8× A (``gen-dynamical-read`` PREREG §3)
+    ========  ==============  ===============  ==========================================
+
+    The realised ledger is **asserted in-run**; the run aborts on any other value.
+
+    ⛔ **Never weaken this rival** (the standing rule, learned the hard way — a spoke
+    that re-fits a rival on its own row budget silently weakened it: at 1,024 fit rows
+    ``knn_proto`` fell 0.8763 → 0.8308).  :attr:`n_fit` / :attr:`n_val` are
+    ``GenBaselinesConfig``'s **32,256 / 512** and ⛔ must not be lowered outside
+    ``--quick``.  The atom selection is **k-medoids** (k-means, then snap each centroid
+    to its nearest actual train row), the strongest honest member of the family; the
+    random subsample is run only as a **declared weaker companion**.
+
+    ⚠ **``GenBridgeConfig.dec_recipe`` still defaults to ``"baseline"``** — the recipe
+    that FAILED the gate.  The winner ``v1_capacity_schedule`` is selected explicitly
+    and its parameter hash is asserted **per arm per seed**.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- ⛔ THE BYTE BUDGETS, declared before the run ------------------------
+    #: ``{"A": 524288, "B": 4194304}`` — both from ``gen-dynamical-read``'s PREREG §3.
+    #: ⛔ A budget that is not an exact multiple of ``D·4`` is refused, ⛔ never floored
+    #: silently: a "matched-bytes" arm that quietly under-spends is not matched.
+    budgets: Dict[str, int] = field(
+        default_factory=lambda: {"A": 524_288, "B": 4_194_304}
+    )
+    #: ⛔ The run aborts unless the realised atom bytes equal the budget exactly.
+    assert_byte_equality: bool = True
+
+    # --- the atom set (⭐ THE SAME points the landscape will use) ------------
+    #: ``"kmedoid"`` (⭐ shipped, strongest) | ``"subsample"`` (declared weaker companion).
+    atom_method: str = "kmedoid"
+    #: Lloyd iterations for the k-medoid seeding pass.
+    atom_kmeans_iters: int = 25
+    #: Distance chunk for the per-well assignment (⚠ 16 GB machine).
+    atom_chunk: int = 4096
+    #: ⭐ Persist the atom set so ``gen-dynamical-read`` loads **these** atoms, verified
+    #: by sha256, rather than re-deriving a set that only looks the same.
+    write_atom_npz: bool = True
+    #: ⭐ Also run the weak companion, so "the control is as strong as it can be" is a
+    #: **measured** statement rather than an assertion.
+    run_subsample_companion: bool = True
+
+    # --- the read + its tuning grid (⛔ selected on VALIDATION only) ---------
+    #: Nearest-atom counts.  ⭐ ``k = 1`` is the pure quantiser; ``k > 1`` is a
+    #: zeroth-order smoother and is in the grid because excluding it would hobble the
+    #: rival the dynamical read has to beat.
+    knn_ks: List[int] = field(default_factory=lambda: [1, 3, 5])
+    #: ``euclidean`` | ``cosine`` (``chlu.eval.rivals.gen_knn.METRICS``).
+    metrics: List[str] = field(default_factory=lambda: ["euclidean", "cosine"])
+    #: ``none`` | ``zscore``, fitted on the FIT rows and applied identically to atoms
+    #: and query (``gen_knn.fit_normaliser``).
+    normalisers: List[str] = field(default_factory=lambda: ["none", "zscore"])
+    #: ⭐ ``per_well`` is the like-for-like structure (the landscape settles per well);
+    #: ``global`` is the whole-D nearest-atom lookup and is the **weaker** member.
+    #: Both are swept and **validation** picks — ⛔ never us.
+    scopes: List[str] = field(default_factory=lambda: ["per_well", "global"])
+    #: ⛔ The selection statistic: validation **aggregate probe accuracy on IMAGES**,
+    #: the same criterion the ``ebm_compose`` arm uses.  ⛔ B never enters selection.
+    tuning_select_on: str = "val_aggregate"
+    #: Validation rows actually rendered during selection (⚠ a full 512-row render per
+    #: trial × 24 trials is the dominant cost).
+    tune_n: int = 256
+    #: Reported beside the realised count, matched to ``GenCellConfig``'s.
+    tuning_trial_budget: int = 36
+
+    # --- rows: ⛔ GenBaselinesConfig's, never a spoke's own ------------------
+    n_fit: int = 32_256
+    n_val: int = 512
+    #: ⭐ The six-factor retention ladder needs a row set where the factors actually
+    #: VARY: on the 72 held-out (B) requests ``shape`` realises **one** value, so its
+    #: row is ``NOT APPLICABLE`` by ``n_values_realised``.  ``A`` supplies the spread.
+    n_eval_a: int = 512
+
+    # --- frozen artefacts (⛔ every one LOADED, none fitted here) ------------
+    claude_root: Optional[str] = None
+    bridge_root: Optional[str] = None
+    decoder_source: str = "winner"
+    winner_root: Optional[str] = None
+    winner_decoder_pattern: str = "decoder_v1_s{seed}.pkl"
+    #: ⛔ Asserted by name AND by hash: a run decoded through ``"baseline"`` is void.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+    classifier_root: Optional[str] = None
+    classifier_checkpoint_pattern: str = "seed_{seed}/external_classifier.pkl"
+    classifier_manifest_pattern: str = "seed_{seed}/classifier_manifest.json"
+    classifier_gate_file: str = "classifier_gate.json"
+    require_classifier_gate: bool = True
+    refusal_scores_file: Optional[str] = "gen-arms-a7-wiring/refusal_scores.json"
+    require_refusal_complete: bool = True
+    store_plan: Optional[str] = None
+    grouping_source: str = "per_seed"
+    verify_cache_checksum: bool = True
+    encode_chunk: int = 2048
+    eval_batch: int = 256
+
+    # --- ⛔ the regression check: full, unrestricted ``knn_proto`` -----------
+    #: ⭐ Transcribed from DISK (``gen-arms-a7-wiring/runs/deployed_524288/seed_*/
+    #: baselines_manifest.json → arms.knn.variants.knn_proto``), ⛔ never from a
+    #: rendered 4-dp table.  Acceptance item 4: reproduced **bit-identically**.
+    knn_proto_probe_reference_per_seed: List[float] = field(
+        default_factory=lambda: [0.8762626262626263, 0.8919597989949748, 0.8969849246231156]
+    )
+    #: ⛔ Bit-identity, not "close": the tolerance is exactly zero and a miss is a
+    #: **hard failure**, because a moved ``knn_proto`` voids the whole comparison.
+    require_knn_proto_bit_identical: bool = True
+
+    # --- read error (the exponent quantity) ---------------------------------
+    #: ⭐ Row sets the relative read error is measured on.  ⛔ The **primary** is
+    #: ``A`` (``eval_a``), which ``select_store_rows`` **excludes** from
+    #: ``store_train`` — so the atoms were never fitted on it, which is what makes it
+    #: comparable with ``gen-variance-equalisation``'s ``SPREAD``, the set the
+    #: **0.2783** centroid anchor came from.  ⚠ ``val`` rows sit INSIDE the atom pool,
+    #: so their number is OPTIMISTIC and is carried as a companion, ⛔ never quoted as
+    #: the headline.
+    read_error_rows: List[str] = field(default_factory=lambda: ["A", "val"])
+    read_error_primary: str = "A"
+    #: ⭐ The centroid quantiser's anchor + implied aggregate ``PR``
+    #: (``gen-dynamical-read`` PREREG §2).  Used only to render the comparison column.
+    centroid_anchor_relative_mse: float = 0.2783
+    centroid_anchor_n: int = 64
+    centroid_implied_pr: float = 6.503
+
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_budgets: Dict[str, int] = field(default_factory=lambda: {"A": 524_288})
+    quick_n_fit: int = 4_096
+    quick_n_val: int = 256
+    quick_n_eval_a: int = 128
+    quick_tune_n: int = 32
+    quick_knn_ks: List[int] = field(default_factory=lambda: [1, 3])
+    quick_metrics: List[str] = field(default_factory=lambda: ["euclidean"])
+    quick_normalisers: List[str] = field(default_factory=lambda: ["none"])
+    quick_scopes: List[str] = field(default_factory=lambda: ["per_well"])
+    quick_atom_kmeans_iters: int = 3
+    quick_verify_cache_checksum: bool = False
+    quick_run_subsample_companion: bool = True
+
+
+def gen_atom_mean_config(
+    config: Optional["CHLUConfig"] = None, **overrides
+) -> GenAtomMeanConfig:
+    """Return (and memoise on ``config``) the atom-mean control block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field, for the same reason
+    :func:`gen_navigate_config` and :func:`gen_variance_eq_config` are not: the merge
+    rule for this file's tail is "take the peer's whole file and re-apply your block by
+    its BEGIN/END markers", which only holds if the block is one contiguous region with
+    **zero** house wiring sites.
+    """
+    cfg = getattr(config, "gen_atom_mean", None) if config is not None else None
+    if cfg is None:
+        cfg = GenAtomMeanConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_atom_mean", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+# --- END gen-atom-mean-control ----------------------------------------------
