@@ -994,3 +994,444 @@ def assert_no_holdout_leak(split: GenSplit, used_rows: np.ndarray) -> dict:
         "n_holdout_total": int(split.test_rows.size),
         "n_holdout_leaked": int(split.test_rows.size - excluded.size),
     }
+
+
+# ---------------------------------------------------------------------------
+# ⭐ BEGIN gen-encoder-unfreeze — THE UNFROZEN PATH (additive; R29 pivot item 3)
+#
+# ⛔ Everything above this marker is the FROZEN path and is untouched: this block
+# adds functions, it rebinds nothing.  Bit-identity of the frozen path before and
+# after this block is not a claim — it is measured, by the pinned fingerprints in
+# ``tests/test_gen_encoder_unfreeze.py`` §1, which were recorded on the unmodified
+# tree at ``main @ 994ca9b`` before the block was written.
+#
+# ⭐ WHAT THIS BLOCK IS FOR.  In every shipped phase-1 artefact the encoder is
+# frozen: the store trains on a cached feature tensor and the decoder is
+# downstream of it (R18).  Unfreezing lets the decoder's loss reach the encoder,
+# and that is **exactly the change that can silently create a bypass** — so the
+# guarantee is re-stated here as an executable check over the *joint* path, not
+# only over ``read_from_codes``' signature.
+#
+# ⛔⭐ THE GUARANTEE, RESTATED PRECISELY FOR A TRAINED ENCODER.
+#   The tensor handed to the decoder is a function of the ``K`` integer codes and
+#   the store alone.  Operationally: **any two feature vectors that address the
+#   same K modes produce a BIT-IDENTICAL decoder input.**  That is the 30-bit
+#   channel (R20's declared design constant ``K·log2(M) = 5·6``) expressed as
+#   something a test can execute, and it is what
+#   :func:`assert_no_feature_bypass` measures.
+#
+# ⚠ DECLARED, NOT HIDDEN — the straight-through gradient.  The codes are integers,
+#   so there is no differentiable path through them at all; any encoder training
+#   through a store necessarily uses a *surrogate* gradient (VQ-VAE's
+#   straight-through estimator, van den Oord et al. 2017).  ``"straight_through"``
+#   adds ``z - stop_gradient(z)``, which is **numerically zero**: the decoder's
+#   input VALUE is bit-identical to ``read_from_codes(store, codes)`` at every
+#   step of training and at evaluation, and the realised channel stays K·log2(M)
+#   bits.  ⛔ The guarantee this programme states in its method section is a
+#   guarantee about the FORWARD VALUE — a bypass is a path by which encoder
+#   information reaches the decoder — and that is the property checked here.
+#   ``"stop"`` is the strict alternative (no surrogate at all: the encoder gets
+#   gradient only from the commitment term) and is kept as a config option so the
+#   surrogate itself can be ablated.
+# ---------------------------------------------------------------------------
+
+#: How the encoder is allowed to receive gradient across the integer bottleneck.
+CODE_GRADS = ("straight_through", "stop")
+
+
+def _store_flat_views(store, zf):
+    """``(N, D) -> [ (N, d_k) ]`` — the store's own well gather, in ``jnp``.
+
+    ⛔ Not a reimplementation of the read: ``chlu.core.gen_store._well_views`` is
+    the same gather, and bit-equality with the shipped ``address_codes`` /
+    ``read_from_codes`` pair is asserted by :func:`assert_no_feature_bypass`.
+    """
+    dt = store.modes[0].dtype
+    Z = jnp.asarray(zf, dt).reshape((zf.shape[0], -1))
+    return [Z[:, jnp.asarray(w, jnp.int32)] for w in store.well_channels]
+
+
+def store_codes_traced(store, zf):
+    """``(N, D) features -> (N, K) integer codes``, **traceable** (``jnp``, jittable).
+
+    ⚠ Why this exists at all: :func:`chlu.core.gen_store.address_codes` returns a
+    **NumPy** array, so it cannot sit inside a jitted training step.  This is the
+    identical argmin in the identical Gram form (the dropped ``||z||^2`` term is
+    constant in ``m``), and :func:`assert_no_feature_bypass` asserts the two agree
+    **exactly** on real features rather than assuming it.
+    """
+    out = []
+    for z, m in zip(_store_flat_views(store, zf), store.modes, strict=True):
+        d2 = jnp.sum(m * m, axis=-1)[None, :] - 2.0 * (z @ m.T)
+        out.append(jnp.argmin(d2, axis=-1))
+    return jnp.stack(out, axis=1)
+
+
+def gather_from_codes_traced(store, codes):
+    """``(N, K) codes -> (N, D)`` codebook gather, **traceable**.
+
+    The ``jnp`` twin of :func:`chlu.core.gen_store.read_from_codes`, with the same
+    ⛔ two-argument signature and the same absence of any feature argument.
+    """
+    idx = jnp.asarray(codes, jnp.int32)
+    n = int(idx.shape[0])
+    out = jnp.zeros((n, store.dim), store.modes[0].dtype)
+    for j, (w, m) in enumerate(zip(store.well_channels, store.modes, strict=True)):
+        out = out.at[:, jnp.asarray(w, jnp.int32)].set(jnp.take(m, idx[:, j], axis=0))
+    return out
+
+
+def quantise_through_store(store, zf, code_grad: str = "straight_through",
+                           bypass_alpha: float = 0.0):
+    """⭐ ``features -> (decoder_input, pure_gather, codes)`` through the K codes.
+
+    ``decoder_input`` is what the decoder is fed.  Under either ``code_grad`` its
+    **value** is bit-identical to ``pure_gather`` — i.e. to
+    ``read_from_codes(store, codes)`` — because ``z - stop_gradient(z)`` is
+    numerically zero.  ⭐ That is the whole guarantee: the encoder's features
+    never reach the decoder, only the ``K`` pointers do.
+
+    ⛔ ``bypass_alpha`` is a **TEST HOOK AND NOTHING ELSE**.  Any non-zero value
+    adds ``alpha * features`` to the decoder's input, which is a real
+    encoder → decoder channel of unbounded width and **voids the claim**.  It
+    exists so that :func:`assert_no_feature_bypass` can be *shown failing* — a
+    check that cannot fail proves nothing.  ⛔ It is not reachable from any
+    config field and nothing in ``chlu/experiments`` passes it a non-zero value
+    outside an explicitly-labelled falsifier run.
+    """
+    if code_grad not in CODE_GRADS:
+        raise ValueError(f"code_grad must be one of {CODE_GRADS}, got {code_grad!r}")
+    Z = jnp.asarray(zf, store.modes[0].dtype).reshape((zf.shape[0], -1))
+    codes = store_codes_traced(store, Z)
+    gather = gather_from_codes_traced(store, codes)
+    dec_in = gather
+    if code_grad == "straight_through":
+        # value: + 0 exactly.  gradient: routed to the encoder (declared surrogate).
+        dec_in = dec_in + (Z - jax.lax.stop_gradient(Z))
+    if float(bypass_alpha) != 0.0:
+        dec_in = dec_in + float(bypass_alpha) * Z      # ⛔ THE BYPASS. Test-only.
+    return dec_in, gather, codes
+
+
+def realised_channel_bits(store, codes) -> dict:
+    """Design-constant width ``K·log2(M)`` plus the width **realised** on ``codes``.
+
+    ⭐ R20 made ``K·log2(M)`` a declared design constant; this reports it beside
+    the number of distinct code tuples actually used, so "we did not widen the
+    channel" is a line in a manifest rather than an assurance.
+    """
+    C = np.asarray(codes, np.int64).reshape((np.asarray(codes).shape[0], -1))
+    n_distinct = int(np.unique(C, axis=0).shape[0]) if C.size else 0
+    k, m = int(store.n_wells), int(store.n_modes)
+    return {
+        "design_bits": float(k * np.log2(m)),
+        "design_formula": "K*log2(M)",
+        "n_wells": k,
+        "n_modes": m,
+        "max_code_configs": int(m**k) if k * np.log2(m) < 62 else None,
+        "n_requests": int(C.shape[0]) if C.size else 0,
+        "n_distinct_code_configs": n_distinct,
+        "realised_bits_used": float(np.log2(n_distinct)) if n_distinct > 0 else 0.0,
+        "note": (
+            "design_bits is the DECLARED constant (R20) and is a property of the "
+            "store, not of the run; realised_bits_used is how much of it this "
+            "request set actually exercised."
+        ),
+    }
+
+
+def assert_no_feature_bypass(
+    store,
+    zf,
+    code_grad: str = "straight_through",
+    bypass_alpha: float = 0.0,
+    jitter: float = 1e-3,
+    seed: int = 0,
+) -> dict:
+    """⛔⭐ Prove the decoder's input is a function of ``(codes, store)`` ALONE.
+
+    Four checks over the *joint* path (the shipped
+    :func:`chlu.core.gen_store.assert_no_bypass` covers the read in isolation;
+    this covers the read **as the unfrozen trainer uses it**):
+
+    1. **Agreement with the shipped read.**  The traced codes equal
+       :func:`chlu.core.gen_store.address_codes` exactly, and the decoder input
+       equals :func:`chlu.core.gen_store.read_from_codes` **bit-identically**.
+       ⇒ the training path and the evaluation path are the same function.
+    2. ⭐ **The collision test — the discriminating leg.**  Replace every feature
+       vector by *the modes it addressed* (a genuinely different tensor that
+       provably addresses the same codes) and re-run the path: the decoder input
+       must come back **bit-identical**.  Two different features, same codes,
+       same decoder input ⇒ the channel is the codes and nothing else.
+       ⛔ A bypass ``q = read + a·z`` fails this by exactly ``a·(z1 - z2)``.
+    3. **Jitter.**  Perturb the features by ``jitter``; on the rows whose codes did
+       not move, the decoder input must not move either.
+    4. **Value purity of the surrogate.**  ``straight_through`` must add exactly
+       zero to the value: the decoder input equals the pure gather to the last bit.
+
+    Returns the measured deltas.  ⛔ Raises ``AssertionError`` the moment any of
+    them is non-zero — which is what makes ``bypass_alpha > 0`` fail, by design.
+    """
+    from .gen_store import address_codes, read_from_codes  # local: no import cycle
+
+    X = np.asarray(zf, np.float32).reshape((np.asarray(zf).shape[0], -1))
+    if X.shape[0] == 0:
+        raise ValueError("assert_no_feature_bypass needs at least one feature row")
+
+    dec_in, gather, codes = quantise_through_store(store, X, code_grad, bypass_alpha)
+    dec_in = np.asarray(dec_in)
+    codes_np = np.asarray(codes, np.int64)
+    failures = []
+
+    # (1) the traced halves agree with the shipped ones, exactly.
+    shipped_codes = np.asarray(address_codes(store, X), np.int64)
+    code_delta = int(np.max(np.abs(codes_np - shipped_codes))) if codes_np.size else 0
+    if code_delta != 0:
+        failures.append(
+            "(1) store_codes_traced disagrees with the shipped address_codes "
+            f"(max |delta| = {code_delta}): the trainer is not addressing the "
+            "store the way the evaluation does"
+        )
+    shipped_read = np.asarray(read_from_codes(store, shipped_codes)).reshape(X.shape[0], -1)
+    read_delta = float(np.max(np.abs(np.asarray(gather) - shipped_read)))
+    if read_delta != 0.0:
+        failures.append(
+            f"(1) the traced gather is not read_from_codes (max |delta| = {read_delta})"
+        )
+
+    # (2) ⭐ THE COLLISION TEST — the discriminating leg.
+    X_alt = np.asarray(shipped_read, np.float32)
+    alt_in, _, alt_codes = quantise_through_store(store, X_alt, code_grad, bypass_alpha)
+    alt_codes = np.asarray(alt_codes, np.int64)
+    same = np.all(alt_codes == codes_np, axis=1)
+    features_differ = float(np.max(np.abs(X_alt - X))) if X.size else 0.0
+    if not bool(same.any()):
+        raise AssertionError(
+            "the collision test could not be constructed: re-addressing the store "
+            "with its own modes moved every code — the store has duplicate modes"
+        )
+    collision_delta = float(np.max(np.abs(np.asarray(alt_in)[same] - dec_in[same])))
+    if collision_delta != 0.0:
+        failures.append(
+            "(2) COLLISION: two DIFFERENT feature tensors that address the SAME K "
+            f"codes produced DIFFERENT decoder inputs (max |delta| = "
+            f"{collision_delta}). ⛔ The decoder input is therefore NOT a function "
+            "of the codes alone: an encoder -> decoder bypass exists and the "
+            "K*log2(M)-bit channel claim is void."
+        )
+
+    # (3) jitter: same codes, same input.
+    rng = np.random.default_rng(int(seed))
+    X_j = (X + float(jitter) * rng.standard_normal(X.shape)).astype(np.float32)
+    jit_in, _, jit_codes = quantise_through_store(store, X_j, code_grad, bypass_alpha)
+    jit_codes = np.asarray(jit_codes, np.int64)
+    stable = np.all(jit_codes == codes_np, axis=1)
+    jitter_delta = (
+        float(np.max(np.abs(np.asarray(jit_in)[stable] - dec_in[stable])))
+        if bool(stable.any())
+        else 0.0
+    )
+    if jitter_delta != 0.0:
+        failures.append(
+            f"(3) JITTER: perturbing the features by {jitter} moved the decoder "
+            f"input by {jitter_delta} on rows whose codes did not change"
+        )
+
+    # (4) the surrogate adds exactly zero to the VALUE.
+    surrogate_delta = float(np.max(np.abs(dec_in - np.asarray(gather))))
+    if surrogate_delta != 0.0:
+        failures.append(
+            "(4) VALUE: the decoder's input is NOT the pure codebook gather "
+            f"(max |delta| = {surrogate_delta}) — a feature tensor is reaching "
+            "the decoder."
+        )
+
+    if failures:
+        raise AssertionError(
+            "⛔ NO-BYPASS CHECK FAILED on the joint (unfrozen) path — "
+            + str(len(failures))
+            + " leg(s):\n  - "
+            + "\n  - ".join(failures)
+        )
+
+    out = {
+        "code_grad": str(code_grad),
+        "bypass_alpha": float(bypass_alpha),
+        "codes_match_shipped_address_codes": True,
+        "gather_matches_read_from_codes": True,
+        "max_abs_delta_decoder_input_vs_pure_gather": surrogate_delta,
+        "collision_test_n_rows": int(same.sum()),
+        "collision_test_feature_max_abs_difference": features_differ,
+        "max_abs_delta_same_codes_different_features": collision_delta,
+        "jitter": float(jitter),
+        "jitter_test_n_rows": int(stable.sum()),
+        "max_abs_delta_under_jitter": jitter_delta,
+        "n_checked": int(X.shape[0]),
+    }
+    out.update(realised_channel_bits(store, codes_np))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# The joint stage-2 loop.  ⭐ ONE function, TWO arms — that is the whole point:
+# a matched-compute control cannot be bolted on afterwards, so ``unfreeze`` is a
+# flag on the identical loop, identical loss, identical key and therefore the
+# identical minibatch sequence.  The ONLY difference between the arms is which
+# leaves are handed to Optax.
+# ---------------------------------------------------------------------------
+
+
+def joint_filter_spec(encoder, store, decoder, unfreeze: bool):
+    """The Optax filter for ``(encoder, store, decoder)``.
+
+    ``unfreeze=False`` marks **every** encoder leaf ``False``, so the frozen arm's
+    encoder cannot receive an update even though the loss is differentiable
+    through it — asserted by parameter hash in ``train_joint``'s return value.
+    """
+    enc_spec = jax.tree_util.tree_map(
+        (lambda leaf: bool(eqx.is_inexact_array(leaf))) if unfreeze else (lambda _: False),
+        encoder,
+    )
+    return (
+        enc_spec,
+        jax.tree_util.tree_map(lambda leaf: bool(eqx.is_inexact_array(leaf)), store),
+        jax.tree_util.tree_map(lambda leaf: bool(eqx.is_inexact_array(leaf)), decoder),
+    )
+
+
+def joint_loss_terms(model, xb, code_grad: str, bypass_alpha: float = 0.0):
+    """``(recon, codebook, commitment)`` for one batch of images.
+
+    ``L = recon + beta_codebook * codebook + beta_commit * commitment`` — the
+    VQ-VAE decomposition, unchanged, with the store's modes playing the codebook:
+
+    * ``recon``      ``|| decoder(read) - x ||^2``  (⛔ pixels only; no labels, R1)
+    * ``codebook``   ``|| gather - sg(z) ||^2``     -> moves the STORE onto the data
+    * ``commitment`` ``|| sg(gather) - z ||^2``     -> moves the ENCODER onto the store
+
+    ⭐ The same three terms are computed in **both** arms; the frozen arm simply
+    never applies the commitment gradient, because its encoder leaves are not in
+    the optimiser.  That keeps the loss — and therefore the step cost profile and
+    the batch sequence — matched between the arms.
+    """
+    encoder, store, decoder = model
+    z = jax.vmap(encoder)(xb)
+    zf = z.reshape((z.shape[0], -1))
+    dec_in, gather, _ = quantise_through_store(store, zf, code_grad, bypass_alpha)
+    recon = jax.vmap(decoder)(dec_in.reshape((-1,) + tuple(store.feat_shape)))
+    l_rec = jnp.mean((recon - jnp.asarray(xb, recon.dtype)) ** 2)
+    l_code = jnp.mean((gather - jax.lax.stop_gradient(zf)) ** 2)
+    l_commit = jnp.mean((jax.lax.stop_gradient(gather) - zf) ** 2)
+    return l_rec, l_code, l_commit
+
+
+def train_joint(
+    encoder,
+    store,
+    decoder,
+    images: np.ndarray,
+    cfg,
+    key,
+    unfreeze: bool,
+    log: Optional[Callable] = None,
+    bypass_alpha: float = 0.0,
+):
+    """⭐ Stage 2: fit ``(store, decoder)`` — and, iff ``unfreeze``, the encoder too.
+
+    Returns ``(encoder, store, decoder, info)``.  ``info`` carries the realised
+    compute budget (steps x batch, per-arm), the loss history and the encoder's
+    parameter hash before and after — so "the control really was frozen" and "the
+    budgets really were matched" are both readable off the manifest.
+
+    ⛔ This is **not** the shipped pipeline.  ``gen-store-grouping`` fits the store
+    with an annealed soft read on a cached tensor and ``gen-decoder-lift`` fits the
+    decoder separately against frozen features; this is one joint loop, and its
+    frozen arm is the control **for this experiment**, ⛔ not a reproduction of
+    those runs and not comparable to their numbers.
+    """
+    code_grad = str(getattr(cfg, "code_grad", "straight_through"))
+    beta_code = float(getattr(cfg, "beta_codebook", 1.0))
+    beta_commit = float(getattr(cfg, "beta_commitment", 0.25))
+    steps = int(getattr(cfg, "joint_steps", 100))
+    batch = int(getattr(cfg, "joint_batch", 32))
+    lr = float(getattr(cfg, "joint_lr", 1e-3))
+
+    enc_hash_before = param_hash(encoder)
+    model = (encoder, store, decoder)
+    spec = joint_filter_spec(encoder, store, decoder, bool(unfreeze))
+    params, static = eqx.partition(model, spec)
+    opt = optax.adam(lr)
+    opt_state = opt.init(params)
+
+    X = jnp.asarray(np.asarray(images, np.float32))
+    n = int(X.shape[0])
+    batch = min(batch, n)
+
+    def loss_fn(p, s, xb):
+        l_rec, l_code, l_commit = joint_loss_terms(
+            eqx.combine(p, s), xb, code_grad, bypass_alpha
+        )
+        return l_rec + beta_code * l_code + beta_commit * l_commit, (l_rec, l_code, l_commit)
+
+    grad_fn = eqx.filter_value_and_grad(loss_fn, has_aux=True)
+
+    @eqx.filter_jit
+    def step(p, s, o, xb):
+        (loss, parts), grads = grad_fn(p, s, xb)
+        updates, o = opt.update(grads, o, p)
+        return eqx.apply_updates(p, updates), o, loss, parts
+
+    history = []
+    for i in range(steps):
+        key, sk = jax.random.split(key)
+        idx = jax.random.choice(sk, n, (batch,), replace=False)
+        params, opt_state, loss, parts = step(params, static, opt_state, X[idx])
+        history.append(
+            {
+                "step": i,
+                "loss": float(loss),
+                "recon": float(parts[0]),
+                "codebook": float(parts[1]),
+                "commitment": float(parts[2]),
+            }
+        )
+        if log is not None and (i == 0 or (i + 1) % max(1, steps // 5) == 0):
+            h = history[-1]
+            log(
+                f"    [{'unfrozen' if unfreeze else 'frozen  '}] step {i + 1}/{steps}"
+                f"  loss={h['loss']:.5f}  recon={h['recon']:.5f}"
+                f"  code={h['codebook']:.5f}  commit={h['commitment']:.5f}"
+            )
+    encoder, store, decoder = eqx.combine(params, static)
+    enc_hash_after = param_hash(encoder)
+    if (not unfreeze) and enc_hash_after != enc_hash_before:
+        raise AssertionError(
+            "the FROZEN control's encoder changed during stage 2 "
+            f"({enc_hash_before} -> {enc_hash_after}) — the matched-compute control "
+            "is not a control"
+        )
+    info = {
+        "unfreeze": bool(unfreeze),
+        "code_grad": code_grad,
+        "bypass_alpha": float(bypass_alpha),
+        "beta_codebook": beta_code,
+        "beta_commitment": beta_commit,
+        "lr": lr,
+        "steps": int(steps),
+        "batch": int(batch),
+        "n_train_rows": n,
+        "gradient_steps": int(steps),
+        "images_seen": int(steps * batch),
+        "encoder_param_hash_before": enc_hash_before,
+        "encoder_param_hash_after": enc_hash_after,
+        "encoder_changed": bool(enc_hash_after != enc_hash_before),
+        "n_params_optimised": int(
+            sum(int(np.asarray(x).size) for x in jax.tree_util.tree_leaves(params))
+        ),
+        "history_first": history[0] if history else None,
+        "history_last": history[-1] if history else None,
+    }
+    return encoder, store, decoder, {"info": info, "history": history}, key
+
+
+# --- END gen-encoder-unfreeze -----------------------------------------------
