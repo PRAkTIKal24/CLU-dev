@@ -504,3 +504,88 @@ def test_quick_does_not_shrink_M_or_the_byte_budget():
     assert c.m_uniform == 64
     assert c.probe_steps == c.quick_probe_steps
     assert cfg.gen_store.train_steps == c.quick_store_train_steps
+
+
+# ---------------------------------------------------------------------------
+# 7. ⛔ THE VERDICT BRANCHES — the bug PREREG_ADDENDUM_1 declares, pinned
+# ---------------------------------------------------------------------------
+
+
+def _summary_stub(d_total, d_distinct, d_scale=0.0, d_orient=0.0,
+                  spread=0.05, dspread=1.0, bytes_delta=(-240, -644, -792)):
+    """A minimal `summarize` output with exactly the fields `_verdict` reads."""
+    def s(m, sd):
+        return {"mean": m, "std": sd, "n_seeds": 3, "ddof": 0}
+
+    def arm(tot, dist, sc, orr):
+        return {
+            "per_factor": {"scale": {"retention_code": s(sc, spread)},
+                           "orientation": {"retention_code": s(orr, spread)}},
+            "total_retained": s(tot, spread),
+            "distinct_request_side": s(dist, dspread),
+        }
+    return {
+        "by_eval_set": {
+            "SPREAD": {"uniform": arm(3.678, 0, 0.2245, 0.2425),
+                       "x": arm(3.678 + d_total, 0, 0.2245 + d_scale, 0.2425 + d_orient)},
+            "CORNER_B": {"uniform": arm(0, 9.0, 0, 0),
+                         "x": arm(0, 9.0 + d_distinct, 0, 0)},
+        },
+        "allocation": {"x": {"bytes_delta_vs_uniform_per_seed": list(bytes_delta)}},
+    }
+
+
+@pytest.mark.parametrize(
+    "d_total,d_distinct,d_scale,d_orient,label,passed",
+    [
+        (+0.50, +0.0, 0.0, 0.0, "PASS", "YES"),
+        (-0.50, +0.0, +0.20, +0.20, "TRADE", "NO"),
+        # ⭐ the branch the first implementation MISLABELLED as LOSS
+        (-0.012, +5.33, 0.0, 0.0, "SPLIT", "NO"),
+        (-0.012, +0.50, 0.0, 0.0, "NULL", "NO"),
+        (-0.50, -5.00, 0.0, 0.0, "LOSS", "NO"),
+    ],
+)
+def test_every_verdict_branch_is_reachable_and_correctly_named(
+    d_total, d_distinct, d_scale, d_orient, label, passed
+):
+    from chlu.experiments.exp_gen_codebook_alloc import _verdict
+
+    v = _verdict(_summary_stub(d_total, d_distinct, d_scale, d_orient), "x")
+    assert v["reading_label"] == label
+    assert v["pre_registered_pass"] == passed
+
+
+def test_a_flat_total_with_a_RISEN_distinct_count_is_NOT_called_a_loss():
+    """⛔ The measured `mse_optimal` case: nothing fell, so 'LOSS' is factually false."""
+    from chlu.experiments.exp_gen_codebook_alloc import _verdict
+
+    v = _verdict(_summary_stub(-0.012, +5.33), "x")
+    assert "LOSS" not in v["reading"]
+    assert v["distinct_of_corner_b"]["rose_beyond_spread"] is True
+    assert v["distinct_of_corner_b"]["fell_beyond_spread"] is False
+    assert v["pre_registered_pass"] == "NO"   # ⛔ still not a pass
+
+
+def test_a_bigger_store_can_never_pass_however_good_it_looks():
+    from chlu.experiments.exp_gen_codebook_alloc import _verdict
+
+    v = _verdict(_summary_stub(+0.50, +5.0, bytes_delta=(+4, 0, 0)), "x")
+    assert v["bytes_within_uniform_every_seed"] is False
+    assert v["pre_registered_pass"] == "NO"
+
+
+def test_within_well_M_exponent_recovers_a_planted_exponent():
+    """⚠ The POST-HOC instrument (PREREG_ADDENDUM_1 §2), shown recovering a slope."""
+    from chlu.experiments.exp_gen_codebook_alloc import within_well_m_exponent
+
+    pts = [{"well": 0, "arm": a, "n_modes": m, "measured_eps": 0.5 * m ** -0.26,
+            "participation_ratio": 4.0}
+           for a, m in zip(("uniform", "equal_distortion", "mse_optimal"), (4, 64, 160),
+                           strict=True)]
+    rec = [{"seed": 0, "spectrum": {"per_well": [{"d_k": 10}]}, "law": {"points": pts}}]
+    out = within_well_m_exponent(rec)
+    assert out["n_points"] == 1
+    assert out["per_well"][0]["fitted_exponent"] == pytest.approx(-0.26, abs=1e-6)
+    assert out["per_well"][0]["law_exponent"] == pytest.approx(-0.5)
+    assert out["status"].startswith("⚠ POST-HOC")

@@ -713,6 +713,7 @@ def summarize(records: list, config: CHLUConfig) -> dict:
             for arm in arms},
         "points": [p for r in records for p in r["law"]["points"]],
     }
+    out["law"]["within_well_M_exponent"] = within_well_m_exponent(records)
     out["infeasibility"] = records[0]["infeasibility"]
 
     # ---- ⭐ THE PRE-REGISTERED PASS ----------------------------------------
@@ -734,6 +735,59 @@ def summarize(records: list, config: CHLUConfig) -> dict:
     return out
 
 
+def within_well_m_exponent(records: list) -> dict:
+    """⚠ **POST-HOC** (`PREREG_ADDENDUM_1` §2), and labelled as such.
+
+    The three allocations give every well a small **``M`` sweep** for free.  Fit
+    ``log ε_measured`` against ``log M`` within each (seed, well) and compare the
+    fitted exponent with the law's own ``−2/PR``.  ⭐ This is the law's *exponent*,
+    which the pooled predicted-vs-measured fit cannot isolate.
+
+    ⛔ Limitations, on the row: for several wells two of the three ``M`` values are
+    nearly equal, so the slope is effectively a two-point contrast over the measured
+    range ``M ∈ [4, 186]``; it may **not** be extrapolated beyond it.
+    """
+    rows = []
+    for r in records:
+        for w in range(len(r["spectrum"]["per_well"])):
+            sel = [p for p in r["law"]["points"] if p["well"] == w and p["arm"] != "shipped"]
+            M = np.asarray([p["n_modes"] for p in sel], np.float64)
+            e = np.asarray([p["measured_eps"] for p in sel], np.float64)
+            if np.unique(M).size < 2 or not np.all(e > 0):
+                continue
+            pr = float(sel[0]["participation_ratio"])
+            fitted = float(np.polyfit(np.log(M), np.log(e), 1)[0])
+            law = -2.0 / pr
+            rows.append({
+                "seed": int(r["seed"]), "well": int(w), "participation_ratio": pr,
+                "n_modes_swept": sorted(int(x) for x in M),
+                "m_range": [int(M.min()), int(M.max())],
+                "measured_eps": [float(x) for x in e[np.argsort(M)]],
+                "fitted_exponent": fitted, "law_exponent": law,
+                "ratio_fitted_over_law": float(fitted / law) if law else float("nan"),
+            })
+    f = np.asarray([x["fitted_exponent"] for x in rows])
+    lw = np.asarray([x["law_exponent"] for x in rows])
+    return {
+        "status": "⚠ POST-HOC — not pre-registered (PREREG_ADDENDUM_1 §2)",
+        "per_well": rows,
+        "n_points": len(rows),
+        "fitted_exponent": {"mean": float(f.mean()), "std": float(f.std()),
+                            "min": float(f.min()), "max": float(f.max())},
+        "law_exponent": {"mean": float(lw.mean()), "min": float(lw.min()),
+                         "max": float(lw.max())},
+        "ratio_fitted_over_law": {"mean": float((f / lw).mean()),
+                                  "median": float(np.median(f / lw)),
+                                  "min": float((f / lw).min()),
+                                  "max": float((f / lw).max())},
+        "reading": (
+            "⭐ The law says the exponent VARIES with PR; if the fitted exponents are "
+            "near-constant across wells while -2/PR spans a 4x range, the law's LEVEL "
+            "may be right while its EXPONENT is not."
+        ),
+    }
+
+
 def _verdict(out: dict, arm: str) -> dict:
     """⭐ The pre-registered pass, applied mechanically and answered in its words.
 
@@ -742,6 +796,11 @@ def _verdict(out: dict, arm: str) -> dict:
     **TRADE** (⛔ not a pass) = TOTAL falls but ``scale``+``orientation`` rise.
     **NULL** (⛔ not a pass) = within seed spread on every row ⇒ ⭐ uniform ``M`` is
     already optimal and re-allocation is not a lever.
+    **SPLIT** (⛔ not a pass; PREREG_ADDENDUM_1) = TOTAL flat **but** distinct-of-72
+    rises beyond spread.  ⛔ The pre-registered pass requires TOTAL to **rise**, so
+    the §4 answer is still NO — but calling this a LOSS, as the first implementation
+    did, is factually false: nothing fell.
+    **LOSS** = ``Δ TOTAL < −seed spread``, and nothing weaker.
     """
     es = "SPREAD"
     A = out["by_eval_set"][es][CONTROL_ARM]
@@ -763,33 +822,51 @@ def _verdict(out: dict, arm: str) -> dict:
                           "seed_spread_used": sp,
                           "rose_beyond_spread": bool(float(b["mean"] - a["mean"]) > sp)}
     total_rose = bool(d_total > tspread)
+    total_fell = bool(d_total < -tspread)
+    total_flat = not (total_rose or total_fell)
+    distinct_rose = bool(d_distinct > dspread)
     distinct_fell = bool(d_distinct < -dspread)
     within_budget = all(
         int(x) <= 0 for x in out["allocation"][arm]["bytes_delta_vs_uniform_per_seed"])
     passed = bool(total_rose and not distinct_fell and within_budget)
     if passed:
+        label = "PASS"
         reading = ("⭐ PASS: TOTAL-RETAINED rose beyond seed spread at bytes <= the "
                    "uniform arm's, and distinct-of-72 did not fall.")
-    elif all(v["rose_beyond_spread"] for v in probe_rise.values()) and d_total < -tspread:
+    elif total_fell and probe_rise and all(
+            v["rose_beyond_spread"] for v in probe_rise.values()):
+        label = "TRADE"
         reading = ("⭐ TRADE, ⛔ NOT A PASS: TOTAL-RETAINED fell but scale AND "
                    "orientation rose beyond seed spread — a redistribution, reported "
                    "as one and ⛔ never promoted to primary.")
-    elif abs(d_total) <= tspread and abs(d_distinct) <= dspread:
+    elif total_flat and distinct_rose:
+        label = "SPLIT"
+        reading = ("⭐ SPLIT, ⛔ NOT A PASS (PREREG_ADDENDUM_1): TOTAL-RETAINED is "
+                   "WITHIN seed spread of the uniform arm while distinct-of-72 ROSE "
+                   "beyond spread. ⛔ The pre-registered pass requires TOTAL to RISE, "
+                   "so the answer is NO — but nothing fell, so this is ⛔ not a loss. "
+                   "⚠ A 72-row statistic on 3 seeds: POST-HOC, replicate before use.")
+    elif total_flat and not distinct_fell:
+        label = "NULL"
         reading = ("⭐ NULL, ⛔ NOT A PASS: every row is within seed spread of the "
                    "uniform arm ⇒ uniform M is ALREADY at the byte-constrained "
                    "optimum and re-allocation is NOT a lever. ⭐ A first-class "
                    "negative result for D6.")
     else:
+        label = "LOSS"
         reading = ("⛔ LOSS: the allocated arm is worse than the uniform control "
                    "beyond seed spread.")
     return {
         "arm": arm,
         "pre_registered_pass": "YES" if passed else "NO",
+        "reading_label": label,
         "reading": reading,
         "total_retained": {"control": ta, "arm": tb, "delta": d_total,
                            "seed_spread_used": tspread, "rose_beyond_spread": total_rose},
         "distinct_of_corner_b": {"control": CA, "arm": CB, "delta": d_distinct,
-                                 "seed_spread_used": dspread, "fell_beyond_spread": distinct_fell},
+                                 "seed_spread_used": dspread,
+                                 "rose_beyond_spread": distinct_rose,
+                                 "fell_beyond_spread": distinct_fell},
         "scale_orientation": probe_rise,
         "bytes_within_uniform_every_seed": bool(within_budget),
         "bytes_delta_per_seed": out["allocation"][arm]["bytes_delta_vs_uniform_per_seed"],
