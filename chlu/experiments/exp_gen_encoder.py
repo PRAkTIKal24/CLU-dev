@@ -104,6 +104,11 @@ from ..utils.checkpoints import save_model  # noqa: E402
 STAGES = ("encoder", "unfreeze", "aggregate")
 #: ⭐ Both, always, in this order.  ⛔ The unfrozen number is not reportable alone.
 ARMS = ("frozen", "unfrozen")
+#: ⭐ The arm-manifest schema.  ⛔ ``skip_if_exists`` compares against it: an
+#: artefact written by an OLDER schema is RE-RUN, loudly, never silently reused —
+#: a resumed cluster run that reuses a manifest missing a field the summary reads
+#: fails deep inside the aggregate, which is the worst place to find out.
+ARM_SCHEMA = "chlu-gen-encoder-unfreeze/2"
 #: ⭐ The CSF3 launcher hard-whitelists its ``ARMS`` axis to
 #: ``clu store_removed lace knn`` (``job_gpu_gen.sh`` §1), so it **cannot express**
 #: this spoke's two arms and ``ARMS="frozen unfrozen"`` is refused at submit time.
@@ -448,7 +453,7 @@ def run_arm(
     save_model(decoder, adir / "decoder.pkl", {"arm": arm, "seed": int(seed)})
 
     manifest = {
-        "schema": "chlu-gen-encoder-unfreeze/1",
+        "schema": ARM_SCHEMA,
         "status": "ok",
         "dataset": dataset,
         "pretext": str(c.pretext),
@@ -587,10 +592,14 @@ def run_seed(
         man_path = out_dir / arm / "manifest.json"
         if bool(c.skip_if_exists) and man_path.exists():
             man = json.loads(man_path.read_text())
-            if man.get("status") == "ok":
-                tlog(f"arm {arm}: artefact exists — SKIPPED")
+            if man.get("status") == "ok" and man.get("schema") == ARM_SCHEMA:
+                tlog(f"arm {arm}: artefact exists ({ARM_SCHEMA}) — SKIPPED")
                 out[arm] = man
                 continue
+            tlog(
+                f"⚠ arm {arm}: existing artefact is status={man.get('status')!r} "
+                f"schema={man.get('schema')!r} (want {ARM_SCHEMA!r}) — RE-RUNNING"
+            )
         tlog(f"arm {arm}: stage 2, {c.joint_steps} steps x batch {c.joint_batch} …")
         out[arm] = run_arm(
             arm, dataset, seed, out_dir, config, (encoder, store, decoder), warm_info,
@@ -624,7 +633,7 @@ def summarise_seed(arm_manifests: dict, warm_info: dict, seed, dataset, pretext)
             "distinct_B_feature_side": f["B"]["n_distinct_code_configs"],
             "distinct_MS_feature_side": f["MS"]["n_distinct_code_configs"],
             "mean_confidence_B": r["B"]["mean_confidence"],
-            "address_book_fit_rows": man["address_book"]["n_fit_rows"],
+            "address_book_fit_rows": man.get("address_book", {}).get("n_fit_rows"),
             "gradient_steps": man["compute"]["gradient_steps"],
             "images_seen": man["compute"]["images_seen"],
             "n_params_optimised": man["compute"]["n_params_optimised"],

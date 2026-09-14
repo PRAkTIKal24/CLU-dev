@@ -443,6 +443,31 @@ def test_the_summary_refuses_to_call_the_budgets_matched_when_they_are_not():
     )
 
 
+def test_a_stale_schema_artefact_is_RE_RUN_not_silently_reused():
+    """⛔ The trap this caught for real: ``skip_if_exists`` reused a manifest
+    written before a field existed, and the run died inside the aggregate with a
+    ``KeyError``.  Resume must compare the SCHEMA, not only the status."""
+    m = _exp()
+    assert m.ARM_SCHEMA.endswith("/2")
+    warm = {"encoder_param_hash": "a", "store_param_hash": "b",
+            "decoder_param_hash": "c", "D": 2048, "feat_shape": [128, 4, 4]}
+    stale = {
+        "distinct_codes_request_side": {
+            "B": {"n_distinct_code_configs": 7, "n_requests": 72, "mean_confidence": 0.5},
+            "MS": {"n_distinct_code_configs": 9, "n_requests": 200, "mean_confidence": 0.5},
+        },
+        "distinct_codes_feature_side": {
+            "B": {"n_distinct_code_configs": 8}, "MS": {"n_distinct_code_configs": 9},
+        },
+        "compute": {"gradient_steps": 60, "images_seen": 960, "n_params_optimised": 1,
+                    "encoder_changed": False, "train_seconds": 1.0},
+        "reconstruction": {"B": {"pixel_mse_through_store": 0.1}},
+        "channel": {"design_bits": 30.0},
+    }  # ⛔ no "address_book" key — exactly the pre-/2 artefact
+    got = m.summarise_seed({"frozen": stale}, warm, 0, "d", "recon")
+    assert got["arms"]["frozen"]["address_book_fit_rows"] is None
+
+
 def test_the_launcher_stage_name_and_the_module_name_agree():
     """⛔ ``job_gpu_gen.sh`` maps ``STAGE=encoder`` to this module by NAME and the
     launcher checks the module exists before spending wallclock."""
