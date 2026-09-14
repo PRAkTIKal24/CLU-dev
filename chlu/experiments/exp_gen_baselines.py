@@ -63,7 +63,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-from ..config import CHLUConfig, get_default_config  # noqa: E402
+from ..config import CHLUConfig, get_default_config, gen_row_split_config  # noqa: E402
 from ..core.gen_bridge import (  # noqa: E402
     PRETEXTS,
     assert_decoder_hash,
@@ -81,6 +81,11 @@ from ..core.gen_request import (  # noqa: E402
     load_query_set_registry,
     load_registered_control_requests,
     requests_from_rows,
+)
+from ..data.gen_rowsplit import (  # noqa: E402
+    assert_row_split_balanced,
+    row_split_balance,
+    split_fit_val,
 )
 from ..data.gen_splits import default_gen_data_root  # noqa: E402
 from ..eval.gen_probe import (  # noqa: E402
@@ -393,28 +398,45 @@ def load_shared_decoder(config: CHLUConfig, bdir: Path, bman: dict, seed: int, l
 # ---------------------------------------------------------------------------
 
 
-def select_baseline_rows(split, config: CHLUConfig, seed: int) -> dict:
+def select_baseline_rows(split, config: CHLUConfig, seed: int, log: Callable = None) -> dict:
     """Fit / validation / A / B rows.
 
-    ⭐ ``fit`` and ``val`` are the head and tail of **exactly** the row set
-    ``gen-store-grouping`` fitted its store on (``select_store_rows``), so the
-    matched-seen negatives are excluded by the same rows and the realised negative
-    count reproduces R22's (198 / 199 / 199).  ⛔ ``val`` is disjoint from ``fit``,
-    from ``eval_a`` (A), from ``eval_b`` (B) and from the negatives, and C never
-    enters tuning at all.
+    ⭐ ``fit`` and ``val`` **partition exactly** the row set ``gen-store-grouping``
+    fitted its store on (``select_store_rows``), so the matched-seen negatives are
+    excluded by the same rows and the realised negative count reproduces R22's
+    (198 / 199 / 199).  ⛔ ``val`` is disjoint from ``fit``, from ``eval_a`` (A), from
+    ``eval_b`` (B) and from the negatives, and C never enters tuning at all.
+
+    ⛔ **The partition is STRATIFIED** (:mod:`chlu.data.gen_rowsplit`), ⛔ no longer the
+    head and tail of a *sorted* array.  A sorted tail is a contiguous corner of the
+    factor grid: it realised **1** ``floor_hue`` value against ``fit``'s 10, and the two
+    halves of it chose different winning trials in 5 of 6 cells, so every configuration
+    selected on it was unidentified.  ⭐ ``pool`` itself is untouched — only how it is
+    cut.  The realised balance is asserted and recorded.
     """
     g = config.gen_baselines
+    rs = gen_row_split_config(config)
     rows = select_store_rows(split, config, int(seed))
     pool = np.asarray(rows["store_train"], np.int64)
-    n_fit = min(int(g.n_fit), pool.size)
-    n_val = min(int(g.n_val), max(pool.size - n_fit, 0))
-    if n_val == 0:
-        raise ValueError(
-            f"no validation rows left: n_fit={g.n_fit} exhausts the {pool.size}-row pool"
+    labels = split.grid.factor_indices_of(pool)
+    fit, val, info = split_fit_val(
+        pool, labels, int(g.n_fit), int(g.n_val), int(seed),
+        mode=str(rs.mode), tiebreak_jitter=float(rs.tiebreak_jitter),
+        seed_mult=int(rs.seed_mult), seed_offset=int(rs.seed_offset), log=log,
+    )
+    balance = row_split_balance(
+        split.grid.factor_indices_of(fit), split.grid.factor_indices_of(val),
+        list(split.grid.names), list(split.grid.cardinalities),
+    )
+    if bool(rs.assert_balanced) and str(rs.mode) != "head_tail":
+        balance = assert_row_split_balanced(
+            balance, require_all_values=bool(rs.require_all_values),
+            max_count_ratio=float(rs.max_count_ratio),
         )
     out = dict(rows)
-    out["fit"] = pool[:n_fit]
-    out["val"] = pool[n_fit : n_fit + n_val]
+    out["fit"] = fit
+    out["val"] = val
+    out["row_split"] = {**info, "balance": balance}
     return out
 
 
@@ -1452,7 +1474,14 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
     grid = split.grid
     names, cards = list(grid.names), list(grid.cardinalities)
     shape_idx = names.index(COMPOSITIONAL_FACTOR)
-    rows = select_baseline_rows(split, config, seed)
+    rows = select_baseline_rows(split, config, seed, log=log)
+    _rsp = rows["row_split"]
+    _bal = _rsp["balance"]
+    log(f"  ⭐ row split: mode={_rsp['mode']} "
+        f"(relaxations={_rsp.get('n_quota_relaxations')}) — val realises "
+        + " · ".join(f"{k} {v['val_n_values_realised']}/{v['cardinality']}"
+                     for k, v in _bal["factors"].items())
+        + f" · max per-value count ratio {_bal['max_val_count_ratio']:.3f}")
 
     leak = assert_no_holdout_leak(split, np.concatenate([rows["fit"], rows["val"]]))
     log(f"  ⭐ no-leak: {leak['n_checked']} fit/val rows checked, "
@@ -1670,6 +1699,9 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
         "no_leak": leak,
         "rows": {k: int(np.asarray(v).size) for k, v in
                  {**req_rows, "fit": rows["fit"]}.items()},
+        # ⭐ How fit/val were cut, and the realised per-factor balance of the cut.
+        # ⛔ A tuned configuration whose manifest cannot show this is not identified.
+        "row_split": rows["row_split"],
         "request_embedding": {
             "rule": ("R8 — composed per-factor prototypes: "
                      "x_hat = mu + sum_terms (mu_{k,v} - mu); off-grid values are "
