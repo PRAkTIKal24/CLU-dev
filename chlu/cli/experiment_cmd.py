@@ -3178,6 +3178,12 @@ def cmd_exp_gen_dynamical_read(args):
     )
 
     c = gen_dynamical_read_config(config)
+    # ⛔ ORDER MATTERS AND IT WAS A MEASURED BUG: ``apply_quick`` REPLACES the seed,
+    # budget, arm and step lists, so an explicit flag applied *before* it is silently
+    # discarded.  A `--quick --budget A B` run reported budget A only and looked
+    # entirely normal in the logs.  ⭐ Quick first, explicit flags last, always.
+    if bool(getattr(args, 'quick', False)):
+        apply_quick(config)
     if getattr(args, 'dataset', None):
         c.dataset = args.dataset
     if getattr(args, 'pretext', None):
@@ -3192,10 +3198,6 @@ def cmd_exp_gen_dynamical_read(args):
         c.decode_reads = False
     if getattr(args, 'bridge_root', None):
         config.gen_store.bridge_root = args.bridge_root
-    if bool(getattr(args, 'quick', False)):
-        apply_quick(config)
-    # ⛔ an explicit --steps survives --quick: the settling length is the thing
-    # under test and a smoke that silently shortens it hides a non-converged chain.
     if getattr(args, 'steps', None):
         c.steps = int(args.steps)
 

@@ -152,6 +152,7 @@ __all__ = [
     "fit_low_rank_coupling",
     "landscape_byte_ledger",
     "launch_state",
+    "pairwise_separation",
     "read_settled",
     "select_atom_rows",
     "settle_chain",
@@ -1301,14 +1302,61 @@ def read_settled(land: AtomLandscape, x, read_mode: str = "state",
     return np.asarray(out, np.float32).reshape((X.shape[0],) + store.feat_shape)
 
 
+def pairwise_separation(x, max_n: int = 512, seed: int = 0,
+                        collapse_frac: float = 0.01) -> dict:
+    """⭐ **Are the settled states actually DIFFERENT from each other?**
+
+    ⚠ Written because the participation ratio **misled this spoke once**: the full
+    arm's ``PR`` fell from 5.31 (launch) to 1.08 (settled) and read like a collapse,
+    while the mean pairwise separation had in fact **risen 0.248 -> 0.385** and the
+    *minimum* pairwise distance had risen from **0.0** (9.2 % of launch pairs were
+    the SAME atom tuple) to **0.012** — i.e. the settling had *separated* requests
+    the discrete clamp collided.  ⭐ ``PR`` measures how many DIRECTIONS the variance
+    uses; it does not measure whether two states are distinct.
+
+    ⛔ Still not falsifier 2, which is the distinct **factor tuples the EXTERNAL
+    CLASSIFIER reads off the DECODED IMAGES** (`PREREG.md` §5.2).  This is the
+    upstream diagnostic that says whether there is anything left for it to read.
+    """
+    X = np.asarray(x, np.float64).reshape((np.asarray(x).shape[0], -1))
+    n0 = int(X.shape[0])
+    if n0 < 2:
+        return {"n": n0, "note": "fewer than 2 states — no separation"}
+    if n0 > int(max_n):
+        # ⛔ a seeded permutation, never a prefix (R31's erratum: the Shapes3D grid
+        # is a lexicographic bijection, so leading rows restrict the outer factor)
+        sel = np.sort(np.random.default_rng(int(seed)).permutation(n0)[: int(max_n)])
+        X = X[sel]
+    n, d = X.shape
+    g = (X * X).sum(1)
+    d2 = np.maximum(g[:, None] + g[None, :] - 2.0 * (X @ X.T), 0.0)
+    iu = np.triu_indices(n, 1)
+    dist = np.sqrt(d2[iu] / max(d, 1))
+    mean = float(dist.mean())
+    return {
+        "n": n, "n_total": n0,
+        "mean_pairwise_rms_distance": mean,
+        "min_pairwise_rms_distance": float(dist.min()),
+        "median_pairwise_rms_distance": float(np.median(dist)),
+        "frac_pairs_collapsed": float((dist <= float(collapse_frac) * max(mean, 1e-30)).mean()),
+        "collapse_frac": float(collapse_frac),
+        "all_states_identical": bool(float(dist.max()) == 0.0),
+        "note": ("⛔ NOT falsifier 2 (that is distinct FACTOR TUPLES read by the "
+                 "EXTERNAL CLASSIFIER off the DECODED IMAGES, PREREG §5.2). ⚠ Also "
+                 "⛔ not the participation ratio: PR counts DIRECTIONS, not distinct "
+                 "states, and reading PR as distinctness misled this spoke once."),
+    }
+
+
 def settled_state_spread(x, store: Optional[AtomStore] = None) -> dict:
     """⭐ The **empirical** spread of the settled states, beside the declared width.
 
     Reports the participation ratio ``PR = (Σλ)²/Σλ²`` of the settled set — the
     same statistic `gen-variance-equalisation` measured at **3.12 … 13.63** on the
-    well features, and the exponent in ``ε ≈ N^(−2/PR)``.  ⛔ This is the honest
-    companion to "the channel is ``D`` floats": ``D`` floats is the *declared* width,
-    not the realised one.
+    well features, and the exponent in ``ε ≈ N^(−2/PR)`` — **and**, because ``PR``
+    alone misled this spoke once, :func:`pairwise_separation` beside it.  ⛔ This is
+    the honest companion to "the channel is ``D`` floats": ``D`` floats is the
+    *declared* width, not the realised one.
     """
     X = np.asarray(x, np.float64).reshape((np.asarray(x).shape[0], -1))
     if X.shape[0] < 2:
@@ -1325,6 +1373,7 @@ def settled_state_spread(x, store: Optional[AtomStore] = None) -> dict:
         "mean_coordinate_std": float(np.sqrt(np.maximum(var, 0)).mean()),
         "participation_ratio": pr,
         "n_distinct_states": int(np.unique(np.asarray(X, np.float32), axis=0).shape[0]),
+        "pairwise": pairwise_separation(X),
         "note": (
             "⛔ n_distinct_states is NOT falsifier 2: continuous states are "
             "trivially distinct and that number is worthless. Falsifier 2 is the "

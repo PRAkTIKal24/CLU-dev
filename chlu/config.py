@@ -6048,7 +6048,11 @@ class GenDynamicalReadConfig:
     quick_budgets: List[str] = field(default_factory=lambda: ["A"])
     quick_n_store_train: int = 2048
     quick_n_coupling_fit: int = 1024
-    quick_n_spread_requests: int = 0
+    #: ⭐ Deliberately larger than ``quick_request_chunk`` so the smoke exercises
+    #: the CHUNKED path (``request_experts`` is ``(F, n, K, N)`` float32 and is
+    #: 251 MB at 4,096 requests with ``N = 512`` — the chunking is not optional
+    #: on a 16 GB box, so it must not be smoke-tested away).
+    quick_n_spread_requests: int = 128
     quick_steps: int = 25
     quick_descent_window: int = 10
     quick_decode_rows: int = 16

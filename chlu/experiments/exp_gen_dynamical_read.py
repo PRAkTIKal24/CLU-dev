@@ -76,6 +76,7 @@ from ..core.gen_landscape import (  # noqa: E402
     fit_atom_address_book,
     fit_low_rank_coupling,
     landscape_byte_ledger,
+    pairwise_separation,
     safe_coupling_strength,
     save_trace,
     settled_state_spread,
@@ -357,6 +358,11 @@ def run_arm(config: CHLUConfig, built: dict, arm: str, requests: np.ndarray,
             "max": float(np.max(np.abs(xs - x0))) if xs.size else float("nan"),
         },
         "settled_spread": settled_state_spread(xs, built["store"]),
+        # ⭐ launch vs settled: does the chain SEPARATE requests the discrete clamp
+        # collided, or collapse them?  ⛔ The one the scored run's falsifier 2 rests
+        # on, and the one PR alone got wrong.
+        "separation": {"launch": pairwise_separation(x0),
+                       "settled": pairwise_separation(xs)},
         "wall_clock_s": float(time.time() - t0),
     }
     log(f"      [{arm}] beta={land.request_strength:g} lambda={land.coupling_strength:g} "
@@ -366,6 +372,13 @@ def run_arm(config: CHLUConfig, built: dict, arm: str, requests: np.ndarray,
         f"disp[1]={conv['displacement_step_1']} disp[T]={conv['displacement_final_step']} "
         f"still_descending={conv['frac_still_descending']} · {conv['verdict']}"
         + ("  ⛔ DIVERGED" if diverged else ""))
+    log(f"        separation launch -> settled: "
+        f"{rec['separation']['launch']['mean_pairwise_rms_distance']:.4f} -> "
+        f"{rec['separation']['settled']['mean_pairwise_rms_distance']:.4f} "
+        f"(min {rec['separation']['launch']['min_pairwise_rms_distance']:.4f} -> "
+        f"{rec['separation']['settled']['min_pairwise_rms_distance']:.4f}, "
+        f"collapsed pairs {rec['separation']['launch']['frac_pairs_collapsed']:.3f} -> "
+        f"{rec['separation']['settled']['frac_pairs_collapsed']:.3f})")
     return rec, {"x0": x0, "x_settled": xs, "read": rd, "trace": trace}
 
 
@@ -715,6 +728,15 @@ def summarize(records: list, config: CHLUConfig) -> dict:
                         "displacement_final_step": [
                             x["arms"][a]["dynamics"]["displacement_final_step"] for x in rr],
                         "verdict": [x["arms"][a]["dynamics"]["verdict"] for x in rr],
+                        "mean_pairwise_rms_launch": [
+                            x["arms"][a]["separation"]["launch"][
+                                "mean_pairwise_rms_distance"] for x in rr],
+                        "mean_pairwise_rms_settled": [
+                            x["arms"][a]["separation"]["settled"][
+                                "mean_pairwise_rms_distance"] for x in rr],
+                        "frac_pairs_collapsed_settled": [
+                            x["arms"][a]["separation"]["settled"][
+                                "frac_pairs_collapsed"] for x in rr],
                     } for a in rr[0]["arms"]
                 },
                 "steering": [x["steering"] for x in rr],
@@ -767,6 +789,12 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
     config = get_default_config()
     c = _cfg(config)
+    # ⛔ ORDER MATTERS AND IT WAS A MEASURED BUG: ``apply_quick`` REPLACES the seed,
+    # budget, arm and step lists, so an explicit flag applied *before* it is silently
+    # discarded.  A `--quick --budget A B` run reported budget A only and looked
+    # entirely normal in the logs.  ⭐ Quick first, explicit flags last, always.
+    if args.quick:
+        apply_quick(config)
     if args.dataset:
         c.dataset = args.dataset
     if args.pretext:
@@ -781,10 +809,6 @@ def main(argv=None) -> int:
         c.steps = int(args.steps)
     if args.no_decode:
         c.decode_reads = False
-    if args.quick:
-        apply_quick(config)
-    if args.steps:                    # ⛔ an explicit --steps survives --quick
-        c.steps = int(args.steps)
     run_experiment_gen_dynamical_read(config, out_dir=args.out)
     return 0
 

@@ -55,6 +55,7 @@ from chlu.core.gen_landscape import (
     fit_low_rank_coupling,
     landscape_byte_ledger,
     launch_state,
+    pairwise_separation,
     read_settled,
     save_trace,
     select_atom_rows,
@@ -467,3 +468,72 @@ def test_settled_spread_reports_a_participation_ratio_and_refuses_the_distinct_t
 
 def test_arms_tuple_names_both_mandatory_controls():
     assert "request_off" in ARMS and "coupling_off" in ARMS and "zero_step" in ARMS
+
+
+# ---------------------------------------------------------------------------
+# 8. ⛔ The flag-ordering hazard — a MEASURED bug, pinned
+# ---------------------------------------------------------------------------
+
+
+def test_quick_must_not_clobber_an_explicit_budget_or_step_flag(monkeypatch):
+    """⛔ MEASURED: ``--quick --budget A B --steps 1000`` ran **budget A only**.
+
+    ``apply_quick`` REPLACES the seed / budget / arm / step lists, so an explicit
+    flag applied before it is silently discarded — and the log looks entirely
+    normal, which is exactly the class of defect that costs a wave.  ⭐ Quick first,
+    explicit flags last.
+    """
+    from chlu.experiments import exp_gen_dynamical_read as ex
+
+    seen = {}
+
+    def _capture(config=None, out_dir=None, log=None):
+        seen["cfg"] = ex._cfg(config)
+        return {}
+
+    monkeypatch.setattr(ex, "run_experiment_gen_dynamical_read", _capture)
+    ex.main(["--quick", "--budgets", "A", "B", "--steps", "1000",
+             "--arms", "full", "coupling_off", "--seeds", "1", "2"])
+    c = seen["cfg"]
+    assert c.budgets == ["A", "B"], "⛔ --quick clobbered the explicit budget list"
+    assert c.steps == 1000, "⛔ --quick clobbered the explicit step count"
+    assert c.arms == ["full", "coupling_off"]
+    assert c.seeds == [1, 2]
+    # and --quick alone really does shrink them (so the hazard is real, not theoretical)
+    seen.clear()
+    ex.main(["--quick"])
+    assert seen["cfg"].budgets == ["A"] and seen["cfg"].steps == 25
+
+
+# ---------------------------------------------------------------------------
+# 9. ⚠ The participation ratio is NOT distinctness — the lesson, pinned
+# ---------------------------------------------------------------------------
+
+
+def test_pairwise_separation_catches_a_collapse_that_PR_calls_healthy():
+    """⚠ MEASURED: the full arm's ``PR`` fell 5.31 -> 1.08 and read like a collapse,
+    while the mean pairwise separation had RISEN 0.248 -> 0.385 and the minimum had
+    risen from **0.0** (9.2 % of launch pairs were the same atom tuple) to 0.012.
+    ⭐ ``PR`` counts DIRECTIONS; it does not count distinct states.  Both directions
+    of the confusion are pinned here."""
+    rng = np.random.default_rng(0)
+    # (a) one direction, well separated: PR ~ 1 but every state is distinct
+    line = (np.linspace(-1, 1, 40)[:, None] * rng.normal(size=(1, 12))).astype(np.float32)
+    sp_line = settled_state_spread(line)
+    assert sp_line["participation_ratio"] < 1.5
+    assert pairwise_separation(line)["min_pairwise_rms_distance"] > 0.0
+    assert pairwise_separation(line)["frac_pairs_collapsed"] < 0.2
+    # (b) a genuine collapse: every state identical
+    flat = np.repeat(rng.normal(size=(1, 12)).astype(np.float32), 40, axis=0)
+    col = pairwise_separation(flat)
+    assert col["all_states_identical"] is True
+    assert col["frac_pairs_collapsed"] == 1.0
+
+
+def test_separation_is_reported_beside_the_declared_channel_width(fixture):
+    out = dynamical_read(fixture["land"], fixture["book"], fixture["requests"],
+                         _cfg(6), jax.random.PRNGKey(0))
+    sp = settled_state_spread(out["x_settled"], fixture["store"])
+    assert "pairwise" in sp
+    assert "NOT falsifier 2" in sp["pairwise"]["note"]
+    assert "not the participation ratio" in sp["pairwise"]["note"]
