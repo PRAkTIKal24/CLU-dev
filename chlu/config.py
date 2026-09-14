@@ -4031,6 +4031,13 @@ class CHLUConfig:
         default_factory=lambda: GenEncoderUnfreezeConfig()
     )
     # --- END gen-encoder-unfreeze ---
+    # --- BEGIN gen-encoder-pretrain (additive; R40.E) ---
+    # ⭐ Same lazy pattern, same reason: ``GenPretrainConfig`` is defined at the END
+    # of this file (the shared append anchor for the gen spokes).
+    gen_pretrain: "GenPretrainConfig" = field(
+        default_factory=lambda: GenPretrainConfig()
+    )
+    # --- END gen-encoder-pretrain ---
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -4316,6 +4323,11 @@ def load_config(path: Path) -> CHLUConfig:
             )
         ),
         # --- END gen-encoder-unfreeze ---
+        # --- BEGIN gen-encoder-pretrain (additive; R40.E) ---
+        gen_pretrain=GenPretrainConfig(
+            **filter_valid_fields(GenPretrainConfig, data.get("gen_pretrain", {}))
+        ),
+        # --- END gen-encoder-pretrain ---
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -4401,6 +4413,9 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         # --- BEGIN gen-encoder-unfreeze (additive; R29 pivot item 3) ---
         "gen_encoder_unfreeze": asdict(config.gen_encoder_unfreeze),
         # --- END gen-encoder-unfreeze ---
+        # --- BEGIN gen-encoder-pretrain (additive; R40.E) ---
+        "gen_pretrain": asdict(config.gen_pretrain),
+        # --- END gen-encoder-pretrain ---
         "project": asdict(config.project),
     }
 
@@ -5554,3 +5569,114 @@ class GenEncoderUnfreezeConfig:
     quick_book_rows: Optional[int] = None
     quick_seeds: List[int] = field(default_factory=lambda: [0])
 # --- END gen-encoder-unfreeze -----------------------------------------------
+# --- BEGIN gen-encoder-pretrain (additive; owner: experiment-engineer; R40.E) -
+# ⭐ The candidate-encoder search.  ⛔ Nothing here feeds the FROZEN bridge path:
+# ``GenBridgeConfig`` is untouched, and a run of ``exp_gen_pretrain`` writes only
+# under its own ``out_dir``.  Promoting a candidate is a Head-level decision that
+# re-measures every phase-1 number (R18) — it is not a default flip.
+@dataclass
+class GenPretrainConfig:
+    """Arms, probe and bar for ``chlu.experiments.exp_gen_pretrain``.
+
+    ⭐ **Reduced scale is a declared axis, not a caveat.**  ``n_enc_train`` /
+    ``enc_steps`` here are deliberately below ``GenBridgeConfig``'s (8192 / 1500):
+    this is the local smoke that R40.A.4 made the acceptance test, and ⛔ a number
+    from it is never compared against a full-scale baseline without saying so.
+    """
+
+    dataset: str = "shapes3d"
+    #: ⛔ ``recon_control`` (laundering control) and ``recon_control_2x`` (COMPUTE
+    #: control) are not optional rows.  ⛔ No augmentation-contrastive arm exists,
+    #: by ruling: it trains invariance to exactly ``scale`` and ``orientation``.
+    variants: List[str] = field(
+        default_factory=lambda: [
+            "recon_control", "random_init", "ae_plain", "recon_control_2x",
+            "ae_deep", "mae", "ae_hires", "vae",
+        ]
+    )
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- rows (SEEN data only; the held-out cell is never probed here) ---
+    #: Rows the encoder is fitted on (drawn from ``split.train_rows``).
+    n_enc_train: int = 4096
+    #: Probe-fit rows, ⛔ disjoint from the encoder's and from the eval rows.
+    n_probe_train: int = 4096
+    #: Probe-eval rows on the SPREAD grid, ⛔ disjoint from both of the above.
+    n_probe_eval: int = 2048
+    #: Also probe the 216 matched-seen CORNER rows, reported **separately**.
+    #: ⚠ 3 realised ``scale`` and 3 realised ``orientation`` values there against 8
+    #: and 15 on the grid — the two columns are not comparable.
+    include_corner: bool = True
+
+    # --- the shared encoder trunk (identical for every arm unless named) ---
+    enc_channels: List[int] = field(default_factory=lambda: [32, 64, 128, 128])
+    #: ``ae_hires``: one fewer downsample, so the feature map stays 8x8 (D=8192,
+    #: still inside LACE's ``D ~ 2e4`` whitening budget).
+    hires_channels: List[int] = field(default_factory=lambda: [32, 64, 128])
+    enc_kernel: int = 4
+    enc_stride: int = 2
+    enc_groups: int = 8
+    #: ⚠ REDUCED SCALE, and it is a declared axis: the shipped bridge uses 1500.
+    #: Measured on this machine at 0.6-3.2 s/step depending on the arm, so 400
+    #: steps x 8 arms x 3 seeds is the local ~2.5 h budget R40.A.4 allows.
+    enc_steps: int = 400
+    enc_batch: int = 128
+    enc_lr: float = 1e-3
+
+    # --- the THROWAWAY pretext decoder (discarded, exactly as on the shipped path) ---
+    dec_channels: List[int] = field(default_factory=lambda: [128, 64, 32])
+    dec_groups: int = 8
+    #: ``ae_deep`` only: channel multiplier and blocks per upsampling stage.
+    #: ⚠ 1.0 = depth-only pressure.  A wider decoder measured 3.2 s/step here
+    #: against 1.8, which at 3 seeds is an hour the local budget does not have.
+    deep_width_mult: float = 1.0
+    deep_blocks_per_stage: int = 2
+    #: ``mae`` only: patch side, masked fraction (Bernoulli, so it is the
+    #: *expected* fraction), and whether the loss sees only the masked pixels.
+    mae_mask_ratio: float = 0.5
+    mae_patch: int = 8
+    mae_loss_on_masked: bool = True
+    #: ``vae`` only: the KL weight of the declared comparison arm.
+    vae_beta: float = 0.05
+    #: ``recon_control_2x`` only: the COMPUTE control's step multiplier.
+    compute_control_mult: int = 2
+
+    # --- the probe (⭐ identical for every arm, every seed, every pool) ---
+    #: ``linear`` is the headline instrument; ``mlp`` is a capacity check reported
+    #: beside it.  ⛔ A linear FAIL with an MLP PASS does not clear the bar.
+    probe_kinds: List[str] = field(default_factory=lambda: ["linear", "mlp"])
+    probe_hidden: int = 256
+    probe_steps: int = 1500
+    probe_batch: int = 256
+    probe_lr: float = 1e-3
+
+    # --- the pre-registered bar (R40.E) ---
+    #: Every factor in ``bar_factors`` must reach this on the SPREAD grid, on SEEN
+    #: data, for a variant to clear.  ⛔ A corner-only pass is not a pass.
+    pass_bar: float = 0.90
+    bar_factors: List[str] = field(default_factory=lambda: ["scale", "orientation"])
+
+    # --- io ---
+    #: Contiguous rows per HDF5 read (the Shapes3D chunking; read geometry only).
+    cache_block: int = 8192
+    eval_batch: int = 256
+    #: ⭐ Per-(variant, seed) incremental writes with skip-if-exists, so a 16 GB
+    #: machine that dies three arms in still has three arms of results.
+    skip_if_exists: bool = True
+    #: ⛔ Never a path under ``runs/`` — this is a candidate, beside the frozen one.
+    out_dir: Optional[str] = None
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
+    quick_variants: List[str] = field(
+        default_factory=lambda: [
+            "recon_control", "random_init", "ae_plain", "ae_deep", "mae", "ae_hires", "vae",
+        ]
+    )
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_enc_steps: int = 12
+    quick_probe_steps: int = 12
+    quick_n_enc_train: int = 128
+    quick_n_probe_train: int = 128
+    quick_n_probe_eval: int = 64
+# --- END gen-encoder-pretrain ------------------------------------------------
