@@ -498,6 +498,16 @@ def test_config_block_round_trips_through_its_own_access_pattern(tmp_path):
     assert gen_variance_eq_config(load_config(p)).arms == c.arms
 
 
+def test_premise_gate_is_adjudicated_at_the_SPOKE_level_by_default():
+    """⭐ PREREG §3 states the rule as an AGGREGATE (">= 2 of 3 seeds"). A per-seed
+    gate is stricter and leaves a DEAD seed with no arms, so the 3-seed falsifier
+    statistics cannot be formed — the default must be the rule as filed."""
+    c = gen_variance_eq_config(get_default_config())
+    assert c.premise_gate_scope == "spoke"
+    assert c.stop_if_premise_dead is True
+    assert c.premise_min_seeds_holding == 0        # -> ceil(n_seeds / 2)
+
+
 def test_quick_does_not_shrink_M_or_disable_the_partition_assertion():
     """⭐ ``K·log2(M) = 30 bits`` is R20's design constant; the smoke exercises it."""
     from chlu.experiments.exp_gen_variance_eq import apply_quick

@@ -5662,6 +5662,17 @@ class GenVarianceEqConfig:
     #: ⛔ PREREG §3's stop rule.  A DEAD premise means the hypothesis is refuted and
     #: the spoke reports that rather than whitening anyway to see what happens.
     stop_if_premise_dead: bool = True
+    #: ⭐⭐ **WHERE the stop rule is adjudicated.**  PREREG §3 states it as an
+    #: **aggregate**: *"the premise HOLDS iff, on ≥ 2 of 3 seeds, …"*.
+    #: ``"spoke"`` (default, and the only one faithful to that wording) records the
+    #: per-seed verdict, runs every seed, and adjudicates **once** in ``summarize``,
+    #: which ⛔ **withholds every Leg 2–4 conclusion** if the aggregate is DEAD.
+    #: ``"seed"`` is the stricter reading that stops each DEAD seed individually —
+    #: ⚠ it leaves that seed with no arms, so the 3-seed falsifier statistics the
+    #: acceptance criteria require cannot be formed.
+    premise_gate_scope: str = "spoke"
+    #: The ≥ k-of-n bar for the aggregate verdict (``0`` -> ``ceil(n_seeds / 2)``).
+    premise_min_seeds_holding: int = 0
 
     # --- Leg 4: the per-well capacity bound ----------------------------------
     #: A well *carries* a factor iff ``MI(code_k; f)/H(f)`` reaches this.

@@ -541,7 +541,8 @@ def run_seed(config: CHLUConfig, dataset: str, pretext: str, seed: int,
         "leg1_premise": premise,
         "wall_clock_s": float(time.time() - t0),
     }
-    if premise["stop_after_leg1"] and bool(c.stop_if_premise_dead):
+    if (premise["stop_after_leg1"] and bool(c.stop_if_premise_dead)
+            and str(c.premise_gate_scope) == "seed"):
         rec["stopped"] = (
             "⛔ PREMISE DEAD (PREREG §3): scale/orientation do NOT sit in low-variance "
             "directions. The variance hypothesis is REFUTED at Leg 1 and nothing was "
@@ -753,7 +754,12 @@ def summarize(records: list, config: CHLUConfig) -> dict:
     """3-seed roll-up + ⭐ the two pre-registered falsifiers, answered yes/no."""
     c = _cfg(config)
     names = records[0]["factor_names"]
-    dead = [r for r in records if r["leg1_premise"]["stop_after_leg1"]]
+    holding = [r for r in records
+               if not r["leg1_premise"]["stop_after_leg1"]]
+    bar = int(c.premise_min_seeds_holding) or int(np.ceil(len(records) / 2))
+    # ⭐ PREREG §3 is an AGGREGATE rule ("on >= 2 of 3 seeds"), adjudicated ONCE.
+    aggregate_holds = len(holding) >= bar
+    incomplete = [r for r in records if "tables" not in r]
     out = {
         "n_seeds": len(records), "seeds": [r["seed"] for r in records],
         "factor_names": names,
@@ -783,9 +789,35 @@ def summarize(records: list, config: CHLUConfig) -> dict:
             },
         },
     }
-    if dead:
-        out["stopped"] = dead[0].get("stopped", "premise dead")
+    out["leg1"]["aggregate"] = {
+        "rule": f"PREREG §3: the premise HOLDS iff >= {bar} of {len(records)} seeds hold",
+        "n_seeds_holding": len(holding),
+        "bar": bar,
+        "gate_scope": str(c.premise_gate_scope),
+        "verdict": "HOLDS" if aggregate_holds else "DEAD",
+        "per_seed": [r["leg1_premise"]["verdict"] for r in records],
+    }
+    if not aggregate_holds:
+        # ⛔ The premise is dead at the spoke level: the Leg 2-4 conclusions are
+        # WITHHELD, whether or not the arms happen to be on disk.
+        out["stopped"] = (
+            "⛔ PREMISE DEAD at the spoke level (PREREG §3): fewer than "
+            f"{bar} of {len(records)} seeds place scale/orientation in low-variance "
+            "directions. The variance hypothesis is REFUTED at Leg 1 and no Leg 2-4 "
+            "conclusion is emitted."
+        )
         return out
+    if incomplete:
+        out["incomplete_seeds"] = {
+            "seeds": [r["seed"] for r in incomplete],
+            "why": ("⚠ these seeds were stopped at Leg 1 by the per-SEED gate "
+                    "(premise_gate_scope='seed'), so the 3-seed falsifier statistics "
+                    "below are formed over fewer seeds — ⛔ declared, never silent"),
+        }
+        records = [r for r in records if "tables" in r]
+        if not records:
+            out["stopped"] = "no seed produced Leg 2-4 arms"
+            return out
 
     arms = list(records[0]["tables"]["SPREAD"].keys())
     out["arms"] = arms
@@ -825,6 +857,13 @@ def summarize(records: list, config: CHLUConfig) -> dict:
 
     base, prim = "identity", "pca_whiten"
     out["falsifiers"] = _falsifiers(out, records, names, base, prim, c)
+    # ⭐ The secondary arm gets the SAME adjudication, reported beside the primary.
+    # ⛔ It is not promoted to primary by having done better; PREREG §5 named
+    # pca_whiten and that stands.
+    out["falsifiers_secondary_arms"] = {
+        a: _falsifiers(out, records, names, base, a, c)
+        for a in arms if a not in (base, prim, REFERENCE_ARM)
+    }
     out["byte_ledger"] = {
         arm: records[0]["arms"][arm]["transform"]["byte_ledger"] for arm in arms
     }
