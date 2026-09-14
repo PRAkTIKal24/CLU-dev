@@ -148,7 +148,8 @@ def test_byte_ledger_matches_PREREG_section_3_exactly():
     ⛔ Declared before the run, so a drift in ``d_k`` that quietly moved the rank
     would be a silent renegotiation of the ledger.  ``K = 5``, ``D = 2048``.
     """
-    well_sizes = [283, 744, 400, 321, 300]
+    # ⭐ seed 0's ACTUAL wells, read off the shipped store in the smoke run
+    well_sizes = [303, 305, 573, 501, 366]
     assert sum(well_sizes) == 2048
     a = landscape_byte_ledger(64, well_sizes, 16, 524_288, "A")
     assert a["store"]["store_bytes"] == 524_288
@@ -164,13 +165,17 @@ def test_byte_ledger_matches_PREREG_section_3_exactly():
     assert b["d3_rule_binding"] is True
     # the store is byte-matched to the codebook at N = M
     assert store_byte_ledger(64, well_sizes)["store_bytes"] == 64 * 2048 * 4
-    # and the coupling identity r*(K-1)*D*4 holds however the wells are cut
-    assert coupling_byte_ledger(16, well_sizes)["coupling_bytes"] == 16 * 4 * 2048 * 4
+    # ⭐ and the coupling identity r*(K-1)*D*4 holds however the wells are CUT, so a
+    # per-seed drift in d_k cannot silently renegotiate the pre-registered rank
+    for other in ([283, 744, 400, 321, 300], [2044, 1, 1, 1, 1], [410, 410, 410, 409, 409]):
+        assert sum(other) == 2048
+        assert coupling_byte_ledger(16, other)["coupling_bytes"] == 16 * 4 * 2048 * 4
+        assert coupling_byte_ledger(128, other)["coupling_bytes"] == 128 * 4 * 2048 * 4
 
 
 def test_config_byte_ledger_expectations_agree_with_the_computed_ledger():
     c = GenDynamicalReadConfig()
-    well_sizes = [283, 744, 400, 321, 300]
+    well_sizes = [303, 305, 573, 501, 366]
     for label in ("A", "B"):
         spec = c.budget_spec(label)
         exp = c.byte_ledger_expectations(label)
