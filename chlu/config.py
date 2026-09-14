@@ -4024,6 +4024,13 @@ class CHLUConfig:
         default_factory=lambda: GenBridgeDspritesConfig()
     )
     # --- END gen-bridge-dsprites ---
+    # --- BEGIN gen-encoder-unfreeze (additive; R29 pivot item 3) ---
+    # ⭐ Same lazy pattern, same reason: ``GenEncoderUnfreezeConfig`` is defined at
+    # the END of this file (the shared append anchor for the concurrent gen spokes).
+    gen_encoder_unfreeze: "GenEncoderUnfreezeConfig" = field(
+        default_factory=lambda: GenEncoderUnfreezeConfig()
+    )
+    # --- END gen-encoder-unfreeze ---
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -4302,6 +4309,13 @@ def load_config(path: Path) -> CHLUConfig:
             )
         ),
         # --- END gen-bridge-dsprites ---
+        # --- BEGIN gen-encoder-unfreeze (additive; R29 pivot item 3) ---
+        gen_encoder_unfreeze=GenEncoderUnfreezeConfig(
+            **filter_valid_fields(
+                GenEncoderUnfreezeConfig, data.get("gen_encoder_unfreeze", {})
+            )
+        ),
+        # --- END gen-encoder-unfreeze ---
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -4384,6 +4398,9 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         # --- BEGIN gen-bridge-dsprites (additive; the SECOND dataset) ---
         "gen_bridge_dsprites": asdict(config.gen_bridge_dsprites),
         # --- END gen-bridge-dsprites ---
+        # --- BEGIN gen-encoder-unfreeze (additive; R29 pivot item 3) ---
+        "gen_encoder_unfreeze": asdict(config.gen_encoder_unfreeze),
+        # --- END gen-encoder-unfreeze ---
         "project": asdict(config.project),
     }
 
@@ -5300,3 +5317,129 @@ class GenBridgeDspritesConfig:
     quick_max_negatives: int = 64
     quick_max_seen: int = 64
 # --- END gen-bridge-dsprites ------------------------------------------------
+
+
+# --- BEGIN gen-encoder-unfreeze (additive; R29 pivot item 3) -----------------
+@dataclass
+class GenEncoderUnfreezeConfig:
+    """⭐ The encoder trained **with the store in the loop** — beside the frozen path.
+
+    Backs ``chlu.experiments.exp_gen_encoder`` (the module the CSF3 launcher's
+    ``STAGE=encoder`` already names).
+
+    ⛔ **THIS IS A NEW CONFIGURATION, NEVER A REPLACEMENT.**  R18: the store
+    trains on cached features from the **frozen** encoder and the decoder is
+    downstream of it, so *a changed encoder changes the feature cache and voids
+    every downstream number in this phase*.  Everything here therefore writes to
+    its **own** output root and ⛔ never re-fits, overwrites or invalidates an
+    existing bridge/store/decoder artefact.
+
+    ⛔ **The 30-bit channel is not touched.**  ``K·log2(M)`` is R20's declared
+    design constant; the joint loop routes the decoder's input through
+    :func:`chlu.core.gen_store.read_from_codes` unchanged and
+    :func:`chlu.core.gen_bridge.assert_no_feature_bypass` measures the realised
+    width on every run.  There is deliberately **no** ``bypass_alpha`` field: the
+    bypass hook exists only in the test harness, so a config file cannot express
+    one.
+
+    ⭐ **The matched-compute control is a field, not an afterthought.**  ``arms``
+    defaults to running *both* arms from the **same** warm-started
+    ``(encoder, store, decoder)`` triple, with the same key, the same batch and
+    the same ``joint_steps`` — the only difference is whether the encoder's
+    leaves are handed to Optax.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+
+    #: ⭐ Both arms, always, in this order.  ⛔ Reporting the unfrozen arm without
+    #: the frozen one at matched compute is reporting a compute win.
+    arms: List[str] = field(default_factory=lambda: ["frozen", "unfrozen"])
+    seeds: List[int] = field(default_factory=lambda: [0])
+
+    # --- stage 1: the shared warm start (identical for both arms) ---
+    #: Pretext steps for the shared encoder warm start.  ⭐ Both arms start from
+    #: the SAME encoder — bit-identical, asserted — so the comparison is about
+    #: stage 2 alone.
+    warmup_steps: int = 300
+    warmup_batch: int = 64
+    #: Train rows streamed for the whole run (⛔ never a held-out row).
+    n_train: int = 4096
+    #: Held-out (B) rows and matched-seen (MS) rows are read from the split;
+    #: this only caps the MS control, which is large.
+    max_matched_seen: int = 1024
+
+    # --- the grouping (a ladder constant; derived ONCE from the warm start) ---
+    #: ``K``.  ⛔ Fixed across arms and seeds: the ladder's logic is that only the
+    #: grouping changes, and here not even that.
+    k_wells: int = 5
+    n_modes: int = 64
+    grouping_method: str = "auto"
+    min_well_frac: float = 0.10
+
+    # --- stage 2: the joint loop ---
+    joint_steps: int = 600
+    joint_batch: int = 32
+    joint_lr: float = 1e-3
+    #: ``"straight_through"`` (VQ-VAE's estimator; the decoder's input VALUE is
+    #: bit-identical to the codebook gather) | ``"stop"`` (no surrogate at all —
+    #: the encoder gets gradient only through the commitment term).  ⭐ ``"stop"``
+    #: is the ablation of the surrogate itself.
+    code_grad: str = "straight_through"
+    #: ``|| gather - sg(z) ||^2`` — moves the STORE onto the data.
+    beta_codebook: float = 1.0
+    #: ``|| sg(gather) - z ||^2`` — moves the ENCODER onto the store.  ⛔ This is
+    #: the only term that touches the encoder when ``code_grad="stop"``.
+    beta_commitment: float = 0.25
+
+    # --- the decoder recipe (⛔ trap 1: the default upstream is the LOSER) ---
+    #: ⭐ R19.1/R20's winner.  ⛔ ``GenBridgeConfig.dec_recipe`` still defaults to
+    #: ``"baseline"``, the recipe that FAILED the gate (0.7191, 0/3 seeds); a run
+    #: that inherited it would look normal in the logs and be void.
+    dec_recipe: str = "v1_capacity_schedule"
+    #: Asserted into the manifest before any number is recorded.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+    #: ⚠ Quick mode must not pull in the recipe's capacity at smoke scale (the
+    #: ``gen-bridge-dsprites`` precedent: *a smoke run that takes 1.5 h is not a
+    #: smoke run*).  A quick run is VOID as a reported number either way, and the
+    #: manifest says so in the ``void`` field.
+    quick_dec_recipe: str = "v1_capacity_schedule"
+
+    # --- the address book (the request -> code head; R8, declared supervision) ---
+    book_smoothing: float = 1.0
+    #: ⭐ Rows used to FIT the address book.  ``None`` (default) = the fitting rows,
+    #: i.e. exactly the shipped behaviour.  ⚠ It exists because the request-side
+    #: distinct-code count is an estimate over ``n_factor_values x K x M`` counting
+    #: cells: at smoke scale those cells hold ~0 samples, the Dirichlet smoothing
+    #: dominates, every posterior goes near-uniform and the argmax degenerates —
+    #: which looks exactly like a commitment collapse but is an ESTIMATION
+    #: artefact.  Setting this larger than ``n_train`` separates the two.
+    #: ⛔ Train rows only; the book never sees a held-out row.
+    book_rows: Optional[int] = None
+
+    # --- output ---
+    #: ``None`` -> ``<repo>/.claude/outputs/gen-encoder-unfreeze/runs``.  ⛔ A FRESH
+    #: root: nothing this spoke writes may land in a bridge/store/cell path.
+    out_root: Optional[str] = None
+    #: Skip any (seed, arm) whose manifest already exists and is ``ok``.
+    skip_if_exists: bool = True
+    #: Persist the per-request code TUPLES for A/B/MS, not merely their count —
+    #: ⭐ R30's lesson: ``gen-read-compose`` stored only the count and the
+    #: "do the 9 codes coincide with SEEN configurations?" rider became a re-run.
+    persist_code_tuples: bool = True
+    make_plots: bool = False
+
+    # --- quick (⚠ plumbing smoke only — ⛔ a quick number is NEVER reported) ---
+    quick_warmup_steps: int = 40
+    quick_joint_steps: int = 60
+    quick_joint_batch: int = 16
+    quick_warmup_batch: int = 16
+    quick_n_train: int = 512
+    quick_k_wells: int = 5
+    #: ⭐ M is NOT reduced by --quick: ``K·log2(M) = 5·6 = 30 bits`` is R20's
+    #: declared design constant, so the smoke exercises the REAL channel width.
+    quick_n_modes: int = 64
+    quick_max_matched_seen: int = 256
+    quick_book_rows: Optional[int] = None
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+# --- END gen-encoder-unfreeze -----------------------------------------------
