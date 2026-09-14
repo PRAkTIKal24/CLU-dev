@@ -4010,6 +4010,13 @@ class CHLUConfig:
         default_factory=lambda: GenClassifierConfig()
     )
     # --- END gen-external-classifier ---
+    # --- BEGIN gen-cell-harness (additive; R29 pivot item 2 — the headline table) ---
+    # ⭐ Same lazy pattern, same reason: ``GenCellConfig`` is defined at the END of
+    # this file (the shared append anchor for the gen spokes).
+    gen_cell: "GenCellConfig" = field(
+        default_factory=lambda: GenCellConfig()
+    )
+    # --- END gen-cell-harness ---
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
 
@@ -4276,6 +4283,11 @@ def load_config(path: Path) -> CHLUConfig:
             **filter_valid_fields(GenClassifierConfig, data.get("gen_classifier", {}))
         ),
         # --- END gen-external-classifier ---
+        # --- BEGIN gen-cell-harness (additive) ---
+        gen_cell=GenCellConfig(
+            **filter_valid_fields(GenCellConfig, data.get("gen_cell", {}))
+        ),
+        # --- END gen-cell-harness ---
         project=ProjectConfig(
             **filter_valid_fields(ProjectConfig, data.get("project", {}))
         ),
@@ -4352,6 +4364,9 @@ def save_config(config: CHLUConfig, path: Path) -> None:
         # --- BEGIN gen-external-classifier (additive; R29 pivot item 2) ---
         "gen_classifier": asdict(config.gen_classifier),
         # --- END gen-external-classifier ---
+        # --- BEGIN gen-cell-harness (additive) ---
+        "gen_cell": asdict(config.gen_cell),
+        # --- END gen-cell-harness ---
         "project": asdict(config.project),
     }
 
@@ -4986,3 +5001,214 @@ def gen_navigate_config(config: Optional["CHLUConfig"] = None, **overrides) -> G
             setattr(cfg, k, v)
     return cfg
 # --- END gen-navigation -----------------------------------------------------
+# --- BEGIN gen-cell-harness (additive; owner: experiment-engineer) -----------
+# ⭐ Appended at the END of the file, behind ``gen-external-classifier``, for the
+# same reason every gen block is: several gen spokes extend this file and a shared
+# anchor at the tail is the only one that merges cleanly (R30 housekeeping — a
+# same-anchor conflict is resolved by taking the peer's WHOLE file and re-applying
+# this block, asserting **0 deletions**, ⛔ never hunk-by-hunk).
+# ⛔ Nothing above this line was modified except the three house wiring sites
+# (the ``CHLUConfig`` field, ``load_config``, ``save_config``).
+@dataclass
+class GenCellConfig:
+    """⭐ **The generation harness, end to end, scored on IMAGES** (R29 pivot item 2).
+
+    Backs ``chlu.experiments.exp_gen_cell`` — the module the CSF3 launcher's
+    ``STAGE=cell`` has expected since ``gen-csf3-launcher`` and which did not exist.
+
+    One path, five arms, one decoder, one instrument::
+
+        request -> launch read -> codes -> THE frozen decoder -> image
+                -> THE external classifier
+
+    ⛔ **Three things this config exists to make impossible.**
+
+    1. **A second decoder.**  Every arm decodes through the ONE shared frozen
+       ``v1_capacity_schedule`` decoder and its **parameter hash is asserted per arm
+       per seed** (R9.2).  :attr:`GenBridgeConfig.dec_recipe` still defaults to
+       ``"baseline"`` — the recipe that FAILED the gate — so the winner is selected
+       explicitly and proven, never inherited.
+    2. **A second instrument.**  Every arm is read by the ONE external classifier
+       gated by ``gen-external-classifier`` (``classifier_gate.json: "gate": "PASS"``),
+       loaded from disk and hash-asserted.  ⛔ Nothing is re-fitted here.
+    3. **A feature tensor on the CLU path.**  ``gen_store.soft_read`` takes FEATURES
+       and using it would void the structural no-bypass guarantee; the harness calls
+       ``gen_compose.assert_request_only`` before it records a number.
+
+    ⚠ **The byte ledger is a TABLE COLUMN, never a footnote.**  Store **524,288 B**
+    (R26.3; ⛔ not the retired 688,128 B), addressing head **74,240 B**, prototype
+    table **475,136 B**.  ⚠ The shipped ``knn_proto`` numbers were selected at the
+    retired budget — a **~31 % advantage** — which is the **conservative** direction
+    and is **declared in the table, never silently dropped**.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+    #: ⭐ Order is the order every table uses.  ``store_removed`` is the **laundering
+    #: control on every row**, ⛔ not a footnote: it is the row that says whether any
+    #: number came from the store.
+    arms: List[str] = field(
+        default_factory=lambda: ["clu", "store_removed", "knn_proto", "lace", "ebm_compose"]
+    )
+
+    # --- frozen artefacts: ⛔ every one is LOADED, none is fitted here ---
+    #: ``None`` -> ``$CHLU_CLAUDE_ROOT`` else ``<repo>/.claude``.
+    claude_root: Optional[str] = None
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<claude>/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: ⭐ ``"winner"`` (gen-decoder-lift's V1) | ``"bridge"`` (⛔ the SUPERSEDED baseline).
+    decoder_source: str = "winner"
+    winner_root: Optional[str] = None
+    winner_decoder_pattern: str = "decoder_v1_s{seed}.pkl"
+    #: ⛔ Asserted, never assumed: a run decoded through ``"baseline"`` is void.
+    expected_decoder_recipe: str = "v1_capacity_schedule"
+    #: ``None`` -> ``<claude>/outputs/gen-external-classifier``.
+    classifier_root: Optional[str] = None
+    classifier_checkpoint_pattern: str = "seed_{seed}/external_classifier.pkl"
+    classifier_manifest_pattern: str = "seed_{seed}/classifier_manifest.json"
+    #: ⛔ **PRECONDITION, mechanical.**  The run refuses to start unless this file's
+    #: top-level ``"gate"`` is ``"PASS"``.
+    classifier_gate_file: str = "classifier_gate.json"
+    require_classifier_gate: bool = True
+    #: ⛔ **PRECONDITION, mechanical.**  ``refusal_scores.json``'s ``"status"`` must be
+    #: ``"complete"`` (R30 sequencing) — the rivals must have been re-scored under A7
+    #: before any of their numbers is quoted beside ours.
+    refusal_scores_file: Optional[str] = "gen-arms-a7-wiring/refusal_scores.json"
+    require_refusal_complete: bool = True
+    #: ``None`` -> ``<claude>/outputs/gen-store-grouping/runs/<ds>_<px>/store_plan.json``.
+    store_plan: Optional[str] = None
+    #: ⭐ Load the store the composition cell already fitted, so the CLU arm's
+    #: probe-space number is **bit-identical** to ``gen-read-compose``'s and the only
+    #: thing that changed between the two tables is the **instrument**.  ⛔ Falls back
+    #: to training only if :attr:`allow_store_training` — a silently re-trained store
+    #: would make the comparison meaningless.
+    store_checkpoint_root: Optional[str] = None
+    store_checkpoint_pattern: str = "runs/{dataset}_{pretext}/seed_{seed}/store_s{seed}.pkl"
+    allow_store_training: bool = True
+    grouping_source: str = "per_seed"
+    address_smoothing: float = 1.0
+    store_removed_delete_mode: str = "mean"
+    verify_cache_checksum: bool = True
+    encode_chunk: int = 2048
+    eval_batch: int = 256
+    #: A-set rows carried alongside B/MS.  ⚠ A is a **companion**; the gate statistic
+    #: is B-vs-MS in the corner.  0 disables it (the headline table does not need it).
+    n_eval_a: int = 0
+
+    # --- ⭐ the byte ledger: a TABLE COLUMN (R26.3) ---
+    #: ⛔ The run aborts on any other realised value.
+    expect_deployed_store_bytes: Optional[int] = 524_288
+    addressing_head_bytes_reference: int = 74_240
+    prototype_table_bytes_reference: int = 475_136
+    #: ⚠ The retired budget the shipped ``knn_proto`` selection was run at.
+    retired_byte_budget: int = 688_128
+
+    # --- ⭐ the tuning-trial budget, matched across arms and REPORTED ---
+    #: ⭐ The budget EVERY arm is entitled to.  ``clu``/``store_removed``/``knn_proto``
+    #: realise **0** of it (they have no tunable axis), which is an advantage handed
+    #: to the two energy-based rivals — the conservative direction, declared.
+    tuning_trial_budget: int = 36
+
+    # --- the LACE arm (⛔ constants live in chlu.eval.rivals.gen_lace) ---
+    #: ⭐ Inherit the per-seed SELECTED configuration from ``gen-arms-a7-wiring``'s
+    #: manifests rather than re-tuning: re-running the 36-trial selection on a new key
+    #: stream could land on a *different* configuration and **weaken the rival through
+    #: our own code** (R27.3).  ⛔ The inherited leg is the **pre-registered** one,
+    #: which is the stronger on composition on both gated seeds (R33 erratum).
+    lace_selection_source: Optional[str] = "gen-arms-a7-wiring/runs/historical_688128"
+    lace_selection_pattern: str = "seed_{seed}/baselines_manifest.json"
+    #: ⛔ ``ode`` is the published composition row (0.6797 ± 0.0207); the Langevin legs
+    #: run as LACE's declared best-of-family companion (R9.4).
+    lace_samplers: List[str] = field(
+        default_factory=lambda: ["ode", "ld_published", "ld_corrected"]
+    )
+    lace_primary_sampler: str = "ode"
+    #: ⛔ The shipped 50, ⛔ not the appendix's 100 and ⛔ not argparse's 200 (R9.6).
+    lace_n_epochs: int = 50
+    lace_batch: int = 128
+    lace_lr: float = 1e-4
+    lace_warmup_iters: int = 1000
+    lace_ld_steps: int = 100
+    #: ⛔ **32,256 / 512, because those are ``GenBaselinesConfig``'s** — the rivals'
+    #: prototype table, whitening and classifier are fitted on the **same rows** they
+    #: were fitted on when they published their numbers.  ⚠ A smaller fit set here
+    #: would **weaken every rival** (measured in the smoke: ``knn_proto`` fell from
+    #: 0.8763 to 0.8308 at 1,024 fit rows, and LACE's whitening went rank-deficient),
+    #: which is precisely the failure this spoke is told to avoid.
+    n_fit: int = 32_256
+    n_val: int = 512
+
+    # --- ⭐ the energy-based composition arm (Du et al. 2020), ⛔ NOT LACE ---
+    #: Independent per-factor energy experts, composed by SUM (product of experts =
+    #: AND), plus an isotropic Gaussian data prior, sampled by SGLD in the
+    #: **standardised feature space**.  ⛔ The structural differences from LACE are
+    #: the independence of the experts, the absence of a whitening transform, and the
+    #: prior score entering the sampler explicitly.
+    ebm_hidden: int = 256
+    ebm_depth: int = 2
+    ebm_epochs: int = 20
+    ebm_batch: int = 128
+    ebm_lr: float = 1e-3
+    #: The tuning axes — ``3 x 3 x 2 x 2 = 36``, matching :attr:`tuning_trial_budget`.
+    ebm_step_sizes: List[float] = field(default_factory=lambda: [3e-3, 1e-2, 3e-2])
+    ebm_prior_sigmas: List[float] = field(default_factory=lambda: [0.5, 1.0, 2.0])
+    ebm_steps_grid: List[int] = field(default_factory=lambda: [50, 200])
+    #: ⭐ Post-ReLU features are non-negative by construction; whether to project the
+    #: sample back onto that cone is a free choice the method does not fix, so **both**
+    #: are in the grid and validation picks — ⛔ never us.
+    ebm_clip_grid: List[bool] = field(default_factory=lambda: [True, False])
+    ebm_tune_n: int = 256
+
+    # --- ⭐ the sampler-noise floor (⛔ so 72 items cannot carry a confident claim) ---
+    #: Independent sampler keys re-run at a FIXED (seed, arm, configuration).  The sd
+    #: over these is the noise floor every arm difference is read against.
+    sampler_noise_repeats: int = 3
+    sampler_noise_arms: List[str] = field(default_factory=lambda: ["lace"])
+    sampler_noise_seed: int = 0
+
+    # --- regression guards against the published numbers (⛔ never-weaken-a-rival) ---
+    #: ⭐ **Transcribed from DISK, not from a report's 4-dp figures** —
+    #: ``gen-read-compose/runs/shapes3d_recon/seed_*/compose_manifest.json →
+    #: arms.read.in_corner_discrimination.balanced_accuracy``.  ⚠ My first version
+    #: guessed the last digits from the report's "0.6809 / 0.6858" and the measured
+    #: values then differed in the 4th decimal for a reason that was **mine, not the
+    #: run's** — the same class of error ``gen-external-classifier`` §11.4 flagged.
+    #: ⛔ Never derive a reference constant from a rendered table.
+    clu_probe_reference_per_seed: List[float] = field(
+        default_factory=lambda: [0.6609848484848484, 0.6809045226130653, 0.6858249581239531]
+    )
+    #: ``gen-arms-a7-wiring/runs/deployed_524288/seed_*/baselines_manifest.json →
+    #: arms.knn.variants.knn_proto`` — full precision from disk (byte-invariant, P5).
+    knn_proto_probe_reference_per_seed: List[float] = field(
+        default_factory=lambda: [0.8762626262626263, 0.8919597989949748, 0.8969849246231156]
+    )
+    #: ``gen-arms-a7-wiring/runs/historical_688128/seed_*/baselines_manifest.json →
+    #: arms.lace.samplers.ode`` — the published composition row, from disk.
+    lace_ode_probe_reference_per_seed: List[float] = field(
+        default_factory=lambda: [0.7077020202020202, 0.6731574539363484, 0.6582216638749302]
+    )
+    #: A rival landing more than this BELOW its published number is a regression and
+    #: is reported as one, ⛔ never quietly absorbed into "sampler noise".
+    rival_regression_tolerance: float = 0.05
+
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_arms: List[str] = field(
+        default_factory=lambda: ["clu", "store_removed", "knn_proto", "lace", "ebm_compose"]
+    )
+    quick_n_fit: int = 4096
+    quick_n_val: int = 256
+    quick_lace_n_epochs: int = 1
+    quick_lace_ld_steps: int = 5
+    quick_ebm_epochs: int = 1
+    quick_ebm_step_sizes: List[float] = field(default_factory=lambda: [1e-2])
+    quick_ebm_prior_sigmas: List[float] = field(default_factory=lambda: [1.0])
+    quick_ebm_steps_grid: List[int] = field(default_factory=lambda: [10])
+    quick_ebm_clip_grid: List[bool] = field(default_factory=lambda: [True])
+    quick_ebm_tune_n: int = 32
+    quick_sampler_noise_repeats: int = 2
+    quick_verify_cache_checksum: bool = False
+# --- END gen-cell-harness ---------------------------------------------------
