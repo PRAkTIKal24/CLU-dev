@@ -48,6 +48,14 @@ PRETEXTS = ("recon", "cls")
 IMAGE_SHAPES = {"shapes3d": (3, 64, 64), "dsprites": (1, 64, 64)}
 #: h5py dataset key holding the images, per dataset.
 IMAGE_KEYS = {"shapes3d": "images", "dsprites": "imgs"}
+#: ⭐ Divisor applied to a ``uint8`` image array to reach [0, 1], **per dataset**.
+#: ⛔ NOT inferable from the dtype.  Shapes3D stores 0…255 RGB, so 255.0 (the
+#: shipped behaviour, unchanged).  dSprites stores a **binary mask as uint8 with
+#: values {0, 1}** — dividing it by 255 yields images whose maximum pixel is
+#: 0.0039, i.e. an essentially black dataset that trains and evaluates without a
+#: single error.  Measured on the real file: ``imgs.dtype == uint8``,
+#: ``np.unique(imgs[:100]) == [0, 1]``.
+UINT8_SCALES = {"shapes3d": 255.0, "dsprites": 1.0}
 #: Above this ``D`` a full ``D × D`` whitening becomes infeasible and the LACE
 #: arm would fall back to channel-only whitening — a declared deviation that
 #: weakens the strongest competitor arm (``gen-lace-spec``).
@@ -131,7 +139,11 @@ def stream_images(
                 imgs = imgs[:, None, :, :]
             else:  # (n, H, W, C) -> (n, C, H, W)
                 imgs = np.transpose(imgs, (0, 3, 1, 2))
-            scale = 255.0 if imgs.dtype == np.uint8 else 1.0
+            scale = (
+                float(UINT8_SCALES.get(dataset, 255.0))
+                if imgs.dtype == np.uint8
+                else 1.0
+            )
             out[order[start:end]] = imgs.astype(np.float32) / scale
             start = end
         if start != srows.size:

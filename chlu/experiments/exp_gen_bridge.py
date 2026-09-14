@@ -54,6 +54,7 @@ from ..core.gen_bridge import (  # noqa: E402
     PRETEXTS,
     assert_no_holdout_leak,
     build_feature_cache,
+    encode_images,
     features_for_rows,
     load_feature_cache,
     param_count,
@@ -66,17 +67,23 @@ from ..core.gen_bridge import (  # noqa: E402
     whitening_feasibility,
 )
 from ..eval.gen_probe import (  # noqa: E402
+    binary_auroc,  # noqa: F401  (re-exported for the dSprites tests)
     decode_features,
+    discrimination_metrics,
+    discrimination_verdict,
     factor_labels,
+    factor_probs,
     gate_verdict,
     measure_ceiling,
+    multiclass_balanced_accuracy,
+    predict_factors,
     probe_accuracy,
     summarize_per_factor,
     summarize_seeds,
 )
 from ..utils.checkpoints import load_model, save_model  # noqa: E402
 
-STAGES = ("encoder", "decoder", "all", "aggregate")
+STAGES = ("encoder", "decoder", "all", "aggregate", "discrimination")
 #: The HEADLINE hold-out condition.  Anything else is a **secondary full
 #: configuration** (R17/R20): its encoder, cache, decoder and probe are re-fitted
 #: with its own cells excluded and land in their own artifacts directory.
@@ -143,7 +150,12 @@ def load_split_and_cells(dataset: str, config: CHLUConfig, log: Callable = print
     condition = condition_of(config)
     cells = None
     if condition == DEFAULT_CONDITION:
-        split, _ = mod.build_split(_data_root(config))
+        # ⚠ The two loaders' arities differ and always have:
+        # ``shapes3d.build_split`` -> (split, labels); ``dsprites.build_split`` ->
+        # (split, latent_values, latent_classes).  ⛔ The old ``split, _ = …``
+        # unpack raised ``ValueError: too many values to unpack`` on dSprites —
+        # i.e. **the dSprites bridge path had never been run end to end.**
+        split = mod.build_split(_data_root(config))[0]
     elif condition == getattr(mod, "WIDE_CONDITION", None):
         gd = config.gen_data
         split, _, cells = mod.build_wide_split(
@@ -516,6 +528,411 @@ def run_decoder_stage(
     return manifest
 
 
+# ---------------------------------------------------------------------------
+# ⭐ dSPRITES — the SECOND dataset.  ADDITIVE ONLY.
+#
+# ⛔ Everything below is reached only when ``dataset == "dsprites"``.  The
+# Shapes3D path above is untouched and is asserted bit-identical before/after by
+# ``tests/test_gen_bridge_dsprites.py::test_shapes3d_path_is_bit_identical``.
+#
+# Two things the dSprites path needs that Shapes3D does not:
+#   1. ⭐ the WINNING decoder recipe, pinned and asserted.  ``dec_recipe`` still
+#      ships as ``"baseline"`` — the recipe that FAILED the Shapes3D gate — so a
+#      dSprites run that inherits it looks normal in the logs and is **void**.
+#   2. ⭐ R20's in-corner DISCRIMINATION read.  The dSprites held-out cell pins
+#      ``latent_classes[:, shp] == 1`` (ellipse), i.e. it is a ONE-CLASS cell
+#      exactly like Montero's ``shape == cylinder`` — so a probe that answers
+#      "ellipse" to everything in that corner scores 1.000 on plain accuracy.
+#      ⛔ The gate therefore reads BALANCED ACCURACY (R23.1) of held-out ellipses
+#      against **matched-seen** other shapes in the same corner, with AUROC as a
+#      mandatory companion and never as the gate.
+# ---------------------------------------------------------------------------
+
+
+def apply_dsprites_profile(config: CHLUConfig, quick: bool = False) -> CHLUConfig:
+    """Pin the dSprites profile onto ``config.gen_bridge`` (⛔ dSprites only).
+
+    Applies ``gen_bridge_dsprites.dec_recipe`` (⭐ R19.1's ``v1_capacity_schedule``)
+    and the chunk-aligned HDF5 read block.  In ``quick`` mode the recipe falls
+    back to ``quick_dec_recipe`` so a smoke run does not silently inherit the
+    winner's 1,800-step schedule — ⚠ a quick run is void as a result either way.
+    """
+    dcfg = config.gen_bridge_dsprites
+    gb = config.gen_bridge
+    gb.dec_recipe = str(dcfg.quick_dec_recipe if quick else dcfg.dec_recipe)
+    gb.cache_block = int(dcfg.cache_block)
+    return config
+
+
+def dsprites_populations(
+    split,
+    latent_values: np.ndarray,
+    latent_classes: np.ndarray,
+    fitted_rows: np.ndarray,
+    dcfg,
+    seed: int,
+    quick: bool = False,
+) -> dict:
+    """⭐ R20's three populations for the dSprites Montero cell.
+
+    * ``positives``   — the held-out ``shape``-class-1 (ellipse) rows.
+    * ``negatives``   — **matched-seen**: the cell's whole conjunction with the
+      ``shape`` clause relaxed to a different, SEEN shape, minus every fitted row
+      and every held-out row.  ⭐ R16 made this a permanent companion; it is not
+      optional here.
+    * ``seen``        — the seen normaliser: the cell's *position* corner with its
+      own shape (ellipse) but **outside the cell**, minus every fitted row.  This
+      is ``gen-bridge-wide``'s definition transposed — it keeps the cell's context
+      clause and relaxes exactly the two factors the cell also constrains
+      (``scale``, ``orientation``).  Scored against the **same** negatives.
+
+    ⛔ Nothing here re-derives the split: the held-out rows come from ``split``.
+    Caps are seeded subsamples and the **realised** counts are what get reported.
+    """
+    from ..data import dsprites as ds
+
+    target = int(ds.HELDOUT_SHAPE_CLASS)
+    corner = ds.montero_corner_mask(latent_values)
+    pos_corner = ds.montero_position_corner_mask(latent_values)
+    is_target = latent_classes[:, ds.shp] == target
+
+    test = np.asarray(split.test_rows, np.int64)
+    fitted = np.unique(np.asarray(fitted_rows, np.int64))
+    in_test = np.zeros(latent_values.shape[0], bool)
+    in_test[test] = True
+    in_fit = np.zeros(latent_values.shape[0], bool)
+    in_fit[fitted] = True
+
+    neg_all = np.where(corner & ~is_target & ~in_test & ~in_fit)[0]
+    seen_all = np.where(pos_corner & is_target & ~in_test & ~in_fit)[0]
+
+    cap_p = int(dcfg.quick_max_positives if quick else dcfg.max_positives)
+    cap_n = int(dcfg.quick_max_negatives if quick else dcfg.max_negatives)
+    cap_s = int(dcfg.quick_max_seen if quick else dcfg.max_seen)
+
+    def take(pool, cap, salt):
+        pool = np.asarray(pool, np.int64)
+        if cap <= 0 or pool.size <= cap:
+            return np.sort(pool)
+        rng = np.random.default_rng(int(seed) * 104_729 + salt)
+        return np.sort(rng.permutation(pool)[:cap])
+
+    out = {
+        "target": target,
+        "positives": take(test, cap_p, 1),
+        "negatives": take(neg_all, cap_n, 2),
+        "seen": take(seen_all, cap_s, 3),
+        "pool_sizes": {
+            "corner_total": int(corner.sum()),
+            "positives_pool": int(test.size),
+            "negatives_pool": int(neg_all.size),
+            "seen_pool": int(seen_all.size),
+        },
+    }
+    # ⛔ The assertions that make the number mean what it says.
+    for name in ("negatives", "seen"):
+        r = out[name]
+        if np.intersect1d(r, test).size:
+            raise AssertionError(f"dSprites {name} overlap the held-out split")
+        if np.intersect1d(r, fitted).size:
+            raise AssertionError(f"dSprites {name} overlap the fitted rows")
+    if np.intersect1d(out["positives"], fitted).size:
+        raise AssertionError("dSprites positives overlap the fitted rows (R3.3 leak)")
+    if out["negatives"].size < int(dcfg.min_negatives):
+        raise AssertionError(
+            f"only {out['negatives'].size} matched-seen negatives "
+            f"(< {int(dcfg.min_negatives)}): a balanced accuracy over that is not "
+            "a measurement"
+        )
+    if np.intersect1d(out["negatives"], out["seen"]).size:
+        raise AssertionError("negatives and seen-normaliser positives overlap")
+    return out
+
+
+def features_cache_or_encoder(
+    dataset: str,
+    config: CHLUConfig,
+    encoder,
+    cache_rows: np.ndarray,
+    features,
+    cache_manifest: dict,
+    rows: np.ndarray,
+    log: Callable = print,
+) -> np.ndarray:
+    """Cached features for ``rows``; the **FROZEN** encoder for rows outside scope.
+
+    ⚠ Measured constraint, not a choice (the ``gen-decoder-lift`` / ``exp_gen_store``
+    precedent): a ``cache_scope="used"`` cache holds train + eval_A + eval_B and
+    therefore **no** matched-seen row.  ⛔ This does **not** rebuild the bridge —
+    the encoder is the bridge's own checkpoint, its parameter hash is asserted
+    against the cache manifest by the caller, and freshly encoded rows are
+    quantised to the cache's own dtype, so a side-buffer row is byte-for-byte
+    what ``build_feature_cache`` would have written.
+    """
+    rows = np.asarray(rows, np.int64)
+    if rows.size == 0:
+        return np.zeros((0,) + tuple(encoder.feat_shape), np.float32)
+    cache_rows = np.asarray(cache_rows, np.int64)
+    if cache_rows.size == 0:
+        hit = np.zeros(rows.size, bool)
+        pos = np.zeros(rows.size, np.int64)
+    else:
+        pos = np.searchsorted(cache_rows, rows)
+        safe = np.minimum(pos, cache_rows.size - 1)
+        hit = (pos < cache_rows.size) & (cache_rows[safe] == rows)
+    out = np.zeros((rows.size,) + tuple(encoder.feat_shape), np.float32)
+    if hit.any():
+        out[hit] = np.asarray(features[pos[hit]], np.float32)
+    miss = ~hit
+    if miss.any():
+        dtype = np.dtype(cache_manifest.get("dtype", config.gen_bridge.cache_dtype))
+        want = rows[miss]
+        log(f"    side buffer: {want.size} row(s) outside the cache scope")
+        imgs = stream_images(
+            dataset, want, _data_root(config), int(config.gen_bridge.cache_block)
+        )
+        out[miss] = encode_images(
+            encoder, imgs, int(config.gen_bridge.eval_batch)
+        ).astype(dtype).astype(np.float32)
+    return out
+
+
+def run_discrimination_stage(
+    dataset: str,
+    pretext: str,
+    seed: int,
+    out_dir: Path,
+    config: CHLUConfig,
+    encoder_dir: Optional[Path] = None,
+    quick: bool = False,
+    log: Callable = print,
+) -> dict:
+    """⭐ THE GATE on the compositional term, R20's in-corner metric, UNCHANGED.
+
+    Loads the frozen encoder / decoder / probe this seed already produced (⛔
+    fits nothing), asserts the decoder was built by the pinned recipe, and reads
+    balanced accuracy + AUROC of ``shape`` for held-out-vs-matched-seen and for
+    the seen normaliser vs the SAME negatives.
+
+    ⛔ ``FAIL`` is a legitimate outcome and returns to the Hub.  It is not a
+    licence to tune.
+    """
+    if dataset != "dsprites":
+        raise NotImplementedError(
+            "the in-corner discrimination stage is wired for the dSprites Montero "
+            f"cell; ⛔ do not invent one for {dataset!r} — the Shapes3D read lives "
+            "in exp_gen_classifier / gen-bridge-wide.  Return to the Hub."
+        )
+    from ..core.gen_bridge import assert_decoder_hash
+    from ..data import dsprites as ds
+
+    cfg = config.gen_bridge
+    dcfg = config.gen_bridge_dsprites
+    out_dir = Path(out_dir)
+    encoder_dir = Path(encoder_dir) if encoder_dir is not None else out_dir
+
+    with open(out_dir / "bridge_manifest.json") as fh:
+        bman = json.load(fh)
+    got_recipe = str(bman["training"]["dec_recipe"]["name"])
+    if got_recipe != str(dcfg.expected_decoder_recipe):
+        msg = (
+            f"⛔ decoder recipe {got_recipe!r} != expected "
+            f"{str(dcfg.expected_decoder_recipe)!r}: this run is VOID "
+            "(R19.1/R20 — 'baseline' is the recipe that FAILED the gate)"
+        )
+        # ⚠ A quick run deliberately uses ``quick_dec_recipe`` so a smoke test does
+        # not inherit the winner's 1,800-step schedule.  Its numbers are plumbing
+        # only and are never reported, so the assertion warns instead of raising —
+        # ⛔ but ONLY under ``quick``.
+        if not quick:
+            raise AssertionError(msg)
+        log(f"  ⚠ QUICK: {msg} — plumbing only, NOT a reported gate")
+
+    encoder = load_model(encoder_dir / "encoder.pkl")
+    decoder = load_model(out_dir / "decoder.pkl")
+    probe = load_model(out_dir / "probe.pkl")
+    enc_hash = param_hash(encoder)
+    dec_hash = assert_decoder_hash(decoder, bman["decoder_param_hash"])
+    probe_hash = param_hash(probe)
+    if enc_hash != bman["encoder_param_hash"]:
+        raise AssertionError("encoder checkpoint does not match the bridge manifest")
+    if probe_hash != bman["probe_param_hash"]:
+        raise AssertionError("probe checkpoint does not match the bridge manifest")
+
+    split, _ = load_split_and_cells(dataset, config, log)
+    rows = select_rows(split, cfg, seed)
+    grid = split.grid
+    names = list(grid.names)
+    factor_index = names.index(str(dcfg.gate_factor))
+
+    latent_values, latent_classes = ds.load_latents(_data_root(config))
+    pops = dsprites_populations(
+        split, latent_values, latent_classes, rows["train"], dcfg, seed, quick=quick
+    )
+    target = pops["target"]
+    log(
+        f"  populations: positives={pops['positives'].size} "
+        f"negatives={pops['negatives'].size} seen={pops['seen'].size} "
+        f"(pools {pops['pool_sizes']})"
+    )
+
+    cache_rows, features, cman = load_feature_cache(
+        encoder_dir, verify=bool(cfg.verify_cache_checksum)
+    )
+    if cman["encoder_param_hash"] != enc_hash:
+        raise AssertionError("feature cache was written by a different encoder")
+
+    # ⭐ The side buffer is proved equal to the cache on rows the cache DOES hold,
+    # before it is trusted on rows it does not.
+    probe_rows = pops["positives"][: min(32, pops["positives"].size)]
+    side = features_cache_or_encoder(
+        dataset, config, encoder, np.zeros(0, np.int64), features, cman,
+        probe_rows, log=lambda *_: None,
+    )
+    cached = features_for_rows(cache_rows, features, probe_rows)
+    side_identical = bool(np.array_equal(side, cached))
+    log(f"  side-buffer == cache on {probe_rows.size} cached rows: {side_identical}")
+
+    eb = int(dcfg.eval_batch)
+    out_pop = {}
+    for name in ("positives", "negatives", "seen"):
+        r = pops[name]
+        feats = features_cache_or_encoder(
+            dataset, config, encoder, cache_rows, features, cman, r, log=log
+        )
+        dec = decode_features(decoder, feats, eb)
+        out_pop[name] = {
+            "n": int(r.size),
+            "probs": factor_probs(probe, dec, factor_index, eb),
+            "preds": predict_factors(probe, dec, eb),
+            "decoded_mse": None,
+        }
+        if bool(dcfg.real_instrument):
+            real = stream_images(dataset, r, _data_root(config), int(cfg.cache_block))
+            out_pop[name]["decoded_mse"] = float(np.mean((dec - real) ** 2))
+            out_pop[name]["real_probs"] = factor_probs(probe, real, factor_index, eb)
+            del real
+        del feats, dec
+
+    held = discrimination_metrics(
+        out_pop["positives"]["probs"], out_pop["negatives"]["probs"],
+        target, int(dcfg.min_negatives),
+    )
+    seen = discrimination_metrics(
+        out_pop["seen"]["probs"], out_pop["negatives"]["probs"],
+        target, int(dcfg.min_negatives),
+    )
+    verdict = discrimination_verdict(
+        held["balanced_accuracy"], seen["balanced_accuracy"],
+        float(dcfg.disc_floor), float(dcfg.disc_abs_floor),
+    )
+    result = {
+        "schema": "chlu-gen-bridge-dsprites-discrimination/1",
+        "dataset": dataset,
+        "pretext": pretext,
+        "seed": int(seed),
+        "quick": bool(quick),
+        "gate_factor": str(dcfg.gate_factor),
+        "target_class": target,
+        "encoder_param_hash": enc_hash,
+        "decoder_param_hash": dec_hash,
+        "decoder_recipe": bman["training"]["dec_recipe"],
+        "decoder_param_count": bman["decoder_param_count"],
+        "probe_param_hash": probe_hash,
+        "feature_cache": {k: cman[k] for k in ("scope", "n_rows", "dtype", "features_sha256")},
+        "side_buffer_identical_to_cache": side_identical,
+        "populations": {k: int(pops[k].size) for k in ("positives", "negatives", "seen")},
+        "pool_sizes": pops["pool_sizes"],
+        "held_out": held,
+        "seen_normaliser": seen,
+        "verdict": verdict,
+        "decoded_mse": {k: out_pop[k]["decoded_mse"] for k in out_pop},
+        "no_leak": assert_no_holdout_leak(split, rows["train"]),
+    }
+    # ⭐ the 3-way companion (a DIFFERENT quantity, in its own row — R20)
+    for name in ("positives", "negatives", "seen"):
+        lab = factor_labels(grid, pops[name])[:, factor_index]
+        result.setdefault("multiclass", {})[name] = multiclass_balanced_accuracy(
+            lab, out_pop[name]["preds"][:, factor_index], int(grid.cardinalities[factor_index])
+        )
+    # ⭐ the instrument: the same metric on REAL images.  ⛔ If this is not ~1.0,
+    # nothing decoded below it is interpretable.
+    if bool(dcfg.real_instrument):
+        result["real_images"] = discrimination_metrics(
+            out_pop["positives"]["real_probs"], out_pop["negatives"]["real_probs"],
+            target, int(dcfg.min_negatives),
+        )
+    log(
+        f"  ⭐ seed {seed}: balacc held-out={held['balanced_accuracy']:.4f} "
+        f"seen={seen['balanced_accuracy']:.4f} ratio={verdict['ratio']:.4f} "
+        f"AUROC={held['auroc']:.4f} -> {verdict['verdict']}"
+    )
+    _write_json(result, out_dir / "discrimination.json")
+    return result
+
+
+def aggregate_discrimination(run_dirs, log: Callable = print) -> dict:
+    """Aggregate per-seed ``discrimination.json`` into the reported gate verdict."""
+    from ..eval.gen_probe import balanced_accuracy  # noqa: F401  (documented sibling)
+
+    res = []
+    for d in run_dirs:
+        path = Path(d) / "discrimination.json"
+        if not path.exists():
+            log(f"  ⚠ {path} missing — seed reported NOT RUN, never as a zero")
+            continue
+        with open(path) as fh:
+            res.append(json.load(fh))
+    if not res:
+        raise ValueError("no per-seed discrimination results to aggregate")
+
+    def stat(getter):
+        v = np.asarray([float(getter(r)) for r in res], np.float64)
+        return {
+            "mean": float(v.mean()), "std": float(v.std()),
+            "min": float(v.min()), "max": float(v.max()),
+            "values": [float(x) for x in v],
+        }
+
+    out = {
+        "schema": "chlu-gen-bridge-dsprites-aggregate/1",
+        "dataset": res[0]["dataset"],
+        "pretext": res[0]["pretext"],
+        "gate_factor": res[0]["gate_factor"],
+        "seeds": [r["seed"] for r in res],
+        "decoder_recipe": res[0]["decoder_recipe"]["name"],
+        "decoder_param_hashes": sorted({r["decoder_param_hash"] for r in res}),
+        "balacc_held_out": stat(lambda r: r["held_out"]["balanced_accuracy"]),
+        "balacc_seen": stat(lambda r: r["seen_normaliser"]["balanced_accuracy"]),
+        "auroc_held_out": stat(lambda r: r["held_out"]["auroc"]),
+        "auroc_seen": stat(lambda r: r["seen_normaliser"]["auroc"]),
+        "tpr_held_out": stat(lambda r: r["held_out"]["tpr"]),
+        "tnr_held_out": stat(lambda r: r["held_out"]["tnr"]),
+        "ratio": stat(lambda r: r["verdict"]["ratio"]),
+        "per_seed_verdicts": [r["verdict"]["verdict"] for r in res],
+        "populations": [r["populations"] for r in res],
+    }
+    if all("real_images" in r for r in res):
+        out["balacc_real_images"] = stat(
+            lambda r: r["real_images"]["balanced_accuracy"]
+        )
+    out["gate"] = discrimination_verdict(
+        out["balacc_held_out"]["mean"],
+        out["balacc_seen"]["mean"],
+        float(res[0]["verdict"]["floor"]),
+        float(res[0]["verdict"]["abs_floor"]),
+    )
+    log(
+        f"⭐ dSPRITES GATE (seeds {out['seeds']}): balacc held-out="
+        f"{out['balacc_held_out']['mean']:.4f}±{out['balacc_held_out']['std']:.4f} "
+        f"seen={out['balacc_seen']['mean']:.4f}±{out['balacc_seen']['std']:.4f} "
+        f"ratio={out['gate']['ratio']:.4f} (floor {out['gate']['floor']}, abs "
+        f"{out['gate']['abs_floor']}) -> {out['gate']['verdict']} "
+        f"[per seed {out['per_seed_verdicts']}]"
+    )
+    return out
+
+
 def aggregate_runs(run_dirs, floor: float, log: Callable = print) -> dict:
     """Aggregate per-seed ``bridge_manifest.json`` into the reported gate verdict."""
     mans = []
@@ -588,6 +1005,7 @@ def run_experiment_gen_bridge(
     out_dir: Optional[str] = None,
     seeds=None,
     quick: bool = False,
+    discrimination: Optional[bool] = None,
     log: Callable = print,
 ) -> dict:
     """Config-load -> data -> init -> train-or-load -> evaluate -> plot, over seeds."""
@@ -596,6 +1014,20 @@ def run_experiment_gen_bridge(
         config = apply_quick(config)
     cfg = config.gen_bridge
     dataset = dataset or cfg.dataset
+    # ⭐ dSprites ONLY (additive).  ⛔ The Shapes3D path never reaches this line,
+    # so every Shapes3D default — including ``dec_recipe="baseline"`` — is exactly
+    # as shipped.  On dSprites the pinned recipe is R19.1's winner, asserted per
+    # seed by the discrimination stage against the frozen decoder's manifest.
+    if dataset == "dsprites":
+        config = apply_dsprites_profile(config, quick=quick)
+        cfg = config.gen_bridge
+        log(f"[gen-bridge] ⭐ dSprites profile: dec_recipe={cfg.dec_recipe!r} "
+            f"cache_block={cfg.cache_block}")
+    # ⭐ Default ON for dSprites: the gate on that dataset IS the in-corner
+    # discrimination read (R20/R23.1), so it is not an opt-in extra.  ⛔ Always
+    # OFF for Shapes3D — that read belongs to gen-bridge-wide / exp_gen_classifier.
+    if discrimination is None:
+        discrimination = dataset == "dsprites"
     pretext = pretext or cfg.pretext
     if pretext not in PRETEXTS:
         raise ValueError(f"pretext must be one of {PRETEXTS}")
@@ -621,6 +1053,18 @@ def run_experiment_gen_bridge(
             log("  bridge artifacts present — reusing (train-or-load)")
         else:
             run_decoder_stage(dataset, pretext, seed, d, config, encoder_dir=d, log=log)
+        # ⭐ dSprites: the gate reads the COMPOSITIONAL term, so the in-corner
+        # discrimination read is part of the per-seed unit of work and is written
+        # incrementally (skip-if-exists) — a run that dies at seed 2 still leaves
+        # seeds 0 and 1 fully reported.
+        if discrimination and dataset == "dsprites":
+            if (d / "discrimination.json").exists():
+                log("  discrimination artifacts present — reusing")
+            else:
+                run_discrimination_stage(
+                    dataset, pretext, seed, d, config,
+                    encoder_dir=d, quick=quick, log=log,
+                )
         run_dirs.append(d)
 
     agg = aggregate_runs(run_dirs, float(cfg.ceiling_floor), log=log)
@@ -629,6 +1073,14 @@ def run_experiment_gen_bridge(
         agg["WARNING"] = "quick run — plumbing only, NOT a reported ceiling"
     _write_json(agg, root / "ceiling.json")
     _write_json(agg["gate"], root / "gate.json")
+    if discrimination and dataset == "dsprites":
+        dagg = aggregate_discrimination(run_dirs, log=log)
+        dagg["quick"] = bool(quick)
+        if quick:
+            dagg["WARNING"] = "quick run — plumbing only, NOT a reported gate"
+        _write_json(dagg, root / "discrimination.json")
+        _write_json(dagg["gate"], root / "discrimination_gate.json")
+        agg["discrimination"] = dagg
     return agg
 
 
@@ -721,7 +1173,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--stage", default="all", choices=list(STAGES) + list(NOT_MINE),
-        help="encoder | decoder | all | aggregate (store/cell belong to other spokes)",
+        help="encoder | decoder | all | aggregate | discrimination "
+             "(⭐ discrimination = the dSprites in-corner gate, R20; "
+             "store/cell belong to other spokes)",
     )
     p.add_argument(
         "--arm", default="clu",
@@ -790,6 +1244,11 @@ def main(argv=None) -> int:
     cfg = config.gen_bridge
     dataset = args.dataset or cfg.dataset
     pretext = args.pretext or cfg.pretext
+    if dataset == "dsprites":
+        config = apply_dsprites_profile(config, quick=bool(args.quick))
+        cfg = config.gen_bridge
+        print(f"[gen-bridge] ⭐ dSprites profile: dec_recipe={cfg.dec_recipe!r} "
+              f"cache_block={cfg.cache_block}")
     condition = condition_of(config)
     tag = artifacts_tag(dataset, pretext, condition)
     out = Path(args.out or (Path("results") / "gen_bridge" / tag / f"seed_{args.seed}"))
@@ -810,6 +1269,16 @@ def main(argv=None) -> int:
         )
         run_decoder_stage(
             dataset, pretext, args.seed, out, config, encoder_dir=enc_dir
+        )
+    if args.stage == "discrimination":
+        enc_dir = (
+            Path(args.encoder_dir)
+            if args.encoder_dir
+            else _default_encoder_dir(out, args.arm, args.seed)
+        )
+        run_discrimination_stage(
+            dataset, pretext, args.seed, out, config,
+            encoder_dir=enc_dir, quick=bool(args.quick),
         )
     if args.stage == "aggregate":
         if not args.runs:

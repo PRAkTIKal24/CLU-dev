@@ -121,6 +121,57 @@ def montero_test_mask(
     )
 
 
+#: The value the held-out cell pins ``shape`` to: class 1 = ellipse (T4 — the
+#: filter reads ``latent_CLASSES`` for shape and ``latent_values`` for the rest).
+HELDOUT_SHAPE_CLASS = 1
+
+
+def montero_corner_mask(latent_values: np.ndarray) -> np.ndarray:
+    """⭐ The held-out cell's conjunction with the ``shape`` clause RELAXED.
+
+    This is the *corner* R16's **matched-seen** control lives in, and R20's
+    in-corner discrimination metric needs: same scale band, same rotation band
+    (T2 — the constants stay swapped), same position quadrant, **any shape**.
+
+    ⛔ Every threshold below is the same literal as :func:`montero_test_mask`'s,
+    and ``tests/test_gen_bridge_dsprites.py`` asserts on the REAL file that
+    ``montero_test_mask(v, c) == (c[:, shp] == 1) & montero_corner_mask(v)``
+    exactly — so the verbatim filter stays verbatim and this stays honest.
+    """
+    latent_values = np.asarray(latent_values)
+    if latent_values.shape[1] != 5:
+        raise ValueError(
+            "dSprites filters expect 5 columns (post colour slice, T1); got "
+            f"values{latent_values.shape}"
+        )
+    return (
+        (latent_values[:, scl] > 0.6)
+        & (latent_values[:, rot] > 0.0)
+        & (latent_values[:, rot] < a120)  # < 240 deg  (T2)
+        & (latent_values[:, rot] > a240)  # > 120 deg  (T2)
+        & (latent_values[:, tx] > 0.66)
+        & (latent_values[:, ty] > 0.66)
+    )
+
+
+def montero_position_corner_mask(latent_values: np.ndarray) -> np.ndarray:
+    """Only the POSITION clauses of the cell (``tx > 0.66 & ty > 0.66``).
+
+    The **seen normaliser** for the in-corner read keeps this context clause and
+    relaxes scale + rotation — the dSprites analogue of ``gen-bridge-wide``'s
+    "the cell's hue bands + its own shape, but outside the cell".  dSprites has
+    no photometric clause at all, so position is the only context the cell
+    carries beyond the two factors that are relaxed.
+    """
+    latent_values = np.asarray(latent_values)
+    if latent_values.shape[1] != 5:
+        raise ValueError(
+            "dSprites filters expect 5 columns (post colour slice, T1); got "
+            f"values{latent_values.shape}"
+        )
+    return (latent_values[:, tx] > 0.66) & (latent_values[:, ty] > 0.66)
+
+
 def _predicate_from_values(latent_values: np.ndarray) -> np.ndarray:
     """Test predicate over reconstructed factor **values** only.
 
