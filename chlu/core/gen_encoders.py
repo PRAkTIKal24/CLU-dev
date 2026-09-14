@@ -54,6 +54,7 @@ from .gen_bridge import (
 PRETRAIN_VARIANTS = (
     "recon_control",
     "random_init",
+    "random_init_hires",
     "ae_plain",
     "recon_control_2x",
     "ae_deep",
@@ -122,6 +123,14 @@ def variant_spec(name: str, cfg) -> VariantSpec:
         # sentence anyone may write.  0 steps, so ⛔ it can never win on compute.
         return VariantSpec(name, "random", enc, dec, steps_mult=0, is_control=True,
                            note="LAUNDERING FLOOR: random init, zero training steps")
+    if name == "random_init_hires":
+        # ⚠ ``ae_hires`` quadruples D (2048 -> 8192), and a linear probe on 8192
+        # dimensions has more capacity than one on 2048.  Without this row an
+        # ``ae_hires`` win is unreadable: it could be the architecture or it could
+        # be the probe.  0 steps, matched D.
+        return VariantSpec(name, "random", tuple(int(c) for c in cfg.hires_channels), dec,
+                           steps_mult=0, is_control=True,
+                           note="LAUNDERING FLOOR at ae_hires' D: random init, zero steps")
     if name == "recon_control":
         return VariantSpec(name, "recon", enc, dec, is_control=True,
                            note="the shipped pretext='recon' path, called verbatim")

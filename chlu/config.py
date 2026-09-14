@@ -5591,7 +5591,7 @@ class GenPretrainConfig:
     variants: List[str] = field(
         default_factory=lambda: [
             "recon_control", "random_init", "ae_plain", "recon_control_2x",
-            "ae_deep", "mae", "ae_hires", "vae",
+            "ae_deep", "mae", "ae_hires", "random_init_hires", "vae",
         ]
     )
     seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
@@ -5670,7 +5670,8 @@ class GenPretrainConfig:
     # --- quick (⚠ plumbing smoke only — a quick number is NEVER reported) ---
     quick_variants: List[str] = field(
         default_factory=lambda: [
-            "recon_control", "random_init", "ae_plain", "ae_deep", "mae", "ae_hires", "vae",
+            "recon_control", "random_init", "ae_plain", "ae_deep", "mae",
+            "ae_hires", "random_init_hires", "vae",
         ]
     )
     quick_seeds: List[int] = field(default_factory=lambda: [0])

@@ -252,7 +252,7 @@ def test_every_named_variant_resolves_and_only_the_vae_is_the_comparison_arm():
     specs = {v: variant_spec(v, cfg) for v in PRETRAIN_VARIANTS}
     assert [v for v, s in specs.items() if s.is_comparison_arm] == ["vae"]
     assert set(v for v, s in specs.items() if s.is_control) == {
-        "recon_control", "random_init", "ae_plain", "recon_control_2x"}
+        "recon_control", "random_init", "random_init_hires", "ae_plain", "recon_control_2x"}
     with pytest.raises(VariantError):
         variant_spec("contrastive", cfg)
 
@@ -266,6 +266,19 @@ def test_ae_hires_keeps_D_inside_the_lace_whitening_budget():
                      cfg.enc_stride, cfg.enc_groups, jax.random.PRNGKey(0))
     assert enc.feature_dim == 8192
     assert enc.feature_dim <= WHITENING_D_LIMIT
+
+
+def test_the_hires_arm_has_a_D_MATCHED_random_floor():
+    """⚠ ``ae_hires`` quadruples ``D``; a linear probe on 8192 dims has more capacity
+    than one on 2048.  ⛔ Without a floor at the SAME ``D`` an ``ae_hires`` win is
+    unreadable — architecture or probe capacity, no way to tell."""
+    cfg = CHLUConfig().gen_pretrain
+    hi = variant_spec("ae_hires", cfg)
+    floor = variant_spec("random_init_hires", cfg)
+    assert floor.enc_channels == hi.enc_channels
+    assert floor.steps_mult == 0 and floor.is_control is True
+    assert variant_spec("random_init", cfg).enc_channels == variant_spec(
+        "recon_control", cfg).enc_channels
 
 
 # ---------------------------------------------------------------------------
