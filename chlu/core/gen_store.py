@@ -427,13 +427,37 @@ class GenStore(eqx.Module):
         return len(self.well_channels)
 
     @property
+    def n_modes_per_well(self) -> tuple:
+        """``(M_0, ..., M_{K-1})``.  ⭐ The wells may hold DIFFERENT numbers of modes
+        (``gen-codebook-allocation``); this is the general accessor and
+        :attr:`n_modes` is the uniform special case."""
+        return tuple(int(np.asarray(m).shape[0]) for m in self.modes)
+
+    @property
     def n_modes(self) -> int:
-        return int(self.modes[0].shape[0])
+        """``M``, for a **uniform** allocation.
+
+        ⛔ **Raises** when the wells hold different ``M_k``: a single ``M`` is then a
+        WRONG number, not an approximate one, and it would silently reach a byte
+        ledger / a one-hot width / an address book (``gen-codebook-allocation``).
+        Use :attr:`n_modes_per_well`.
+        """
+        ms = self.n_modes_per_well
+        if len(set(ms)) != 1:
+            raise ValueError(
+                f"⛔ this store has a NON-UNIFORM allocation {ms} — there is no single "
+                "`n_modes`. Use `store.n_modes_per_well`."
+            )
+        return int(ms[0])
 
     @property
     def bits_per_read(self) -> float:
-        """Width of the ONLY channel from the features to the decoder."""
-        return float(self.n_wells * np.log2(self.n_modes))
+        """Width of the ONLY channel from the features to the decoder.
+
+        ``sum_k log2(M_k)`` — identical to ``K·log2(M)`` for a uniform allocation and
+        ⭐ correct for an allocated one, where ``K·log2(M_0)`` would not be.
+        """
+        return float(sum(np.log2(float(m)) for m in self.n_modes_per_well))
 
     def n_bytes(self) -> int:
         """Store size in bytes (float32 modes) — follows ``FactoredStore.n_bytes``."""
@@ -444,14 +468,22 @@ class GenStore(eqx.Module):
 def store_bytes(store: GenStore) -> dict:
     """⭐ Machine-readable byte accounting — ``gen-baselines`` byte-matches to this."""
     per_well = [int(np.asarray(m).size) * 4 for m in store.modes]
+    ms = store.n_modes_per_well
+    uniform = len(set(ms)) == 1
     return {
         "store_bytes": int(sum(per_well)),
         "store_bytes_per_well": per_well,
         "n_wells": int(store.n_wells),
-        "n_modes": int(store.n_modes),
+        # ⛔ ``None`` rather than a lie when the allocation is non-uniform.
+        "n_modes": int(ms[0]) if uniform else None,
+        "n_modes_per_well": [int(x) for x in ms],
+        "uniform_allocation": bool(uniform),
         "dim": int(store.dim),
         "dtype": "float32",
-        "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+        "bytes_formula": (
+            "n_modes * sum_k d_k * 4 = n_modes * D * 4" if uniform
+            else "sum_k M_k * d_k * 4  (⭐ a per-well allocation)"
+        ),
         "bits_per_read": store.bits_per_read,
         "note": (
             "The modes ARE the store. The addressing head is reported separately "
@@ -670,14 +702,31 @@ def _kmeanspp_init(Z: np.ndarray, m: int, rng) -> np.ndarray:
 
 
 def init_store(
-    X: np.ndarray, well_channels, n_modes: int, feat_shape, key, seed: int
+    X: np.ndarray, well_channels, n_modes, feat_shape, key, seed: int
 ) -> GenStore:
-    """Modes seeded by k-means++ **on the store's own training features**."""
+    """Modes seeded by k-means++ **on the store's own training features**.
+
+    ``n_modes`` is either an ``int`` (the uniform allocation, unchanged) or a
+    per-well sequence ``(M_0, …, M_{K-1})`` — ⭐ ``gen-codebook-allocation`` spends
+    codewords where the distortion is, at constant total bytes.  ⛔ The RNG stream is
+    identical in both cases (one ``default_rng`` consumed well-by-well in order), so
+    a uniform call is bit-identical to the pre-allocation code path.
+    """
+    ms = ([int(n_modes)] * len(list(well_channels))
+          if np.isscalar(n_modes) or isinstance(n_modes, (int, np.integer))
+          else [int(x) for x in n_modes])
+    if len(ms) != len(list(well_channels)):
+        raise ValueError(
+            f"n_modes has {len(ms)} entries but there are "
+            f"{len(list(well_channels))} wells"
+        )
+    if min(ms) < 1:
+        raise ValueError(f"every well needs at least one mode, got {ms}")
     rng = np.random.default_rng(int(seed) * 2_654_435_761 % (2**32))
     flat = np.asarray(X, np.float32).reshape((X.shape[0], -1))
-    init = [_kmeanspp_init(flat[:, np.asarray(w, np.int64)], int(n_modes), rng)
-            for w in well_channels]
-    return GenStore(well_channels, int(n_modes), feat_shape, key, init=init)
+    init = [_kmeanspp_init(flat[:, np.asarray(w, np.int64)], int(m), rng)
+            for w, m in zip(well_channels, ms, strict=True)]
+    return GenStore(well_channels, int(ms[0]), feat_shape, key, init=init)
 
 
 def train_store(

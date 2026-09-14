@@ -6304,3 +6304,152 @@ def gen_dynamical_read_config(
             setattr(cfg, k, v)
     return cfg
 # --- END gen-dynamical-read --------------------------------------------------
+# --- BEGIN gen-codebook-allocation (additive; D6) ----------------------------
+# ⭐ Appended at the END of the file, behind ``gen-variance-equalisation``, for the
+# same reason every gen block is: ⛔ APPEND-ONLY, one contiguous BEGIN/END region,
+# **no** ``CHLUConfig`` field and **no** ``load_config``/``save_config`` site, so the
+# merge rule "take the peer's whole file and re-apply my block by its markers"
+# holds with zero deletions.
+@dataclass
+class GenCodebookAllocConfig:
+    """⭐⭐ Knobs for ``exp_gen_codebook_alloc`` — **spend codewords where the
+    distortion is**, at CONSTANT TOTAL BYTES (design note §0.5, D6).
+
+    ⭐ **DIAL: codeword allocation across wells, at constant total bytes.**
+    ⛔ The encoder, the decoder, the **partition**, ``K``, the store recipe and the
+    probe are all UNCHANGED; the only thing an arm changes is **how many codewords
+    each well gets**.
+
+    ⛔ **This is a CONTROL ARM for the dynamical read, NOT a gate on it.**
+
+    ⛔ **The byte constraint is enforced as ``<=``, never ``==``**: with integer
+    ``M_k`` at unequal ``d_k`` (283…744) hitting ``Σ M_k d_k = 64·D`` exactly is a
+    Diophantine problem with no guaranteed solution.  The harness raises if any arm
+    exceeds the uniform arm's bytes and reports the exact shortfall otherwise.
+
+    ⚠ **The decoder trap, again.**  :attr:`GenBridgeConfig.dec_recipe` still defaults
+    to ``"baseline"`` — the recipe that FAILED the gate — so :attr:`dec_recipe` is
+    pinned to `gen-decoder-lift`'s winner and the per-seed ``param_hash`` is asserted.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- ⛔ frozen artifacts (every one is LOADED, never fitted here) ---------
+    commit_cache_pattern: str = (
+        "outputs/gen-commitment-collapse/runs/{dataset}_{pretext}/seed_{seed}"
+    )
+    store_checkpoint_source: str = (
+        "outputs/gen-read-compose/runs/{dataset}_{pretext}/seed_{seed}/store_s{seed}.pkl"
+    )
+    assert_store_hash: bool = True
+    verify_cache_checksum: bool = True
+    encode_chunk: int = 8192
+
+    # --- ⭐ the arms.  ⛔ ``uniform`` is the LAUNDERING CONTROL, not a placeholder
+    #: ``uniform``           M_k = 64 — the shipped arm, re-fitted through the
+    #:                       identical code path (⛔ never transcribed).
+    #: ``equal_distortion``  ⭐ the rule D6 names: M_k = eps^(-PR_k/2).
+    #: ``mse_optimal``       the byte-constrained minimiser of the read error —
+    #:                       ⭐ if it ties ``uniform``, re-allocation is not a lever.
+    arms: List[str] = field(
+        default_factory=lambda: ["uniform", "equal_distortion", "mse_optimal"]
+    )
+    #: ⛔ The uniform reference AND the byte budget: every arm is measured against
+    #: ``M_uniform · D · 4``.  ⛔ Not reduced by ``--quick`` (R20's 30-bit channel).
+    m_uniform: int = 64
+    #: A well may never fall below this many codewords (a 1-mode well is a constant).
+    m_min: int = 2
+    #: Sanity ceiling; the equal-distortion rule can ask for millions on a high-PR
+    #: well and the budget, not this, is what actually binds.
+    m_max: int = 100_000
+    #: Rows the label-free per-well spectrum (``PR``, ``Σλ``) is measured on
+    #: (``0`` -> every store-training row).  ⛔ Always a seeded permutation, never a
+    #: prefix (the Shapes3D grid is a lexicographic bijection — veq §12 L1).
+    spectrum_rows: int = 16384
+    #: ⚠ Compare the harness's ``PR`` against `gen-variance-equalisation`'s published
+    #: per-seed values and FAIL if the deviation exceeds this.  ``0`` disables.
+    pr_cross_check_tol: float = 0.0
+
+    # --- rows (⭐ identical draw to gen-loss-attribution's) -------------------
+    n_store_train: int = 0
+    n_spread_train: int = 12288
+    n_spread_test: int = 4096
+    max_matched_seen: int = 256
+    row_seed_mult: int = 7_919
+    row_seed_offset: int = 20_260_914
+
+    # --- ⛔ THE ONE PROBE — identical to gen-loss-attribution's, deliberately --
+    probe_steps: int = 3000
+    probe_batch: int = 512
+    probe_lr: float = 3e-3
+    probe_seed_offset: int = 20_260_914
+    random_code_seed: int = 20_260_914
+    #: ⭐ A random-code control at **each arm's own** ``M_k`` widths.  ⛔ Mandatory:
+    #: the one-hot probe width is ``Σ_k M_k`` and therefore ARM-DEPENDENT, so a
+    #: uniform-``M`` control cannot bound an allocated arm's probe.
+    per_arm_random_control: bool = True
+
+    # --- capacity + distinctness --------------------------------------------
+    capacity_carry_threshold: float = 0.25
+    address_smoothing: float = 1.0
+    distinct_on_spread: bool = True
+
+    # --- the decoder (⛔ the standing trap) ----------------------------------
+    decode_reads: bool = True
+    dec_recipe: str = "v1_capacity_schedule"
+    assert_dec_recipe: bool = True
+    winner_decoder_pattern: str = "outputs/gen-decoder-lift/winner/decoder_v1_s{seed}.pkl"
+    winner_hashes_path: str = "outputs/gen-decoder-lift/winner/winner_hashes.json"
+    decode_batch: int = 256
+    decode_rows: int = 1024
+
+    # --- ⭐ the laundering control -------------------------------------------
+    assert_knn_proto_identical: bool = True
+    #: ⛔ The byte gate (this spoke's own falsifier #1).  Refuse to report anything
+    #: if an arm uses MORE bytes than the uniform arm.
+    assert_bytes_within_budget: bool = True
+
+    make_plots: bool = True
+    skip_if_exists: bool = True
+    out_root: Optional[str] = None
+    claude_root: Optional[str] = None
+
+    # --- quick (⚠ plumbing smoke only — ⛔ a quick number is NEVER reported) --
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_store_train: int = 2048
+    quick_n_spread_train: int = 512
+    quick_n_spread_test: int = 256
+    quick_probe_steps: int = 30
+    quick_spectrum_rows: int = 1024
+    quick_max_matched_seen: int = 32
+    quick_decode_rows: int = 64
+    quick_verify_cache_checksum: bool = False
+    #: ⭐ ``m_uniform`` is NOT reduced by ``--quick``: ``K·log2(M) = 30 bits`` is
+    #: R20's declared design constant, so the smoke exercises the REAL channel width
+    #: and the REAL byte budget.
+    quick_store_train_steps: int = 30
+
+
+def gen_codebook_alloc_config(
+    config: Optional["CHLUConfig"] = None, **overrides
+) -> GenCodebookAllocConfig:
+    """Return (and memoise on ``config``) the codebook-allocation block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field, for the same reason
+    :func:`gen_variance_eq_config` and :func:`gen_attribution_config` are not: the
+    merge rule for this file's tail is "take the peer's whole file and re-apply your
+    block by its BEGIN/END markers", which only holds if the block is one contiguous
+    region with **zero** house wiring sites.
+    """
+    cfg = getattr(config, "gen_codebook_alloc", None) if config is not None else None
+    if cfg is None:
+        cfg = GenCodebookAllocConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_codebook_alloc", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+# --- END gen-codebook-allocation ---------------------------------------------

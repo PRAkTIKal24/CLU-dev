@@ -617,10 +617,18 @@ def per_well_capacity(
     """
     R = np.asarray(mi_bits, np.float64)
     H = np.asarray(entropy_bits, np.float64)
-    M = int(n_modes)
     K = int(R.shape[0])
+    # ⭐ ``n_modes`` may be a per-well sequence (``gen-codebook-allocation``); the
+    # scalar path is unchanged.
+    Ms = ([int(n_modes)] * K if np.isscalar(n_modes) or isinstance(n_modes, (int, np.integer))
+          else [int(x) for x in n_modes])
+    if len(Ms) != K:
+        raise ValueError(f"n_modes has {len(Ms)} entries but there are {K} wells")
+    uniform_M = len(set(Ms)) == 1
+    M = int(Ms[0])
     wells = []
     for k in range(K):
+        M = int(Ms[k])
         frac = np.where(H > 0, R[k] / np.where(H > 0, H, 1.0), 0.0)
         carried = [str(factor_names[j]) for j in range(len(factor_names))
                    if float(frac[j]) >= float(carry_threshold)]
@@ -643,15 +651,19 @@ def per_well_capacity(
     total = 1
     for c in cardinalities:
         total *= int(c)
+    bits_available = float(np.log2(np.asarray(Ms, np.float64)).sum())
     return {
         "carry_threshold": float(carry_threshold),
-        "n_modes": M,
+        # ⛔ ``None`` rather than a lie when the allocation is non-uniform.
+        "n_modes": int(Ms[0]) if uniform_M else None,
+        "n_modes_per_well": [int(x) for x in Ms],
+        "uniform_allocation": bool(uniform_M),
         "n_wells": K,
         "per_well": wells,
         "n_wells_over_capacity": n_over,
-        "aggregate_bits_available": float(K * np.log2(M)),
+        "aggregate_bits_available": bits_available,
         "aggregate_bits_needed": float(np.log2(total)) if total > 0 else 0.0,
-        "aggregate_is_sufficient": bool(K * np.log2(M) >= np.log2(total)),
+        "aggregate_is_sufficient": bool(bits_available >= np.log2(total)),
         "ruling": (
             "⛔ The aggregate code is SUFFICIENT (K·log2(M) = 30 bits vs log2(480000) "
             "= 18.87) — '30 bits' may NOT be written as the cause. ⭐ The binding "
