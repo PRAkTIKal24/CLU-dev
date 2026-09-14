@@ -1066,6 +1066,43 @@ def setup_experiment_parsers(subparsers):
     exp_gcm_parser.set_defaults(func=cmd_exp_gen_compose)
     # --- END gen-read-compose -----------------------------------------------
 
+    # --- BEGIN gen-dynamical-read (additive; owner: experiment-engineer; R40.C) --
+    # exp-gen-dynamical-read (generative pivot phase 1: THE READ as a settling chain)
+    exp_gdr_parser = subparsers.add_parser(
+        'exp-gen-dynamical-read',
+        help='Generative phase 1: the DYNAMICAL READ — request -> address-book '
+             'clamp + request ENERGY -> launch -> settle in a landscape over the '
+             'WRITTEN ATOMS (⛔ never the k-means centres) with a low-rank coupling '
+             '-> decode the settled continuous state. ⛔ BUILD ONLY: no falsifier '
+             'verdict is rendered here; the scored run is gated on a signed PREREG.'
+    )
+    exp_gdr_parser.add_argument('--project', help='Project name to use')
+    exp_gdr_parser.add_argument('--seeds', type=int, nargs='+',
+                                help='Seeds (default: gen_dynamical_read.seeds)')
+    exp_gdr_parser.add_argument('--quick', action='store_true',
+                                help='Plumbing smoke only — NEVER a reported number')
+    exp_gdr_parser.add_argument('--dataset', choices=['shapes3d', 'dsprites'],
+                                help='Dataset (default: gen_dynamical_read.dataset)')
+    exp_gdr_parser.add_argument('--pretext', choices=['recon', 'cls'],
+                                help='recon = the mandatory primary (R1)')
+    exp_gdr_parser.add_argument('--budget', action='append', choices=['A', 'B'],
+                                help='repeatable; A = MATCHED bytes, B = declared '
+                                     'larger (PREREG §3). Default: both.')
+    exp_gdr_parser.add_argument('--arm', action='append',
+                                help='repeatable; ⭐ request_off and coupling_off are '
+                                     'the MANDATORY controls (default: all five)')
+    exp_gdr_parser.add_argument('--steps', type=int,
+                                help='Settling steps (default 1000, R40.C). A chain '
+                                     'still descending at the last step is reported '
+                                     'NOT CONVERGED, ⛔ never as a null.')
+    exp_gdr_parser.add_argument('--no-decode', action='store_true',
+                                help='Skip the render through the frozen winner decoder')
+    exp_gdr_parser.add_argument('--bridge-root',
+                                help='Where gen-feature-bridge wrote its frozen runs')
+    exp_gdr_parser.add_argument('--out', help='Output directory')
+    exp_gdr_parser.set_defaults(func=cmd_exp_gen_dynamical_read)
+    # --- END gen-dynamical-read ---------------------------------------------
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -3123,3 +3160,74 @@ def cmd_exp_gen_compose(args):
     console.print(f"✓ gen-compose completed -> {out_dir}", style="bold green")
     return 0
 # --- END gen-read-compose ---------------------------------------------------
+
+
+# --- BEGIN gen-dynamical-read (additive; owner: experiment-engineer; R40.C) ---
+def cmd_exp_gen_dynamical_read(args):
+    """Run the dynamical read over the written atoms.  ⛔ BUILD ONLY, no verdict."""
+    console.print("[bold cyan]Generative phase 1: the DYNAMICAL READ "
+                  "(settling over the WRITTEN ATOMS)[/bold cyan]")
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    from ..config import gen_dynamical_read_config
+    from ..experiments.exp_gen_dynamical_read import (
+        apply_quick,
+        run_experiment_gen_dynamical_read,
+    )
+
+    c = gen_dynamical_read_config(config)
+    # ⛔ ORDER MATTERS AND IT WAS A MEASURED BUG: ``apply_quick`` REPLACES the seed,
+    # budget, arm and step lists, so an explicit flag applied *before* it is silently
+    # discarded.  A `--quick --budget A B` run reported budget A only and looked
+    # entirely normal in the logs.  ⭐ Quick first, explicit flags last, always.
+    if bool(getattr(args, 'quick', False)):
+        apply_quick(config)
+    if getattr(args, 'dataset', None):
+        c.dataset = args.dataset
+    if getattr(args, 'pretext', None):
+        c.pretext = args.pretext
+    if getattr(args, 'seeds', None):
+        c.seeds = list(args.seeds)
+    if getattr(args, 'budget', None):
+        c.budgets = list(args.budget)
+    if getattr(args, 'arm', None):
+        c.arms = list(args.arm)
+    if getattr(args, 'no_decode', False):
+        c.decode_reads = False
+    if getattr(args, 'bridge_root', None):
+        config.gen_store.bridge_root = args.bridge_root
+    if getattr(args, 'steps', None):
+        c.steps = int(args.steps)
+
+    out_dir = args.out or str(Path(paths['results']) / 'gen_dynamical_read')
+    try:
+        summary = run_experiment_gen_dynamical_read(
+            config=config, out_dir=out_dir, log=console.print)
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    for b, entry in summary.get('budgets', {}).items():
+        lg = entry['byte_ledger']
+        console.print(
+            f"⭐ budget {b}: store {lg['store']['store_bytes']:,} B + coupling "
+            f"{lg['coupling']['coupling_bytes']:,} B = {lg['total_bytes']:,} B "
+            f"({lg['multiple_of_budget']:.2f}x budget) · PREREG §3 match "
+            f"{all(entry['byte_ledger_matches_prereg'].values())} · declared channel "
+            f"{entry['declared_channel']['declared_channel_floats']} floats"
+        )
+        for rs, e in entry.get('request_sets', {}).items():
+            for arm, d in e['dynamics'].items():
+                console.print(
+                    f"    [{b}/{rs}/{arm}] still-descending "
+                    f"{d['frac_still_descending']} · accept {d['accepted_fraction']} "
+                    f"· disp[1] {d['displacement_step_1']} -> "
+                    f"disp[T] {d['displacement_final_step']}")
+    console.print(
+        "⛔ BUILD ONLY — no falsifier verdict is rendered here; the scored run is "
+        "gated on a signed PREREG.", style='yellow')
+    console.print(f"✓ gen-dynamical-read completed -> {out_dir}", style="bold green")
+    return 0
+# --- END gen-dynamical-read --------------------------------------------------

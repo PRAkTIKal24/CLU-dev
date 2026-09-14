@@ -6078,3 +6078,229 @@ def gen_atom_mean_config(
             setattr(cfg, k, v)
     return cfg
 # --- END gen-atom-mean-control ----------------------------------------------
+
+# --- BEGIN gen-dynamical-read (additive; R40.C/R40.D; owner: experiment-engineer) -
+# ⭐ The dynamical read: a continuous landscape over the WRITTEN ATOMS.  ⛔ APPEND-
+# ONLY at EOF, one contiguous region, no ``CHLUConfig`` field / ``load_config`` /
+# ``save_config`` site — this file's syntax has been broken twice by hunk-by-hunk
+# "keep both" merges; the rule is take the peer's whole file and re-apply this block
+# by its BEGIN/END markers, asserting **0 deletions**.
+@dataclass
+class GenDynamicalReadConfig:
+    """⭐ Knobs for ``exp_gen_dynamical_read`` — ``request -> clamp + request ENERGY
+    -> launch -> settle over the stored ATOMS -> decode the settled state``.
+
+    ⛔ **Atoms are stored TRAIN DATA POINTS, never the ``k``-means centres**
+    (Advisor, 2026-09-14): a landscape whose minima *are* the 64 centres can only
+    settle onto them, so a continuous read over discrete minima is still a discrete
+    read.  :func:`chlu.core.gen_landscape.assert_atoms_are_train_rows` proves this
+    bit-for-bit and there is deliberately no knob that turns it off.
+
+    ⭐ **Two budgets, declared BEFORE the run** (this spoke's ``PREREG.md`` §3):
+    ``A`` matched (64 atoms/well, rank 16) and ``B`` declared-larger (512 atoms/well,
+    rank 128).  D3's rule *"store + coupling ≤ 2× budget"* binds **exactly** at those
+    ranks, and :meth:`byte_ledger_expectations` is asserted against the ledger the
+    code computes — a silent drift in ``d_k`` would otherwise move the rank.
+
+    ⚠ **The decoder trap, again.**  :attr:`GenBridgeConfig.dec_recipe` still defaults
+    to ``"baseline"`` — the recipe that FAILED the gate (0.7191 balanced accuracy,
+    0/3 seeds).  This block pins :attr:`dec_recipe` to ``gen-decoder-lift``'s winner
+    and the experiment asserts the winner's per-seed ``param_hash`` before anything
+    is rendered.
+
+    ⛔ **The declared channel is the store's FULL WIDTH IN FLOATS** (``knn_proto``
+    parity).  ⛔ Nothing here is expressed in ``K·log₂M = 30 bits``.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- ⛔ frozen artifacts (every one is LOADED, never fitted here) ---------
+    #: ``gen-commitment-collapse``'s per-seed cache, for its ``labels_vec`` — the
+    #: partition `gen-loss-attribution` EXONERATED.  ⛔ Never re-derived here.
+    commit_cache_pattern: str = (
+        "outputs/gen-commitment-collapse/runs/{dataset}_{pretext}/seed_{seed}"
+    )
+    #: ``gen-read-compose``'s per-seed store — the codebook this arm is measured
+    #: against, and the source of the well channels and ``feat_shape``.
+    store_checkpoint_source: str = (
+        "outputs/gen-read-compose/runs/{dataset}_{pretext}/seed_{seed}/store_s{seed}.pkl"
+    )
+    assert_store_hash: bool = True
+    #: sha256 the feature cache before reading it (off = faster re-runs).
+    verify_cache_checksum: bool = True
+    #: ⚠ Feature caches are NON-UNIFORM: seed 0 wrote ``scope="full"`` (480,000 rows),
+    #: seeds 1-2 wrote ``scope="used"`` (9,288 rows).  Rows outside a ``used`` cache
+    #: are re-encoded through the **frozen** encoder this many at a time (16 GB box).
+    encode_chunk: int = 8192
+    #: ⭐ ``gen-decoder-lift``'s WINNER.  ⛔ ``dec_recipe`` must never be "baseline".
+    winner_decoder_pattern: str = "outputs/gen-decoder-lift/winner/decoder_v1_s{seed}.pkl"
+    winner_hashes_path: str = "outputs/gen-decoder-lift/winner/winner_hashes.json"
+    dec_recipe: str = "v1_capacity_schedule"
+    #: Assert the decoder's parameter hash against the winner manifest.
+    assert_decoder_hash: bool = True
+
+    # --- ⭐ the two DECLARED budgets (PREREG §3) -----------------------------
+    budgets: List[str] = field(default_factory=lambda: ["A", "B"])
+    #: ``A`` — MATCHED: 64 atoms/well = 524,288 B, exactly the codebook's budget.
+    budget_a_atoms: int = 64
+    budget_a_rank: int = 16
+    budget_a_budget_bytes: int = 524_288
+    #: ``B`` — DECLARED LARGER: 512 atoms/well = 4,194,304 B = 8x.
+    budget_b_atoms: int = 512
+    budget_b_rank: int = 128
+    budget_b_budget_bytes: int = 4_194_304
+    #: ⛔ Stop the run if the computed ledger does not match PREREG §3 exactly.
+    assert_byte_ledger: bool = True
+
+    # --- the landscape ------------------------------------------------------
+    #: ⛔ Both options select ROWS; neither ever averages (that would be a centre).
+    atom_selection: str = "kmeanspp"
+    #: ``sigma_k = bandwidth_frac * <rule>`` on the atoms' own geometry.  ⚠ This is
+    #: THE interpolation knob: too small and the minima ARE the atoms (the Advisor's
+    #: constraint re-entering by the back door); too large and the well is one blob.
+    bandwidth_frac: float = 1.0
+    bandwidth_rule: str = "nn_median"
+    #: Laplace smoothing for the atom address book.
+    address_smoothing: float = 1.0
+    #: ⭐ THE DECLARED STRENGTH of the request energy.  ``0.0`` is the request-off
+    #: control and it runs on the SAME chain.
+    request_strength: float = 1.0
+    #: ⭐ The declared strength of the low-rank coupling.  ``0.0`` is coupling-off.
+    coupling_strength: float = 1.0
+    #: Divide each pair's coupling by its own leading singular value, so the strength
+    #: is dimensionless and one wide well cannot silently own the whole term.
+    coupling_normalise: bool = True
+    #: ⛔⭐ A bilinear coupling is an INDEFINITE quadratic form and an unbounded-below
+    #: landscape does not settle, it DIVERGES — measured at ``E = -1.6e28`` with a
+    #: per-step displacement of ``8e11`` on this spoke's first smoke.  With this on,
+    #: the strength actually used is ``min(coupling_strength,
+    #: coupling_safety_frac x λ*)`` where ``λ*`` is
+    #: :func:`chlu.core.gen_landscape.coupling_stability`'s closed-form coercivity
+    #: bound, computed from the ATOMS.  ⛔ The clip is always reported, never silent.
+    enforce_coupling_certificate: bool = True
+    coupling_safety_frac: float = 0.9
+    #: A settled state further than this many atom-radii from the atom centre is
+    #: reported DIVERGED.  ⛔ A diverged chain's energy trace measures nothing.
+    divergence_radius_mult: float = 50.0
+    #: Rows the coupling is fitted on.  ⛔ TRAIN features only, label-free.
+    n_coupling_fit: int = 8192
+    launch_mode: str = "clamp_atom"
+    clamp_threshold: float = 0.5
+    #: ``state`` = PREREG §1's literal wording; ``atom_mixture`` = the softmax
+    #: generalisation of ``read_from_codes``' argmax gather.
+    read_mode: str = "state"
+
+    # --- ⛔ settling: 1000 steps (R40.C), and the binding audit trail --------
+    steps: int = 1000
+    step_size: float = 0.2
+    sigma_scale_start: float = 4.0
+    sigma_scale_end: float = 1.0
+    #: ``0.0`` = pure settling (the proposal is a gradient step and MH degenerates to
+    #: "accept iff the energy fell").  ⚠ Any non-zero temperature is in the
+    #: landscape's own energy units.
+    temp_start: float = 0.0
+    temp_end: float = 0.0
+    metropolis: bool = True
+    #: ⭐ PREREG §6: a chain still descending at the final step is NOT CONVERGED.
+    descent_window: int = 100
+    descent_tol: float = 1e-3
+    #: ⚠ ``request_experts`` is ``(F, n, K, N)`` float32 — 251 MB at 4,096 requests
+    #: and ``N = 512``.  The path is run in chunks of this many requests.
+    request_chunk: int = 256
+
+    #: ⭐ ``request_off`` and ``coupling_off`` are MANDATORY; ``zero_step`` decodes
+    #: the launch itself (the control that took ALL of dreaming's apparent gain).
+    arms: List[str] = field(default_factory=lambda: [
+        "full", "request_off", "request_off_launch", "coupling_off", "zero_step"])
+
+    # --- rows ---------------------------------------------------------------
+    #: The pool the atoms are drawn from and the address book is fitted on.
+    n_store_train: int = 32_768
+    #: Requests taken from the SPREAD row set (``0`` -> none).  ⭐ CORNER_B's 72
+    #: held-out requests are ALWAYS run: they are the "seventy-two questions".
+    n_spread_requests: int = 512
+    row_seed_mult: int = 7_919
+    row_seed_offset: int = 20_260_914
+
+    # --- decode -------------------------------------------------------------
+    decode_reads: bool = True
+    decode_rows: int = 72
+    decode_batch: int = 64
+    #: ⛔ Demonstrate the bypass assertion FAILING at every stage.  A guard never
+    #: seen to fail is decoration.
+    demonstrate_bypass_failure: bool = True
+    bypass_alpha: float = 1e-2
+
+    make_plots: bool = True
+    skip_if_exists: bool = True
+    out_root: Optional[str] = None
+    claude_root: Optional[str] = None
+
+    # --- quick (⚠ plumbing smoke only — ⛔ a quick number is NEVER reported) --
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_budgets: List[str] = field(default_factory=lambda: ["A"])
+    quick_n_store_train: int = 2048
+    quick_n_coupling_fit: int = 1024
+    #: ⭐ Deliberately larger than ``quick_request_chunk`` so the smoke exercises
+    #: the CHUNKED path (``request_experts`` is ``(F, n, K, N)`` float32 and is
+    #: 251 MB at 4,096 requests with ``N = 512`` — the chunking is not optional
+    #: on a 16 GB box, so it must not be smoke-tested away).
+    quick_n_spread_requests: int = 128
+    quick_steps: int = 25
+    quick_descent_window: int = 10
+    quick_decode_rows: int = 16
+    quick_request_chunk: int = 72
+    quick_verify_cache_checksum: bool = False
+    #: ⛔ ``N`` and ``r`` are NOT reduced by ``--quick``: the byte ledger is a
+    #: PRE-REGISTERED number and a smoke that shrinks it proves nothing about it.
+    quick_assert_byte_ledger: bool = True
+
+    def budget_spec(self, label: str) -> dict:
+        """``"A"``/``"B"`` -> ``{n_atoms, rank, budget_bytes}``.  ⛔ Declared, not
+        discovered: both budgets are named in ``PREREG.md`` §3 before the run."""
+        lab = str(label).upper()
+        if lab == "A":
+            return {"label": "A", "role": "MATCHED",
+                    "n_atoms": int(self.budget_a_atoms), "rank": int(self.budget_a_rank),
+                    "budget_bytes": int(self.budget_a_budget_bytes)}
+        if lab == "B":
+            return {"label": "B", "role": "DECLARED LARGER",
+                    "n_atoms": int(self.budget_b_atoms), "rank": int(self.budget_b_rank),
+                    "budget_bytes": int(self.budget_b_budget_bytes)}
+        raise ValueError(f"unknown budget {label!r} — PREREG §3 declares A and B only")
+
+    def byte_ledger_expectations(self, label: str) -> dict:
+        """⭐ The PRE-REGISTERED byte ledger for a budget, to assert the code against.
+
+        ``PREREG.md`` §3 verbatim: store 524,288 / 4,194,304 B, coupling 524,288 /
+        4,194,304 B, total **2.00x** that budget in both cases.
+        """
+        spec = self.budget_spec(label)
+        b = int(spec["budget_bytes"])
+        return {"store_bytes": b, "coupling_bytes": b, "total_bytes": 2 * b,
+                "multiple_of_budget": 2.0}
+
+
+def gen_dynamical_read_config(
+    config: Optional["CHLUConfig"] = None, **overrides
+) -> GenDynamicalReadConfig:
+    """Return (and memoise on ``config``) the dynamical-read block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field, for the same reason
+    :func:`gen_variance_eq_config` and :func:`gen_attribution_config` are not: the
+    merge rule for this file's tail is "take the peer's whole file and re-apply your
+    block by its BEGIN/END markers", which only holds if the block is one contiguous
+    region with **zero** house wiring sites.
+    """
+    cfg = getattr(config, "gen_dynamical_read", None) if config is not None else None
+    if cfg is None:
+        cfg = GenDynamicalReadConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_dynamical_read", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+# --- END gen-dynamical-read --------------------------------------------------
