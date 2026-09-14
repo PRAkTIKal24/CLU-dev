@@ -782,13 +782,16 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
             } for k, v in row_sets.items()
         },
         "row_construction_note": (
-            "⚠ ``fit`` = pool[:n_fit] and ``val`` = pool[n_fit:n_fit+n_val] where "
-            "``pool`` is SORTED — this is select_baseline_rows' shipped construction "
-            "and is INHERITED VERBATIM here (⛔ never re-chosen on my own budget). "
-            "⭐ Consequence, measured above: ``val`` is a contiguous TAIL slice of the "
-            "factor grid and is NOT exchangeable with ``fit``; any variance-normalised "
-            "statistic on it (relative read error) is distorted, which is why the "
-            "PRIMARY read-error rows are ``A`` (``eval_a``, excluded from the pool)."),
+            "⭐ ``fit``/``val`` are the STRATIFIED cut (chlu.data.gen_rowsplit), the "
+            "same one exp_gen_baselines gives the rivals, on the same (seed, 32256, "
+            "512) — ⛔ no longer pool[:n_fit] / pool[n_fit:] of a SORTED array, under "
+            "which ``val`` realised 1 floor_hue value against fit's 10 and no tuned "
+            "configuration was identified. ``pool`` itself is UNCHANGED, so the atoms "
+            "and the hold-out are what they were. ⚠ The PRIMARY read-error rows are "
+            "still ``A`` (``eval_a``, excluded from the pool): ``val`` rows sit INSIDE "
+            "the atom pool, so their read error is optimistic for a reason the split "
+            "repair does not touch. See ``row_split.balance`` for the realised "
+            "per-factor counts."),
         "prototype_byte_ledger": protos.byte_ledger(),
         "ceiling": ceiling,
         "budgets": manifest.get("budgets", {}),

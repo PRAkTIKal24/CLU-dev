@@ -1478,7 +1478,7 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
     _rsp = rows["row_split"]
     _bal = _rsp["balance"]
     log(f"  ⭐ row split: mode={_rsp['mode']} "
-        f"(relaxations={_rsp.get('n_quota_relaxations')}) — val realises "
+        f"(rule: {_rsp.get('rule')}) — val realises "
         + " · ".join(f"{k} {v['val_n_values_realised']}/{v['cardinality']}"
                      for k, v in _bal["factors"].items())
         + f" · max per-value count ratio {_bal['max_val_count_ratio']:.3f}")
