@@ -6013,11 +6013,18 @@ class GenAtomMeanConfig:
     eval_batch: int = 256
 
     # --- ⛔ the regression check: full, unrestricted ``knn_proto`` -----------
-    #: ⭐ Transcribed from DISK (``gen-arms-a7-wiring/runs/deployed_524288/seed_*/
+    #: ⭐ Transcribed from DISK (``gen-val-split-fix/runs/deployed_524288/seed_*/
     #: baselines_manifest.json → arms.knn.variants.knn_proto``), ⛔ never from a
     #: rendered 4-dp table.  Acceptance item 4: reproduced **bit-identically**.
+    #: ⚠ **RE-BASED 2026-09-14 by ``gen-val-split-fix``.**  The superseded constants
+    #: were ``[0.8762626262626263, 0.8919597989949748, 0.8969849246231156]``, measured
+    #: when ``fit`` was the head of a SORTED row array.  ``knn_proto`` has **no tuning
+    #: axis** — it moved purely because the repaired split swaps 1.55 % of the ``fit``
+    #: rows its prototype table is built from (3-seed mean 0.8884 → 0.8817, inside the
+    #: old 0.0088 seed-sd).  ⛔ A run against the old constants on the repaired split
+    #: aborts, which is the guard working, ⛔ not a regression.
     knn_proto_probe_reference_per_seed: List[float] = field(
-        default_factory=lambda: [0.8762626262626263, 0.8919597989949748, 0.8969849246231156]
+        default_factory=lambda: [0.8787878787878788, 0.8844221105527639, 0.8819095477386935]
     )
     #: ⛔ Bit-identity, not "close": the tolerance is exactly zero and a miss is a
     #: **hard failure**, because a moved ``knn_proto`` voids the whole comparison.
