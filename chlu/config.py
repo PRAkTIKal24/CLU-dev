@@ -5681,3 +5681,205 @@ class GenPretrainConfig:
     quick_n_probe_train: int = 128
     quick_n_probe_eval: int = 64
 # --- END gen-encoder-pretrain ------------------------------------------------
+
+# --- BEGIN gen-variance-equalisation (additive; R43.1) -----------------------
+@dataclass
+class GenVarianceEqConfig:
+    """⭐ Knobs for ``exp_gen_variance_eq`` — **does k-means drop `scale` because it
+    is LOW-VARIANCE?**
+
+    ⭐ **DIAL: feature scaling before the store.**  ⛔ The encoder, the decoder, the
+    **partition** and ``K`` are all UNCHANGED; the only thing any arm changes is the
+    **metric the k-means codebook sees**.
+
+    ⛔ **ORDER IS RULED (R43.1): the grouping is fitted on UNWHITENED features
+    FIRST, then the transform.**  Whitening before grouping would move the
+    partition, and `gen-loss-attribution` **exonerated** the partition (9.5 % of the
+    ``scale`` loss, **0 %** of ``orientation``).  There is deliberately **no** knob
+    here that re-derives the grouping: it is loaded from
+    ``gen-commitment-collapse``'s cache and asserted channel-for-channel against the
+    shipped store.
+
+    ⛔ **Leg 1 gates Leg 2.**  ``stop_if_premise_dead`` defaults to ``True``: if
+    ``scale``/``orientation`` do **not** sit in low-variance directions the
+    hypothesis is dead and the spoke stops before whitening anything.
+
+    ⚠ **The decoder trap, again.**  :attr:`GenBridgeConfig.dec_recipe` still
+    defaults to ``"baseline"`` — the recipe that FAILED the gate.  This block pins
+    :attr:`dec_recipe` to ``gen-decoder-lift``'s winner and asserts the winner's
+    per-seed ``param_hash`` before anything is rendered.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    # --- ⛔ frozen artifacts (every one is LOADED, never fitted here) ---------
+    #: ``gen-commitment-collapse``'s per-seed cache, for its ``labels_vec`` — the
+    #: **grouping fitted on UNWHITENED features**.
+    commit_cache_pattern: str = (
+        "outputs/gen-commitment-collapse/runs/{dataset}_{pretext}/seed_{seed}"
+    )
+    #: ``gen-read-compose``'s per-seed store — the REFERENCE row, so this spoke's
+    #: re-measured ladder can be checked against `gen-loss-attribution`'s.
+    store_checkpoint_source: str = (
+        "outputs/gen-read-compose/runs/{dataset}_{pretext}/seed_{seed}/store_s{seed}.pkl"
+    )
+    assert_store_hash: bool = True
+    verify_cache_checksum: bool = True
+    encode_chunk: int = 8192
+
+    # --- the arms.  ⛔ ``identity`` is the CONTROL, not a placeholder ---------
+    #: ⭐ ``identity`` re-measures the unwhitened baseline **through the identical
+    #: code path** (⛔ never transcribed from a rendered table — that has caused
+    #: three errata on this programme).  ``pca_whiten`` is the ruled PRIMARY arm,
+    #: ``diag_std`` the secondary.
+    arms: List[str] = field(
+        default_factory=lambda: ["identity", "pca_whiten", "diag_std"]
+    )
+    #: Relative eigenvalue floor, ``λ + eps·mean(λ)``.  ⛔ Absolute would regularise
+    #: each well differently — the wells have very different scales.
+    whiten_eps: float = 1e-6
+    #: ⭐⭐ **THE MATCHED-COMPUTE CONTROL, not a second treatment.**  ``train_store``
+    #: anneals a softmax over ``−d²/(2τ²)`` with ``τ`` in **absolute distance units**
+    #: and Adam's step is absolute too; whitening changes a well's overall scale by
+    #: ~15× at the shipped cell, so an unmatched arm would see a different anneal and
+    #: a different effective learning rate and would lose for a reason that has
+    #: nothing to do with the metric.  ⭐ A single scalar per well is
+    #: **metric-neutral** — Euclidean k-means is equivariant under a uniform scaling,
+    #: so the induced clustering is identical — and it is folded into the transform,
+    #: so the byte ledger and the exact invertibility are unchanged.
+    #: ⚠ Set ``False`` to measure the unmatched confound deliberately.
+    scale_match_to_raw: bool = True
+    #: Rows the round-trip assertion is measured on.
+    round_trip_rows: int = 2048
+    #: Refuse a transform whose round-trip relative error exceeds this.
+    round_trip_tol: float = 1e-2
+
+    # --- rows (⭐ SPREAD is the headline; the corner is reported separately) --
+    #: ⛔ Matches ``gen_store.n_store_train`` so the re-fitted stores are fitted on
+    #: the same rows `gen-read-compose` used.  ``0`` -> take ``gen_store``'s value.
+    n_store_train: int = 0
+    #: ⭐ Identical to ``GenAttributionConfig`` so the probe numbers are comparable.
+    n_spread_train: int = 12288
+    n_spread_test: int = 4096
+    max_matched_seen: int = 256
+    row_seed_mult: int = 7_919
+    row_seed_offset: int = 20_260_914
+
+    # --- ⛔ THE ONE PROBE — identical to gen-loss-attribution's, deliberately --
+    probe_steps: int = 3000
+    probe_batch: int = 512
+    probe_lr: float = 3e-3
+    probe_seed_offset: int = 20_260_914
+    random_code_seed: int = 20_260_914
+
+    # --- Leg 1: the premise test (PREREG §3) ---------------------------------
+    #: Rows the variance spectrum is computed on (``0`` -> all store-train rows).
+    #: ⚠ A (d_k, d_k) eigendecomposition per well; d_k <= 744 at the shipped cell.
+    spectrum_rows: int = 16384
+    premise_rank_ratio: float = 2.0
+    premise_share_ratio: float = 0.5
+    premise_reference_factors: List[str] = field(
+        default_factory=lambda: ["floor_hue", "wall_hue"]
+    )
+    premise_probe_factors: List[str] = field(
+        default_factory=lambda: ["scale", "orientation"]
+    )
+    #: ⛔ PREREG §3's stop rule.  A DEAD premise means the hypothesis is refuted and
+    #: the spoke reports that rather than whitening anyway to see what happens.
+    stop_if_premise_dead: bool = True
+    #: ⭐⭐ **WHERE the stop rule is adjudicated.**  PREREG §3 states it as an
+    #: **aggregate**: *"the premise HOLDS iff, on ≥ 2 of 3 seeds, …"*.
+    #: ``"spoke"`` (default, and the only one faithful to that wording) records the
+    #: per-seed verdict, runs every seed, and adjudicates **once** in ``summarize``,
+    #: which ⛔ **withholds every Leg 2–4 conclusion** if the aggregate is DEAD.
+    #: ``"seed"`` is the stricter reading that stops each DEAD seed individually —
+    #: ⚠ it leaves that seed with no arms, so the 3-seed falsifier statistics the
+    #: acceptance criteria require cannot be formed.
+    premise_gate_scope: str = "spoke"
+    #: The ≥ k-of-n bar for the aggregate verdict (``0`` -> ``ceil(n_seeds / 2)``).
+    premise_min_seeds_holding: int = 0
+
+    # --- Leg 4: the per-well capacity bound ----------------------------------
+    #: A well *carries* a factor iff ``MI(code_k; f)/H(f)`` reaches this.
+    capacity_carry_threshold: float = 0.25
+
+    # --- falsifier (b): the distinct configuration counts --------------------
+    #: ⭐ PRIMARY: the request-side count on the 72 held-out ``B`` requests — the
+    #: programme's "nine answers to seventy-two questions".
+    address_smoothing: float = 1.0
+    #: SECONDARY, reported but not adjudicating: the feature-side distinct ``(N, K)``
+    #: code count on the SPREAD rows (already near-injective, so little headroom).
+    distinct_on_spread: bool = True
+
+    # --- the decoder (⛔ the standing trap) ----------------------------------
+    #: Render the reads and score them with the frozen image probe.  ⭐ The read is
+    #: mapped **back** through the inverse first — a decoder fed whitened vectors
+    #: measures the transform, not the store.
+    decode_reads: bool = True
+    #: ⛔ R19.1/R20's winner.  ``GenBridgeConfig.dec_recipe`` still defaults to
+    #: ``"baseline"``, the recipe that FAILED the gate (0.7191, 0/3 seeds).
+    dec_recipe: str = "v1_capacity_schedule"
+    assert_dec_recipe: bool = True
+    winner_decoder_pattern: str = "outputs/gen-decoder-lift/winner/decoder_v1_s{seed}.pkl"
+    winner_hashes_path: str = "outputs/gen-decoder-lift/winner/winner_hashes.json"
+    decode_batch: int = 256
+    #: Rows decoded per arm (``0`` -> the whole SPREAD test set).  ⚠ 16 GB machine.
+    decode_rows: int = 1024
+
+    # --- ⭐ the laundering control -------------------------------------------
+    #: ``knn_proto`` never sees the transform.  If its embedding moves, the
+    #: transform escaped its scope and the comparison is void.
+    assert_knn_proto_identical: bool = True
+    #: Block-diagonality of the correlation matrix under the SAME labels, before and
+    #: after whitening — the cheap witness for **why** the order is ruled.
+    block_diagonality_rows: int = 4096
+
+    make_plots: bool = True
+    #: Skip any seed whose artefact already exists and is ``complete``.
+    skip_if_exists: bool = True
+    out_root: Optional[str] = None
+    claude_root: Optional[str] = None
+
+    # --- quick (⚠ plumbing smoke only — ⛔ a quick number is NEVER reported) --
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_store_train: int = 2048
+    quick_n_spread_train: int = 512
+    quick_n_spread_test: int = 256
+    quick_probe_steps: int = 30
+    quick_spectrum_rows: int = 1024
+    quick_max_matched_seen: int = 32
+    quick_round_trip_rows: int = 128
+    quick_decode_rows: int = 64
+    quick_block_diagonality_rows: int = 512
+    quick_verify_cache_checksum: bool = False
+    #: ⭐ ``M`` is NOT reduced by ``--quick``: ``K·log2(M) = 30 bits`` is R20's
+    #: declared design constant, so the smoke exercises the REAL channel width.
+    quick_store_train_steps: int = 30
+    #: ⛔ The premise gate is NOT disabled by ``--quick`` — but a quick premise
+    #: verdict is a plumbing artefact and is never reported.
+    quick_stop_if_premise_dead: bool = False
+
+
+def gen_variance_eq_config(
+    config: Optional["CHLUConfig"] = None, **overrides
+) -> GenVarianceEqConfig:
+    """Return (and memoise on ``config``) the variance-equalisation block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field, for the same reason
+    :func:`gen_attribution_config` and :func:`gen_navigate_config` are not: the merge
+    rule for this file's tail is "take the peer's whole file and re-apply your block
+    by its BEGIN/END markers", which only holds if the block is one contiguous region
+    with **zero** house wiring sites.
+    """
+    cfg = getattr(config, "gen_variance_eq", None) if config is not None else None
+    if cfg is None:
+        cfg = GenVarianceEqConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_variance_eq", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+# --- END gen-variance-equalisation ------------------------------------------
