@@ -2,15 +2,21 @@
 # scripts/cloud/launch.sh -- run one CHLU job on one GCP GPU, and get it back.
 #
 #   scripts/cloud/launch.sh --card l4 --job smoke1 --steps 200
-#   scripts/cloud/launch.sh --card a100-40 --spot --job train1 --wait
+#   scripts/cloud/launch.sh --card l4 --spot --job pilot1 \
+#       --exp cluformer --units '0 1' --exp-args '--stage s1 --scale toy'
+#   scripts/cloud/launch.sh --card a100-40 --spot --job cell1 \
+#       --exp gen_cell --units '0 1 2' --artefacts gs://<bucket>/artefacts --wait
 #   scripts/cloud/launch.sh --card a100-80 --dry-run        # refuses: no quota
 #
 # Design commitments, in the order they bite:
 #   * QUOTA IS CHECKED BEFORE ANYTHING IS CREATED, and a shortfall is refused
 #     by name (card + measured limit) rather than submitted and discovered.
 #   * THE IMAGE MUST BE DIGEST-PINNED. A tag is refused outright.
+#   * ONE LAUNCHER, PARAMETERISED: --exp selects the experiment module from
+#     startup.sh's registry. There is never a second launcher per experiment.
 #   * SPOT IS THE DEFAULT ASSUMPTION FOR TRAINING and spot VMs get taken away,
-#     so the job checkpoints to GCS on a timer and resumes by default.
+#     so the job checkpoints to GCS on a timer and resumes by default. A spot
+#     job should be driven by run_until_done.sh, not by hand.
 #   * The VM deletes itself on every exit path, plus a --max-hours watchdog.
 #   * A cost line is printed at exit.
 set -euo pipefail
@@ -24,14 +30,23 @@ CARD=l4 SPOT=0 JOB="" GPUS=1 DRY=0 WAIT=0 KEEP_VM=0 FRESH=0
 STEPS=400 SIZE=4096 STEP_SLEEP=0 CKPT_EVERY=20 SYNC_EVERY=15 MAX_HOURS=2 SEED=0
 IMAGE="${CHLU_IMAGE:-}"
 EXTRA_ENV="" DETERMINISTIC=0
+# --- the real-experiment knobs ------------------------------------------------
+EXP="${CHLU_EXP:-smoke}" EXP_ARGS="" UNITS="0" SKIP_ART=0
+ARTEFACTS="${CHLU_ARTEFACTS:-}" DEC_RECIPE="${CHLU_DEC_RECIPE:-v1_capacity_schedule}"
 
-usage() { sed -n '2,30p' "$0"; exit "${1:-0}"; }
+usage() { sed -n '2,36p' "$0"; exit "${1:-0}"; }
 die() { echo "FATAL: $*" >&2; exit 1; }
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --card) CARD="$2"; shift 2 ;;
     --job) JOB="$2"; shift 2 ;;
+    --exp) EXP="$2"; shift 2 ;;
+    --exp-args) EXP_ARGS="$2"; shift 2 ;;
+    --units) UNITS="$2"; shift 2 ;;
+    --artefacts) ARTEFACTS="$2"; shift 2 ;;
+    --dec-recipe) DEC_RECIPE="$2"; shift 2 ;;
+    --skip-artefact-check) SKIP_ART=1; shift ;;
     --gpus) GPUS="$2"; shift 2 ;;
     --spot) SPOT=1; shift ;;
     --on-demand) SPOT=0; shift ;;
@@ -58,6 +73,33 @@ done
 [ -n "$JOB" ] || die "--job is required (it namespaces gs://${CHLU_BUCKET}/jobs/<job>)"
 echo "$JOB" | grep -Eq '^[a-z]([-a-z0-9]*[a-z0-9])?$' \
   || die "--job '$JOB' must be a GCE-legal name: lowercase letters, digits, hyphens"
+
+# --- 0. the EXP must exist in startup.sh's registry ---------------------------
+# Asked HERE, on the laptop, rather than discovered on the VM: an unknown EXP is
+# a typo, and finding it out after a stockout walk and a 7 GB image pull wastes
+# a GPU-minute to report a spelling mistake. startup.sh answers, so the launcher
+# and the VM cannot hold two different registries.
+EXP_ROW="$(bash "$HERE/startup.sh" --check exp "$EXP")" \
+  || die "--exp '$EXP' is not in startup.sh's registry (see the list above).
+       ⛔ Do not write a second launcher for a new experiment -- add a row to
+       exp_row() in scripts/cloud/startup.sh."
+read -r _EXP_MODULE _EXP_OUTMODE EXP_NEEDS_ART <<<"$EXP_ROW"
+for u in $UNITS; do
+  case "$u" in ''|*[!0-9]*) die "--units '$UNITS': unit '$u' is not a non-negative integer" ;; esac
+done
+[ -n "$UNITS" ] || die "--units is empty"
+# ⛔ The decoder trap, refused at the launcher too: GenBridgeConfig.dec_recipe
+# defaults to "baseline", the recipe that FAILED the gate. startup.sh asserts it
+# again on the VM against the staged bytes; this is the cheap first line.
+[ "$DEC_RECIPE" = "v1_capacity_schedule" ] \
+  || die "--dec-recipe '$DEC_RECIPE' is not 'v1_capacity_schedule'. 'baseline' is
+       the SUPERSEDED decoder that failed the gate (0.7191, 0/3 seeds); a run
+       through it looks entirely normal in the logs and is VOID."
+if [ "$EXP_NEEDS_ART" = "1" ] && [ -z "$ARTEFACTS" ] && [ "$SKIP_ART" != "1" ]; then
+  die "--exp '$EXP' needs the gen artefact set but no --artefacts gs://... was given.
+       Stage it with scripts/cloud/stage_gcs.sh (⛔ do not improvise a staging
+       path), or pass --skip-artefact-check if this run genuinely needs none."
+fi
 
 # --- 1. quota preflight -------------------------------------------------------
 # Deliberately first. Nothing is created, nothing is billed, and a "no" here is
@@ -105,7 +147,11 @@ cat <<PLAN
    zone          ${CHLU_ZONE} preferred; falls back across ${CHLU_REGION} on a stockout
    boot image    ${CHLU_BOOT_IMAGE} (${CHLU_BOOT_IMAGE_PROJECT})
    run image     ${IMAGE}
-   payload       ${ARGS}
+   experiment    ${EXP} -> ${_EXP_MODULE} (out_mode ${_EXP_OUTMODE}, artefacts ${EXP_NEEDS_ART})
+   units         ${UNITS}
+   exp args      ${EXP_ARGS:-<none>}
+   artefacts     ${ARTEFACTS:-<none needed>}   dec_recipe ${DEC_RECIPE}
+   payload       ${ARGS}   (smoke only)
    checkpoints   ${REMOTE}/${JOB}/ckpt   every ${CKPT_EVERY}s
    sync-back     ${REMOTE}/${JOB}/out    every ${SYNC_EVERY}s (DURING the run, not only at exit)
    determinism   $([ "$DETERMINISTIC" = 1 ] && echo "XLA deterministic ops, autotune off" || echo "default (XLA may autotune; last-bit variation expected across VMs)")
@@ -123,6 +169,12 @@ if [ "$DRY" = "1" ]; then echo "== --dry-run: nothing created."; exit 0; fi
 PROV=(); [ "$SPOT" = "1" ] && PROV=(--provisioning-model=SPOT --instance-termination-action=DELETE)
 T0="$(date -u +%s)"
 
+# `--metadata` is a COMMA-separated key=value list, so any value containing a
+# comma is silently split into two bogus keys. Experiment arguments routinely
+# contain one (`--set a=1,b=2`), so they travel as a file instead.
+ARGFILE="$(mktemp)"; printf '%s' "$EXP_ARGS" > "$ARGFILE"
+GIT_COMMIT="$(git -C "$HERE/../.." rev-parse HEAD 2>/dev/null || echo unknown)"
+
 # Zone fallback. A STOCKOUT is NOT a quota problem -- the preflight already
 # passed, the zone is simply out of that card right now -- and GCE tells us
 # which zones do have it. Retrying by hand every time is how a launcher stops
@@ -136,8 +188,8 @@ create_in_zone() {
     --boot-disk-size=200GB --boot-disk-type=pd-balanced \
     --maintenance-policy=TERMINATE --scopes=cloud-platform \
     ${PROV[@]+"${PROV[@]}"} \
-    --metadata-from-file=startup-script="$HERE/startup.sh",shutdown-script="$HERE/shutdown.sh" \
-    --metadata="chlu-image=${IMAGE},chlu-job=${JOB},chlu-remote=${REMOTE},chlu-args=${ARGS},chlu-sync-every-s=${SYNC_EVERY},chlu-keep-vm=${KEEP_VM},chlu-max-hours=${MAX_HOURS},chlu-env=${EXTRA_ENV},install-nvidia-driver=True" \
+    --metadata-from-file=startup-script="$HERE/startup.sh",shutdown-script="$HERE/shutdown.sh",chlu-exp-args="$ARGFILE" \
+    --metadata="chlu-image=${IMAGE},chlu-job=${JOB},chlu-remote=${REMOTE},chlu-args=${ARGS},chlu-sync-every-s=${SYNC_EVERY},chlu-keep-vm=${KEEP_VM},chlu-max-hours=${MAX_HOURS},chlu-env=${EXTRA_ENV},chlu-exp=${EXP},chlu-units=${UNITS},chlu-artefacts=${ARTEFACTS},chlu-skip-artefact-check=${SKIP_ART},chlu-dec-recipe=${DEC_RECIPE},chlu-git-commit=${GIT_COMMIT},install-nvidia-driver=True" \
     --labels="owner=chlu,job=${JOB},card=${CARD}" >/dev/null 2>"$ERRF"
 }
 
@@ -153,7 +205,7 @@ done
 ZONES="$(echo "${ZONES:-$CHLU_ZONE}" | xargs)"
 echo "   candidate zones for ${MACHINE}: ${ZONES}"
 
-ERRF="$(mktemp)"; trap 'rm -f "$ERRF"' EXIT
+ERRF="$(mktemp)"; trap 'rm -f "$ERRF" "$ARGFILE"' EXIT
 CREATED_ZONE=""
 for z in $ZONES; do
   if create_in_zone "$z"; then CREATED_ZONE="$z"; CHLU_ZONE="$z"; break; fi
@@ -176,8 +228,11 @@ echo "   gcloud compute instances get-serial-port-output ${VM} --zone=${CHLU_ZON
 if [ "$WAIT" = "1" ]; then
   echo -n "== waiting"
   while :; do
+    if gcloud storage cat "${REMOTE}/${JOB}/out/result.json" --project="$CHLU_PROJECT" >/dev/null 2>&1; then
+      echo " COMPLETE (result.json present)"; break
+    fi
     if gcloud storage cat "${REMOTE}/${JOB}/out/EXIT_CODE" --project="$CHLU_PROJECT" >/dev/null 2>&1; then
-      echo " done"; break
+      echo " attempt finished"; break
     fi
     STATE="$(gcloud compute instances describe "$VM" --zone="$CHLU_ZONE" --project="$CHLU_PROJECT" \
              --format='value(status)' 2>/dev/null || echo GONE)"
