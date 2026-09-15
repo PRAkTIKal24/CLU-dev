@@ -24,6 +24,7 @@ import pytest
 
 from chlu.config import GenBridgeConfig, get_default_config, load_config, save_config
 from chlu.core.gen_bridge import (
+    ENCODE_PRECISION,
     WHITENING_D_LIMIT,
     GenDecoder,
     GenEncoder,
@@ -32,6 +33,7 @@ from chlu.core.gen_bridge import (
     assert_no_holdout_leak,
     build_feature_cache,
     encode_images,
+    encode_precision_record,
     features_for_rows,
     load_feature_cache,
     param_count,
@@ -376,6 +378,114 @@ def test_features_for_rows_refuses_a_row_the_cache_does_not_hold(tmp_path, monke
     rows, feats, _ = load_feature_cache(tmp_path)
     with pytest.raises(KeyError, match="not in the feature cache"):
         features_for_rows(rows, feats, np.array([999]))
+
+
+# ---------------------------------------------------------------------------
+# 6b. ⭐ the encode PRECISION — the frozen encoder has to compute the same
+#     features on GPU as on the CPU that wrote the cache
+# ---------------------------------------------------------------------------
+
+
+def _capture_encode_jaxpr(enc, imgs):
+    """The jaxpr of the function ``encode_images`` actually hands to ``filter_jit``.
+
+    ⭐ Not a reconstruction: ``filter_jit`` is intercepted so the captured callable
+    is the shipped one, and the precision is read off the real ``conv`` equations.
+    ``eqx.nn.Conv2d`` passes **no** ``precision`` to
+    :func:`jax.lax.conv_general_dilated`, so every conv here resolves
+    ``precision=None`` against ``jax_default_matmul_precision`` at TRACE time —
+    which is the moment this test exists to pin.
+    """
+    captured = {}
+    real_filter_jit = eqx.filter_jit
+
+    def capture(fn, *a, **kw):
+        captured["fn"] = fn
+        return real_filter_jit(fn, *a, **kw)
+
+    eqx.filter_jit = capture
+    try:
+        encode_images(enc, imgs, 2, log=lambda *_: None)
+    finally:
+        eqx.filter_jit = real_filter_jit
+    jaxpr = jax.make_jaxpr(captured["fn"])(jnp.asarray(imgs[:2]))
+    return [
+        e.params.get("precision")
+        for e in jaxpr.jaxpr.eqns
+        if "conv_general_dilated" in str(e.primitive)
+    ]
+
+
+def test_encode_path_convolutions_carry_the_requested_precision():
+    """⭐⭐ The load-bearing test: DELETE the precision context in
+    ``encode_images`` and every entry below becomes ``None``, i.e. XLA's default,
+    i.e. **TF32 on Ampere/Ada** — the defect measured on an L40S (2026-09-16:
+    ``max |delta| = 2^-8 = 4181 float16 ULP`` on 20.85 % of elements, encoder
+    parameter hash MATCHING).  ⛔ It is not enough that the encoder is frozen; the
+    arithmetic has to be pinned too."""
+    enc = GenEncoder((3, 16, 16), [4, 8], 4, 2, 2, jax.random.PRNGKey(0))
+    imgs = np.zeros((2, 3, 16, 16), np.float32)
+    precisions = _capture_encode_jaxpr(enc, imgs)
+    want = jax.lax.Precision(ENCODE_PRECISION)
+    assert want is jax.lax.Precision.HIGHEST
+    assert len(precisions) == 2  # one per encoder block
+    assert all(p == (want, want) for p in precisions), precisions
+
+
+def test_encode_precision_does_not_move_the_numbers_on_cpu():
+    """⭐ The laundering control, pinned as a test.  ``Precision`` is a no-op on
+    CPU backends — and it must stay one, because the whole feature cache was
+    written on CPU and every ``features_sha256`` in the programme depends on it.
+    ⛔ If this ever fails on the laptop, the fix has changed the science."""
+    enc = GenEncoder((3, 16, 16), [4, 8], 4, 2, 2, jax.random.PRNGKey(0))
+    imgs = np.asarray(np.random.default_rng(0).random((6, 3, 16, 16)), np.float32)
+    fixed = encode_images(enc, imgs, 4, log=lambda *_: None)
+    loose = np.concatenate(
+        [
+            np.asarray(
+                eqx.filter_jit(jax.vmap(enc))(jnp.asarray(imgs[i : i + 4])), np.float32
+            )
+            for i in range(0, 6, 4)
+        ]
+    )
+    assert fixed.tobytes() == loose.tobytes()
+
+
+def test_encode_precision_record_names_the_precision_backend_and_device():
+    """⛔ A silent precision is how the defect hid: the hash matched and nothing
+    in the record said which arithmetic ran."""
+    rec = encode_precision_record()
+    assert rec["requested"] == ENCODE_PRECISION
+    assert rec["resolved"] == "HIGHEST"
+    assert rec["backend"] == jax.devices()[0].platform
+    assert rec["device_kind"] == jax.devices()[0].device_kind
+    assert rec["n_devices"] == len(jax.devices())
+    assert rec["jax_version"] == jax.__version__
+
+
+def test_encode_images_announces_the_precision_once_per_process(monkeypatch):
+    monkeypatch.setattr("chlu.core.gen_bridge._PRECISION_ANNOUNCED", set())
+    lines = []
+    enc = GenEncoder((3, 16, 16), [4, 8], 4, 2, 2, jax.random.PRNGKey(0))
+    imgs = np.zeros((2, 3, 16, 16), np.float32)
+    encode_images(enc, imgs, 2, log=lines.append)
+    encode_images(enc, imgs, 2, log=lines.append)
+    assert len(lines) == 1, lines  # ⚠ a 300-block cache build logs it once
+    assert "encode precision" in lines[0]
+    assert "resolved=HIGHEST" in lines[0]
+    assert f"backend={jax.devices()[0].platform}" in lines[0]
+    assert f"device={jax.devices()[0].device_kind}" in lines[0]
+
+
+def test_feature_cache_manifest_records_which_arithmetic_wrote_it(tmp_path, monkeypatch):
+    """⭐ A cache written under one precision and extended under another is a
+    different computation with a matching ``encoder_param_hash``."""
+    _, _, man = _cache_fixture(tmp_path, monkeypatch)
+    rec = man["encode_precision"]
+    assert rec["resolved"] == "HIGHEST"
+    assert rec["backend"] and rec["device_kind"]
+    on_disk = json.loads((tmp_path / "feature_cache.json").read_text())
+    assert on_disk["encode_precision"] == rec
 
 
 # ---------------------------------------------------------------------------

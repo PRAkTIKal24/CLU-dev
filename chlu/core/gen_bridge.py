@@ -852,10 +852,98 @@ def train_probe(
 # ---------------------------------------------------------------------------
 
 
-def encode_images(encoder, images: np.ndarray, batch: int = 512) -> np.ndarray:
-    """Frozen forward pass -> ``(N, C, H, W)`` float32 penultimate maps."""
+#: ⭐ Precision requested for **every matmul/convolution on the frozen encoder's
+#: forward pass**.  ⛔ Not a tunable and not a tolerance.
+#:
+#: The feature cache was written on CPU in true float32.  Re-encoding its own
+#: cached rows on an L40S (Ada, sm_89 — cluster preflight, 2026-09-16) reproduced
+#: them only to ``max |delta| = 0.00390625 = 2^-8 = 4181 float16 ULP`` on
+#: ``27332 / 131072`` elements (20.85 %), with ``n_nonfinite = 0`` and the encoder
+#: parameter hash MATCHING.  That error is bounded in ABSOLUTE terms (one ULP at
+#: the tensor's *max* magnitude) and unbounded in RELATIVE terms, i.e. it is set
+#: by the scale of the partial sums, not of the outputs — the signature of a
+#: reduced-precision accumulation.  JAX leaves ``precision=None`` on every op here
+#: (``eqx.nn.Conv2d`` passes no ``precision`` to :func:`jax.lax.conv_general_dilated`),
+#: and ``Precision.DEFAULT`` lets XLA:GPU run float32 convolutions through **TF32**
+#: — 10 mantissa bits, ~1e-3 relative — on Ampere/Ada.  ``HIGHEST`` forces true
+#: float32.
+#:
+#: ⚠ ``Precision`` is documented as having **no effect on CPU backends**, which is
+#: exactly what this fix needs: the laptop's numbers must not move, and they do
+#: not (verified byte-for-byte against ``main``; see the spoke report).
+ENCODE_PRECISION = "highest"
+
+#: One announcement per distinct (precision, backend, device) in a process — a
+#: 300-block cache build should not print 300 identical lines.
+_PRECISION_ANNOUNCED: set[tuple[str, str, str]] = set()
+
+
+def encode_precision_record(precision: str = ENCODE_PRECISION) -> dict:
+    """What arithmetic the encode path is asking for, and on what hardware.
+
+    ⛔ A *silent* precision is how the L40S defect hid for a whole cluster leg:
+    the parameter hash matched, the gate failed, and nothing in the record said
+    which arithmetic had actually run.  This dict goes in the feature-cache
+    manifest and its contents go in the log.
+
+    ⚠ Touches :func:`jax.devices`, so it initialises the backend — call it at
+    encode time, never at import time (§7.23: six modules already mutate JAX
+    config at import and the ordering hazard is standing).
+    """
+    resolved = jax.lax.Precision(precision)
+    try:
+        devs = jax.devices()
+        backend, kind, n_dev = devs[0].platform, devs[0].device_kind, len(devs)
+    except RuntimeError as exc:  # no backend — record it, do not raise
+        backend, kind, n_dev = f"unavailable:{exc.__class__.__name__}", "unknown", 0
+    return {
+        "requested": str(precision),
+        "resolved": str(resolved),  # e.g. 'HIGHEST'
+        "backend": backend,
+        "device_kind": kind,
+        "n_devices": int(n_dev),
+        "jax_version": jax.__version__,
+    }
+
+
+def _announce_encode_precision(log: Callable) -> dict:
+    """Log the precision record once per process, per distinct device/precision."""
+    rec = encode_precision_record()
+    key = (rec["resolved"], rec["backend"], rec["device_kind"])
+    if key not in _PRECISION_ANNOUNCED:
+        _PRECISION_ANNOUNCED.add(key)
+        log(
+            f"  ⭐ encode precision: requested={rec['requested']} "
+            f"resolved={rec['resolved']} backend={rec['backend']} "
+            f"device={rec['device_kind']} n_devices={rec['n_devices']} "
+            f"(jax {rec['jax_version']})"
+        )
+    return rec
+
+
+def encode_images(
+    encoder, images: np.ndarray, batch: int = 512, log: Optional[Callable] = None
+) -> np.ndarray:
+    """Frozen forward pass -> ``(N, C, H, W)`` float32 penultimate maps.
+
+    ⭐ Runs at :data:`ENCODE_PRECISION` so that the frozen encoder computes the
+    *same* features on GPU as it did on the CPU that wrote the cache.  ``log``
+    defaults to :func:`print` so the precision reaches the job log even from the
+    callers that do not pass a logger.
+    """
     dtype = model_dtype(encoder)
-    fwd = eqx.filter_jit(jax.vmap(encoder))
+
+    def _fwd(x):
+        # ⭐ The context is entered INSIDE the function handed to `filter_jit`, so
+        # it is in force at TRACE time — which is when an op with `precision=None`
+        # reads `jax_default_matmul_precision` and freezes the choice into the
+        # jaxpr.  Wrapping the *call site* instead would leave the precision
+        # dependent on which caller happened to trigger the trace.
+        with jax.default_matmul_precision(ENCODE_PRECISION):
+            return jax.vmap(encoder)(x)
+
+    fwd = eqx.filter_jit(_fwd)
+    _announce_encode_precision(print if log is None else log)
     out = []
     n = int(images.shape[0])
     for i in range(0, n, batch):
@@ -903,7 +991,7 @@ def build_feature_cache(
             chunk_rows = rows_sorted[i : i + block]
             imgs = stream_images(dataset, chunk_rows, root, block=block, handle=handle)
             arr[i : i + chunk_rows.size] = encode_images(
-                encoder, imgs, int(cfg.eval_batch)
+                encoder, imgs, int(cfg.eval_batch), log=log
             ).astype(dtype)
             if log is not None:
                 log(f"    cached {min(i + block, rows_sorted.size)}/{rows_sorted.size}")
@@ -922,6 +1010,13 @@ def build_feature_cache(
         "D": int(np.prod(feat_shape)),
         "dtype": str(dtype),
         "encoder_param_hash": param_hash(encoder),
+        # ⭐ WHICH ARITHMETIC wrote these bytes, not just which encoder.  A cache
+        # written under one precision and extended under another is a different
+        # computation with a matching parameter hash — the exact thing the L40S
+        # preflight caught and the exact thing nothing downstream would notice.
+        # ⛔ Additive and optional: pre-existing manifests do not carry it, so
+        # every reader must use ``.get("encode_precision")``.
+        "encode_precision": encode_precision_record(),
         "features_file": feat_path.name,
         "features_sha256": file_sha256(feat_path),
         "features_bytes": int(feat_path.stat().st_size),
