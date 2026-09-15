@@ -348,6 +348,11 @@ def test_the_previous_attempts_sentinels_are_cleared_before_a_vm_is_created():
     assert src.index("for _stale in") < src.index("gcloud compute instances create")
     # ⛔ and it must never clear the COMPLETION sentinel
     assert "result.json" not in m.group(1)
+    # `|| true` under set -e: on a job's FIRST attempt none of these exist and
+    # `gcloud storage rm` exits non-zero, which killed the launcher four seconds
+    # in, having created nothing and printed nothing after the plan.
+    body = src[src.index("for _stale in"):src.index("ARGFILE=")]
+    assert "|| true" in body
 
 
 def test_exp_args_travel_by_file_not_in_the_comma_separated_metadata_list():

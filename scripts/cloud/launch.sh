@@ -181,8 +181,12 @@ T0="$(date -u +%s)"
 # "finished" in 62 s without a VM ever running the payload.
 # ⭐ out/result.json is NOT cleared: it is the COMPLETION sentinel, it describes
 # the job rather than an attempt, and the supervisor has already checked it.
+# `|| true` is load-bearing under `set -e`: `gcloud storage rm` on an object
+# that does not exist exits non-zero, and on the FIRST attempt of a job none of
+# these exist. Without it the launcher dies four seconds in, having created
+# nothing and printed nothing after the plan -- which is exactly what it did.
 for _stale in EXIT_CODE DONE FAILED PREEMPTED; do
-  gcloud storage rm "${REMOTE}/${JOB}/out/${_stale}" --project="$CHLU_PROJECT" -q 2>/dev/null
+  gcloud storage rm "${REMOTE}/${JOB}/out/${_stale}" --project="$CHLU_PROJECT" -q 2>/dev/null || true
 done
 
 ARGFILE="$(mktemp)"; printf '%s' "$EXP_ARGS" > "$ARGFILE"
