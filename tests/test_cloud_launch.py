@@ -86,7 +86,18 @@ def test_h100_h200_are_refused_as_unknown_and_the_message_says_why(quotas):
     for card in ("h100", "h200"):
         with pytest.raises(quota_mod.QuotaRefusal) as exc:
             quota_mod.check(card, spot=True, gpus=1, quotas=quotas)
-        assert "not offered" in str(exc.value)
+        assert "no NVIDIA_" in str(exc.value) and "quota in ANY region" in str(exc.value)
+
+
+def test_the_catalogue_records_where_80gb_a100_quota_actually_exists():
+    """The task's brief said A100-80GB quota was zero and unrequested. That is
+    true of us-central1 and europe-west4 and FALSE of us-east4, which has 2
+    (one free, on-demand only). Pinned here because it is the difference
+    between filing a quota request and not needing one."""
+    spec = quota_mod.load_cards()["cards"]["a100-80"]
+    assert spec["regions_with_quota"]["us-east4"]["ondemand"] == 2
+    assert spec["regions_with_quota"]["us-east4"]["spot"] == 0
+    assert "us-east4" in spec["note"]
 
 
 def test_cpu_quota_binds_before_gpu_quota_for_a100(quotas):

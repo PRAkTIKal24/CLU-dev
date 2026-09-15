@@ -38,22 +38,41 @@ deletes itself on every exit path. `fetch_results.sh` brings the outputs to
 | A100-80GB | `NVIDIA_A100_80GB_GPUS` | **0** | 0 | 0 | ⛔ not requested yet — §7 |
 | H100 / H200 | — | — | — | — | ⛔ not offered to this project |
 
-**Two limits that are not in any card table and that bind first:**
+**Two limits that are not in any card table, and an honest account of how far they bind:**
 
-1. ⭐ **`A2_CPUS` = 12.** An `a2-highgpu-1g` is 12 vCPU, so **the real A100
-   concurrency is ONE VM, not sixteen.** The 16 spot-A100 GPUs cannot be
-   reached without an `A2_CPUS` increase. `quota.py` checks this metric
-   alongside the GPU metric for exactly this reason; a GPU-only preflight
-   would promise 16 and deliver 1.
-2. **`PREEMPTIBLE_CPUS` = 0.** This is *not* a block: with a zero preemptible
-   CPU quota GCE bills Spot VMs against the regular `CPUS` quota (200 here).
-   `quota.py` encodes that rather than refusing every spot launch.
+1. **`A2_CPUS` = 12 — one `a2-highgpu-1g` worth of vCPU.** Read literally, that caps A100
+   concurrency at **one VM**, however many of the 16 spot GPUs are free. ⚠ **How strictly it
+   binds is NOT established, and the measurement argues against the literal reading:** another
+   team's `jonas-vm-a100` (`a2-highgpu-1g`, 12 vCPU) was RUNNING in `us-central1-f` while our
+   own spot `a2-highgpu-1g` launched successfully in `us-central1-a` — and the API reported
+   `A2_CPUS usage = 0` throughout. **The `limit` is reliable; the reported `usage` is not.**
+   `quota.py` therefore treats this metric as a **conservative** check: it may refuse a launch
+   GCE would have accepted, which is the right direction for a preflight, but do not quote
+   "concurrency is exactly 1" as a measured fact. It is an upper bound derived from a metric
+   whose usage field we have caught lying.
+2. **`PREEMPTIBLE_CPUS` = 0.** This is *not* a block: with a zero preemptible CPU quota GCE bills
+   Spot VMs against the regular `CPUS` quota (200 here). `quota.py` encodes that rather than
+   refusing every spot launch — reading the 0 literally would have refused the entire training path.
 
-⛔ **`us-central1` holds another project's live capacity.** `tsfm-pair-a` **and
-`tsfm-pair-b`** (both `g2-standard-4`, both **RUNNING**) are the 2 L4s in use.
-Neither may be stopped, resized or evicted. *(The task named only `tsfm-pair-a`;
-there are two.)* Everything this path creates is named `chlu-*` and labelled
-`owner=chlu`, so it is separable at a glance:
+### ⭐ A100-80GB: the brief was regionally, not globally, true
+All regions were scanned on 2026-09-15. **`us-east4` has `NVIDIA_A100_80GB_GPUS` = 2, one in use,
+ONE FREE, on-demand** (`a2-ultragpu-1g`, zone `us-east4-c` only). Spot 80GB is 0 everywhere, and
+**no region has any H100 or H200 quota** — that part of the brief is confirmed.
+
+```bash
+scripts/cloud/launch.sh --card a100-80 --region us-east4 --job <name>   # preflight passes today
+```
+⭐ **So the quota request in §7.1 may be unnecessary — check whether `us-east4` is enough first.**
+Caveats: it is on-demand only (**$5.07/h**, no spot), stock in `us-east4-c` is intermittent, and
+the image and bucket live in `us-central1` so an 80GB run pays cross-region egress on the ~7 GB
+pull. **CSF3 remains the right home for 80 GB work** — `-p gpuA`, 19 nodes × 4, free at point of use.
+
+⛔ **`us-central1` holds other teams' running instances.** `tsfm-pair-a` **and `tsfm-pair-b`
+(both `g2-standard-4`)** are the 2 in-use L4s — *the task named one; there are two* — and
+`jonas-vm-a100` (`a2-highgpu-1g`, `us-central1-f`) consumes the single on-demand A100-40GB.
+`a100-dev-machine` (`a2-ultragpu-1g`, `us-east4-c`) holds one of the two 80GB A100s. **None of
+these may be stopped, resized or evicted.** Everything this path creates is named `chlu-*` and
+labelled `owner=chlu`, so it is separable at a glance:
 `gcloud compute instances list --filter="labels.owner=chlu"`.
 
 ---
@@ -180,27 +199,33 @@ and the bucket (negligible).
 
 ## 7. [HEAD] — the items an agent cannot do
 
-**7.1 File the A100-80GB quota request.** It posts under the Head's account.
+**7.1 [CHECK FIRST, THEN MAYBE FILE] The A100-80GB quota request.**
+
+⭐ **Before filing anything: `us-east4` already has 2 `NVIDIA_A100_80GB_GPUS`, one of them free.**
+`scripts/cloud/launch.sh --card a100-80 --region us-east4 --job <name>` passes the preflight today.
+If one on-demand 80GB A100 at a time is enough, **there is nothing to file** — and CSF3 gives you
+80GB A100s for free anyway.
+
+If more is genuinely needed, this posts under the Head's account:
 
 - Console: **IAM & Admin → Quotas & System Limits** —
   <https://console.cloud.google.com/iam-admin/quotas?project=forgisprova>
-- Filter on *Service:* **Compute Engine API** (`compute.googleapis.com`) and
-  *Dimension:* `region:us-central1`.
-- Request **all three** — the first two alone buy nothing, because the third
-  is what caps concurrency:
+- Filter on *Service:* **Compute Engine API** (`compute.googleapis.com`) and the *Dimension*
+  `region` = the region you want.
 
-  | metric ID | console display name | now | why |
+  | metric ID | console display name | us-central1 | us-east4 |
   |---|---|---|---|
-  | `NVIDIA_A100_80GB_GPUS` | NVIDIA A100 80GB GPUs | **0** | on-demand |
-  | `PREEMPTIBLE_NVIDIA_A100_80GB_GPUS` | Preemptible NVIDIA A100 80GB GPUs | **0** | the spot path |
-  | `A2_CPUS` | CPUs (A2 machine family) | **12** | ⭐ `a2-ultragpu-1g` is 12 vCPU, so **12 A2_CPUS = exactly one VM** whatever the GPU quota says |
+  | `NVIDIA_A100_80GB_GPUS` | NVIDIA A100 80GB GPUs | **0** | 2 (1 free) |
+  | `PREEMPTIBLE_NVIDIA_A100_80GB_GPUS` | Preemptible NVIDIA A100 80GB GPUs | **0** | **0** |
+  | `A2_CPUS` | CPUs (A2 machine family) | 12 | 12 |
 
-  Justification text that matches reality: single-node JAX training, 1–4
-  concurrent Spot VMs, checkpoint/resume already in place.
+  Ask for `A2_CPUS` alongside the GPU metrics: `a2-ultragpu-1g` is 12 vCPU, so 12 A2_CPUS is one
+  VM's worth however many GPUs are granted. ⚠ But see §2 — we have caught that metric's *usage*
+  field reporting 0 while a 12-vCPU A2 instance was running, so treat it as a limit to raise
+  rather than as a measurement you can trust.
 
-  ⭐ **This is a convenience, not a dependency.** 80 GB A100s are free at point
-  of use on CSF3 (`-p gpuA`, 19 nodes × 4). Nothing in this path is designed
-  around an 80 GB cloud card, because there is not one.
+  Justification text that matches reality: single-node JAX training, 1–4 concurrent VMs,
+  checkpoint/resume already in place and demonstrated against real pre-emptions.
 
 **7.2 Set a billing budget + alert** on project `forgisprova` before the first
 long spot run — <https://console.cloud.google.com/billing/budgets>. The
