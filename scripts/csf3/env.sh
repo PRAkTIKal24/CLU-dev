@@ -79,3 +79,49 @@ export PYTHONUNBUFFERED=1
 
 echo "[env.sh] repo=$CLU_REPO python=$(python --version 2>&1) venv=$VIRTUAL_ENV"
 echo "[env.sh] MPLBACKEND=$MPLBACKEND JAX_COMPILATION_CACHE_DIR=$JAX_COMPILATION_CACHE_DIR"
+
+# ---------------------------------------------------------------------------
+# ⭐ BEGIN gen-wells-route-b — THE ARTEFACT ROOT (owner: experiment-engineer)
+#
+# ⛔ The inherited defect this closes.  Neither this file nor any jobscript knew about
+# the gen artefact root, so every submit had to carry five CHLU_* variables by hand in
+# `--export` — and an omission fails LATE, inside the loader, AFTER the scheduler has
+# already handed the job its GPU.  On a queue that costs a resubmit and a wait, and it
+# will happen.  ⭐ A job now INHERITS the root instead of being handed it.
+#
+# ⭐ Every variable keeps the `${VAR:-default}` form, so an explicit `--export` still
+# wins.  ⛔ No path is hardcoded: everything hangs off $CLU_REPO.
+#
+# The layout is `gen-cluster-stage-artefacts`' own, not a guess — its STAGED.json
+# records `artefact_root` with `data/gen/...` and `outputs/...` beneath it.
+# ---------------------------------------------------------------------------
+export CHLU_CLAUDE_ROOT="${CHLU_CLAUDE_ROOT:-$CLU_REPO/artefacts}"
+export CHLU_GEN_DATA_ROOT="${CHLU_GEN_DATA_ROOT:-$CHLU_CLAUDE_ROOT/data/gen}"
+export CHLU_GEN_BRIDGE_ROOT="${CHLU_GEN_BRIDGE_ROOT:-$CHLU_CLAUDE_ROOT/outputs/gen-feature-bridge/runs}"
+export CHLU_GEN_STORE_RUNS="${CHLU_GEN_STORE_RUNS:-$CHLU_CLAUDE_ROOT/outputs/gen-store-grouping/runs}"
+export CHLU_GEN_DECLIFT_DIR="${CHLU_GEN_DECLIFT_DIR:-$CHLU_CLAUDE_ROOT/outputs/gen-decoder-lift/winner}"
+
+# ⭐ Assert the roots exist AT JOB START and die loudly with the MISSING NAME.
+# ⛔ A job must never reach the GPU only to discover it cannot open an artefact.
+# ⚠ Opt out with CHLU_SKIP_ARTEFACT_CHECK=1 for jobs that genuinely need no artefacts
+# (the CPU smoke, the env build) — ⛔ never for a training job.
+if [ "${CHLU_SKIP_ARTEFACT_CHECK:-0}" != "1" ]; then
+    _chlu_missing=""
+    for _v in CHLU_CLAUDE_ROOT CHLU_GEN_DATA_ROOT CHLU_GEN_BRIDGE_ROOT \
+              CHLU_GEN_STORE_RUNS CHLU_GEN_DECLIFT_DIR; do
+        eval "_p=\${$_v}"
+        [ -e "$_p" ] || _chlu_missing="$_chlu_missing\n    $_v -> $_p"
+    done
+    if [ -n "$_chlu_missing" ]; then
+        # shellcheck disable=SC2059
+        printf "FATAL [env.sh] gen artefact root(s) MISSING, by name:$_chlu_missing\n"
+        echo   "       Stage them first (scripts/csf3/stage_artefacts.sh, owned by"
+        echo   "       gen-cluster-stage-artefacts) or override via sbatch --export."
+        echo   "       ⛔ Failing here, at job start, is deliberate: the alternative is"
+        echo   "       discovering this inside the loader after the GPU was allocated."
+        exit 1
+    fi
+    unset _v _p _chlu_missing
+fi
+echo "[env.sh] CHLU_CLAUDE_ROOT=$CHLU_CLAUDE_ROOT (gen artefact roots present)"
+# --- END gen-wells-route-b ---------------------------------------------------
