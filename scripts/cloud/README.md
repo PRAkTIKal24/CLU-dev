@@ -86,8 +86,9 @@ labelled `owner=chlu`, so it is separable at a glance:
 | `quota.py` | laptop | the preflight. Refuses by name, with the measured limit. Also a standalone CLI |
 | `Dockerfile` | builder | the pinned runtime image (§4) |
 | `build_image.sh` | laptop | builds the image on a throwaway GCE VM, prints the **digest** |
-| `launch.sh` | laptop | **the entry point**: preflight → create → (optionally wait) → cost line |
-| `startup.sh` | the VM | GCE startup script: sync loop, GPU preflight, digest-pinned pull, run, self-delete |
+| `launch.sh` | laptop | **the entry point for ONE attempt**: preflight → create → (optionally wait) → cost line |
+| `run_until_done.sh` | laptop | **the entry point for a SPOT job**: relaunches until `result.json` exists, under a hard attempt cap **and** a hard spend cap |
+| `startup.sh` | the VM | GCE startup script: sync loop, **artefact-root + decoder assertions**, GPU preflight, digest-pinned pull, **the EXP registry and the unit sweep**, self-delete |
 | `shutdown.sh` | the VM | GCE shutdown script: the pre-emption path — SIGTERM the payload, final sync |
 | `ckpt.py` | in-container | atomic, time-based, fingerprinted, GCS-backed checkpoints |
 | `payload_smoke.py` | in-container | the trivial deterministic GPU payload (hash chain) |
@@ -150,6 +151,119 @@ scripts/cloud/fetch_results.sh train1
 Useful flags: `--gpus N` · `--region/--zone` · `--fresh` (discard checkpoints
 and start over) · `--keep-vm` (skip self-delete; **you must then delete it**) ·
 `--max-hours H` (watchdog) · `--ckpt-every-s` · `--sync-every-s`.
+
+### ⭐ 5.1 Running a REAL experiment — `--exp`
+
+`--steps/--size` above drive the **synthetic smoke payload**, which runs no
+science. A real arm is selected by name:
+
+```bash
+# the tier-III pilot, three seeds, on a spot L4, supervised (see §5.3):
+scripts/cloud/run_until_done.sh --job pilot1 --card l4 --spot \
+    --exp cluformer --units '0 1 2' --exp-args '--stage s1 --scale toy' \
+    --max-hours 1 --max-attempts 8 --max-usd 3.00
+
+# a gen arm: the artefact set is REQUIRED and the launcher refuses without it
+scripts/cloud/run_until_done.sh --job cell1 --card a100-40 --spot \
+    --exp gen_cell --units '0 1 2' \
+    --artefacts gs://chlu-cloud-forgisprova/artefacts \
+    --exp-args '--dataset shapes3d --pretext recon --stage cell'
+```
+
+⭐ **One launcher, parameterised.** The experiment is a row in `exp_row()` in
+`startup.sh`; adding an arm is that row and nothing else. ⛔ **Never a second
+launcher per experiment** — two launchers drift and only one gets the next fix.
+`launch.sh` asks `startup.sh --check exp <name>` rather than holding a second
+copy of the table, so the laptop and the VM cannot disagree.
+
+| `--exp` | module | `--out` is | artefacts |
+|---|---|---|---|
+| `smoke` | `payload_smoke.py` | — | no |
+| `cluformer` | `chlu.experiments.exp_cluformer_pilot` | sweep root | no (downloads enwik8) |
+| `gen_encoder` | `chlu.experiments.exp_gen_encoder` | sweep root | **yes** |
+| `gen_store` | `chlu.experiments.exp_gen_store` | sweep root | **yes** |
+| `gen_cell` | `chlu.experiments.exp_gen_cell` | sweep root | **yes** |
+| `gen_dream` | `chlu.experiments.exp_gen_dream` | sweep root | **yes** |
+| `gen_certificate` | `chlu.experiments.exp_gen_certificate` | sweep root | **yes** |
+| `gen_atom_mean` | `chlu.experiments.exp_gen_atom_mean` | sweep root | **yes** |
+| `gen_baselines` | `chlu.experiments.exp_gen_baselines` | **the unit dir** | **yes** |
+
+(The last row is not a typo: `exp_gen_baselines` does **not** append `seed_<N>/`
+to `--out` and `exp_gen_atom_mean` does — the same split `job_cpu_gen.sh` §7
+encodes. Getting it backwards writes every seed over one manifest.)
+
+**One unit per seed, and a pre-emption costs ONE UNIT.** `--units '0 1 2'` runs
+three units; each completed one is banked in a GCS-backed journal, so a
+relaunched VM skips it. The unit that was in flight re-runs.
+
+### ⭐ 5.2 What is asserted before the GPU is touched
+
+Both checks run **before** the driver wait, the docker install and the 7 GB
+image pull, because all three cost minutes and neither check costs anything.
+
+1. **The five `CHLU_*` artefact roots**, each `${VAR:-default}` over the staged
+   GCS prefix, in the same relative layout `scripts/csf3/stage_artefacts.sh`
+   publishes — so the bucket and CSF3 scratch are the same tree in two places:
+
+   | variable | default |
+   |---|---|
+   | `CHLU_CLAUDE_ROOT` | `/var/chlu/artefacts` (the `--artefacts` prefix, fetched) |
+   | `CHLU_GEN_DATA_ROOT` | `$CHLU_CLAUDE_ROOT/data/gen` |
+   | `CHLU_GEN_BRIDGE_ROOT` | `$CHLU_CLAUDE_ROOT/outputs/gen-feature-bridge/runs` |
+   | `CHLU_GEN_STORE_RUNS` | `$CHLU_CLAUDE_ROOT/outputs/gen-store-grouping/runs` |
+   | `CHLU_GEN_DECLIFT_DIR` | `$CHLU_CLAUDE_ROOT/outputs/gen-decoder-lift/winner` |
+
+   A missing root is refused **by name**, naming the variable *and* its value —
+   ⛔ a job must never reach the GPU to discover it cannot open an artefact.
+   `--skip-artefact-check` opts out for a run that genuinely needs none.
+   ⚠ `CHLU_DATA_ROOT` is **not** one of the five and is not asserted: it is the
+   download cache, pointed at the host mount so a sweep of N units does not
+   download enwik8 N times.
+
+2. ⛔ **The decoder recipe, by name AND by hash.** `GenBridgeConfig.dec_recipe`
+   still defaults to **`"baseline"`** — the recipe that **FAILED** the gate
+   (0.7191 balanced accuracy, 0/3 seeds) — deliberately, so Montero's history
+   reproduces. ⛔ **A baseline run looks entirely normal in the logs and is
+   void.** So three things are checked against `gen-decoder-lift`'s own
+   `winner_hashes.json`, which is the authority the experiments use:
+   * the requested recipe is `v1_capacity_schedule` (⛔ not merely "not
+     baseline" — `v2_object_weighted` also lost);
+   * the **staged** decoder declares that recipe itself; and
+   * `sha256(decoder_v1_s<seed>.pkl)` matches `pkl_sha256`, per seed.
+
+### ⭐⭐ 5.3 `run_until_done.sh` — the relaunch supervisor
+
+⛔ **A fallback that needs a human to notice and relaunch is not a fallback.**
+`gen-cloud-enablement` proved resume works; nothing re-invoked it, and its
+`det-ctl` needed **three launches** to finish 600 steps with a human driving all
+three. Two of this project's spot L4s were pre-empted by Google **unprompted**
+inside one short acceptance window.
+
+```bash
+scripts/cloud/run_until_done.sh --job <job> --card l4 --spot \
+    --exp <exp> --units '0 1 2' [--max-attempts N] [--max-usd X] [--backoff-s S]
+```
+
+* **Completion sentinel**: `out/result.json`, written by `startup.sh` **only**
+  when every requested unit is banked. Its absence is the relaunch condition and
+  nothing else is.
+* ⛔ **Never an unbounded loop.** Two independent hard caps, both refusing by
+  name and both reported: `--max-attempts` (default 6) and `--max-usd`
+  (default 5.00). The spend cap is checked against spend-so-far **plus the
+  ceiling of the attempt about to be launched**, so it cannot be breached by
+  exactly the attempt that tests it. A card with no price in `cards.json` is
+  refused outright — a loop whose cost cannot be computed is an unbounded loop
+  wearing a cap.
+* **Stockout back-off**: a stockout creates no VM and is charged \$0, and the
+  wait doubles (`--backoff-s`, capped by `--backoff-max-s`). A real VM having
+  run resets it: the region is not stocked out.
+* It never races a VM of its own — a previous attempt still `RUNNING` is waited
+  out, not launched alongside.
+* State (attempts used, estimated spend, stockouts) is written to
+  `.claude/outputs/gen-cloud-runner/supervisor/<job>.json` after every
+  transition, plus one log per attempt.
+* Unknown flags are passed straight through to `launch.sh`. ⛔ The flag list is
+  not re-declared here; two copies is how the two drift apart.
 
 ### Checkpoint / resume contract
 - **Time-based**, not per-epoch: pre-emption does not wait for an epoch, so
