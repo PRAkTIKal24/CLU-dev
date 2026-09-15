@@ -60,13 +60,21 @@ WORKDIR /opt/chlu
 
 # Dependency layer first: it is ~6 GB of CUDA wheels and must not be
 # invalidated by a source edit.
+# `--extra gen` is h5py, and it is NOT optional on this path: Shapes3D ships as
+# a single HDF5 file, so chlu/data/shapes3d.py refuses to open the dataset
+# without it. Measured on `gencell1`, which fetched the whole 2 GB staged
+# artefact set, passed every root and decoder assertion, reached the GPU and
+# then died 11 s into the arm with `ModuleNotFoundError: No module named
+# 'h5py'`. Every gen experiment reads that dataset, so an image without it can
+# run none of them -- and the failure is invisible on the laptop, where
+# tests/test_gen_data_splits.py importorskip's h5py and passes as SKIPS.
 COPY pyproject.toml uv.lock README.md ./
-RUN uv sync --frozen --no-dev --extra cuda --no-install-project
+RUN uv sync --frozen --no-dev --extra cuda --extra gen --no-install-project
 
 # Source layer.
 COPY chlu ./chlu
 COPY scripts/cloud ./scripts/cloud
-RUN uv sync --frozen --no-dev --extra cuda
+RUN uv sync --frozen --no-dev --extra cuda --extra gen
 
 ENV PATH="/opt/venv/bin:${PATH}" \
     VIRTUAL_ENV=/opt/venv
@@ -88,7 +96,7 @@ LABEL org.opencontainers.image.revision=${GIT_COMMIT} \
 # CPU-side import check: fails the build if the lock did not produce a usable
 # jax. (A GPU assert cannot run here -- the builder has no GPU; startup.sh
 # preflights the device on the real VM.)
-RUN python -c "import jax, chlu; print('image OK: jax', jax.__version__, '| chlu', chlu.__version__ if hasattr(chlu,'__version__') else '?')" \
+RUN python -c "import jax, chlu, h5py; print('image OK: jax', jax.__version__, '| h5py', h5py.__version__, '| chlu', chlu.__version__ if hasattr(chlu,'__version__') else '?')" \
  && gcloud --version | head -2
 
 CMD ["python", "/opt/chlu/scripts/cloud/payload_smoke.py", "--help"]

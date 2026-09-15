@@ -80,6 +80,10 @@ is_done() {
   if [ -n "${CHLU_DONE_PROBE:-}" ]; then "$CHLU_DONE_PROBE" "$JOB"; return $?; fi
   gcloud storage cat "$REMOTE/out/result.json" --project="$CHLU_PROJECT" >/dev/null 2>&1
 }
+have_object() {   # $1 = path under jobs/<job>/
+  if [ -n "${CHLU_OBJECT_PROBE:-}" ]; then "$CHLU_OBJECT_PROBE" "$JOB" "$1"; return $?; fi
+  gcloud storage cat "$REMOTE/$1" --project="$CHLU_PROJECT" >/dev/null 2>&1
+}
 vm_state() {
   if [ -n "${CHLU_VM_PROBE:-}" ]; then "$CHLU_VM_PROBE" "$JOB"; return 0; fi
   gcloud compute instances list --project="$CHLU_PROJECT" --filter="name=chlu-${JOB}" \
@@ -88,7 +92,7 @@ vm_state() {
 nap() { [ -n "${CHLU_NO_SLEEP:-}" ] || sleep "$1"; }
 
 # --- state --------------------------------------------------------------------
-ATTEMPTS=0 SPENT=0 STOCKOUTS=0 PREEMPTIONS=0 CUR_BACKOFF="$BACKOFF"
+ATTEMPTS=0 SPENT=0 STOCKOUTS=0 PREEMPTIONS=0 CUR_BACKOFF="$BACKOFF" PAYLOAD_FAILS=0
 write_state() {   # $1 = status, $2 = note
   "$PY" - "$STATE" "$JOB" "$CARD" "$SPOT" "$ATTEMPTS" "$MAX_ATTEMPTS" "$SPENT" "$MAX_USD" \
          "$STOCKOUTS" "$PREEMPTIONS" "$RATE" "$1" "${2:-}" <<'PYST'
@@ -202,8 +206,29 @@ while :; do
 
   PREEMPTIONS=$((PREEMPTIONS + 1))
   say "attempt $ATTEMPTS ended WITHOUT result.json (launcher rc=$LRC, ${ELAPSED}s, ~\$$COST)."
-  say "   Pre-emption or a failed unit. Completed units are banked in the journal;"
-  say "   the next attempt resumes and re-runs only the unit that was in flight."
+
+  # ⛔ A DETERMINISTIC PAYLOAD FAILURE IS NOT A PRE-EMPTION, and relaunching it
+  #    just buys the same traceback on a new VM. The two are distinguishable from
+  #    the bucket: a VM that RAN and whose unit failed leaves out/FAILED and no
+  #    out/PREEMPTED; a pre-empted one is killed before it can write FAILED and
+  #    shutdown.sh leaves PREEMPTED. Two in a row is the bar -- one could be a
+  #    flaky fetch or an OOM under contention. (Measured on `gencell1`: the image
+  #    was missing h5py, and every attempt would have reproduced it exactly.)
+  if have_object "out/FAILED" && ! have_object "out/PREEMPTED"; then
+    PAYLOAD_FAILS=$((PAYLOAD_FAILS + 1))
+    say "   The VM RAN and the unit FAILED (out/FAILED present, out/PREEMPTED absent)"
+    say "   -- consecutive payload failures: $PAYLOAD_FAILS"
+    if [ "$PAYLOAD_FAILS" -ge 2 ]; then
+      say "⛔ STOPPING: the same job has failed in the payload twice with no pre-emption."
+      say "   That is a defect, not a lost VM, and a relaunch reproduces it. Read"
+      say "   gs://${CHLU_BUCKET}/jobs/${JOB}/out/job.log."
+      FINAL=payload_failed; break
+    fi
+  else
+    PAYLOAD_FAILS=0
+    say "   Pre-emption. Completed units are banked in the journal;"
+    say "   the next attempt resumes and re-runs only the unit that was in flight."
+  fi
   write_state relaunching "attempt $ATTEMPTS incomplete; relaunching"
 done
 
@@ -214,6 +239,7 @@ say "    estimated spend: \$$SPENT of \$$MAX_USD   ($CHLU_PRICES_AS_OF)"
 say "    state: $STATE"
 [ "$FINAL" = "done" ] && exit 0
 [ "$FINAL" = "quota_refused" ] && exit 3
+[ "$FINAL" = "payload_failed" ] && exit 6
 [ "$FINAL" = "attempt_cap" ] && exit 4
 [ "$FINAL" = "spend_cap" ] && exit 5
 exit 1

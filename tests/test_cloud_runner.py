@@ -337,11 +337,15 @@ def seams(tmp_path: Path):
         "never_done": _mk("never.sh", "exit 1"),
         "always_done": _mk("always.sh", "exit 0"),
         "no_vm": _mk("novm.sh", 'echo ""'),
+        # out/FAILED present, out/PREEMPTED absent == the VM ran and the unit
+        # failed; the opposite means it was taken away mid-run.
+        "obj_failed": _mk("obj_failed.sh", '[ "$2" = "out/FAILED" ]'),
+        "obj_preempted": _mk("obj_preempted.sh", '[ "$2" = "out/PREEMPTED" ]'),
         "dir": tmp_path,
     }
 
 
-def _run_sup(seams, *args, launch="ok", done="never_done"):
+def _run_sup(seams, *args, launch="ok", done="never_done", objects=None):
     env = {
         "CHLU_SUPERVISOR_DIR": str(seams["dir"] / "state"),
         "CHLU_NO_SLEEP": "1",
@@ -349,6 +353,8 @@ def _run_sup(seams, *args, launch="ok", done="never_done"):
         "CHLU_DONE_PROBE": str(seams[done]),
         "CHLU_VM_PROBE": str(seams["no_vm"]),
     }
+    if objects:
+        env["CHLU_OBJECT_PROBE"] = str(seams[objects])
     return sh(SUPERVISOR, *args, env=env)
 
 
@@ -419,6 +425,27 @@ def test_an_attempt_that_created_no_vm_is_charged_nothing(seams):
     assert "created NO VM" in r.stdout
     state = json.loads((seams["dir"] / "state" / "j.json").read_text())
     assert state["usd_estimated"] == 0.0
+
+
+def test_two_payload_failures_in_a_row_stop_the_loop(seams):
+    """A VM that RAN and whose unit failed leaves out/FAILED and no out/PREEMPTED.
+    Relaunching that buys the same traceback on a new VM. (Measured on `gencell1`:
+    the image was missing h5py.)"""
+    r = _run_sup(seams, "--job", "j", "--card", "l4", "--spot", "--max-attempts", "9",
+                 "--max-usd", "100", objects="obj_failed")
+    assert r.returncode == 6
+    assert "failed in the payload twice" in r.stdout
+    assert "attempts used: 2 of 9" in r.stdout        # one is not enough
+
+
+def test_a_preempted_attempt_is_not_mistaken_for_a_payload_failure(seams):
+    """out/PREEMPTED present: the VM was taken away. That is the case the whole
+    supervisor exists for and must never stop the loop."""
+    r = _run_sup(seams, "--job", "j", "--card", "l4", "--spot", "--max-attempts", "4",
+                 "--max-usd", "100", objects="obj_preempted")
+    assert r.returncode == 4                          # ran to the attempt cap
+    assert "Pre-emption." in r.stdout
+    assert "failed in the payload twice" not in r.stdout
 
 
 def test_an_already_complete_job_launches_nothing(seams):
