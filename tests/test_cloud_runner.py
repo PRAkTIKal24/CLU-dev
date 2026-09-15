@@ -335,6 +335,21 @@ def test_launcher_refuses_a_non_integer_unit():
     assert "is not a non-negative integer" in r.stderr
 
 
+def test_the_previous_attempts_sentinels_are_cleared_before_a_vm_is_created():
+    """out/EXIT_CODE, DONE, FAILED and PREEMPTED describe ONE attempt, and the
+    sync-back never deletes. Measured on `gencell2`: --wait returned on a stale
+    EXIT_CODE 62 s after create, before the VM had booted, and the supervisor
+    read a stale FAILED and called a fresh attempt a payload failure."""
+    src = LAUNCH.read_text()
+    m = re.search(r"for _stale in ([A-Z_ ]+); do", src)
+    assert m, "the stale-sentinel sweep is gone"
+    assert set(m.group(1).split()) == {"EXIT_CODE", "DONE", "FAILED", "PREEMPTED"}
+    # it must happen BEFORE the instance is created, not after
+    assert src.index("for _stale in") < src.index("gcloud compute instances create")
+    # ⛔ and it must never clear the COMPLETION sentinel
+    assert "result.json" not in m.group(1)
+
+
 def test_exp_args_travel_by_file_not_in_the_comma_separated_metadata_list():
     """gcloud splits --metadata on commas, so an experiment flag like
     `--set a=1,b=2` would be torn into two bogus metadata keys."""

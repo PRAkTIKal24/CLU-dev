@@ -172,6 +172,19 @@ T0="$(date -u +%s)"
 # `--metadata` is a COMMA-separated key=value list, so any value containing a
 # comma is silently split into two bogus keys. Experiment arguments routinely
 # contain one (`--set a=1,b=2`), so they travel as a file instead.
+# ⛔ CLEAR THE PREVIOUS ATTEMPT'S SENTINELS BEFORE CREATING ANYTHING.
+# out/EXIT_CODE, out/DONE, out/FAILED and out/PREEMPTED describe ONE attempt.
+# The sync-back is additive and never deletes, so they survive into the next
+# one -- and then `--wait` returns on a stale EXIT_CODE seconds after create,
+# before the VM has even booted, and the supervisor reads a stale FAILED and
+# calls a fresh attempt a payload failure. Measured on `gencell2`: attempt 2
+# "finished" in 62 s without a VM ever running the payload.
+# ⭐ out/result.json is NOT cleared: it is the COMPLETION sentinel, it describes
+# the job rather than an attempt, and the supervisor has already checked it.
+for _stale in EXIT_CODE DONE FAILED PREEMPTED; do
+  gcloud storage rm "${REMOTE}/${JOB}/out/${_stale}" --project="$CHLU_PROJECT" -q 2>/dev/null
+done
+
 ARGFILE="$(mktemp)"; printf '%s' "$EXP_ARGS" > "$ARGFILE"
 GIT_COMMIT="$(git -C "$HERE/../.." rev-parse HEAD 2>/dev/null || echo unknown)"
 
