@@ -970,7 +970,9 @@ def run_dynread_budget(
                 "wall_clock_s": rec["wall_clock_s"],
             }
             arte[rs] = {"energy_traces": str(tp), "settled_states": str(sp)}
-            log(f"    ⭐ [{label}/{rs}] E {rec['dynamics']['energy_first']:.3f} -> "
+            # ⚠ ``·`` not ``/``: "dynread/B" is a RUNG label, and a request-set
+            # suffix spelled with a slash would read as one.
+            log(f"    ⭐ [{label} · {rs}] E {rec['dynamics']['energy_first']:.3f} -> "
                 f"{rec['dynamics']['energy_final']:.3f} · still_descending="
                 f"{rec['dynamics']['frac_still_descending']} · "
                 f"{rec['dynamics']['verdict']}")
