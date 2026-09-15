@@ -269,30 +269,129 @@ def gather_features(
 
 
 def _assert_cache_reencodes(dataset, config, encoder, cache_rows, features, cman, n=64, log=print):
-    """⭐ Verify that re-encoding CACHED rows reproduces the cache bit-for-bit.
+    """⭐ Verify that re-encoding CACHED rows reproduces the cache **to within one
+    representable step of the format the cache is stored in**.
 
     Without this, "extending the cache through the frozen encoder" is a claim.  With
-    it, it is a measurement.  Any mismatch means the loaded encoder is not the one
-    that wrote the cache and the run must stop.
+    it, it is a measurement.
+
+    ⛔ **Why not bit-identity** (the defect this replaced — cluster job 20603452,
+    L40S, 2026-09-15).  The cache is written as ``cman["dtype"]`` (float16 in every
+    shipped manifest) and read back through float32, so a GPU that accumulates the
+    encoder's convolutions in a different order than the CPU that wrote the cache can
+    land a float32 output the other side of a float16 rounding boundary.  One element
+    of 64 x 2048 moved by ``0.00390625`` — **exactly 2^-8, one float16 ULP for values
+    in [4, 8)** — and the old ``if max_abs != 0.0: raise`` convicted an encoder whose
+    parameter hash had matched in the same preflight moments earlier.  Bit-identity
+    across hardware is unachievable, and it is not what "the same encoder" means.
+
+    ⭐ **The tolerance is DERIVED FROM THE CACHE DTYPE, never picked.**  Each element is
+    scaled by :func:`numpy.spacing` evaluated on *its own cached value at the cache
+    dtype*, so the bound is ~0.00098 near 1.0 and ~0.0078 near 8.0.  ⛔ A single global
+    ULP would be simultaneously too tight at the bottom of the range and too loose at
+    the top.  ``np.spacing(|v|)`` is the gap *above* ``|v|``; the gap below is never
+    larger (it halves only at a binade boundary), so a genuine one-step move always
+    scores <= 1 ULP and is never convicted, and nothing larger is ever excused.
+
+    ⚠ **Two bounds, both required — one ULP per element is not enough on its own.**  A
+    run in which *most* elements moved by 1 ULP is a different computation even though
+    no single element exceeds the per-element bound, so the differing **fraction** is
+    bounded too.
+
+        *Derivation of the 1% fraction bound.*  A float32 accumulation reorder
+        perturbs the encoder output by relative ~1e-7.  float16 has relative precision
+        2^-11 ~ 4.9e-4, so an element re-rounds only if its float32 value sits within
+        ~1e-7 of a rounding midpoint: an expected flip fraction of ~2 x 1e-7 / 4.9e-4
+        ~ 4e-4.  The cluster incident measured 1 / 131,072 = 7.6e-6.  ``1e-2`` sits
+        ~25x above the derivation and ~1300x above the observation, while a genuinely
+        different encoder moves essentially every element (measured at 100.0% of
+        elements and ~1e2-1e4 ULP by ``tests/test_gen_store.py``'s positive control),
+        so the bound is ~50x below the failure mode it exists to catch.
+
+    ⭐ The statistics are computed and logged **always, pass or fail**, and returned so
+    they reach the run manifest instead of living only in an exception string:
+    ``max_abs_delta`` · ``max_ulp_delta`` · ``n_differing`` · ``frac_differing`` ·
+    ``n_checked``.  ⛔ Backward compatible: ``n_checked`` still counts **rows** (two
+    callers log it as such); every other key is new.
+
+    ⭐ On a real mismatch the message states what was **measured**, in ULP.  It does not
+    say "this is NOT the encoder" — the parameter hash is asserted separately and by
+    the time this runs it has already matched; the reader draws the conclusion.
     """
+    # ⭐ Declared here, in force for every caller, recorded in the returned dict so the
+    # manifest carries the bound that was applied.  ⛔ Deliberately NOT a keyword
+    # argument: there must be no per-caller, per-device way to widen or disable this.
+    ULP_BOUND = 1.0
+    FRAC_BOUND = 1e-2
+
     take = np.asarray(cache_rows[: int(n)], np.int64)
     cached = features_for_rows(cache_rows, features, take).reshape((take.size, -1))
+    cache_dtype = np.dtype(cman["dtype"])
     imgs = stream_images(dataset, take, config.gen_data.data_root, int(config.gen_bridge.cache_block))
     fresh = (
         encode_images(encoder, imgs, int(config.gen_bridge.eval_batch))
-        .astype(np.dtype(cman["dtype"]))
+        .astype(cache_dtype)
         .astype(np.float32)
         .reshape((take.size, -1))
     )
-    max_abs = float(np.max(np.abs(cached - fresh)))
-    if max_abs != 0.0:
+
+    # ⛔ A NaN defeats every comparison below silently (`nan > 0` is False), which would
+    # make the gate unable to fail.  Count it before the arithmetic and convict on it.
+    n_nonfinite = int(np.count_nonzero(~(np.isfinite(cached) & np.isfinite(fresh))))
+
+    delta = np.abs(cached.astype(np.float64) - fresh.astype(np.float64))
+    # one representable step of the CACHE's own format, at THIS element's magnitude
+    ulp = np.spacing(np.abs(cached).astype(cache_dtype)).astype(np.float64)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        ulp_delta = np.where(delta > 0.0, delta / ulp, 0.0)
+
+    n_elem = int(cached.size)
+    n_diff = int(np.count_nonzero(delta > 0.0))
+    stats = {
+        "n_checked": int(take.size),  # rows — unchanged meaning, two callers log it
+        "n_elements": n_elem,
+        "max_abs_delta": float(np.max(delta)) if n_elem else 0.0,
+        "max_ulp_delta": float(np.max(ulp_delta)) if n_elem else 0.0,
+        "n_differing": n_diff,
+        "frac_differing": (n_diff / n_elem) if n_elem else 0.0,
+        "n_nonfinite": n_nonfinite,
+        "cache_dtype": str(cache_dtype),
+        "ulp_bound": float(ULP_BOUND),
+        "frac_bound": float(FRAC_BOUND),
+    }
+    log(
+        f"  ⭐ cache re-encode check: {stats['n_checked']} rows, "
+        f"{n_diff}/{n_elem} elements differ ({stats['frac_differing']:.3%}), "
+        f"max |delta| = {stats['max_abs_delta']:.6g} = {stats['max_ulp_delta']:.3f} "
+        f"{cache_dtype} ULP (bounds: {ULP_BOUND:g} ULP, {FRAC_BOUND:.1%} of elements)"
+    )
+
+    if n_nonfinite:
         raise AssertionError(
-            f"re-encoding {take.size} cached rows through the loaded encoder did not "
-            f"reproduce the cache (max |delta| = {max_abs}) — this is NOT the encoder "
-            "that wrote the cache"
+            f"re-encode check: {n_nonfinite} of {n_elem} element(s) are NaN or Inf in "
+            f"the cache or in the re-encoded features, so the comparison is undefined "
+            f"— {stats}"
         )
-    log(f"  ⭐ cache re-encode check: {take.size} rows bit-identical through the frozen encoder")
-    return {"n_checked": int(take.size), "max_abs_delta": max_abs}
+    if stats["max_ulp_delta"] > ULP_BOUND:
+        raise AssertionError(
+            f"re-encoding {stats['n_checked']} cached rows did not reproduce the cache "
+            f"to within one {cache_dtype} ULP: max |delta| = "
+            f"{stats['max_abs_delta']:.6g} = {stats['max_ulp_delta']:.3f} ULP of the "
+            f"cache dtype (bound {ULP_BOUND:g}); {n_diff}/{n_elem} elements "
+            f"({stats['frac_differing']:.3%}) differ.  ⭐ That is further than a "
+            f"rounding step of the stored format, so the loaded encoder does not "
+            f"reproduce these cached values — {stats}"
+        )
+    if stats["frac_differing"] > FRAC_BOUND:
+        raise AssertionError(
+            f"re-encoding {stats['n_checked']} cached rows stayed within one "
+            f"{cache_dtype} ULP (max {stats['max_ulp_delta']:.3f} ULP) but "
+            f"{n_diff}/{n_elem} elements ({stats['frac_differing']:.3%}) moved, over "
+            f"the {FRAC_BOUND:.3%} bound: a rounding-boundary crossing touches a "
+            f"handful of elements, a population this size is a different computation "
+            f"— {stats}"
+        )
+    return stats
 
 
 def _decoded_probe(decoder, probe, feats, labels, names, batch) -> dict:
