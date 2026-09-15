@@ -102,7 +102,7 @@ cat <<PLAN
    job           ${JOB}          vm ${VM}
    card          ${CARD} (${ACCEL}) x${GPUS} on ${MACHINE} [${VCPU} vCPU]
    provisioning  $([ "$SPOT" = 1 ] && echo "SPOT -- expect pre-emption; the job resumes" || echo "on-demand")
-   zone          ${CHLU_ZONE}
+   zone          ${CHLU_ZONE} preferred; falls back across ${CHLU_REGION} on a stockout
    boot image    ${CHLU_BOOT_IMAGE} (${CHLU_BOOT_IMAGE_PROJECT})
    run image     ${IMAGE}
    payload       ${ARGS}
