@@ -1292,7 +1292,7 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
     reenc = _assert_cache_reencodes(dataset, config, encoder, crows, feats_cache, cman,
                                     log=tlog)
     tlog(f"cache {cman['n_rows']} rows (scope={cman['scope']}), D={cman['D']}; "
-         f"re-encode check bit-identical on {reenc.get('n_checked')} rows")
+         f"re-encode check within 1 ULP of the cache dtype on {reenc.get('n_checked')} rows")
 
     def gather(r):
         return gather_features(dataset, config, encoder, crows, feats_cache, cman, r,

@@ -235,7 +235,10 @@ def gather_features(
     the cache.  Newly encoded rows are quantised to the cache's own dtype so a
     cached row and an encoded row are numerically indistinguishable — and that is
     **verified**, not asserted: :func:`_assert_cache_reencodes` re-encodes a sample
-    of genuinely cached rows and requires bit-identity.
+    of genuinely cached rows and requires agreement to within **one ULP of the cache
+    dtype**, plus a differing fraction under 1%.  ⛔ Bit-identity is unachievable across
+    hardware — a GPU accumulates convolutions in a different order and a single element
+    can cross a float16 rounding boundary (measured on an L40S, job 20603452).
     """
     rows = np.asarray(rows, np.int64)
     d = int(cman["D"])
