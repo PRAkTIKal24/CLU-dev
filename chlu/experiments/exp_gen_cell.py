@@ -5,8 +5,20 @@ One path::
     request -> launch read -> codes -> THE frozen decoder -> image
             -> THE external classifier
 
-five arms — ``clu`` · ``store_removed`` · ``knn_proto`` · ``lace`` · ``ebm_compose`` —
-three seeds, and **one table**.
+six arms — ``clu`` · ``store_removed`` · ``knn_proto`` · ``lace`` · ``ebm_compose`` ·
+``dynread`` — three seeds, and **one table**.
+
+⭐ **``dynread`` is WIRING, not building** (`gen-read-cell-arm`, 2026-09-15).  The
+dynamical read (``request -> posterior-argmax launch -> settle over stored ATOMS ->
+decode the settled continuous state``) is built by :mod:`chlu.core.gen_landscape` and
+assembled by :mod:`chlu.experiments.exp_gen_dynamical_read`; this module **calls**
+both and scores the result **on the cell already here** — same store rows, same
+stratified split, same frozen decoder, same hash-asserted external classifier.  ⛔ An
+arm scored on a cell of its own is not on this table, and that is the whole point.
+⭐ Its ``request_off`` control (``β = 0``, SAME launch, SAME chain) runs beside every
+rung: the launch is request-addressed either way, so the control isolates the request
+**energy** — and if it scores the same, the arm is settling onto a mode rather than
+being steered, **and that is the result**.
 
 ⭐ **DIAL DECLARATION** — *composition, end to end, scored on IMAGES.*
 
@@ -61,7 +73,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence
 
 import equinox as eqx
 import jax
@@ -73,7 +85,12 @@ import optax
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from ..config import CHLUConfig, get_default_config, gen_row_split_config  # noqa: E402
+from ..config import (  # noqa: E402
+    CHLUConfig,
+    gen_dynamical_read_config,
+    gen_row_split_config,
+    get_default_config,
+)
 from ..data.gen_rowsplit import (  # noqa: E402
     assert_row_split_balanced,
     row_split_balance,
@@ -93,6 +110,11 @@ from ..core.gen_compose import (  # noqa: E402
 from ..core.gen_dream import (  # noqa: E402
     fit_address_book,
     requests_from_labels,
+)
+from ..core.gen_landscape import (  # noqa: E402
+    arm_key,
+    convergence_report,
+    save_trace,
 )
 from ..core.gen_request import (  # noqa: E402
     FactorPrototypes,
@@ -123,6 +145,15 @@ from ..experiments.exp_gen_compose import (  # noqa: E402
     resolve_decoder,
 )
 from ..experiments.exp_gen_dream import resolve_grouping  # noqa: E402
+# ⭐ The dynamical read is CALLED, never re-implemented: ``build_landscape`` and
+# ``run_arm`` are ``gen-dynamical-read``'s own, so the atoms, the bandwidths, the
+# address book, the coercivity certificate and the settling loop on this table are
+# bit-for-bit the ones that spoke built.  ⛔ A second implementation here would make
+# the row incomparable with everything that spoke measured.
+from ..experiments.exp_gen_dynamical_read import (  # noqa: E402
+    build_landscape as dynread_build_landscape,
+    run_arm as dynread_run_arm,
+)
 from ..experiments.exp_gen_store import (  # noqa: E402
     _assert_cache_reencodes,
     bridge_dir,
@@ -152,7 +183,7 @@ STAGES = ("cell", "aggregate")
 NOT_MINE = ("encoder", "decoder", "store", "dream", "certificate", "baselines", "compose")
 #: ⭐ ``store_removed`` is second on purpose: the laundering control sits beside the
 #: mechanism in every table this module writes, ⛔ never in a footnote.
-ARMS = ("clu", "store_removed", "knn_proto", "lace", "ebm_compose")
+ARMS = ("clu", "store_removed", "knn_proto", "lace", "ebm_compose", "dynread")
 #: The request sets the gate statistic needs.  ``A`` is an optional companion.
 REQUEST_SETS = ("B", "MS")
 
@@ -688,14 +719,349 @@ def ebm_resample(state, ctx: dict, cfg, key) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# 4b. ⭐ THE DYNAMICAL READ as a sixth arm — ⛔ WIRING, not building
+# ---------------------------------------------------------------------------
+
+#: ⭐ The two PRE-REGISTERED budgets (``gen-dynamical-read`` PREREG §3).  ``A`` is the
+#: MATCHED rung — 64 atoms/well = 524,288 B, **exactly** the codebook's budget — so it
+#: is the rung that carries the arm's bare name on the generation table.  ``B`` is the
+#: declared-larger rung (512 atoms/well) and is reported beside it, never instead.
+DYNREAD_BUDGETS = ("A", "B")
+DYNREAD_PRIMARY_BUDGET = "A"
+#: ⛔ **Step budgets, declared here and not read from**
+#: :attr:`~chlu.config.GenDynamicalReadConfig.steps`, which is a single scalar: this
+#: table fixes a different budget per rung (A = 1000, B = 2000).  ⛔ Not a tuning
+#: knob — a chain still descending at **its own** step budget is NOT CONVERGED and
+#: yields no quotable number, and the number reported is the one at the budget
+#: declared before the run.
+DYNREAD_STEPS = {"A": 1000, "B": 2000}
+#: ⭐ The step counts the still-descending fraction is reported at for EVERY rung, so
+#: a budget-B chain's 1000-step state is on the record beside its 2000-step one and
+#: "it converged eventually" can never be asserted without the earlier number.
+DYNREAD_CONVERGENCE_CHECKPOINTS = (1000, 2000)
+#: ⭐ ``full`` and its MANDATORY ``request_off`` control, ⛔ and nothing else.  This
+#: spoke is deliberately lean: ``coupling_off``, ``request_off_launch`` and
+#: ``zero_step`` belong to ``gen-dynamical-read`` and are ⛔ NOT re-run here.
+#: ``request_off`` is not optional — the launch is request-addressed in BOTH arms, so
+#: it is the only thing that isolates the request **energy**, which is the entire
+#: steering claim (PREREG §4; dreaming's clamp produced a gain its control took whole).
+DYNREAD_ARMS = ("full", "request_off")
+#: ⛔ The launch this table's rows are scored from.  ⭐ The posterior **argmax** —
+#: never the thresholded variant, which degenerates to the prior's argmax because the
+#: naive-Bayes posterior clears 0.5 in **0.00 of 5** wells and would carry no request
+#: information at all.
+DYNREAD_LAUNCH_MODE = "clamp_atom"
+
+
+def dynread_label(budget: str, inner_arm: str) -> str:
+    """``(budget, inner arm) -> the label the table row carries``.
+
+    ⭐ The matched rung's ``full`` arm is plain ``dynread`` — it is THE row the
+    generation table gains.  Everything else is suffixed, on the ``lace/<sampler>``
+    precedent, so a reader can never mistake a control or the larger rung for it.
+    """
+    if str(budget) == DYNREAD_PRIMARY_BUDGET and str(inner_arm) == "full":
+        return "dynread"
+    suffix = "" if str(inner_arm) == "full" else f"_{inner_arm}"
+    return f"dynread/{budget}{suffix}"
+
+
+def dynread_artefact_dir(config: CHLUConfig, dataset: str, pretext: str, seed: int) -> Path:
+    """⭐ Where the traces, settled states and decoded images land.
+
+    ⛔ Under ``.claude/`` and therefore untracked, and ⛔ deliberately **not** under
+    ``gen-cell-harness/runs``: these are this spoke's artefacts, and the refusal and
+    dreaming spokes are told to look for them here.
+    """
+    r = os.environ.get("CHLU_GEN_CELL_ARTEFACTS")
+    root = Path(r).expanduser() if r else (
+        _cell_root(config) / "outputs" / "gen-read-cell-arm" / "runs")
+    return root / f"{dataset}_{pretext}" / f"seed_{int(seed)}"
+
+
+def dynread_convergence_checkpoints(
+    trace: dict, window: int, tol: float,
+    checkpoints=DYNREAD_CONVERGENCE_CHECKPOINTS,
+) -> dict:
+    """⭐ The still-descending fraction at **1000 and 2000 steps**, from ONE trace.
+
+    ⛔ A chain is not re-run to answer this: the energy trace is logged every step, so
+    the earlier checkpoint is a slice.  ⛔ A checkpoint beyond the chain's own budget
+    is reported NOT RUN and is ⛔ never extrapolated.
+    """
+    E = np.asarray(trace["energy_ref"])
+    n_steps = int(E.shape[0]) - 1
+    per_step = ("accept_prob", "accepted", "displacement")
+    per_state = ("energy", "energy_ref")
+    out = {"n_steps_run": n_steps, "window": int(window), "tol": float(tol)}
+    for cp in checkpoints:
+        cp = int(cp)
+        if cp > n_steps:
+            out[str(cp)] = {
+                "NOT_RUN": (f"⛔ the chain ran {n_steps} steps; the {cp}-step "
+                            "checkpoint is NOT RUN and ⛔ is never extrapolated")}
+            continue
+        sub = {k: np.asarray(trace[k])[: cp + 1] for k in per_state}
+        sub.update({k: np.asarray(trace[k])[:cp] for k in per_step})
+        r = convergence_report(sub, int(window), float(tol))
+        out[str(cp)] = {
+            "frac_still_descending": r["frac_still_descending"],
+            "n_still_descending": r["n_still_descending"],
+            "n_chains": r["n_chains"],
+            "energy_final": r["energy_final"],
+            "displacement_final_step": r["displacement_final_step"],
+            "verdict": r["verdict"],
+        }
+    return out
+
+
+def dynread_preflight(config: CHLUConfig) -> dict:
+    """⛔ The four standing traps for this arm, as ASSERTIONS rather than comments.
+
+    1. ``λ`` comes from the **coercivity certificate**, ⛔ never the declared 1.0: a
+       bilinear coupling is an indefinite quadratic form and an unbounded-below
+       landscape does not settle, it diverges (measured ``E = −1.6e28``).
+    2. The launch is the posterior **argmax**.
+    3. ``T = 0`` at both ends — ⭐ the settling chain is therefore **deterministic**
+       (the proposal is a pure gradient step and MH degenerates to *accept iff the
+       energy fell*), which is what makes ``request_off`` a genuinely SAME-CHAIN,
+       SAME-KEY control rather than a differently-seeded run.
+    4. The atoms are stored train rows, asserted bit-for-bit downstream by
+       :func:`~chlu.core.gen_landscape.assert_atoms_are_train_rows`.
+    """
+    c = gen_dynamical_read_config(config)
+    if not bool(c.enforce_coupling_certificate):
+        raise AssertionError(
+            "⛔ enforce_coupling_certificate is OFF: λ would be the declared "
+            f"{float(c.coupling_strength):g} rather than the coercivity bound, and an "
+            "unbounded-below landscape does not settle — it diverges. Refusing.")
+    if str(c.launch_mode) != DYNREAD_LAUNCH_MODE:
+        raise AssertionError(
+            f"⛔ launch_mode={c.launch_mode!r}; this table's rows are scored from the "
+            f"posterior argmax ({DYNREAD_LAUNCH_MODE!r}). ⛔ The thresholded variant "
+            "degenerates to the prior's argmax (0.00 of 5 wells clear 0.5) and would "
+            "carry no request information at all.")
+    if float(c.temp_start) != 0.0 or float(c.temp_end) != 0.0:
+        raise AssertionError(
+            f"⛔ temp_start={c.temp_start}, temp_end={c.temp_end}: at T > 0 the chain "
+            "is stochastic and `request_off` stops being the SAME-CHAIN control the "
+            "steering claim rests on. Refusing rather than reporting a control that "
+            "differs from its arm in two things at once.")
+    return {
+        "coupling_certificate_enforced": True,
+        "coupling_safety_frac": float(c.coupling_safety_frac),
+        "declared_coupling_strength": float(c.coupling_strength),
+        "launch_mode": str(c.launch_mode),
+        "clamp_threshold": float(c.clamp_threshold),
+        "read_mode": str(c.read_mode),
+        "temperature": {"start": float(c.temp_start), "end": float(c.temp_end)},
+        "chain_is_deterministic": True,
+        "same_key_control": ("⭐ T = 0 at both ends ⇒ the proposal is a pure gradient "
+                             "step and the MH accept is `de < 0`: the PRNG key is "
+                             "INERT, so `request_off` is a same-chain same-key control "
+                             "by construction, ⛔ not by assumption."),
+        "step_budgets": dict(DYNREAD_STEPS),
+        "budgets": list(DYNREAD_BUDGETS),
+        "inner_arms": list(DYNREAD_ARMS),
+        "NOT_RUN": ("⛔ coupling_off, request_off_launch and zero_step are "
+                    "gen-dynamical-read's controls and are NOT re-run on this table "
+                    "(this spoke is scoped LEAN); ⛔ their absence is declared, not "
+                    "silent."),
+    }
+
+
+def dynread_stored_atom_tuples(built: dict, lab_store: np.ndarray, names, path: Path) -> dict:
+    """⛔⭐ **The stored atoms' factor tuples, on disk — dreaming's other half.**
+
+    Dreaming's novelty test is *"a valid tuple that is not a stored atom's tuple"*.
+    That needs the decoded tuples **and** the stored atoms' tuples, ⛔ both from THIS
+    run: the atoms are chosen by a seeded k-means++ over this seed's pool, so a
+    re-derivation elsewhere is a different set of atoms and a different answer.
+    """
+    rows = np.asarray(built["store"].atom_rows, np.int64)
+    tuples = np.asarray(lab_store, np.int64)[rows]
+    uniq = np.unique(tuples, axis=0)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez_compressed(path, atom_rows_into_pool=rows, atom_factor_tuples=tuples,
+                        distinct_atom_factor_tuples=uniq,
+                        factor_names=np.asarray([str(x) for x in names]))
+    return {"path": str(path), "n_atoms": int(rows.size),
+            "n_distinct_atom_factor_tuples": int(uniq.shape[0]),
+            "what": ("⭐ the stored atoms' factor tuples AND the pool row indices they "
+                     "came from — the reference set dreaming's novelty test subtracts")}
+
+
+def run_dynread_budget(
+    config: CHLUConfig, budget: str, X_store, lab_store: np.ndarray, well_channels,
+    feat_shape, names, cards, seed: int, req_arr: dict, art_dir: Path,
+    record: Callable, already: Sequence = (), log: Callable = print,
+) -> dict:
+    """⭐ One rung of the dynamical read, scored **on this cell**, artefacts kept.
+
+    ⛔ Nothing here re-implements the read.  The landscape is
+    ``gen-dynamical-read``'s :func:`build_landscape` over THIS cell's store rows and
+    THIS cell's well partition; the chain is its :func:`run_arm`.  What this function
+    owns is (a) the per-rung step budget, (b) the artefacts, and (c) handing the
+    settled read to the **same** ``_record`` every other arm goes through.
+
+    ⚠ ``key`` derivation is by :func:`~chlu.core.gen_landscape.arm_key`
+    (``fold_in``), ⛔ never by lengthening a ``split``: with
+    ``jax_threefry_partitionable`` ``split(k, 2)[1]`` **is** ``split(k, 3)[1]``, so a
+    lengthened split would hand two arms the same key and their agreement would be
+    reported as a finding.
+    """
+    c = gen_dynamical_read_config(config)
+    c.steps = int(DYNREAD_STEPS[str(budget)])
+    t0 = time.time()
+    wanted = [dynread_label(budget, a) for a in DYNREAD_ARMS]
+    if all(w in set(already) for w in wanted):
+        # ⛔ Do not rebuild the landscape to skip it: the k-means++ over 32,768 pool
+        # rows and the low-rank coupling fit are the expensive half of a rung.
+        log(f"  [dynread/{budget}] every rung row is already on disk — skipped")
+        return {"budget": str(budget), "rows": [], "skipped": True}
+    log(f"  ⭐ [dynread] budget {budget}: {c.steps} settling steps "
+        f"(⛔ declared before the run, not tuned)")
+    built = dynread_build_landscape(config, str(budget), X_store, lab_store,
+                                    well_channels, feat_shape, cards, int(seed), log=log)
+    cert = built["coupling_certificate"]
+    log(f"    [dynread/{budget}] λ used = {cert['coupling_strength_used']:.4g} "
+        f"(declared {cert['declared_coupling_strength']:g}, λ* = "
+        f"{cert['max_safe_coupling_strength']:.4g}, capped="
+        f"{bool(cert['certificate_bound_the_strength'])}) — ⛔ never 1.0 by fiat")
+    atoms_ref = dynread_stored_atom_tuples(
+        built, lab_store, names,
+        art_dir / f"stored_atom_tuples_s{int(seed)}_{budget}.npz")
+    spec = built["spec"]
+    key0 = jax.random.PRNGKey(int(c.row_seed_offset) + int(seed))
+    bkey = arm_key(key0, f"budget_{budget}")
+    rows_done = []
+    for inner in DYNREAD_ARMS:
+        label = dynread_label(budget, inner)
+        if label in already:
+            log(f"    [{label}] already on disk for this seed — skipped")
+            continue
+        feats, per_set, arte = {}, {}, {}
+        for rs in REQUEST_SETS:
+            rec, states = dynread_run_arm(config, built, inner, req_arr[rs],
+                                          arm_key(bkey, rs), log=log)
+            feats[rs] = np.asarray(states["read"], np.float32)
+            # ⭐ WRITTEN THE MOMENT THE CHAIN FINISHES.  ⛔ Refusal is scored off the
+            # energy trace `(final energy, still-descending)` and dreaming off the
+            # decoded tuples; losing either costs a full re-run of the scored cell.
+            tp = art_dir / f"energy_traces_s{int(seed)}_{budget}_{rs}_{inner}.npz"
+            save_trace(states["trace"], tp)
+            sp = art_dir / f"settled_states_s{int(seed)}_{budget}_{rs}_{inner}.npz"
+            np.savez_compressed(
+                sp, x_settled=np.asarray(states["x_settled"], np.float32),
+                x0=np.asarray(states["x0"], np.float32),
+                read=np.asarray(states["read"], np.float32),
+                requests=np.asarray(req_arr[rs], np.int16))
+            conv_cp = dynread_convergence_checkpoints(
+                states["trace"], int(c.descent_window), float(c.descent_tol))
+            per_set[rs] = {
+                "n_requests": int(np.asarray(req_arr[rs]).shape[0]),
+                "launch": rec["launch"],
+                "dynamics": rec["dynamics"],
+                "convergence_at": conv_cp,
+                "stability": rec["stability"],
+                "displacement_from_launch": rec["displacement_from_launch"],
+                "settled_spread": rec["settled_spread"],
+                "separation": rec["separation"],
+                "wall_clock_s": rec["wall_clock_s"],
+            }
+            arte[rs] = {"energy_traces": str(tp), "settled_states": str(sp)}
+            # ⚠ ``·`` not ``/``: "dynread/B" is a RUNG label, and a request-set
+            # suffix spelled with a slash would read as one.
+            log(f"    ⭐ [{label} · {rs}] E {rec['dynamics']['energy_first']:.3f} -> "
+                f"{rec['dynamics']['energy_final']:.3f} · still_descending="
+                f"{rec['dynamics']['frac_still_descending']} · "
+                f"{rec['dynamics']['verdict']}")
+        b = per_set["B"]
+        quotable = bool(
+            (not b["stability"]["diverged"])
+            and float(b["dynamics"]["frac_still_descending"]) == 0.0)
+        extra = {
+            "dynread": {
+                "budget": str(budget), "role": spec["role"],
+                "n_atoms_per_well": int(spec["n_atoms"]), "coupling_rank": int(spec["rank"]),
+                "inner_arm": str(inner),
+                "request_strength": float(0.0 if inner == "request_off"
+                                          else c.request_strength),
+                "steps": int(c.steps),
+                "step_size": float(c.step_size),
+                "sigma_anneal": [float(c.sigma_scale_start), float(c.sigma_scale_end)],
+                "read_mode": str(c.read_mode),
+                "launch_mode": str(c.launch_mode),
+                "coupling_certificate": cert,
+                "byte_ledger": built["byte_ledger"],
+                "byte_ledger_matches_prereg": built["byte_ledger_matches_prereg"],
+                "atoms_are_train_rows": built["atoms_are_train_rows"],
+                "declared_channel": built["declared_channel"],
+                "n_coupling_fit_rows": built["n_coupling_fit_rows"],
+                "request_sets": per_set,
+                "artefacts": {**arte, "stored_atom_tuples": atoms_ref},
+                "QUOTABLE": quotable,
+                "quotable_rule": ("⛔ a number is quotable only if its B chains are "
+                                  "bounded AND no chain is still descending at the "
+                                  "rung's own step budget"),
+            },
+            "mechanism": (
+                "⭐ request → posterior-ARGMAX launch over the stored ATOMS → settle "
+                f"{c.steps} steps on E_store + β·E_request − λ·E_couple → decode the "
+                "SETTLED CONTINUOUS STATE. ⛔ No codebook gather; the output is not "
+                "constrained to lie on a stored point."
+                if inner == "full" else
+                "⭐ THE STEERING CONTROL: identical launch, identical chain, identical "
+                "(inert) key, β = 0. ⛔ The request reaches the state ONLY through the "
+                "launch. ⭐ If this scores the same as the full arm, the gain is not "
+                "steering — and that is the result, not something to tune around."),
+            "channel_bits": None,
+        }
+        record(label, feats, extra)
+        rows_done.append(label)
+    return {
+        "budget": str(budget), "spec": spec, "rows": rows_done,
+        "coupling_certificate": cert,
+        "byte_ledger": built["byte_ledger"],
+        "stored_atom_tuples": atoms_ref,
+        "wall_clock_s": float(time.time() - t0),
+    }
+
+
+# ---------------------------------------------------------------------------
 # 5. ⭐ THE BYTE LEDGER — a table COLUMN, never a footnote (R26.3)
 # ---------------------------------------------------------------------------
 
 
 def arm_byte_ledger(arm: str, cfg, store_led: dict, proto_led: dict,
-                    lace_state: Optional[dict], ebm: Optional[dict]) -> dict:
+                    lace_state: Optional[dict], ebm: Optional[dict],
+                    dynread_ledgers: Optional[dict] = None) -> dict:
     """Deployed bytes per arm, with the ~31 % kNN advantage **declared in words**."""
     base = {"arm": arm, "budget_bytes": int(cfg.expect_deployed_store_bytes or 0)}
+    if arm.split("/")[0] == "dynread":
+        led = (dynread_ledgers or {}).get(arm)
+        if led is None:
+            return {**base, "deployed_bytes": None,
+                    "what": "⛔ NOT RUN — no landscape ledger was recorded for this row"}
+        spec, ledger = led["spec"], led["byte_ledger"]
+        return {**base,
+                "deployed_bytes": int(ledger["total_bytes"]),
+                "store_bytes": int(ledger["store"]["store_bytes"]),
+                "coupling_bytes": int(ledger["coupling"]["coupling_bytes"]),
+                "addressing_head_bytes": 0,
+                "rung": spec["label"], "rung_role": spec["role"],
+                "n_atoms_per_well": int(spec["n_atoms"]), "coupling_rank": int(spec["rank"]),
+                "multiple_of_budget": float(ledger["multiple_of_budget"]),
+                "what": ("the stored ATOMS (N·D·4 — genuine train rows, ⛔ not fitted "
+                         "centres) plus the low-rank inter-well coupling; the read is "
+                         "the settled continuous state at the store's FULL FLOAT WIDTH"),
+                "budget_note": (
+                    "⚠ **DECLARED, NOT SILENT:** at rung A the ATOM TABLE is byte-matched "
+                    f"to the codebook ({int(ledger['store']['store_bytes']):,} B = the "
+                    "524,288 B store) but the coupling is a SECOND table of the same size, "
+                    f"so the rung's total is {float(ledger['multiple_of_budget']):.2f}x the "
+                    "budget — PREREG §3's declared D3 allowance, ⛔ not a match. ⭐ Rung B "
+                    "is declared LARGER and is never quoted as matched-bytes.")}
     if arm in ("clu", "store_removed"):
         return {**base,
                 "deployed_bytes": int(store_led["deployed_bytes"]),
@@ -870,6 +1236,23 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
         seed_mult=int(rs.seed_mult), seed_offset=int(rs.seed_offset), log=tlog,
     )
     n_fit, n_val = int(fit_rows.size), int(val_rows.size)
+    # ⛔⛔ A MEASURED SILENT TRUNCATION IN THE SHARED PATH (2026-09-15).
+    # ``stratified_fit_val`` CLAMPS ``n_val`` to ``pool.size − n_fit`` — 512 at the
+    # shipped ``n_fit`` — so a caller asking for a larger ``n_val`` gets 512 rows and a
+    # **completely normal log**.  ⛔ The repair belongs to whoever owns
+    # ``chlu/data/gen_rowsplit.py``; what is binding HERE is that the REALISED number
+    # is asserted against the requested one and recorded, so this cell can never be
+    # silently truncated and a future caller cannot inherit the trap unseen.
+    # ⛔ The shipped ``n_val = 512`` is NOT raised in this spoke — that is the ladder's
+    # business, not the scored cell's.
+    n_val_requested = int(cfg.n_val)
+    if n_val != n_val_requested:
+        raise AssertionError(
+            f"⛔ SILENT TRUNCATION: n_val was requested as {n_val_requested} and the "
+            f"split realised {n_val} (pool {pool.size} − n_fit {n_fit} = "
+            f"{max(pool.size - int(cfg.n_fit), 0)}). `stratified_fit_val` clamps and "
+            "logs normally. ⛔ Refusing to score a cell whose validation set is not "
+            "the one that was asked for.")
     row_balance = row_split_balance(
         split.grid.factor_indices_of(fit_rows), split.grid.factor_indices_of(val_rows),
         list(split.grid.names), list(split.grid.cardinalities),
@@ -879,7 +1262,10 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
             row_balance, require_all_values=bool(rs.require_all_values),
             max_count_ratio=float(rs.max_count_ratio),
         )
-    row_split = {**split_info, "balance": row_balance}
+    row_split = {**split_info, "balance": row_balance,
+                 "n_val_requested": n_val_requested, "n_val_realised": n_val,
+                 "n_val_clamp_headroom": int(max(pool.size - int(cfg.n_fit), 0)),
+                 "n_val_truncation_asserted": True}
     tlog("  ⭐ row split: mode=" + str(row_split["mode"]) + " — val realises "
          + " · ".join(f"{k} {v['val_n_values_realised']}/{v['cardinality']}"
                       for k, v in row_balance["factors"].items())
@@ -1041,10 +1427,33 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
     # ---- the arms -----------------------------------------------------------
     want = [a for a in (arms or cfg.arms)]
     lace_state, ebm_state, sel = None, None, None
+    dynread_ledgers: dict = {}
 
-    def _record(arm: str, feats: dict, extra: dict, tuning_trials: int) -> None:
+    def _record(arm: str, feats: dict, extra: dict, tuning_trials: int,
+                persist_to: Optional[Path] = None) -> None:
         imgs = {k: render(decoder, feats[k], feat_shape, cfg.eval_batch)
                 for k in REQUEST_SETS}
+        # ⭐ ARTEFACTS, not results.  ⛔ Refusal (target 2) and dreaming (target 4) are
+        # scored off what this run produces and throws away unless it is kept: the
+        # DECODED IMAGES and the external classifier's factor tuple per decoded image.
+        # ⛔ Losing them costs a full re-run of the scored cell.
+        if persist_to is not None:
+            persist_to.mkdir(parents=True, exist_ok=True)
+            safe = arm.replace("/", "__")
+            for k in REQUEST_SETS:
+                dp = persist_to / f"decoded_s{int(seed)}_{safe}_{k}.npz"
+                np.savez_compressed(
+                    dp,
+                    images=np.asarray(imgs[k], np.float32),
+                    factor_tuples=np.asarray(
+                        predict_factors(external, imgs[k], int(cfg.eval_batch)), np.int64),
+                    features=np.asarray(feats[k], np.float32).reshape(
+                        (int(np.asarray(feats[k]).shape[0]), -1)),
+                    requests=np.asarray(req_arr[k], np.int16),
+                    labels=np.asarray(lab[k], np.int64),
+                    factor_names=np.asarray([str(x) for x in names]))
+                extra.setdefault("dynread", {}).setdefault("artefacts", {}).setdefault(
+                    k, {})["decoded"] = str(dp)
         row = {
             "arm": arm,
             "uses_store": bool(arm in ("clu", "store_removed")),
@@ -1067,7 +1476,7 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
             "distinct": {k: distinct_counts(external, feats[k], imgs[k], cfg.eval_batch)
                          for k in REQUEST_SETS},
             "byte_ledger": arm_byte_ledger(arm, cfg, store_led, proto_led, lace_state,
-                                           ebm_state),
+                                           ebm_state, dynread_ledgers),
             "tuning": {"budget_available": int(cfg.tuning_trial_budget),
                        "trials_realised": int(tuning_trials)},
             **extra,
@@ -1090,7 +1499,16 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
              f"{row['probe_companion']['in_corner']['balanced_accuracy']:.4f}")
 
     for arm in want:
-        if arm in manifest["arms"]:
+        if arm == "dynread":
+            # ⭐ ``dynread`` is FOUR rows (2 rungs x {full, request_off}), so the
+            # resume check is per ROW, ⛔ not per arm name: a run that died after the
+            # matched rung must not be told the whole arm is done.
+            wanted_rows = {dynread_label(b, i)
+                           for b in DYNREAD_BUDGETS for i in DYNREAD_ARMS}
+            if wanted_rows <= set(manifest["arms"]):
+                tlog("  [dynread] every rung already on disk for this seed — skipped")
+                continue
+        elif arm in manifest["arms"]:
             tlog(f"  [{arm}] already on disk for this seed — skipped")
             continue
         try:
@@ -1145,6 +1563,36 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
                     "standardiser": ebm_state["standardiser"],
                     "method": ebm_state["method"],
                 }, int(ebm_state["tuning"]["budget"]))
+            elif arm == "dynread":
+                pre = dynread_preflight(config)
+                manifest["dynread_preflight"] = pre
+                art = dynread_artefact_dir(config, dataset, pretext, int(seed))
+                art.mkdir(parents=True, exist_ok=True)
+                tlog(f"  ⭐ [dynread] artefacts -> {art}  (⛔ they are not results; "
+                     "refusal and dreaming are scored FROM them and must never have "
+                     "to re-run this cell)")
+
+                def _rec_dynread(label: str, feats: dict, extra: dict,
+                                 _art: Path = art) -> None:
+                    d = extra["dynread"]
+                    # ⛔ the ledger must exist BEFORE _record, which reads it
+                    dynread_ledgers[label] = {
+                        "spec": {"label": d["budget"], "role": d["role"],
+                                 "n_atoms": d["n_atoms_per_well"],
+                                 "rank": d["coupling_rank"]},
+                        "byte_ledger": d["byte_ledger"]}
+                    _record(label, feats, extra, 0, persist_to=_art)
+
+                snapshot = set(manifest["arms"])
+                runs = {}
+                for budget in DYNREAD_BUDGETS:
+                    runs[budget] = run_dynread_budget(
+                        config, budget, X_store, lab_store, wc, feat_shape, names,
+                        cards, int(seed), req_arr, art, _rec_dynread,
+                        already=snapshot, log=tlog)
+                manifest["dynread"] = {"preflight": pre, "artefact_dir": str(art),
+                                       "budgets": runs}
+                _write_json(manifest, man_path)
             else:
                 raise ValueError(f"unknown arm {arm!r} (have {ARMS})")
         except Exception as exc:  # ⛔ NOT RUN, never a zero and never a silent gap
@@ -1310,6 +1758,15 @@ def aggregate_runs(run_dirs, log: Callable = print) -> dict:
             "alone hides the measured commitment collapse.",
         ],
     }
+    # ⭐⭐ the generation-table verdict, in PREREG §2b's words and no others
+    out["dynread_verdict"] = dynread_verdict(mans)
+    out["dynread_convergence"] = {
+        int(m["seed"]): {
+            a: {"B": (((r.get("dynread") or {}).get("request_sets") or {})
+                      .get("B", {}).get("convergence_at")),
+                "QUOTABLE": (r.get("dynread") or {}).get("QUOTABLE")}
+            for a, r in m.get("arms", {}).items() if a.split("/")[0] == "dynread"
+        } for m in mans}
     for arm, row in table.items():
         e, p = row["external_in_corner_balacc"], row["probe_in_corner_balacc"]
         out["instrument_invariance"][arm] = {
@@ -1330,6 +1787,131 @@ def aggregate_runs(run_dirs, log: Callable = print) -> dict:
     }
     log(f"⭐ aggregate: {len(seeds)} seeds, {len(arms)} arms; instrument ordering "
         f"{'IDENTICAL' if oe == op else '⛔ DIFFERS'}")
+    if out["dynread_verdict"].get("headline"):
+        log(out["dynread_verdict"]["headline"])
+    return out
+
+
+# ---------------------------------------------------------------------------
+# 7b. ⭐⭐ THE VERDICT — PREREG §2b's words, ⛔ and no other vocabulary
+# ---------------------------------------------------------------------------
+
+#: ⛔ ``gen-dynamical-read`` PREREG §2b's equivalence margin, HARDENED by
+#: ``PREREG-addendum-0`` (Advisor, 2026-09-15).  Fixed **before** the run as the sum of
+#: the two arms' published 3-seed sds (0.0122 + 0.0082 = 0.0204, rounded down to
+#: 0.020).  ⛔ ``m`` is not re-derived after the run, and ⛔ nothing here re-reads it
+#: from the measured spread.
+DYNREAD_MARGIN = 0.020
+#: ⛔⛔ **A TIE IS AVAILABLE ONLY AGAINST THE CEILING.**
+DYNREAD_CEILING_ARM = "knn_proto"
+#: ⭐ Every one of these is a like-for-like row and must be **BEATEN OUTRIGHT, beyond
+#: seed spread**.  ⛔ A tie against any of them is a LOSS and is reported as one.
+#: ⚠ ``clu`` is the codebook read this arm REPLACES; beating everything except it
+#: would mean the read improved nothing.
+DYNREAD_LIKE_FOR_LIKE = ("store_removed", "ebm_compose", "lace", "clu")
+#: ⛔ The headline metric for target 1.  ⛔ ``in-corner balacc`` is reported beside it
+#: and is **not substitutable for it after the fact**.
+DYNREAD_HEADLINE = "external composition-B aggregate"
+
+
+def _paired_by_seed(mans: list, arm: str) -> dict:
+    return {int(m["seed"]): float(m["arms"][arm]["external"]["composition_B"]["aggregate"])
+            for m in mans if arm in m.get("arms", {})}
+
+
+def dynread_verdict(mans: list, arm: str = "dynread",
+                    margin: float = DYNREAD_MARGIN) -> dict:
+    """⭐⭐ The generation-table verdict, computed — ⛔ never written by hand.
+
+    ⛔ **The vocabulary is PREREG §2b's and there is no other.**  WIN · TIE
+    (favourable) · TIE · LOSS · INDETERMINATE against the ceiling; BEATEN OUTRIGHT or
+    LOSS against every like-for-like row.  ⛔ A ``+0.001`` with three agreeing signs is
+    a **TIE**, never a WIN — that is what ``PREREG-addendum-0`` hardened.
+
+    ⛔ ``Δ`` is the mean **paired, per-seed** difference on the SAME seeds, so a rival
+    missing a seed can never flatter or damage the comparison through the mean.
+    "Beyond seed spread" is ``mean ± std`` disjointness **and** 3/3 agreeing signs.
+    """
+    ours = _paired_by_seed(mans, arm)
+    out = {
+        "arm": arm,
+        "metric": DYNREAD_HEADLINE,
+        "margin_m": float(margin),
+        "margin_provenance": ("⛔ PREREG §2b, fixed BEFORE the run as 0.0122 + 0.0082 "
+                              "= 0.0204 rounded down; ⛔ not re-derived after it"),
+        "rule": ("⭐ PREREG §2b as hardened by PREREG-addendum-0. ⛔ A TIE is available "
+                 f"ONLY against the ceiling ({DYNREAD_CEILING_ARM}); every like-for-like "
+                 "row must be BEATEN OUTRIGHT, beyond seed spread, and a tie against one "
+                 "of those is reported as a LOSS."),
+        "ours": {"per_seed": ours, "mean": float(np.mean(list(ours.values())))
+                 if ours else float("nan"),
+                 "std": float(np.std(list(ours.values()))) if ours else float("nan")},
+        "against": {},
+    }
+    if not ours:
+        out["verdict"] = "NOT RUN"
+        out["note"] = f"⛔ {arm!r} is on no seed's manifest — ⛔ reported NOT RUN, never as a zero"
+        return out
+    for rival in (DYNREAD_CEILING_ARM,) + tuple(DYNREAD_LIKE_FOR_LIKE):
+        theirs = _paired_by_seed(mans, rival)
+        shared = sorted(set(ours) & set(theirs))
+        if not shared:
+            out["against"][rival] = {"verdict": "NOT RUN",
+                                     "why": "⛔ no seed carries both arms"}
+            continue
+        d = [ours[s] - theirs[s] for s in shared]
+        delta = float(np.mean(d))
+        a_m, a_s = float(np.mean([ours[s] for s in shared])), float(np.std([ours[s] for s in shared]))
+        b_m, b_s = float(np.mean([theirs[s] for s in shared])), float(np.std([theirs[s] for s in shared]))
+        all_pos = bool(all(x > 0 for x in d))
+        all_neg = bool(all(x < 0 for x in d))
+        same_sign = bool(all_pos or all_neg)
+        overlap = bool(not (a_m - a_s > b_m + b_s or b_m - b_s > a_m + a_s))
+        is_ceiling = bool(rival == DYNREAD_CEILING_ARM)
+        if is_ceiling:
+            if delta > margin and all_pos:
+                v = "WIN"
+            elif 0.0 < delta <= margin and all_pos:
+                v = "TIE (favourable)"
+            elif abs(delta) <= margin and overlap:
+                v = "TIE"
+            elif delta < -margin:
+                v = "LOSS"
+            else:
+                v = "INDETERMINATE"
+        else:
+            v = ("BEATEN OUTRIGHT" if (delta > 0.0 and all_pos and not overlap)
+                 else "LOSS")
+        out["against"][rival] = {
+            "role": "ceiling (⭐ the only row a TIE is available against)" if is_ceiling
+                    else "like-for-like (⛔ must be BEATEN OUTRIGHT; a tie here is a LOSS)",
+            "seeds": shared,
+            "ours_mean": a_m, "ours_std": a_s,
+            "theirs_mean": b_m, "theirs_std": b_s,
+            "delta": delta,
+            "paired_per_seed": {int(s): float(ours[s] - theirs[s]) for s in shared},
+            "same_sign_3_of_3": same_sign,
+            "n_seeds_same_sign": int(max(sum(1 for x in d if x > 0),
+                                         sum(1 for x in d if x < 0))),
+            "intervals_overlap_mean_pm_sd": overlap,
+            "verdict": v,
+        }
+    ceil = out["against"].get(DYNREAD_CEILING_ARM, {})
+    lfl = {k: out["against"][k]["verdict"] for k in DYNREAD_LIKE_FOR_LIKE
+           if k in out["against"]}
+    not_beaten = [k for k, v in lfl.items() if v != "BEATEN OUTRIGHT"]
+    out["verdict"] = ceil.get("verdict", "NOT RUN")
+    out["like_for_like"] = lfl
+    out["like_for_like_all_beaten"] = bool(not not_beaten)
+    out["PASS"] = bool(
+        (not not_beaten)
+        and out["verdict"] in ("WIN", "TIE (favourable)", "TIE"))
+    out["headline"] = (
+        f"⭐ {arm} vs {DYNREAD_CEILING_ARM}: Δ = {ceil.get('delta', float('nan')):+.4f} "
+        f"(m = {margin:.3f}) ⇒ **{out['verdict']}**; like-for-like "
+        + (" · ".join(f"{k}: {v}" for k, v in lfl.items()) or "NOT RUN")
+        + ("" if not not_beaten else
+           f"  ⛔ NOT BEATEN OUTRIGHT: {', '.join(not_beaten)} — reported as LOSS(es)"))
     return out
 
 

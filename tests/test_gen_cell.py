@@ -400,7 +400,13 @@ def test_the_shipped_defaults_are_the_ones_the_rulings_pin():
     assert c.decoder_source == "winner"
     assert c.lace_n_epochs == 50                                     # R9.6, ⛔ not 100/200
     assert c.lace_primary_sampler == "ode"
-    assert list(c.arms) == list(ARMS)
+    # ⚠ ``dynread`` is the sixth arm on ``ARMS`` but is NOT in the shipped default
+    # ``arms`` list: ``chlu/config.py`` is held by a concurrent spoke and
+    # ``gen-read-cell-arm`` is ⛔ forbidden to touch it, so the arm is selected
+    # explicitly (``--arm dynread`` / a yaml ``gen_cell.arms``). ⛔ Declared here, not
+    # silent — one line in ``GenCellConfig.arms`` is owed to whoever owns that file.
+    assert list(c.arms) == [a for a in ARMS if a != "dynread"]
+    assert "dynread" in ARMS
     assert "store_removed" in c.arms                                 # the laundering row
     assert c.tuning_trial_budget == 36
     # the EBM grid realises exactly the declared budget
@@ -428,3 +434,267 @@ def test_the_reference_constants_carry_full_double_precision():
         assert len(vals) == 3
         for v in vals:
             assert abs(v - round(v, 4)) > 1e-9, f"{name}: {v} looks like a 4-dp figure"
+
+
+# ---------------------------------------------------------------------------
+# ⭐ the sixth arm: the dynamical read, wired onto THIS cell (gen-read-cell-arm)
+#
+# ⛔ The load-bearing ones here are, again, the tests that FIRE:
+# ``test_dynread_preflight_FIRES_*`` show the three traps refusing (λ = 1 by fiat,
+# a launch that carries no request information, a temperature that would stop
+# ``request_off`` being a same-chain control), and the verdict tests show a
+# sub-margin gain being refused the word WIN and a tie against a like-for-like row
+# being reported as a LOSS.
+# ---------------------------------------------------------------------------
+
+from chlu.config import gen_dynamical_read_config  # noqa: E402
+from chlu.data.gen_rowsplit import stratified_fit_val  # noqa: E402
+from chlu.experiments.exp_gen_cell import (  # noqa: E402
+    DYNREAD_ARMS,
+    DYNREAD_BUDGETS,
+    DYNREAD_CEILING_ARM,
+    DYNREAD_LIKE_FOR_LIKE,
+    DYNREAD_MARGIN,
+    DYNREAD_PRIMARY_BUDGET,
+    DYNREAD_STEPS,
+    dynread_convergence_checkpoints,
+    dynread_label,
+    dynread_preflight,
+    dynread_stored_atom_tuples,
+    dynread_verdict,
+)
+
+
+def _dr_config():
+    c = get_default_config()
+    gen_dynamical_read_config(c)
+    return c
+
+
+def test_dynread_is_the_sixth_arm_and_the_MATCHED_rung_carries_the_bare_name():
+    assert ARMS[-1] == "dynread" and len(ARMS) == 6
+    labels = [dynread_label(b, a) for b in DYNREAD_BUDGETS for a in DYNREAD_ARMS]
+    assert len(set(labels)) == len(labels), "two rungs must never share a table row"
+    # ⭐ the matched rung's full arm is THE row the generation table gains
+    assert dynread_label(DYNREAD_PRIMARY_BUDGET, "full") == "dynread"
+    # ⛔ a control or the larger rung can never be mistaken for it
+    assert dynread_label("B", "full") == "dynread/B"
+    assert dynread_label("A", "request_off") == "dynread/A_request_off"
+    assert all(lbl.split("/")[0] == "dynread" for lbl in labels)
+
+
+def test_the_step_budgets_are_the_declared_ones_and_differ_by_rung():
+    # ⛔ declared before the run; A = 1000, B = 2000. Not a tuning knob.
+    assert DYNREAD_STEPS == {"A": 1000, "B": 2000}
+    assert "request_off" in DYNREAD_ARMS, "the steering control is not optional"
+
+
+def test_dynread_preflight_passes_on_the_shipped_block():
+    pre = dynread_preflight(_dr_config())
+    assert pre["coupling_certificate_enforced"] is True
+    assert pre["launch_mode"] == "clamp_atom"
+    assert pre["chain_is_deterministic"] is True
+
+
+def test_dynread_preflight_FIRES_when_lambda_would_be_the_DECLARED_one():
+    # ⛔ a bilinear coupling is an indefinite quadratic form: at λ = 1 the landscape
+    # is unbounded below and the chain does not settle, it diverges (E = -1.6e28).
+    c = _dr_config()
+    gen_dynamical_read_config(c).enforce_coupling_certificate = False
+    with pytest.raises(AssertionError, match="coercivity|certificate"):
+        dynread_preflight(c)
+
+
+def test_dynread_preflight_FIRES_on_a_launch_that_carries_no_request():
+    # ⛔ the naive-Bayes posterior clears 0.5 in 0.00 of 5 wells, so the thresholded
+    # launch degenerates to the PRIOR's argmax and the launch is request-free.
+    c = _dr_config()
+    gen_dynamical_read_config(c).launch_mode = "clamp_atom_thresholded"
+    with pytest.raises(AssertionError, match="argmax"):
+        dynread_preflight(c)
+
+
+def test_dynread_preflight_FIRES_at_a_TEMPERATURE_that_breaks_the_control():
+    # ⭐ at T = 0 the chain is deterministic, which is what makes `request_off` a
+    # same-chain SAME-KEY control. ⛔ At T > 0 it would differ in two things at once.
+    c = _dr_config()
+    gen_dynamical_read_config(c).temp_end = 0.01
+    with pytest.raises(AssertionError, match="same-chain|SAME|control"):
+        dynread_preflight(c)
+
+
+def _trace(n_steps: int, n_chains: int = 4, slope: float = 0.0):
+    t = np.arange(n_steps + 1, dtype=np.float64)[:, None]
+    E = -100.0 + slope * t + np.zeros((1, n_chains))
+    return {
+        "energy": E.copy(), "energy_ref": E.copy(),
+        "accept_prob": np.ones((n_steps, n_chains)),
+        "accepted": np.ones((n_steps, n_chains), bool),
+        "displacement": np.full((n_steps, n_chains), 1e-3),
+    }
+
+
+def test_convergence_checkpoints_report_1000_and_NEVER_extrapolate_to_2000():
+    out = dynread_convergence_checkpoints(_trace(1000), window=100, tol=1e-3)
+    assert out["n_steps_run"] == 1000
+    assert out["1000"]["frac_still_descending"] == 0.0
+    # ⛔ the 2000-step checkpoint of a 1000-step chain is NOT RUN, never guessed
+    assert "NOT_RUN" in out["2000"]
+    assert "frac_still_descending" not in out["2000"]
+
+
+def test_convergence_checkpoints_CONVICT_a_chain_still_descending_at_1000():
+    # a chain whose energy is still falling at its own budget yields NO quotable number
+    out = dynread_convergence_checkpoints(_trace(2000, slope=-0.05), window=100, tol=1e-3)
+    assert out["1000"]["frac_still_descending"] == 1.0
+    assert out["2000"]["frac_still_descending"] == 1.0
+    assert "NOT CONVERGED" in out["2000"]["verdict"]
+
+
+def test_a_budget_B_chain_reports_BOTH_checkpoints_from_ONE_trace():
+    # ⛔ no chain is re-run to answer "what was it doing at 1000?"
+    out = dynread_convergence_checkpoints(_trace(2000), window=100, tol=1e-3)
+    assert set(("1000", "2000")) <= set(out)
+    assert all("NOT_RUN" not in out[k] for k in ("1000", "2000"))
+
+
+# ---------------------------------------------------------------------------
+# ⭐⭐ the verdict — PREREG §2b's vocabulary and no other
+# ---------------------------------------------------------------------------
+
+
+def _vman(seed: int, values: dict) -> dict:
+    return {"seed": int(seed),
+            "arms": {a: {"external": {"composition_B": {"aggregate": float(v)}}}
+                     for a, v in values.items()}}
+
+
+def _mans(dyn, knn=(0.8650, 0.8650, 0.8650), lfl=0.30):
+    base = {a: lfl for a in DYNREAD_LIKE_FOR_LIKE}
+    return [_vman(s, {**base, "dynread": dyn[s], DYNREAD_CEILING_ARM: knn[s]})
+            for s in range(3)]
+
+
+def test_the_margin_is_the_PREREGISTERED_one_and_is_not_re_derived():
+    assert DYNREAD_MARGIN == 0.020
+
+
+def test_a_sub_margin_gain_with_three_agreeing_signs_is_a_TIE_NEVER_a_WIN():
+    # ⛔ PREREG-addendum-0, verbatim: "a +0.001 with three agreeing signs is a tie".
+    v = dynread_verdict(_mans([0.8660, 0.8660, 0.8660]))
+    assert v["verdict"] == "TIE (favourable)"
+    assert v["against"][DYNREAD_CEILING_ARM]["same_sign_3_of_3"] is True
+    assert "WIN" not in v["verdict"]
+
+
+def test_a_WIN_needs_BOTH_the_margin_AND_three_of_three():
+    beats = dynread_verdict(_mans([0.92, 0.93, 0.94]))
+    assert beats["verdict"] == "WIN"
+    # ⛔ same Δ, but one seed disagrees in sign ⇒ ⛔ not a WIN
+    split = dynread_verdict(_mans([0.99, 0.99, 0.80], knn=(0.80, 0.80, 0.90)))
+    assert split["against"][DYNREAD_CEILING_ARM]["delta"] > DYNREAD_MARGIN
+    assert split["against"][DYNREAD_CEILING_ARM]["same_sign_3_of_3"] is False
+    assert split["verdict"] == "INDETERMINATE"
+
+
+def test_a_clear_shortfall_against_the_ceiling_is_a_LOSS():
+    assert dynread_verdict(_mans([0.60, 0.61, 0.59]))["verdict"] == "LOSS"
+
+
+def test_a_TIE_is_available_ONLY_against_the_ceiling():
+    # dynread level-pegging with every like-for-like row: ⛔ that is a LOSS on each
+    v = dynread_verdict(_mans([0.30, 0.30, 0.30], lfl=0.30))
+    assert set(v["like_for_like"].values()) == {"LOSS"}
+    assert v["like_for_like_all_beaten"] is False
+    assert v["PASS"] is False
+    assert "clu" in v["like_for_like"], "the codebook read this arm replaces is a row"
+
+
+def test_beating_a_like_for_like_row_requires_beyond_seed_spread():
+    # a gain smaller than the two arms' spread is ⛔ NOT "beaten outright"
+    mans = [_vman(s, {"dynread": [0.40, 0.30, 0.20][s], "clu": [0.35, 0.25, 0.15][s],
+                      DYNREAD_CEILING_ARM: 0.8650}) for s in range(3)]
+    v = dynread_verdict(mans)
+    assert v["against"]["clu"]["same_sign_3_of_3"] is True
+    assert v["against"]["clu"]["intervals_overlap_mean_pm_sd"] is True
+    assert v["against"]["clu"]["verdict"] == "LOSS"
+
+
+def test_the_headline_PASS_needs_the_ceiling_AND_every_like_for_like_row():
+    v = dynread_verdict(_mans([0.8660, 0.8660, 0.8660], lfl=0.30))
+    assert v["verdict"] == "TIE (favourable)"
+    assert v["like_for_like_all_beaten"] is True
+    assert v["PASS"] is True
+
+
+def test_an_absent_dynread_is_NOT_RUN_never_a_zero():
+    v = dynread_verdict([_vman(s, {DYNREAD_CEILING_ARM: 0.8650}) for s in range(3)])
+    assert v["verdict"] == "NOT RUN"
+
+
+# ---------------------------------------------------------------------------
+# ⭐ the byte ledger and the artefacts
+# ---------------------------------------------------------------------------
+
+
+def _dyn_led(budget="A", store=524_288, coupling=524_288):
+    return {"dynread": {
+        "spec": {"label": budget, "role": "MATCHED", "n_atoms": 64, "rank": 16},
+        "byte_ledger": {"store": {"store_bytes": store},
+                        "coupling": {"coupling_bytes": coupling},
+                        "total_bytes": store + coupling,
+                        "multiple_of_budget": (store + coupling) / 524_288.0}}}
+
+
+def test_the_dynread_ledger_declares_the_2x_rung_IN_WORDS_not_as_matched_bytes():
+    cfg = GenCellConfig()
+    led = arm_byte_ledger("dynread", cfg, _store_led(), {"bytes": SHIPPED_PROTO_BYTES},
+                          None, None, _dyn_led())
+    assert led["store_bytes"] == SHIPPED_STORE_BYTES        # the ATOM table is matched
+    assert led["deployed_bytes"] == 2 * SHIPPED_STORE_BYTES  # ⛔ the rung total is not
+    assert abs(led["multiple_of_budget"] - 2.0) < 1e-9
+    assert "not a match" in led["budget_note"]
+    assert "DECLARED, NOT SILENT" in led["budget_note"]
+
+
+def test_a_dynread_row_without_a_ledger_is_NOT_RUN_not_a_zero():
+    led = arm_byte_ledger("dynread/B", GenCellConfig(), _store_led(),
+                          {"bytes": SHIPPED_PROTO_BYTES}, None, None, {})
+    assert led["deployed_bytes"] is None and "NOT RUN" in led["what"]
+
+
+def test_stored_atom_tuples_are_written_WITH_the_pool_rows_they_came_from(tmp_path):
+    # ⛔ dreaming's novelty test needs the atoms' OWN tuples from THIS run: the atoms
+    # are a seeded k-means++ draw and a re-derivation elsewhere is a different set.
+    from chlu.core.gen_landscape import build_atom_store
+
+    rng = np.random.default_rng(0)
+    Z = rng.normal(size=(64, 8)).astype(np.float32)
+    lab = np.stack([np.arange(64) % 3, np.arange(64) % 4], axis=1).astype(np.int64)
+    store = build_atom_store([(0, 1, 2, 3), (4, 5, 6, 7)], (8,), Z, 8, "kmeanspp", 0)
+    p = tmp_path / "atoms.npz"
+    info = dynread_stored_atom_tuples({"store": store}, lab, ["a", "b"], p)
+    z = np.load(p)
+    assert info["n_atoms"] == store.n_atoms
+    assert z["atom_rows_into_pool"].tolist() == list(store.atom_rows)
+    assert np.array_equal(z["atom_factor_tuples"], lab[list(store.atom_rows)])
+    assert info["n_distinct_atom_factor_tuples"] == int(
+        np.unique(lab[list(store.atom_rows)], axis=0).shape[0])
+
+
+# ---------------------------------------------------------------------------
+# ⛔⛔ the silent truncation this spoke is told to assert against, demonstrated
+# ---------------------------------------------------------------------------
+
+
+def test_stratified_fit_val_SILENTLY_CLAMPS_n_val_and_says_nothing():
+    # ⛔ POSITIVE CONTROL for the assertion `run_seed` now carries: a caller asking
+    # for a larger `n_val` gets `pool.size - n_fit` rows and a completely normal
+    # return value. ⛔ Not fixed here — `gen_rowsplit` is shared and a peer wave owns
+    # the repair; this test pins the behaviour the cell must refuse to inherit.
+    pool = np.arange(1000, dtype=np.int64)
+    labels = np.stack([pool % 3, pool % 4], axis=1).astype(np.int64)
+    fit, val, info = stratified_fit_val(pool, labels, n_fit=900, n_val=400, seed=0)
+    assert val.size == 100, "the clamp is `pool.size - n_fit`"
+    assert info["n_val"] == 100          # ⭐ the realised number IS reported...
+    assert "400" not in json.dumps(info)  # ...⛔ but the REQUEST is nowhere in it
