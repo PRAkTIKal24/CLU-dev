@@ -241,11 +241,20 @@ def _b(chain: bytes):
 
 def _sync(out: str, remote: str | None) -> None:
     """Push the output dir now. Called on every checkpoint, not only at exit:
-    a pre-empted VM never reaches its last write."""
+    a pre-empted VM never reaches its last write.
+
+    `ckpt/` is excluded. The Checkpointer already publishes each checkpoint to
+    `<remote>/ckpt/` atomically at save time, and it prunes that prefix to the
+    newest N; a second copy under `<remote>/out/ckpt/` is not pruned by anything
+    and grows without bound over a campaign of pre-emptions. (Measured: the
+    exclusion has to be `.*ckpt.*`, not `^ckpt/.*` -- gcloud matches the regex
+    against the full path, so the anchored form silently matches nothing.)
+    """
     if not remote:
         return
     subprocess.run(
-        [os.environ.get("GCLOUD_BIN", "gcloud"), "storage", "rsync", "-r", out, f"{remote}/out"],
+        [os.environ.get("GCLOUD_BIN", "gcloud"), "storage", "rsync", "-r",
+         "-x", ".*ckpt.*", out, f"{remote}/out"],
         check=False, capture_output=True, text=True,
     )
 

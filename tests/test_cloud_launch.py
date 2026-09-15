@@ -394,6 +394,28 @@ def test_payload_watches_for_preemption_two_independent_ways():
     assert "force=True" in text or "cp.save(step" in text
 
 
+def test_neither_syncer_duplicates_checkpoints_into_the_output_prefix():
+    """The Checkpointer publishes and prunes `<remote>/ckpt/` itself. A copy of
+    the same files under `<remote>/out/ckpt/` is pruned by nothing and grows
+    without bound across a campaign of pre-emptions.
+
+    Both syncers need the exclusion, and it must be unanchored: gcloud matches
+    the regex against the FULL path, so `^ckpt/.*` silently matches nothing --
+    which is how the first attempt at this passed review and did nothing.
+    """
+    host = open(os.path.join(CLOUD, "startup.sh")).read()
+    rsync_lines = [ln for ln in host.splitlines()
+                   if "storage rsync" in ln and not ln.lstrip().startswith("#")]
+    assert rsync_lines, "startup.sh no longer syncs at all"
+    for ln in rsync_lines:
+        assert "-x '.*ckpt.*'" in ln, f"host sync copies checkpoints twice: {ln.strip()}"
+
+    payload = open(os.path.join(CLOUD, "payload_smoke.py")).read()
+    call = payload[payload.index("def _sync("):]
+    assert '"rsync"' in call, "the in-container sync is gone"
+    assert '"-x", ".*ckpt.*"' in call, "the in-container sync copies checkpoints twice"
+
+
 def test_payload_syncs_on_every_checkpoint_not_only_at_exit():
     text = open(os.path.join(CLOUD, "payload_smoke.py")).read()
     body = text[text.index("for step in range("):text.index("    result = {")]
