@@ -1103,6 +1103,54 @@ def setup_experiment_parsers(subparsers):
     exp_gdr_parser.set_defaults(func=cmd_exp_gen_dynamical_read)
     # --- END gen-dynamical-read ---------------------------------------------
 
+    # --- BEGIN gen-wells-route-b (additive; owner: experiment-engineer) -------
+    # exp-gen-wells-route-b (⭐ WHERE THE WELLS GO: placement learned with the
+    # store in the loop, against a D-matched RANDOM-placement floor)
+    exp_gwb_parser = subparsers.add_parser(
+        'exp-gen-wells-route-b',
+        help='⭐ Route B: learn WHERE THE WELLS GO — well placement learned with '
+             'the store in the loop, replacing the inherited partition. ⭐ Scored '
+             'ONLY as a margin over a D-MATCHED RANDOM-PLACEMENT FLOOR, which is '
+             'built and measured FIRST. ⛔ The weakly-supervised arm is a separate '
+             'row and is NEVER the label-free result.'
+    )
+    exp_gwb_parser.add_argument('--project', help='Project name to use')
+    exp_gwb_parser.add_argument('--seeds', type=int, nargs='+',
+                                help='⚠ Only seed 0 is cached at scope="full"; '
+                                     'seeds 1/2 hold 9,288 rows and the coverage '
+                                     'assertion will name the shortfall and die.')
+    exp_gwb_parser.add_argument('--quick', action='store_true',
+                                help='Plumbing smoke only — NEVER a reported number')
+    exp_gwb_parser.add_argument('--dataset', choices=['shapes3d', 'dsprites'],
+                                help='Dataset (default: gen_wells_route_b.dataset)')
+    exp_gwb_parser.add_argument('--pretext', choices=['recon', 'cls'],
+                                help='recon = the mandatory primary (R1)')
+    exp_gwb_parser.add_argument('--arm', action='append',
+                                help='repeatable; ⭐ random_dmatched is the '
+                                     'LAUNDERING CONTROL and always runs first')
+    exp_gwb_parser.add_argument('--steps', type=int,
+                                help='Placement steps for the learned arms')
+    exp_gwb_parser.add_argument('--ckpt-dir',
+                                help='⛔ ~/scratch on the cluster; never $TMPDIR '
+                                     '(wiped at job end), never $HOME (quota)')
+    exp_gwb_parser.add_argument('--ckpt-every-seconds', type=float,
+                                help='⭐ TIME-based checkpoints: an OOM does not '
+                                     'wait for an epoch boundary')
+    exp_gwb_parser.add_argument('--resume', action='store_true',
+                                help='⭐ Resume from the newest GOOD checkpoint; a '
+                                     'checkpoint from a different config is REFUSED')
+    exp_gwb_parser.add_argument('--allow-reencode', action='store_true',
+                                help='⚠ Take the UNTESTED gather-with-extension '
+                                     're-encode path deliberately; the run is then '
+                                     'reported as an exercised untested path')
+    exp_gwb_parser.add_argument('--scored', action='store_true',
+                                help='Render the pre-registered verdict (⛔ not smokes)')
+    exp_gwb_parser.add_argument('--bridge-root',
+                                help='Where gen-feature-bridge wrote its frozen runs')
+    exp_gwb_parser.add_argument('--out', help='Output directory')
+    exp_gwb_parser.set_defaults(func=cmd_exp_gen_wells_route_b)
+    # --- END gen-wells-route-b -----------------------------------------------
+
     # all-experiments
     all_parser = subparsers.add_parser(
         'all-experiments',
@@ -3231,3 +3279,74 @@ def cmd_exp_gen_dynamical_read(args):
     console.print(f"✓ gen-dynamical-read completed -> {out_dir}", style="bold green")
     return 0
 # --- END gen-dynamical-read --------------------------------------------------
+
+
+# --- BEGIN gen-wells-route-b (additive; owner: experiment-engineer) -----------
+def cmd_exp_gen_wells_route_b(args):
+    """⭐ Route B — learn WHERE THE WELLS GO, with the store in the loop."""
+    console.print("[bold cyan]⭐ Route B: WHERE THE WELLS GO (placement learned with "
+                  "the store in the loop)[/bold cyan]")
+    config, paths = _get_config_and_paths(args)
+    if config is None:
+        return 1
+
+    from ..config import gen_wells_route_b_config
+    from ..experiments.exp_gen_wells_route_b import (
+        apply_quick,
+        run_experiment_gen_wells_route_b,
+    )
+
+    c = gen_wells_route_b_config(config)
+    # ⛔ ORDER MATTERS AND IT WAS A MEASURED BUG IN THIS FAMILY: ``apply_quick``
+    # REPLACES the seed list, so an explicit flag applied *before* it is silently
+    # discarded.  ⭐ Quick first, explicit flags last, always.
+    if bool(getattr(args, 'quick', False)):
+        apply_quick(config)
+    if getattr(args, 'dataset', None):
+        c.dataset = args.dataset
+    if getattr(args, 'pretext', None):
+        c.pretext = args.pretext
+    if getattr(args, 'seeds', None):
+        c.seeds = list(args.seeds)
+    if getattr(args, 'arm', None):
+        c.arms = list(args.arm)
+    if getattr(args, 'steps', None):
+        c.placement_steps = int(args.steps)
+    if getattr(args, 'ckpt_dir', None):
+        c.ckpt_dir = args.ckpt_dir
+    if getattr(args, 'ckpt_every_seconds', None) is not None:
+        c.ckpt_every_seconds = float(args.ckpt_every_seconds)
+    if getattr(args, 'allow_reencode', False):
+        c.allow_reencode = True
+    if getattr(args, 'bridge_root', None):
+        c.bridge_root = args.bridge_root
+    if bool(getattr(args, 'quick', False)) and bool(getattr(args, 'scored', False)):
+        console.print("⛔ --quick --scored is refused: a quick number is never reported",
+                      style='bold red')
+        return 1
+
+    out_dir = args.out or str(Path(paths['results']) / 'gen_wells_route_b')
+    try:
+        summary = run_experiment_gen_wells_route_b(
+            config=config, out_dir=out_dir, resume=bool(getattr(args, 'resume', False)),
+            scored=bool(getattr(args, 'scored', False)), log=console.print)
+    except Exception as e:
+        console.print(f"✗ Error: {e}", style="bold red")
+        return 1
+
+    for seed, margins in (summary.get('margins') or {}).items():
+        for arm, m in (margins or {}).items():
+            mm = m.get('mean_margin_max')
+            shown = f"{mm:+.4f}" if isinstance(mm, float) else str(mm)
+            # ⛔ The margin is the ONLY form a placement number is printed in: an
+            # absolute sharpness without its D-matched random floor beside it is void.
+            console.print(f"⭐ seed {seed} [{arm}] margin over the D-matched random "
+                          f"floor: mean ΔS = {shown}")
+    v = summary.get('verdict', {})
+    console.print(f"⭐ {v.get('verdict')}", style='yellow')
+    if not summary.get('scored'):
+        console.print("⛔ NOT SCORED — no number from this run enters any table.",
+                      style='yellow')
+    console.print(f"✓ gen-wells-route-b completed -> {out_dir}", style="bold green")
+    return 0
+# --- END gen-wells-route-b ----------------------------------------------------
