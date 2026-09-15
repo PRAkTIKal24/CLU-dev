@@ -159,6 +159,22 @@ def test_empty_beats_partial_when_both_apply(rig):
     assert "REQUIRED artefact" not in r.stderr
 
 
+def test_a_root_with_nothing_in_it_is_EMPTY_not_44_missing_files(rig):
+    """⭐ The wrong-root case (a worktree has no `.claude/` of its own) must read
+    as EMPTY. Listing every file in the manifest as 'missing' buries it."""
+    files = [rig.write_file("outputs/a/x.json", b"{}"),
+             rig.write_file("outputs/b/y.json", b"{}")]
+    rig.write_manifest(files)
+    for f in files:
+        (rig.root / f["path"]).unlink()
+
+    r = rig.run("--dry-run")
+    assert r.returncode == 4, (r.returncode, r.stderr)
+    assert "EMPTY" in r.stderr
+    assert "Not one of the 2 expected artefacts" in r.stderr
+    assert "loader:" not in r.stderr          # ⛔ not a 2-line missing-file dump
+
+
 def test_refuses_a_stale_manifest_rather_than_uploading_wrong_bytes(rig):
     f = rig.write_file("outputs/a/x.json", b'{"k": 1}')
     rig.write_manifest([f])

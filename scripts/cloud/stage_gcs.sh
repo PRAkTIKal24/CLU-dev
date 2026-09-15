@@ -239,6 +239,18 @@ for rec in files:
     total += size
     rows.append("\t".join([rec["path"], str(size), rec["sha256"], rec["open_with"]]))
 
+# ⭐ …and emptiness is also NOT-ONE-OF-THEM-IS-HERE, not just an empty manifest:
+#    that is the wrong-root case (a worktree has no `.claude/` of its own), and
+#    naming 44 "missing" files buries it. The CSF3 ordering, verbatim.
+if missing and len(missing) == len(files):
+    print("FATAL[stage_gcs]: the artefact set is EMPTY — refusing to stage.", file=sys.stderr)
+    print("  manifest=%s  root=%s" % (mf_path, root), file=sys.stderr)
+    print("  ⚠ Not one of the %d expected artefacts exists there."
+          % len(files), file=sys.stderr)
+    print("  ⛔ An empty stage is a silent no-op that looks like a success on the far side.",
+          file=sys.stderr)
+    sys.exit(4)
+
 # ⭐ PARTIAL SET: name the file AND the loader that opens it. The leg that
 #    opens a missing file dies mid-run on the far side, which is a far more
 #    expensive way to learn the same thing.
