@@ -330,11 +330,32 @@ if [ "$NEEDS_ART" = "1" ] && [ "$SKIP_ART" != "1" ]; then
   fi
   assert_roots || { echo MISSING_ARTEFACT_ROOTS > "$OUT/FAILED"; exit 2; }
   assert_dec_recipe "$DEC_RECIPE" $UNITS || { echo BAD_DEC_RECIPE > "$OUT/FAILED"; exit 5; }
+  NEED_DATASET=1
 elif [ "$NEEDS_ART" = "1" ]; then
   echo "[artefacts] ⚠ CHLU_SKIP_ARTEFACT_CHECK=1 -- roots and decoder NOT asserted"
 else
   echo "[artefacts] $EXP needs none (it generates or downloads its own stream)"
 fi
+
+# ⭐ 9b. THE DATASET. ⛔ Not staged, by `gen-cloud-artefact-bridge`'s measured
+#     decision: 3dshapes.h5 comes from a PUBLIC bucket whose owner pays the
+#     egress, so a VM download costs $0.00 while staging it would cost storage
+#     and a 255 MiB upload. ⭐ Its report calls this "the only place the two
+#     platforms differ" and hands the wiring here -- so here it is, and the
+#     runner is the reason a gen job finds its dataset at all.
+#
+#     `download_shapes3d` / `download_dsprites` ARE the production path (the one
+#     `chlu data <ds> --download` calls). They assert sha256 AND the exact byte
+#     count, so a truncated fetch fails loudly instead of yielding a short file.
+#     ⛔ The CLI command is not used because it also BUILDS THE SPLIT, which the
+#     arm builds for itself moments later; the download is the part a job needs.
+#
+#     The dataset is read out of the experiment's own --dataset argument: every
+#     gen module takes one, so there is no second place to keep it in sync.
+DATASET=""
+case " $EXP_ARGS " in
+  *" --dataset "*) DATASET="$(printf '%s' "$EXP_ARGS" | sed -n 's/.*--dataset[= ]\([^ ]*\).*/\1/p')" ;;
+esac
 
 # --- 10. GPU preflight --------------------------------------------------------
 for i in $(seq 1 60); do nvidia-smi >/dev/null 2>&1 && break; echo "waiting for nvidia driver ($i)"; sleep 5; done
@@ -399,7 +420,7 @@ fi
 for v in $CHLU_ROOT_VARS CHLU_DATA_ROOT; do eval "ENVARGS+=(-e $v=\$$v)"; done
 
 docker_run() {   # $@ = the command inside the container
-  docker run --rm --name chlu-job --gpus all --network host --shm-size=1g \
+  docker run --rm -i --name chlu-job --gpus all --network host --shm-size=1g \
     -v "$VARCHLU:$VARCHLU" \
     ${ENVARGS[@]+"${ENVARGS[@]}"} \
     -e CHLU_JOB="$JOB" -e CHLU_DEC_RECIPE="$DEC_RECIPE" \
@@ -474,6 +495,26 @@ PYJ
 }
 
 journal init || { echo JOURNAL_REFUSED > "$OUT/FAILED"; exit 7; }
+
+if [ "${NEED_DATASET:-0}" = "1" ] && [ -n "$DATASET" ]; then
+  echo "[dataset] fetching '$DATASET' into \$CHLU_GEN_DATA_ROOT=$CHLU_GEN_DATA_ROOT"
+  docker_run python - "$DATASET" <<'PYDS' || { echo DATASET_FETCH_FAILED > "$OUT/FAILED"; exit 8; }
+import sys
+
+name = sys.argv[1]
+if name == "shapes3d":
+    from chlu.data.shapes3d import download_shapes3d as fetch
+elif name == "dsprites":
+    from chlu.data.dsprites import download_dsprites as fetch
+else:
+    raise SystemExit(f"FATAL[startup]: unknown --dataset {name!r} (shapes3d | dsprites)")
+
+for fname, rec in fetch(None, verify=True).items():
+    print(f"[dataset] {name}/{fname}: {rec['bytes']} bytes sha256={rec['sha256']}", flush=True)
+PYDS
+elif [ "${NEED_DATASET:-0}" = "1" ]; then
+  echo "[dataset] ⚠ no --dataset in the experiment args; nothing fetched"
+fi
 
 # ===========================================================================
 # 15. ⭐ THE SWEEP. One unit per seed. A pre-emption costs ONE UNIT.

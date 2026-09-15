@@ -177,6 +177,50 @@ def test_an_EMPTY_root_is_refused_too(artefact_tree, tmp_path):
     assert "EMPTY" in r.stderr
 
 
+# ---------------------------------------------------------------------------
+# 2b. The dataset: NOT staged, fetched on the VM (the bridge's measured decision)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("args,expected", [
+    ("--dataset shapes3d --pretext recon --stage cell", "shapes3d"),
+    ("--dataset=dsprites --stage cell", "dsprites"),
+    ("--stage s1 --scale toy", ""),
+])
+def test_the_dataset_is_read_out_of_the_experiments_own_argument(args, expected):
+    """Every gen module takes --dataset, so there is no second place to keep it
+    in sync with."""
+    got = subprocess.run(
+        ["sed", "-n", r"s/.*--dataset[= ]\([^ ]*\).*/\1/p"],
+        input=args, capture_output=True, text=True,
+    ).stdout.strip()
+    assert got == expected
+
+
+def test_the_dataset_download_is_the_production_path_not_a_reimplementation():
+    """3dshapes.h5 comes from a public bucket whose owner pays egress, so the VM
+    downloads it and the sha256 + byte count are asserted by chlu's own loader."""
+    src = STARTUP.read_text()
+    assert "from chlu.data.shapes3d import download_shapes3d" in src
+    assert "from chlu.data.dsprites import download_dsprites" in src
+    assert "verify=True" in src
+    # ⛔ no hand-rolled fetching of a DATASET anywhere in the launcher. (curl is
+    # used, legitimately, for the metadata server and the NVIDIA toolkit repo --
+    # so the check is for the dataset's own URLs and filenames, not for curl.)
+    for banned in ("storage.googleapis.com/3d-shapes", "dsprites_ndarray", "wget ",
+                   "H5_SHA256", "sha256sum"):
+        assert banned not in src, banned
+
+
+def test_the_dataset_is_never_staged_into_the_artefact_prefix():
+    """stage_gcs.sh (the bridge's file) stages 44 files and not the dataset; the
+    runner must not quietly add a 45th path that only exists on GCP."""
+    src = STARTUP.read_text()
+    assert "stage_gcs.sh" in src            # named as the staging owner
+    assert "gcloud storage cp" in src       # artefacts come down, nothing goes up
+    assert "storage cp -r" in src
+
+
 def test_roots_default_to_the_csf3_relative_layout(artefact_tree):
     """The GCS prefix and the CSF3 scratch tree must be the same tree in two
     places, or a result cannot be moved between the platforms."""
