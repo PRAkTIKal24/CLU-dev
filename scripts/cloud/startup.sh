@@ -83,8 +83,8 @@ CHLU_ROOT_VARS="CHLU_CLAUDE_ROOT CHLU_GEN_DATA_ROOT CHLU_GEN_BRIDGE_ROOT CHLU_GE
 
 # ⚠ NOT one of the five, and deliberately not asserted: CHLU_DATA_ROOT is the
 # DOWNLOAD CACHE (chlu.data.industrial.base.default_data_root), not a staged
-# artefact. Its default is $HOME/.cache, which inside a `docker run --rm`
-# container is thrown away -- so a sweep of N units would download enwik8 N
+# artefact. Its default is $HOME/.cache, which inside a --rm container is
+# thrown away -- so a sweep of N units would download enwik8 N
 # times. Pointing it at the host mount makes it one download per VM.
 export CHLU_DATA_ROOT="${CHLU_DATA_ROOT:-${VARCHLU}/data}"
 
@@ -304,7 +304,11 @@ echo "[exp] $EXP -> module=$MODULE out_mode=$OUT_MODE needs_artefacts=$NEEDS_ART
 # produced files this one has not yet.
 if [ -n "$REMOTE" ]; then
   echo "[resume] restoring $REMOTE/$JOB/out -> $OUT"
-  gcloud storage rsync -r "$REMOTE/$JOB/out" "$OUT" -q 2>/dev/null
+  # Same `-x '.*ckpt.*'` as the upload leg, for the same reason and in the other
+  # direction: checkpoints live at $REMOTE/$JOB/ckpt and the Checkpointer fetches
+  # the one it needs itself. Pulling them into out/ would re-create the duplicate
+  # prefix that nothing prunes.
+  gcloud storage rsync -r "$REMOTE/$JOB/out" "$OUT" -x '.*ckpt.*' -q 2>/dev/null
   rm -f "$OUT/FAILED" "$OUT/PREEMPTED" "$OUT/EXIT_CODE" "$OUT/DONE"
 fi
 
@@ -314,7 +318,13 @@ fi
 if [ "$NEEDS_ART" = "1" ] && [ "$SKIP_ART" != "1" ]; then
   if [ -n "$ARTEFACTS" ]; then
     echo "[artefacts] fetching $ARTEFACTS -> $CHLU_ARTEFACT_DIR"
-    gcloud storage rsync -r "$ARTEFACTS" "$CHLU_ARTEFACT_DIR" 2>&1 | tail -5
+    # ⚠ `cp -r`, deliberately not `rsync`. Every rsync on this path carries
+    # `-x '.*ckpt.*'` so the two syncers cannot duplicate checkpoints; applying
+    # that filter to the ARTEFACT set would silently drop a staged file whose
+    # name happens to contain "ckpt" -- a missing artefact that looks like a
+    # successful fetch, which is exactly what verify_gcs.sh exists to catch.
+    # A fresh VM starts empty, so there is nothing for rsync to skip anyway.
+    gcloud storage cp -r "$ARTEFACTS/*" "$CHLU_ARTEFACT_DIR/" 2>&1 | tail -5
   else
     echo "[artefacts] ⚠ no --artefacts prefix given; asserting the roots as they stand"
   fi
