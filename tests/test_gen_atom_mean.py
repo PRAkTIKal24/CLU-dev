@@ -529,3 +529,179 @@ def test_read_error_primary_rows_are_OUTSIDE_the_atom_pool():
     assert cfg.read_error_primary == "A"
     assert set(cfg.read_error_rows) == {"A", "val"}
     assert cfg.n_eval_a > 0, "the primary read-error row set would be empty"
+
+
+# ---------------------------------------------------------------------------
+# 9. ⭐ THE ``n_val`` CALIBRATION AXIS (gen-atom-mean-resweep)
+#
+# ⛔ These exist because ``gen-dynamical-read`` PREREG §5b.0 makes the six-rung tuning
+# ladder conditional on the selection being IDENTIFIED, and at the shipped 512/256 it
+# is not: the interleaved halves of ``val`` pick different winners in 5 of 6 cells.
+# ---------------------------------------------------------------------------
+
+
+def _probe_and_render(n_rows: int, cards=(10, 10, 10, 8, 4, 15)):
+    """A traceable stand-in probe + a render whose predictions actually VARY."""
+    rng = np.random.default_rng(7)
+    probe = _Reader(cards)
+    img = rng.integers(0, 40, size=(n_rows, len(cards))).astype(np.float32)
+    lab = rng.integers(0, 4, size=(n_rows, len(cards))).astype(np.int64)
+    return probe, img, lab
+
+
+def test_trial_scores_match_score_images_BIT_IDENTICALLY():
+    """⭐ The one-pass scorer must change **no number**.
+
+    ``_trial_scores`` replaced five ``score_images`` calls per trial with one probe
+    pass so the ``n_val`` sweep is affordable at ``tune_n`` = 8,192.  ⛔ That is a COST
+    change and must not be a MEASUREMENT change — so the tolerance here is exactly
+    zero, on an ODD row count so the ragged halves are exercised.
+    """
+    from chlu.experiments.exp_gen_atom_mean import _trial_scores, score_images
+
+    n = 257
+    probe, img, lab = _probe_and_render(n)
+    names = ["floor_hue", "wall_hue", "object_hue", "scale", "shape", "orientation"]
+    got = _trial_scores(probe, img, lab, names, 64)
+
+    half = n // 2
+    want = {
+        "aggregate": score_images(probe, img, lab, names, 64)["aggregate"],
+        "half1": score_images(probe, img[:half], lab[:half], names, 64)["aggregate"],
+        "half2": score_images(probe, img[half:], lab[half:], names, 64)["aggregate"],
+        "ihalf1": score_images(probe, img[0::2], lab[0::2], names, 64)["aggregate"],
+        "ihalf2": score_images(probe, img[1::2], lab[1::2], names, 64)["aggregate"],
+    }
+    for k, v in want.items():
+        assert got[k] == v, f"{k}: {got[k]!r} != {v!r} — the one-pass scorer MOVED it"
+    assert got["compositional"] == score_images(
+        probe, img, lab, names, 64)["per_factor"]["shape"]
+
+
+def test_the_two_halvings_are_DIFFERENT_slicings():
+    """⛔ The falsifier for this whole calibration: if ``ihalf*`` were secretly the
+    contiguous halves, every cell would agree and the sweep would report identification
+    it never measured.  ⭐ Pin the slicings apart on a row set built so they disagree.
+    """
+    from chlu.experiments.exp_gen_atom_mean import _trial_scores
+
+    names = ["floor_hue", "wall_hue", "object_hue", "scale", "shape", "orientation"]
+    probe = _Reader((10, 10, 10, 8, 4, 15))
+    # ⭐ first half all-correct, second half all-wrong  =>  contiguous halves differ
+    # maximally; the interleaved halves see the same 50/50 mix and must be EQUAL.
+    n = 200
+    img = np.zeros((n, 6), np.float32)
+    lab = np.zeros((n, 6), np.int64)
+    lab[n // 2:] = 3
+    s = _trial_scores(probe, img, lab, names, 64)
+    assert s["half1"] == 1.0 and s["half2"] == 0.0, "contiguous halving is not sliced"
+    assert s["ihalf1"] == s["ihalf2"] == 0.5, "the INTERLEAVED halving is not interleaved"
+
+
+def test_stratified_split_CLAMPS_n_val_to_the_fit_remainder():
+    """⛔⛔ The trap, pinned so it can never come back silently.
+
+    ``stratified_fit_val`` clamps ``n_val`` to ``pool.size - n_fit`` — so at the shipped
+    ``n_fit`` against a full pool, asking for 8,192 val rows **yields 512** and the run
+    logs entirely normally. ⭐ A flat disagreement curve would then be a PLUMBING
+    artefact wearing a finding's clothes. This test is the reason ``fit_rows_for_val``
+    exists.
+    """
+    from chlu.data.gen_rowsplit import stratified_fit_val
+
+    rng = np.random.default_rng(3)
+    n_pool = 2048
+    pool = np.arange(n_pool, dtype=np.int64)
+    labels = np.stack([rng.integers(0, c, n_pool) for c in (10, 10, 10, 8, 4, 15)], 1)
+    n_fit_shipped = 1_984  # the 32,256-analogue: pool minus the small shipped val cut
+
+    _, clamped, _ = stratified_fit_val(pool, labels, n_fit_shipped, 512, 0)
+    assert clamped.size == 64, "the clamp has moved — re-derive fit_rows_for_val"
+
+
+def test_raising_n_val_COSTS_fit_rows_arithmetically():
+    """⭐ ``n_fit`` is deliberately NOT a flag — and this is why it does not need to be.
+
+    ``fit_rows_for_val`` brings ``n_fit`` down so the asked-for ``n_val`` survives the
+    clamp; the rows it costs are arithmetic. ⛔ A sweep report that does not price them
+    is reporting identification bought by hobbling the comparators.
+    """
+    from chlu.data.gen_rowsplit import stratified_fit_val
+    from chlu.experiments.exp_gen_atom_mean import MIN_FIT_ROWS, fit_rows_for_val
+
+    # --- the arithmetic, at PRODUCTION scale (the floor is a production constant) ---
+    pool, shipped_fit = 32_768, 32_256
+    assert fit_rows_for_val(shipped_fit, 512, pool)["fit_rows_traded_away"] == 0
+    for n_val in (1024, 2048, 4096, 8192):
+        t = fit_rows_for_val(shipped_fit, n_val, pool)
+        assert t["n_fit_effective"] == pool - n_val      # ⭐ val rows come OUT of fit
+        assert t["fit_rows_traded_away"] == shipped_fit - (pool - n_val)
+    # ⛔ the floor: starving `fit` to buy val rows is REFUSED, not warned about
+    with pytest.raises(AssertionError, match="Refusing"):
+        fit_rows_for_val(shipped_fit, pool - (MIN_FIT_ROWS - 1), pool)
+
+    # --- and the derived n_fit actually DELIVERS the asked-for cut through the split --
+    rng = np.random.default_rng(3)
+    n_pool = 2048
+    rows = np.arange(n_pool, dtype=np.int64)
+    labels = np.stack([rng.integers(0, c, n_pool) for c in (10, 10, 10, 8, 4, 15)], 1)
+    fit, val, _ = stratified_fit_val(rows, labels, n_pool - 512, 512, 0)
+    assert val.size == 512 and fit.size == n_pool - 512
+
+
+def test_the_shipped_production_pair_is_a_NO_OP_for_the_trade():
+    """⛔ The anchor must be untouched: at (32,256 fit, 512 val) on the 32,768-row
+    ``store_train`` pool the calibration machinery changes nothing at all."""
+    from chlu.experiments.exp_gen_atom_mean import fit_rows_for_val
+
+    cfg = GenAtomMeanConfig()
+    t = fit_rows_for_val(cfg.n_fit, cfg.n_val, 32_768)
+    assert t["n_fit_effective"] == 32_256 and t["fit_rows_traded_away"] == 0
+    # ⭐ and the whole sweep grid stays an order of magnitude above the floor
+    for n_val in (1024, 2048, 4096, 8192):
+        assert fit_rows_for_val(cfg.n_fit, n_val, 32_768)["n_fit_effective"] == (
+            32_768 - n_val) >= 24_576
+
+
+def test_quick_REFUSES_the_sweep_flags_it_would_clobber():
+    """⚠ Measured trap: ``apply_quick`` REPLACES ``n_val``/``tune_n`` after the CLI
+    parses them, so ``--quick --n-val 8192`` would render 256 rows and log entirely
+    normally.  ⛔ Refusing is the only safe spelling."""
+    from chlu.experiments.exp_gen_atom_mean import _config_from_args, build_arg_parser
+
+    p = build_arg_parser()
+    with pytest.raises(SystemExit, match="CLOBBERS"):
+        _config_from_args(p.parse_args(["--quick", "--n-val", "8192"]))
+    with pytest.raises(SystemExit, match="CLOBBERS"):
+        _config_from_args(p.parse_args(["--quick", "--tune-n", "8192"]))
+    # ⛔ and the flags must actually REACH the config, or the sweep measures nothing
+    cfg = gen_atom_mean_config(
+        _config_from_args(p.parse_args(["--n-val", "8192", "--tune-n", "8192"])))
+    assert (cfg.n_val, cfg.tune_n) == (8192, 8192)
+    # ⭐ the default is still the shipped pair — a flag, ⛔ never a new default
+    fresh = gen_atom_mean_config(_config_from_args(p.parse_args([])))
+    assert (fresh.n_val, fresh.tune_n) == (512, 256)
+
+
+def test_the_knn_proto_WAIVER_prices_the_move_instead_of_aborting(monkeypatch):
+    """⭐ Under ``--allow-knn-proto-move`` the rival's movement is the PRICE of the
+    validation rows and is MEASURED; ⛔ without it, a move is still a hard abort."""
+    from chlu.experiments.exp_gen_atom_mean import build_arg_parser
+
+    cfg = GenAtomMeanConfig()
+    moved = cfg.knn_proto_probe_reference_per_seed[0] - 0.01
+    ctx = _reg_ctx(monkeypatch, moved)
+    ctx["X_fit"] = np.zeros((24_576, 4), np.float32)
+
+    with pytest.raises(AssertionError, match="FULL knn_proto MOVED"):
+        knn_proto_regression(ctx, cfg, 0, log=lambda *_: None)
+
+    cfg.require_knn_proto_bit_identical = False
+    out = knn_proto_regression(ctx, cfg, 0, log=lambda *_: None)
+    assert out["bit_identical"] is False
+    assert out["delta"] == pytest.approx(-0.01)
+    assert out["n_fit_it_was_refitted_on"] == 24_576
+    assert "WAIVED" in out["bit_identity_check"]
+    # ⛔ and the waiver is NEVER the default: it must be asked for on the command line
+    assert GenAtomMeanConfig().require_knn_proto_bit_identical is True
+    assert build_arg_parser().parse_args([]).allow_knn_proto_move is False

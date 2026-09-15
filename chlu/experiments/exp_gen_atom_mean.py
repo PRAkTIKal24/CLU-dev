@@ -98,7 +98,7 @@ from ..core.gen_bridge import load_feature_cache, param_hash  # noqa: E402
 from ..core.gen_compose import COMPOSITIONAL_FACTOR  # noqa: E402
 from ..core.gen_request import FactorPrototypes, requests_from_rows  # noqa: E402
 from ..core.gen_store import load_store_plan, well_channels_from_labels  # noqa: E402
-from ..eval.gen_probe import factor_labels  # noqa: E402
+from ..eval.gen_probe import factor_labels, predict_factors  # noqa: E402
 from ..eval.rivals.gen_knn import fit_normaliser  # noqa: E402
 from ..experiments.exp_gen_bridge import condition_of  # noqa: E402
 from ..experiments.exp_gen_cell import (  # noqa: E402
@@ -164,6 +164,57 @@ def apply_quick(config: CHLUConfig) -> CHLUConfig:
     return config
 
 
+#: ⛔ THE FLOOR THE ``n_val`` SWEEP MAY NEVER CROSS.  At **1,024** fit rows ``knn_proto``
+#: fell 0.8763 -> 0.8308 — a rival re-fitted on a spoke's own row budget is a WEAKENED
+#: rival, and identification bought that way is manufactured.  2,048 is 2x that and the
+#: sweep is expected to stay an order of magnitude above it (24,576 at ``n_val`` 8,192).
+MIN_FIT_ROWS = 2_048
+
+
+def fit_rows_for_val(n_fit_asked: int, n_val: int, n_pool: int) -> dict:
+    """⛔⛔ **THE TRAP THIS FUNCTION EXISTS TO CLOSE.**
+
+    ``gen_rowsplit.stratified_fit_val`` clamps ``n_val`` *after* ``n_fit``::
+
+        n_fit = min(n_fit, pool.size)
+        n_val = min(n_val, max(pool.size - n_fit, 0))
+
+    ⚠ So at the shipped ``n_fit = 32,256`` against a **32,768**-row pool, ``n_val`` is
+    silently clamped to **512** — and ``--n-val 8192`` would cut 512 rows, select on 512
+    rows, and **log entirely normally**.  A flat disagreement curve would then be a
+    PLUMBING artefact wearing a finding's clothes.
+
+    ⭐ **The rule: ``n_val`` is the axis and ``fit`` absorbs it, ⛔ never the reverse.**
+    ``n_fit`` is therefore deliberately **not** a CLI flag: the caller names the val rows
+    it wants, and the fit rows it costs are ARITHMETIC (``n_pool - n_val``), logged, and
+    recorded in the manifest.  ⛔ Nobody gets to ask for a starved ``fit`` by name.
+
+    Raises:
+        AssertionError: if the implied ``n_fit`` would fall below :data:`MIN_FIT_ROWS`.
+    """
+    n_fit_asked, n_val, n_pool = int(n_fit_asked), int(n_val), int(n_pool)
+    n_fit = min(n_fit_asked, max(n_pool - n_val, 0))
+    if n_fit < MIN_FIT_ROWS:
+        raise AssertionError(
+            f"⛔ n_val={n_val:,} against a {n_pool:,}-row pool leaves only "
+            f"{n_fit:,} fit rows, under the {MIN_FIT_ROWS:,} floor. At 1,024 fit rows "
+            "knn_proto fell 0.8763 -> 0.8308: buying validation rows by starving `fit` "
+            "manufactures identification by hobbling the comparators. ⛔ Refusing."
+        )
+    return {
+        "n_fit_asked": n_fit_asked,
+        "n_fit_effective": int(n_fit),
+        "n_val_asked": n_val,
+        "n_pool": n_pool,
+        "fit_rows_traded_away": int(n_fit_asked - n_fit),
+        "floor": int(MIN_FIT_ROWS),
+        "why": ("⛔ stratified_fit_val clamps n_val to (pool - n_fit), so n_fit MUST "
+                "come down first or the val cut is silently the shipped 512 and the "
+                "log looks normal. ⭐ The traded-away rows are the PRICE of the "
+                "calibration and are priced by the knn_proto regression delta."),
+    }
+
+
 def store_plan_path(config: CHLUConfig, dataset: str, pretext: str) -> Path:
     cfg = gen_atom_mean_config(config)
     if cfg.store_plan:
@@ -212,6 +263,42 @@ def retention_ladder(model, images: np.ndarray, labels: np.ndarray, names,
 # ---------------------------------------------------------------------------
 # 2. The arm
 # ---------------------------------------------------------------------------
+
+
+def _trial_scores(probe, images: np.ndarray, labels, names, batch: int) -> dict:
+    """Full-set **and** four half-set aggregates from ⭐ ONE probe forward pass.
+
+    ``gen_probe.probe_accuracy``'s ``aggregate`` is the unweighted mean over factors of
+    a per-row correctness column, so **every halving of it is a slice of the same
+    boolean matrix**.  Scoring the four halves with four further ``score_images`` calls
+    re-ran the probe over the same renders three times over.
+
+    ⭐ **Why this spelling exists (cost, ⛔ not taste).**  The ``n_val`` calibration
+    sweeps ``tune_n`` to 8,192; at 24 trials × 2 budgets × 3 seeds the old spelling's
+    3 redundant full passes per trial is the difference between an affordable sweep and
+    an unaffordable one.  ⛔ It changes **no number**: bit-identity against five
+    ``score_images`` calls is asserted by
+    ``tests/test_gen_atom_mean.py::test_trial_scores_match_score_images``.
+    """
+    Y = np.asarray(labels, np.int32)
+    correct = predict_factors(probe, images, int(batch)) == Y
+    half = int(correct.shape[0] // 2)
+
+    def agg(sel) -> dict:
+        c = correct[sel]
+        per = {str(nm): (float(c[:, j].mean()) if c.size else float("nan"))
+               for j, nm in enumerate(names)}
+        return {"per_factor": per,
+                "aggregate": (float(np.mean(list(per.values()))) if per
+                              else float("nan"))}
+
+    full = agg(slice(None, None))
+    out = {"aggregate": full["aggregate"],
+           "compositional": full["per_factor"][COMPOSITIONAL_FACTOR]}
+    for name, sel in (("half1", slice(None, half)), ("half2", slice(half, None)),
+                      ("ihalf1", slice(0, None, 2)), ("ihalf2", slice(1, None, 2))):
+        out[name] = agg(sel)["aggregate"] if half else float("nan")
+    return out
 
 
 def _trial_grid(cfg) -> list:
@@ -280,14 +367,13 @@ def run_budget(tag: str, budget_bytes: int, ctx: dict, cfg, seed: int, out_dir: 
         f"{int(cfg.tuning_trial_budget)} available; selection = "
         f"{cfg.tuning_select_on} on {n_tune} VALIDATION rows (⛔ B never enters)")
     trials = []
-    half = int(n_tune // 2)
     for t_i, tr in enumerate(grid):
         nzt = ctx["normalisers"][tr["normaliser"]]
         r = atom_read(sets[tr["scope"]], Qv, tr["k"], tr["metric"], nzt)
         img = render(ctx["decoder"], r["read"], ctx["feat_shape"], int(cfg.eval_batch))
-        sc = score_images(ctx["probe"], img, lab_v, ctx["names"], int(cfg.eval_batch))
-        # ⭐ the same render scored on two disjoint halves — the SELECTION-STABILITY
-        # diagnostic.  ⚠ TWO halvings are reported and ⛔ neither is dropped:
+        # ⭐ the same render scored on the full set and on two disjoint halvings — the
+        # SELECTION-STABILITY diagnostic, from ONE probe pass (``_trial_scores``).
+        # ⚠ TWO halvings are reported and ⛔ neither is dropped:
         #  * CONTIGUOUS (``[:half]`` / ``[half:]``) — the halving the 5-of-6
         #    disagreement was measured with, kept so the number stays comparable.  On a
         #    sorted ``val`` the two halves are non-exchangeable BY CONSTRUCTION (they
@@ -296,20 +382,13 @@ def run_budget(tag: str, budget_bytes: int, ctx: dict, cfg, seed: int, out_dir: 
         #  * INTERLEAVED (``[0::2]`` / ``[1::2]``) — exchangeable under a stratified
         #    ``val`` (both halves inherit its marginals), so it is the halving that
         #    actually asks "is this trial's win reproducible?".
-        h1 = score_images(ctx["probe"], img[:half], lab_v[:half], ctx["names"],
-                          int(cfg.eval_batch))["aggregate"] if half else float("nan")
-        h2 = score_images(ctx["probe"], img[half:], lab_v[half:], ctx["names"],
-                          int(cfg.eval_batch))["aggregate"] if half else float("nan")
-        h1i = score_images(ctx["probe"], img[0::2], lab_v[0::2], ctx["names"],
-                           int(cfg.eval_batch))["aggregate"] if half else float("nan")
-        h2i = score_images(ctx["probe"], img[1::2], lab_v[1::2], ctx["names"],
-                           int(cfg.eval_batch))["aggregate"] if half else float("nan")
+        sc = _trial_scores(ctx["probe"], img, lab_v, ctx["names"], int(cfg.eval_batch))
         trials.append({**tr, "val_aggregate": float(sc["aggregate"]),
-                       "val_compositional": float(sc["per_factor"][COMPOSITIONAL_FACTOR]),
-                       "val_aggregate_half1": float(h1),
-                       "val_aggregate_half2": float(h2),
-                       "val_aggregate_ihalf1": float(h1i),
-                       "val_aggregate_ihalf2": float(h2i),
+                       "val_compositional": float(sc["compositional"]),
+                       "val_aggregate_half1": float(sc["half1"]),
+                       "val_aggregate_half2": float(sc["half2"]),
+                       "val_aggregate_ihalf1": float(sc["ihalf1"]),
+                       "val_aggregate_ihalf2": float(sc["ihalf2"]),
                        "bits_per_read": float(r["bits_per_read"])})
         if (t_i + 1) % 6 == 0 or t_i == 0:
             log(f"    [{tag}] trial {t_i + 1}/{len(grid)} {tr}: "
@@ -507,6 +586,13 @@ def run_budget(tag: str, budget_bytes: int, ctx: dict, cfg, seed: int, out_dir: 
         "atom_sha256": {s: sets[s].sha256() for s in sets},
         "tuning": {"budget_available": int(cfg.tuning_trial_budget),
                    "trials_realised": len(grid), "selected": best, "trials": trials,
+                   # ⭐ the calibration axis: ``n_tune_realised`` is the number of
+                   # validation rows the SELECTION actually saw (``min(tune_n,
+                   # n_val)``), and each halving of it is half that.  ⛔ Quoting a
+                   # disagreement count without this number is meaningless.
+                   "n_tune_realised": int(n_tune),
+                   "n_val_available": int(ctx["X_val"].shape[0]),
+                   "n_half_rows": int(n_tune // 2),
                    "selection_criterion":
                        "validation aggregate probe accuracy on IMAGES (⛔ B never enters)",
                    "stability": stability},
@@ -571,6 +657,18 @@ def knn_proto_regression(ctx: dict, cfg, seed: int, log: Callable = print) -> di
                 f"(Δ {out['delta']:+.3e}). Something out of scope changed and the "
                 "comparison this spoke exists to make is VOID. ⛔ Stop and report."
             )
+        if not bool(cfg.require_knn_proto_bit_identical):
+            # ⭐ THE PRICE OF THE VALIDATION ROWS, measured on the rival that has no
+            # tuning axis: anything knn_proto does under --allow-knn-proto-move is the
+            # ``fit``-row swap and nothing else.  ⛔ A sweep that bought identification
+            # by starving ``fit`` shows up HERE and nowhere else.
+            out["bit_identity_check"] = (
+                "⚠ WAIVED (--allow-knn-proto-move): n_fit was moved ON PURPOSE, so "
+                "the rival MUST move. ⭐ delta is the PRICE of the val rows.")
+            out["n_fit_it_was_refitted_on"] = int(ctx["X_fit"].shape[0])
+            log(f"  ⚠ [knn_proto PRICE] refitted on {ctx['X_fit'].shape[0]:,} fit rows: "
+                f"probe in-corner {m:.6f} vs published {out['published_probe']:.6f} "
+                f"(Δ {out['delta']:+.6f}) — ⛔ reported, NOT aborted")
     else:
         out["NOT_RUN"] = f"no published constant for seed {seed}"
     return out
@@ -642,12 +740,27 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
     # same config block and the same (seed, n_fit, n_val) — ⛔ fixing our split and not
     # theirs would manufacture a win.
     rs = gen_row_split_config(config)
+    # ⭐ ``n_val`` is the axis; ``fit`` absorbs it (see ``fit_rows_for_val`` for the
+    # clamp this closes).  ⛔ At the shipped 32,256/512 this is a NO-OP.
+    fit_trade = fit_rows_for_val(int(cfg.n_fit), int(cfg.n_val), int(pool.size))
+    if fit_trade["fit_rows_traded_away"]:
+        tlog(f"  ⚠ n_val={cfg.n_val:,} ⇒ n_fit {fit_trade['n_fit_asked']:,} -> "
+             f"{fit_trade['n_fit_effective']:,} (⭐ "
+             f"{fit_trade['fit_rows_traded_away']:,} FIT ROWS TRADED AWAY — the price "
+             "of the calibration, priced below by the knn_proto delta)")
     fit_rows, val_rows, split_info = split_fit_val(
-        pool, split.grid.factor_indices_of(pool), int(cfg.n_fit), int(cfg.n_val),
+        pool, split.grid.factor_indices_of(pool), int(fit_trade["n_fit_effective"]),
+        int(cfg.n_val),
         int(seed), mode=str(rs.mode), tiebreak_jitter=float(rs.tiebreak_jitter),
         seed_mult=int(rs.seed_mult), seed_offset=int(rs.seed_offset), log=tlog,
     )
     n_fit, n_val = int(fit_rows.size), int(val_rows.size)
+    if n_val != int(cfg.n_val):
+        raise AssertionError(
+            f"⛔ asked for n_val={int(cfg.n_val):,} and the split realised "
+            f"{n_val:,}. An n_val sweep whose cut is silently clamped measures NOTHING "
+            "while logging normally. ⛔ Stop and report."
+        )
     row_balance = row_split_balance(
         split.grid.factor_indices_of(fit_rows), split.grid.factor_indices_of(val_rows),
         list(split.grid.names), list(split.grid.cardinalities),
@@ -657,7 +770,7 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
             row_balance, require_all_values=bool(rs.require_all_values),
             max_count_ratio=float(rs.max_count_ratio),
         )
-    row_split = {**split_info, "balance": row_balance}
+    row_split = {**split_info, "balance": row_balance, "fit_val_trade": fit_trade}
     row_sets = {
         "B": rows["eval_b"],
         "MS": matched_seen_rows(dataset, split, values, rows["store_train"]),
@@ -665,9 +778,15 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
         "fit": fit_rows,
         "val": val_rows,
     }
+    shipped = (int(n_fit), int(n_val)) == (32_256, 512)
     tlog(f"rows: store_train={pool.size} B={row_sets['B'].size} MS={row_sets['MS'].size} "
          f"A={row_sets['A'].size} fit={n_fit} val={n_val} "
-         f"(⛔ fit/val are GenBaselinesConfig's 32,256/512, ⛔ never my own)")
+         + ("(⛔ fit/val are GenBaselinesConfig's 32,256/512, ⛔ never my own)"
+            if shipped else
+            f"(⚠ ⚠ NOT the shipped 32,256/512 — an n_val CALIBRATION point. "
+            f"⭐ {32_256 - int(n_fit):,} FIT ROWS WERE TRADED AWAY for "
+            f"{int(n_val) - 512:,} val rows; every rival re-fitted on ``fit`` moves "
+            f"and the knn_proto regression delta below PRICES it.)"))
     tlog("  ⭐ row split: mode=" + str(row_split["mode"]) + " — val realises "
          + " · ".join(f"{k} {v['val_n_values_realised']}/{v['cardinality']}"
                       for k, v in row_balance["factors"].items())
@@ -783,8 +902,12 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
         },
         "row_construction_note": (
             "⭐ ``fit``/``val`` are the STRATIFIED cut (chlu.data.gen_rowsplit), the "
-            "same one exp_gen_baselines gives the rivals, on the same (seed, 32256, "
-            "512) — ⛔ no longer pool[:n_fit] / pool[n_fit:] of a SORTED array, under "
+            f"same one exp_gen_baselines gives the rivals, on (seed, {n_fit}, "
+            f"{n_val})"
+            + ("" if shipped else
+               " ⚠ ⚠ which is NOT the shipped (32256, 512): this is an n_val "
+               "CALIBRATION point and the fit rows it cost are the price of it")
+            + " — ⛔ no longer pool[:n_fit] / pool[n_fit:] of a SORTED array, under "
             "which ``val`` realised 1 floor_hue value against fit's 10 and no tuned "
             "configuration was identified. ``pool`` itself is UNCHANGED, so the atoms "
             "and the hold-out are what they were. ⚠ The PRIMARY read-error rows are "
@@ -1135,6 +1258,25 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", default=None)
     p.add_argument("--quick", action="store_true")
     p.add_argument("--config", default=None)
+    # --- ⭐ the ``n_val`` CALIBRATION axis (gen-atom-mean-resweep) --------------
+    # ⛔ These exist because the six-rung tuning ladder of ``gen-dynamical-read``
+    # PREREG §5b.0 is only a MEASUREMENT if the selection is identified, and at the
+    # shipped 512/256 it is not (interleaved halves disagree in 5 of 6 cells).
+    # ⚠ ``n_fit`` is deliberately NOT a flag: ``stratified_fit_val`` takes ``val``
+    # first and gives ``fit`` the remainder, so raising ``--n-val`` lowers the realised
+    # ``n_fit`` ARITHMETICALLY (32,768 - n_val) and ⛔ nobody gets to ask for a
+    # starved ``fit`` by name.  The realised ``n_fit`` is in ``manifest.rows``.
+    p.add_argument("--n-val", type=int, default=None,
+                   help="validation rows to CUT (shipped 512). ⚠ costs fit rows")
+    p.add_argument("--tune-n", type=int, default=None,
+                   help="validation rows the SELECTION renders (shipped 256). ⛔ "
+                        "raising --n-val without this changes nothing")
+    p.add_argument("--allow-knn-proto-move", action="store_true",
+                   help="⚠ measure the knn_proto regression delta instead of "
+                        "ABORTING on it. ⛔ Only legitimate when n_fit has been "
+                        "moved ON PURPOSE (an n_val sweep): the rival is re-fitted on "
+                        "fewer rows, so it MUST move, and the size of that move is "
+                        "the PRICE of the validation rows, not a defect.")
     return p
 
 
@@ -1150,6 +1292,22 @@ def _config_from_args(args) -> CHLUConfig:
         cfg.dataset = str(args.dataset)
     if args.pretext:
         cfg.pretext = str(args.pretext)
+    # ⛔ ``apply_quick`` REPLACES n_val/tune_n (and the seed/budget/arm lists) after
+    # this function runs, so a ``--quick --n-val 8192`` invocation would run 256 rows
+    # and log entirely normally.  Refusing is the only safe spelling.
+    sweep = {"--n-val": args.n_val, "--tune-n": args.tune_n}
+    given = sorted(k for k, v in sweep.items() if v is not None)
+    if args.quick and given:
+        raise SystemExit(
+            f"⛔ --quick CLOBBERS {', '.join(given)} (apply_quick REPLACES n_val/"
+            "tune_n) and the run would look entirely normal. Refusing: pick one."
+        )
+    if args.n_val is not None:
+        cfg.n_val = int(args.n_val)
+    if args.tune_n is not None:
+        cfg.tune_n = int(args.tune_n)
+    if args.allow_knn_proto_move:
+        cfg.require_knn_proto_bit_identical = False
     return config
 
 
