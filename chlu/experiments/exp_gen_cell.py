@@ -73,7 +73,12 @@ import optax
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from ..config import CHLUConfig, get_default_config  # noqa: E402
+from ..config import CHLUConfig, get_default_config, gen_row_split_config  # noqa: E402
+from ..data.gen_rowsplit import (  # noqa: E402
+    assert_row_split_balanced,
+    row_split_balance,
+    split_fit_val,
+)
 from ..core.gen_bridge import load_feature_cache, param_hash  # noqa: E402
 from ..core.gen_compose import (  # noqa: E402
     COMPOSITIONAL_FACTOR,
@@ -855,13 +860,35 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
     shape_idx = names.index(COMPOSITIONAL_FACTOR)
     rows = select_store_rows(split, config, seed)
     pool = np.asarray(rows["store_train"], np.int64)
-    n_fit = int(min(int(cfg.n_fit), pool.size))
-    n_val = int(min(int(cfg.n_val), max(pool.size - n_fit, 0)))
+    # ⛔ THE SAME stratified cut ``exp_gen_baselines`` makes, from the same block, on
+    # the same (seed, n_fit, n_val) — so the rivals' fit rows here are bit-identical to
+    # the rows they published from.  ⛔ Never the head/tail of a sorted array again.
+    rs = gen_row_split_config(config)
+    fit_rows, val_rows, split_info = split_fit_val(
+        pool, split.grid.factor_indices_of(pool), int(cfg.n_fit), int(cfg.n_val),
+        int(seed), mode=str(rs.mode), tiebreak_jitter=float(rs.tiebreak_jitter),
+        seed_mult=int(rs.seed_mult), seed_offset=int(rs.seed_offset), log=tlog,
+    )
+    n_fit, n_val = int(fit_rows.size), int(val_rows.size)
+    row_balance = row_split_balance(
+        split.grid.factor_indices_of(fit_rows), split.grid.factor_indices_of(val_rows),
+        list(split.grid.names), list(split.grid.cardinalities),
+    )
+    if bool(rs.assert_balanced) and str(rs.mode) != "head_tail":
+        row_balance = assert_row_split_balanced(
+            row_balance, require_all_values=bool(rs.require_all_values),
+            max_count_ratio=float(rs.max_count_ratio),
+        )
+    row_split = {**split_info, "balance": row_balance}
+    tlog("  ⭐ row split: mode=" + str(row_split["mode"]) + " — val realises "
+         + " · ".join(f"{k} {v['val_n_values_realised']}/{v['cardinality']}"
+                      for k, v in row_balance["factors"].items())
+         + f" · max per-value count ratio {row_balance['max_val_count_ratio']:.3f}")
     row_sets = {
         "B": rows["eval_b"],
         "MS": matched_seen_rows(dataset, split, values, rows["store_train"]),
-        "fit": pool[:n_fit],
-        "val": pool[n_fit : n_fit + n_val],
+        "fit": fit_rows,
+        "val": val_rows,
     }
     if int(cfg.n_eval_a) > 0:
         row_sets["A"] = rows["eval_a"][: int(cfg.n_eval_a)]
@@ -996,6 +1023,7 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
         "request_only_path": req_only,
         "address_book_bytes": address_book_bytes(book),
         "rows": {k: int(v.size) for k, v in row_sets.items()},
+        "row_split": row_split,
         "request_addressing": {
             "n_distinct_code_configs": {k: codes[k]["n_distinct_code_configs"]
                                         for k in REQUEST_SETS},

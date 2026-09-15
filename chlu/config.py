@@ -6013,11 +6013,18 @@ class GenAtomMeanConfig:
     eval_batch: int = 256
 
     # --- ⛔ the regression check: full, unrestricted ``knn_proto`` -----------
-    #: ⭐ Transcribed from DISK (``gen-arms-a7-wiring/runs/deployed_524288/seed_*/
+    #: ⭐ Transcribed from DISK (``gen-val-split-fix/runs/deployed_524288/seed_*/
     #: baselines_manifest.json → arms.knn.variants.knn_proto``), ⛔ never from a
     #: rendered 4-dp table.  Acceptance item 4: reproduced **bit-identically**.
+    #: ⚠ **RE-BASED 2026-09-14 by ``gen-val-split-fix``.**  The superseded constants
+    #: were ``[0.8762626262626263, 0.8919597989949748, 0.8969849246231156]``, measured
+    #: when ``fit`` was the head of a SORTED row array.  ``knn_proto`` has **no tuning
+    #: axis** — it moved purely because the repaired split swaps 1.55 % of the ``fit``
+    #: rows its prototype table is built from (3-seed mean 0.8884 → 0.8817, inside the
+    #: old 0.0088 seed-sd).  ⛔ A run against the old constants on the repaired split
+    #: aborts, which is the guard working, ⛔ not a regression.
     knn_proto_probe_reference_per_seed: List[float] = field(
-        default_factory=lambda: [0.8762626262626263, 0.8919597989949748, 0.8969849246231156]
+        default_factory=lambda: [0.8787878787878788, 0.8844221105527639, 0.8819095477386935]
     )
     #: ⛔ Bit-identity, not "close": the tolerance is exactly zero and a miss is a
     #: **hard failure**, because a moved ``knn_proto`` voids the whole comparison.
@@ -6453,3 +6460,74 @@ def gen_codebook_alloc_config(
             setattr(cfg, k, v)
     return cfg
 # --- END gen-codebook-allocation ---------------------------------------------
+
+# --- BEGIN gen-val-split-fix (additive; owner: experiment-engineer) -----------
+# ⭐ The fit/val row split for the generative cell.  ⛔ APPEND-ONLY at EOF, one
+# contiguous region, no ``CHLUConfig`` field / ``load_config`` / ``save_config`` site —
+# this file's syntax has been broken twice by hunk-by-hunk "keep both" merges; the rule
+# is take the peer's whole file and re-apply this block by its BEGIN/END markers,
+# asserting **0 deletions**.
+@dataclass
+class GenRowSplitConfig:
+    """⭐ How ``fit`` and ``val`` are cut out of the store's training pool.
+
+    ⛔ **The default is ``"stratified"``, and that is a deliberate default CHANGE.**
+    The shipped construction was ``fit = pool[:n_fit]`` / ``val = pool[n_fit:]`` of a
+    **sorted** row-index array, i.e. ``val`` was a contiguous corner of the factor grid:
+    at production scale it realised **1** ``floor_hue`` value and **2** ``wall_hue``
+    values against ``fit``'s 10 and 10, at 0.0924 feature variance vs 0.2229, and the
+    two halves of it disagreed about the winning tuning trial in **5 of 6** cells
+    (``gen-atom-mean-control`` §7).  Preserving that as the default would preserve a
+    coin flip at the centre of every tuned configuration in the phase.
+
+    ⛔ ``mode="head_tail"`` still reproduces it bit-for-bit, must be asked for by name,
+    and shouts in the log.  ⭐ Every arm — ours, ``knn``/``knn_proto`` and LACE — reads
+    **this one block**, so a repair cannot reach our split without reaching theirs.
+    """
+
+    #: ``"stratified"`` (proportional marginal stratification) | ``"head_tail"`` (⛔ broken).
+    mode: str = "stratified"
+    #: ⭐ Randomises the deficit-priority walk among candidates whose total bucket
+    #: deficit differs by less than this.  **1.0 = one row's worth**, measured: it
+    #: leaves the realised balance untouched (max per-value count ratio 1.091 on all
+    #: three seeds, identical to a 1e-3 jitter) while giving the split genuine seed
+    #: dependence (512-row val overlap between seeds 0 and 1: 21/512, vs 158/512 at
+    #: 1e-3 — at 1e-3 the walk is effectively deterministic given the pool).
+    tiebreak_jitter: float = 1.0
+    #: ⚠ NumPy ``default_rng(seed*seed_mult + seed_offset)``.  ⛔ Deliberately NOT a
+    #: lengthened ``jax.random.split``: ``split(key, n)`` is prefix-stable here.
+    seed_mult: int = 6_637
+    seed_offset: int = 20_260_914
+
+    # --- the gate (⛔ capable of failing; run it on head_tail and it raises) ---
+    assert_balanced: bool = True
+    #: ``val`` must realise **every** value of **every** factor, not just the hues.
+    require_all_values: bool = True
+    #: Per-value count max/min inside ``val``.  ⭐ This is the clause that checks
+    #: ``scale`` and ``orientation``, which the broken split already realised in full.
+    max_count_ratio: float = 1.25
+    #: Record the realised balance table in every manifest that cuts a split.
+    record_balance: bool = True
+
+
+def gen_row_split_config(
+    config: Optional["CHLUConfig"] = None, **overrides
+) -> GenRowSplitConfig:
+    """Return (and memoise on ``config``) the row-split block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field, for the same reason
+    :func:`gen_atom_mean_config` and :func:`gen_codebook_alloc_config` are not: the
+    merge rule for this file's tail is "take the peer's whole file and re-apply your
+    block by its BEGIN/END markers", which only holds if the block is one contiguous
+    region with **zero** house wiring sites.
+    """
+    cfg = getattr(config, "gen_row_split", None) if config is not None else None
+    if cfg is None:
+        cfg = GenRowSplitConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_row_split", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+# --- END gen-val-split-fix ----------------------------------------------------

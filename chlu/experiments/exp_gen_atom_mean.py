@@ -74,7 +74,17 @@ import numpy as np
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from ..config import CHLUConfig, gen_atom_mean_config, get_default_config  # noqa: E402
+from ..config import (  # noqa: E402
+    CHLUConfig,
+    gen_atom_mean_config,
+    gen_row_split_config,
+    get_default_config,
+)
+from ..data.gen_rowsplit import (  # noqa: E402
+    assert_row_split_balanced,
+    row_split_balance,
+    split_fit_val,
+)
 from ..core.gen_atoms import (  # noqa: E402
     atom_byte_ledger,
     atom_read,
@@ -277,18 +287,29 @@ def run_budget(tag: str, budget_bytes: int, ctx: dict, cfg, seed: int, out_dir: 
         img = render(ctx["decoder"], r["read"], ctx["feat_shape"], int(cfg.eval_batch))
         sc = score_images(ctx["probe"], img, lab_v, ctx["names"], int(cfg.eval_batch))
         # ⭐ the same render scored on two disjoint halves — the SELECTION-STABILITY
-        # diagnostic.  ⚠ ``val`` is the head/tail slice of a SORTED row array
-        # (``select_baseline_rows``, inherited verbatim), so it is NOT exchangeable
-        # with ``fit``; if the two halves disagree about the winner, the selection is
-        # riding that structure and the arm may be WEAKENED by its own tuning.
+        # diagnostic.  ⚠ TWO halvings are reported and ⛔ neither is dropped:
+        #  * CONTIGUOUS (``[:half]`` / ``[half:]``) — the halving the 5-of-6
+        #    disagreement was measured with, kept so the number stays comparable.  On a
+        #    sorted ``val`` the two halves are non-exchangeable BY CONSTRUCTION (they
+        #    are low- and high-index corners of the factor grid), so under the repaired
+        #    split this leg is a **conservative** reading and ⛔ not the headline.
+        #  * INTERLEAVED (``[0::2]`` / ``[1::2]``) — exchangeable under a stratified
+        #    ``val`` (both halves inherit its marginals), so it is the halving that
+        #    actually asks "is this trial's win reproducible?".
         h1 = score_images(ctx["probe"], img[:half], lab_v[:half], ctx["names"],
                           int(cfg.eval_batch))["aggregate"] if half else float("nan")
         h2 = score_images(ctx["probe"], img[half:], lab_v[half:], ctx["names"],
                           int(cfg.eval_batch))["aggregate"] if half else float("nan")
+        h1i = score_images(ctx["probe"], img[0::2], lab_v[0::2], ctx["names"],
+                           int(cfg.eval_batch))["aggregate"] if half else float("nan")
+        h2i = score_images(ctx["probe"], img[1::2], lab_v[1::2], ctx["names"],
+                           int(cfg.eval_batch))["aggregate"] if half else float("nan")
         trials.append({**tr, "val_aggregate": float(sc["aggregate"]),
                        "val_compositional": float(sc["per_factor"][COMPOSITIONAL_FACTOR]),
                        "val_aggregate_half1": float(h1),
                        "val_aggregate_half2": float(h2),
+                       "val_aggregate_ihalf1": float(h1i),
+                       "val_aggregate_ihalf2": float(h2i),
                        "bits_per_read": float(r["bits_per_read"])})
         if (t_i + 1) % 6 == 0 or t_i == 0:
             log(f"    [{tag}] trial {t_i + 1}/{len(grid)} {tr}: "
@@ -305,14 +326,27 @@ def run_budget(tag: str, budget_bytes: int, ctx: dict, cfg, seed: int, out_dir: 
         "spread_over_trials": float(np.std([t["val_aggregate"] for t in trials])),
         "gap_best_to_second": float(np.diff(np.sort(
             [t["val_aggregate"] for t in trials])[-2:])[0]) if len(trials) > 1 else 0.0,
-        "what": ("⚠ ``val`` is the TAIL slice of a SORTED row index array, so it is "
-                 "not exchangeable with ``fit``. ⛔ The row construction is INHERITED "
-                 "verbatim from select_baseline_rows and is NOT changed here; this is "
-                 "the diagnostic that says whether the selection depends on it."),
+        "argmax_ihalf1": {k: trials[int(np.argmax([t["val_aggregate_ihalf1"]
+                                                    for t in trials]))][k]
+                          for k in ("k", "metric", "normaliser", "scope")},
+        "argmax_ihalf2": {k: trials[int(np.argmax([t["val_aggregate_ihalf2"]
+                                                    for t in trials]))][k]
+                          for k in ("k", "metric", "normaliser", "scope")},
+        "what": ("⭐ ``val`` is now the STRATIFIED cut (chlu.data.gen_rowsplit), ⛔ no "
+                 "longer the TAIL slice of a sorted row index array. Two halvings are "
+                 "reported: CONTIGUOUS (comparable with the published 5-of-6 "
+                 "disagreement, but non-exchangeable by construction on a sorted val) "
+                 "and INTERLEAVED (exchangeable under stratification — ⭐ this is the "
+                 "one that says whether the selection is identified)."),
     }
     stability["halves_agree"] = bool(
         stability["argmax_half1"] == stability["argmax_half2"] == stability["selected"])
+    stability["ihalves_agree"] = bool(
+        stability["argmax_ihalf1"] == stability["argmax_ihalf2"] == stability["selected"])
     log(f"  ⭐ [{tag}] SELECTED (validation aggregate, ⛔ C/B never enter): {best}")
+    log(f"    [{tag}] selection stability (INTERLEAVED halves): agree="
+        f"{stability['ihalves_agree']} (half1 {stability['argmax_ihalf1']}, "
+        f"half2 {stability['argmax_ihalf2']})")
     log(f"    [{tag}] selection stability: halves agree={stability['halves_agree']} "
         f"(half1 {stability['argmax_half1']}, half2 {stability['argmax_half2']}); "
         f"best-to-second gap {stability['gap_best_to_second']:.4f}, trial spread "
@@ -604,18 +638,40 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
     names, cards = list(grid.names), list(grid.cardinalities)
     rows = select_store_rows(split, config, seed)
     pool = np.asarray(rows["store_train"], np.int64)
-    n_fit = int(min(int(cfg.n_fit), pool.size))
-    n_val = int(min(int(cfg.n_val), max(pool.size - n_fit, 0)))
+    # ⛔ THE SAME stratified cut the rivals get (``chlu.data.gen_rowsplit``), from the
+    # same config block and the same (seed, n_fit, n_val) — ⛔ fixing our split and not
+    # theirs would manufacture a win.
+    rs = gen_row_split_config(config)
+    fit_rows, val_rows, split_info = split_fit_val(
+        pool, split.grid.factor_indices_of(pool), int(cfg.n_fit), int(cfg.n_val),
+        int(seed), mode=str(rs.mode), tiebreak_jitter=float(rs.tiebreak_jitter),
+        seed_mult=int(rs.seed_mult), seed_offset=int(rs.seed_offset), log=tlog,
+    )
+    n_fit, n_val = int(fit_rows.size), int(val_rows.size)
+    row_balance = row_split_balance(
+        split.grid.factor_indices_of(fit_rows), split.grid.factor_indices_of(val_rows),
+        list(split.grid.names), list(split.grid.cardinalities),
+    )
+    if bool(rs.assert_balanced) and str(rs.mode) != "head_tail":
+        row_balance = assert_row_split_balanced(
+            row_balance, require_all_values=bool(rs.require_all_values),
+            max_count_ratio=float(rs.max_count_ratio),
+        )
+    row_split = {**split_info, "balance": row_balance}
     row_sets = {
         "B": rows["eval_b"],
         "MS": matched_seen_rows(dataset, split, values, rows["store_train"]),
         "A": rows["eval_a"][: int(cfg.n_eval_a)],
-        "fit": pool[:n_fit],
-        "val": pool[n_fit : n_fit + n_val],
+        "fit": fit_rows,
+        "val": val_rows,
     }
     tlog(f"rows: store_train={pool.size} B={row_sets['B'].size} MS={row_sets['MS'].size} "
          f"A={row_sets['A'].size} fit={n_fit} val={n_val} "
          f"(⛔ fit/val are GenBaselinesConfig's 32,256/512, ⛔ never my own)")
+    tlog("  ⭐ row split: mode=" + str(row_split["mode"]) + " — val realises "
+         + " · ".join(f"{k} {v['val_n_values_realised']}/{v['cardinality']}"
+                      for k, v in row_balance["factors"].items())
+         + f" · max per-value count ratio {row_balance['max_val_count_ratio']:.3f}")
 
     # ---- the frozen cache ---------------------------------------------------
     crows, feats_cache, cman = load_feature_cache(bdir,
@@ -715,6 +771,7 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
         "store_budget_bytes": store_budget,
         "grouping": ginfo, "well_sizes": [len(c) for c in wc],
         "rows": {k: int(v.size) for k, v in row_sets.items()},
+        "row_split": row_split,
         "row_set_diagnostics": {
             k: {
                 "n": int(v.size),
@@ -725,13 +782,16 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
             } for k, v in row_sets.items()
         },
         "row_construction_note": (
-            "⚠ ``fit`` = pool[:n_fit] and ``val`` = pool[n_fit:n_fit+n_val] where "
-            "``pool`` is SORTED — this is select_baseline_rows' shipped construction "
-            "and is INHERITED VERBATIM here (⛔ never re-chosen on my own budget). "
-            "⭐ Consequence, measured above: ``val`` is a contiguous TAIL slice of the "
-            "factor grid and is NOT exchangeable with ``fit``; any variance-normalised "
-            "statistic on it (relative read error) is distorted, which is why the "
-            "PRIMARY read-error rows are ``A`` (``eval_a``, excluded from the pool)."),
+            "⭐ ``fit``/``val`` are the STRATIFIED cut (chlu.data.gen_rowsplit), the "
+            "same one exp_gen_baselines gives the rivals, on the same (seed, 32256, "
+            "512) — ⛔ no longer pool[:n_fit] / pool[n_fit:] of a SORTED array, under "
+            "which ``val`` realised 1 floor_hue value against fit's 10 and no tuned "
+            "configuration was identified. ``pool`` itself is UNCHANGED, so the atoms "
+            "and the hold-out are what they were. ⚠ The PRIMARY read-error rows are "
+            "still ``A`` (``eval_a``, excluded from the pool): ``val`` rows sit INSIDE "
+            "the atom pool, so their read error is optimistic for a reason the split "
+            "repair does not touch. See ``row_split.balance`` for the realised "
+            "per-factor counts."),
         "prototype_byte_ledger": protos.byte_ledger(),
         "ceiling": ceiling,
         "budgets": manifest.get("budgets", {}),
