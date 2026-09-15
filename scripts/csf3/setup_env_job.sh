@@ -54,17 +54,20 @@ if [ -f uv.lock ]; then
         echo "[setup] uv.lock lacks the cuda extra — running additive uv lock"
         uv lock
     fi
-    echo "[setup] uv sync --frozen from uv.lock (cuda + eval extras)"
+    # ⛔ --extra gen carries h5py.  Shapes3D ships as ONE HDF5 file, so WITHOUT it every
+    # gen job downloads 255 MB and then dies at the split with
+    # "Shapes3D is a single HDF5 file and requires h5py" (measured: job 20583601, FAILED).
+    echo "[setup] uv sync --frozen from uv.lock (cuda + eval + gen extras)"
     # --extra eval carries the industrial-loader deps (pandas/pyarrow/pyreadr);
     # without it voraus/TEP cannot even read their data on a compute node
     # (voraus-baseline-floors blocker 1). The eval extra pulls pure-Python /
     # already-pinned wheels only — it does NOT bump jax off the 0.9.0 pin
     # (verify with the sanity check below).
-    uv sync --frozen --extra cuda --extra eval --python 3.11
+    uv sync --frozen --extra cuda --extra eval --extra gen --python 3.11
 else
     echo "[setup] WARNING: no uv.lock found — resolving fresh (env may drift"
     echo "[setup] from the laptop). Prefer push_repo.sh which carries the lock."
-    uv sync --extra cuda --extra eval --python 3.11
+    uv sync --extra cuda --extra eval --extra gen --python 3.11
 fi
 
 # --- 3. CPU-side sanity check (this is a non-GPU node: force cpu backend; ---
