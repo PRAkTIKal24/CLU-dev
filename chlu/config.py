@@ -6671,3 +6671,175 @@ def gen_codebook_exponent_config(
             setattr(cfg, k, v)
     return cfg
 # --- END gen-dsprites-exponent -----------------------------------------------
+
+# --- BEGIN gen-wells-route-b (additive; owner: experiment-engineer; route B) ---
+# ⭐ WHERE THE WELLS GO: well placement learned with the store in the loop.  ⛔ APPEND-ONLY
+# at EOF, one contiguous BEGIN/END region, **no ``CHLUConfig`` field** and no
+# ``load_config``/``save_config`` site — this file's syntax has been broken twice by
+# hunk-by-hunk "keep both" merges.  ⛔ On conflict the rule is: take the peer's WHOLE file
+# and re-apply this block by its BEGIN/END markers, asserting **0 deletions**, then verify
+# BEHAVIOUR (instantiate every block and round-trip save/load) — ⚠ some blocks are fields
+# and others are reached by accessors, so a presence check that assumes fields reports a
+# false loss.  It has, twice.
+@dataclass
+class GenWellsRouteBConfig:
+    """⭐ Route B — the placement dial.
+
+    ⛔ **The contract is not ours to renegotiate.**  ``gen-store-grouping``'s
+    ``store_plan.json`` says it in its own ``note``: *"K, n_modes, D and store_bytes are
+    pinned here; only the grouping (the `labels` field) is allowed to change between
+    rungs."*  So ``K``/``n_modes``/``D``/``store_bytes`` are **loaded from the plan** and
+    are identical in every arm, and the byte ledger aborts the run if they ever are not.
+
+    ⚠ **The inherited partition is NOT k-means** (the task file's phrasing).  It is
+    hierarchical linkage on the channel-correlation matrix — the shipped Shapes3D/``recon``
+    plan records ``method_used: "ward"``.  **k-means++ seeds the MODES**, not the partition.
+    """
+
+    dataset: str = "shapes3d"
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0])
+
+    # --- ⛔ THE ARMS, declared in config so neither can be swapped in later ---------
+    #: ⭐ ``random_dmatched`` is the laundering control and runs **FIRST** — a floor
+    #: measured after the thing it is the floor for is a floor that can be talked about.
+    #: ⛔ ``learned_weak_sup`` is a DECLARED arm, reported as a separate row, and ⛔ may
+    #: **never** be quoted as the label-free result.
+    arms: List[str] = field(
+        default_factory=lambda: [
+            "random_dmatched", "correlation", "learned_label_free", "learned_weak_sup"])
+
+    # --- rows -----------------------------------------------------------------------
+    #: ⚠ The production value (32,768) EXCEEDS seeds 1 and 2's cached coverage (9,288
+    #: rows, ``scope="used"``).  That is not a bug to route around: the coverage assertion
+    #: names the seed and the shortfall and dies at startup.
+    n_store_train: int = 32768
+    n_corr: int = 16384
+    n_eval: int = 8192
+
+    # --- the placement relaxation ----------------------------------------------------
+    placement_steps: int = 3000
+    placement_batch: int = 1024
+    placement_lr: float = 3e-3
+    placement_tau_start: float = 1.0
+    placement_tau_end: float = 0.25
+    #: Within-well MULTIMODALITY (occupancy entropy, maximised).
+    lambda_occ: float = 0.10
+    #: Between-well FACTORISATION (pairwise MI of the soft codes, minimised).
+    lambda_fact: float = 1.00
+    #: ⛔ The DECLARED weakly-supervised arm's weight.  Used by that arm ONLY.
+    lambda_sup: float = 1.00
+    logit_init_scale: float = 0.01
+    #: ⭐ The placement logits get their OWN Adam rate, as a multiple of ``placement_lr``.
+    #: ⛔ Not a nicety.  The relaxation carries ``K·M·D`` mode floats against ``D·K``
+    #: placement logits; at a shared rate the modes absorb the gradient and the placement
+    #: does not move at all.  The first smoke of this harness hardened with **0 of 2048
+    #: coordinates moved** — which looks exactly like the finding "placement is not the
+    #: lever" and was in fact an optimisation artefact.  ⛔ A null must not be
+    #: manufacturable by a learning rate.
+    placement_logit_lr_mult: float = 30.0
+    #: ⭐ Initialise the relaxation AT the inherited partition (``True``) or from noise.
+    #: ⚠ Warm-starting makes the learned arm's *improvement* over the inherited partition
+    #: legible; it does ⛔ not change the D-matched random floor it is scored against.
+    warm_start_from_reference: bool = True
+
+    # --- the DELIVERED store (⛔ identical call for every arm) ------------------------
+    store_train_steps: int = 1200
+    store_train_batch: int = 1024
+    store_train_lr: float = 3e-3
+    store_commitment_beta: float = 0.25
+    store_tau_start: float = 1.0
+    store_tau_end: float = 0.10
+
+    # --- ⛔⛔ checkpoint / resume (a STANDING Head requirement, not an option) ---------
+    #: ⛔ ``~/scratch`` on the cluster.  ⛔ NEVER ``$TMPDIR`` (wiped at job end), ⛔ never
+    #: ``$HOME`` (quota, backed up).  ``None`` -> ``<out_dir>/checkpoints``.
+    ckpt_dir: Optional[str] = None
+    #: ⭐ TIME-based, because an OOM does not wait for an epoch boundary.
+    ckpt_every_seconds: float = 300.0
+    #: Belt and braces; ``0`` disables the step-based cadence.
+    ckpt_every_steps: int = 0
+    #: ⭐ Keep the last N GOOD checkpoints, not just one.
+    ckpt_keep_last: int = 3
+
+    # --- ⛔ gates.  Every one of these fails at STARTUP or not at all -----------------
+    assert_byte_ledger: bool = True
+    assert_cache_coverage: bool = True
+    #: ⚠ Take ``gather_features``' extend-by-re-encode path DELIBERATELY.  The run is then
+    #: reported as an **exercised untested path**, ⛔ not as a normal run.
+    allow_reencode: bool = False
+    assert_label_free: bool = True
+    #: ⛔ THE DECODER TRAP.  ``GenBridgeConfig.dec_recipe`` still defaults to ``"baseline"``
+    #: — the decoder that FAILED the gate (0.7191 vs the winner's 0.9414).  A run through
+    #: it looks entirely normal in the logs and is **void**.
+    dec_recipe: str = "v1_capacity_schedule"
+    assert_dec_recipe: bool = True
+    #: ``None`` -> ``$CHLU_GEN_DECLIFT_DIR`` else ``<claude>/outputs/gen-decoder-lift/winner``.
+    declift_dir: Optional[str] = None
+    #: ⭐ The collapse guard: a sharpness gain whose ``mean_used_modes`` has fallen below
+    #: this fraction of the FLOOR arm's is reported as **COLLAPSE, not as a win**.
+    collapse_used_modes_frac: float = 0.80
+    #: The coupling rank the byte identity ``Σ r(d_k+d_l)·4 = r(K−1)D·4`` is checked at.
+    coupling_rank: int = 16
+    address_smoothing: float = 1.0
+
+    # --- roots (⚠ a worktree has no ``.claude/``, so the env vars must be set) --------
+    #: ``None`` -> ``$CHLU_GEN_BRIDGE_ROOT`` else ``<claude>/outputs/gen-feature-bridge/runs``.
+    bridge_root: Optional[str] = None
+    #: ``None`` -> ``$CHLU_GEN_STORE_RUNS`` else ``<claude>/outputs/gen-store-grouping/runs``.
+    store_runs: Optional[str] = None
+    #: ``None`` -> ``<store_runs>/store_plan.json``.  ⛔ ``K``/``n_modes``/``D`` are loaded
+    #: from it VERBATIM and are never re-derived here.
+    store_plan: Optional[str] = None
+    #: ``None`` -> ``$CHLU_CLAUDE_ROOT`` else ``<repo>/.claude``.
+    claude_root: Optional[str] = None
+    out_root: Optional[str] = None
+
+    encode_chunk: int = 16384
+    eval_batch: int = 4096
+    verify_cache_checksum: bool = True
+    skip_if_exists: bool = True
+    make_plots: bool = True
+
+    # --- quick (⚠ plumbing smoke only — ⛔ a quick number is NEVER reported) ----------
+    #: ⚠ ``--quick`` REPLACES these lists, so an explicit CLI flag applied before it is
+    #: silently discarded.  ⭐ The mains apply quick FIRST and explicit flags LAST.
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    quick_n_store_train: int = 2048
+    quick_n_corr: int = 1024
+    quick_n_eval: int = 1024
+    quick_placement_steps: int = 40
+    #: ⚠ The relaxation's einsum is ``N·K·M·D``; at the production batch a smoke is not
+    #: quick.  ⛔ Reduced for the smoke ONLY.
+    quick_placement_batch: int = 128
+    quick_store_train_steps: int = 30
+    quick_ckpt_every_seconds: float = 1e9
+    quick_ckpt_every_steps: int = 10
+    quick_verify_cache_checksum: bool = False
+    #: ⛔ NOT reduced by ``--quick``: the byte ledger is a PRE-REGISTERED number and a
+    #: smoke that shrinks it proves nothing about it.  Same for the label-free gate.
+    quick_assert_byte_ledger: bool = True
+    quick_assert_label_free: bool = True
+
+
+def gen_wells_route_b_config(
+    config: Optional["CHLUConfig"] = None, **overrides
+) -> GenWellsRouteBConfig:
+    """Return (and memoise on ``config``) the route-B placement block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field, for the same reason
+    :func:`gen_row_split_config` and :func:`gen_codebook_alloc_config` are not: the merge
+    rule for this file's tail is "take the peer's whole file and re-apply your block by its
+    BEGIN/END markers", which only holds if the block is one contiguous region with **zero**
+    house wiring sites.
+    """
+    cfg = getattr(config, "gen_wells_route_b", None) if config is not None else None
+    if cfg is None:
+        cfg = GenWellsRouteBConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_wells_route_b", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+# --- END gen-wells-route-b ----------------------------------------------------
