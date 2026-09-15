@@ -6531,3 +6531,143 @@ def gen_row_split_config(
             setattr(cfg, k, v)
     return cfg
 # --- END gen-val-split-fix ----------------------------------------------------
+
+# --- BEGIN gen-dsprites-exponent (additive; §11b) -----------------------------
+# ⭐ Appended at the END of the file, behind ``gen-codebook-allocation``, for the
+# same reason every gen block is: ⛔ APPEND-ONLY, one contiguous BEGIN/END region,
+# **no** ``CHLUConfig`` field and **no** ``load_config``/``save_config`` site, so the
+# merge rule "take the peer's whole file and re-apply my block by its markers" holds
+# with zero deletions.
+@dataclass
+class GenCodebookExponentConfig:
+    """⭐⭐ Knobs for ``exp_gen_codebook_exponent`` — **is the codebook exponent set by
+    the FACTOR MANIFOLD?** (`gen-dynamical-read/PREREG.md` §11b.)
+
+    ⭐ **DIAL: the DATASET.**  ⛔ No arm, no CLU claim, no verdict.  One quantity is
+    measured — the within-well exponent of ``ε`` in ``M`` — on **two datasets**
+    through **one** code path, and the two are compared.
+
+    ⛔ **The laundering control is structural, not optional:** Shapes3D is re-run
+    here over the *same* ``M`` grid with the *same* fit.  ``−0.2631`` from
+    `gen-codebook-allocation` §5d is a **historical reference** (:attr:
+    `reference_exponent_shapes3d`) and ⛔ is never the comparator — three errata on
+    this programme came from transcribed table values.
+
+    ⛔ **Exponents are only comparable over comparable ranges.**  :attr:`m_grid` is
+    ONE grid used for BOTH datasets, and its endpoints are pinned to Shapes3D's
+    historical range ``M ∈ [4, 186]``.
+
+    ⛔ **No decoder is loaded** (no image is rendered, no probe is read), so
+    :attr:`GenBridgeConfig.dec_recipe`'s default of ``"baseline"`` — the recipe that
+    FAILED the gate — cannot reach any number here.
+    """
+
+    #: ⛔ BOTH, always: the Shapes3D row IS the control.  Order is the run order.
+    datasets: List[str] = field(default_factory=lambda: ["shapes3d", "dsprites"])
+    pretext: str = "recon"
+    seeds: List[int] = field(default_factory=lambda: [0, 1, 2])
+
+    #: ⭐⭐ THE grid, shared by both datasets.  7 log-spaced points whose endpoints
+    #: are exactly Shapes3D's historical ``M ∈ [4, 186]``.
+    m_grid: List[int] = field(default_factory=lambda: [4, 8, 16, 32, 64, 128, 186])
+    #: ⛔ Refuse to run if the two datasets would be swept over different ``M``.
+    assert_grid_is_shared: bool = True
+
+    #: ⛔ ONE ``K`` for both datasets — Shapes3D's shipped ``K``.  ``K`` is a
+    #: partition of the 2,048 encoder channels, ⛔ NOT the factor count, so it does
+    #: **not** track ``n_factors`` and must not be varied between the datasets.
+    k_wells: int = 5
+    #: Rows the channel correlation (and hence the partition) is measured on.
+    n_corr: int = 16384
+
+    # --- ⛔ frozen artifacts (LOADED; ⛔ nothing here re-fits a bridge) --------
+    #: ⚠ The two bridges live in different directories: Shapes3D's was written by
+    #: `gen-feature-bridge`, dSprites' by `gen-bridge-dsprites`.  Relative paths are
+    #: resolved against ``$CHLU_CLAUDE_ROOT``.
+    bridge_root_by_dataset: Dict[str, str] = field(
+        default_factory=lambda: {
+            "shapes3d": "outputs/gen-feature-bridge/runs",
+            "dsprites": "outputs/gen-bridge-dsprites/runs",
+        }
+    )
+    #: ⭐ `gen-commitment-collapse`'s cache, read ONLY to check that the per-seed
+    #: re-derived partition reproduces the shipped ``labels_vec`` bit-identically
+    #: where one exists (Shapes3D).  ⛔ Never loaded as the partition: dSprites has
+    #: no such cache and one loaded partition + one derived partition is two code
+    #: paths, which is exactly what this spoke may not have.
+    commit_cache_pattern: str = (
+        "outputs/gen-commitment-collapse/runs/{dataset}_{pretext}/seed_{seed}"
+    )
+    assert_partition_matches_shipped: bool = True
+    verify_cache_checksum: bool = True
+    encode_chunk: int = 8192
+
+    # --- rows (⭐ `gen-codebook-allocation`'s draw, verbatim, so the Shapes3D
+    #     ``SPREAD`` rows are the SAME rows its ε was measured on) --------------
+    n_store_train: int = 32768
+    #: ⚠ Drawn but ⛔ never gathered: only its SIZE matters, because ``SPREAD`` is
+    #: ``take[n_spread_train:]`` in the allocation harness and dropping it would
+    #: silently change which rows ``SPREAD`` holds.
+    n_spread_train: int = 12288
+    n_spread_test: int = 4096
+    row_seed_mult: int = 7_919
+    row_seed_offset: int = 20_260_914
+    spectrum_rows: int = 16384
+
+    # --- the store recipe (⛔ identical at every ``M``, every seed, both datasets)
+    store_key_mult: int = 10_007
+    store_key_offset: int = 20_260_911
+
+    # --- ⛔ the pre-registered comparison, as data ----------------------------
+    #: ⛔ HISTORICAL REFERENCE ONLY (`gen-codebook-allocation` §5d).  ⛔ Never the
+    #: comparator for the directional claim — the re-run Shapes3D row is.
+    reference_exponent_shapes3d: float = -0.2631
+    #: The two filed companions (§11b).  ⛔ Reported as a distance table; ⛔ neither
+    #: may be promoted to "the prediction" afterwards.
+    companion_pure_factor_count: float = -0.400
+    companion_carried_offset: float = -0.316
+    #: The dataset whose exponent the directional claim says is STEEPER.
+    steeper_dataset: str = "dsprites"
+    reference_dataset: str = "shapes3d"
+
+    make_plots: bool = True
+    skip_if_exists: bool = True
+    out_root: Optional[str] = None
+    claude_root: Optional[str] = None
+
+    # --- quick (⚠ plumbing smoke only — ⛔ a quick number is NEVER reported) --
+    quick_seeds: List[int] = field(default_factory=lambda: [0])
+    #: ⭐ The ENDPOINTS are NOT reduced by ``--quick``: :func:`assert_shared_grid`
+    #: is this spoke's named falsifier ("a different M range is not comparable"),
+    #: so the smoke exercises the REAL gate over the REAL range.
+    quick_m_grid: List[int] = field(default_factory=lambda: [4, 16, 186])
+    quick_n_store_train: int = 2048
+    quick_n_spread_train: int = 512
+    quick_n_spread_test: int = 256
+    quick_n_corr: int = 1024
+    quick_spectrum_rows: int = 1024
+    quick_store_train_steps: int = 30
+    quick_verify_cache_checksum: bool = False
+
+
+def gen_codebook_exponent_config(
+    config: Optional["CHLUConfig"] = None, **overrides
+) -> GenCodebookExponentConfig:
+    """Return (and memoise on ``config``) the codebook-exponent block.
+
+    ⛔ Deliberately **not** a ``CHLUConfig`` field, for the same reason
+    :func:`gen_codebook_alloc_config` is not: the merge rule for this file's tail is
+    "take the peer's whole file and re-apply your block by its BEGIN/END markers",
+    which only holds if the block is one contiguous region with **zero** house
+    wiring sites.
+    """
+    cfg = getattr(config, "gen_codebook_exponent", None) if config is not None else None
+    if cfg is None:
+        cfg = GenCodebookExponentConfig()
+        if config is not None:
+            object.__setattr__(config, "gen_codebook_exponent", cfg)
+    for k, v in overrides.items():
+        if v is not None and hasattr(cfg, k):
+            setattr(cfg, k, v)
+    return cfg
+# --- END gen-dsprites-exponent -----------------------------------------------
