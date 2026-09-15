@@ -92,11 +92,21 @@ assert_roots() {
   # ⛔ Name the missing one. "artefacts missing" an hour into a GPU hour is the
   # expensive failure; "CHLU_GEN_STORE_RUNS -> /var/chlu/artefacts/outputs/..."
   # is a fix.
+  # ⚠ Not a bare `-e`, unlike scripts/csf3/job_cpu_gen.sh: this file MAKES
+  # $CHLU_ARTEFACT_DIR before the fetch, so testing a directory for existence
+  # asks a question we already answered ourselves. An EMPTY root is a failed
+  # fetch, not a staged set -- measured on `gate1`, where the four derived roots
+  # fired and CHLU_CLAUDE_ROOT vacuously passed.
   local missing="" v p
   for v in $CHLU_ROOT_VARS; do
     eval "p=\$$v"
-    [ -e "$p" ] || missing="${missing}
+    if [ -d "$p" ]; then
+      [ -n "$(ls -A "$p" 2>/dev/null)" ] || missing="${missing}
+    $v -> $p   (EMPTY -- the fetch produced nothing)"
+    elif [ ! -e "$p" ]; then
+      missing="${missing}
     $v -> $p"
+    fi
   done
   if [ -n "$missing" ]; then
     echo "FATAL[startup]: gen artefact root(s) MISSING, by name:$missing" >&2

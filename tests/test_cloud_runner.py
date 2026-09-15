@@ -119,7 +119,11 @@ def artefact_tree(tmp_path: Path) -> Path:
                 "outputs/gen-feature-bridge/runs",
                 "outputs/gen-store-grouping/runs",
                 "outputs/gen-decoder-lift/winner"):
-        (root / rel).mkdir(parents=True, exist_ok=True)
+        d = root / rel
+        d.mkdir(parents=True, exist_ok=True)
+        # a staged root holds files; an empty one is a failed fetch and is
+        # refused (see test_an_EMPTY_root_is_refused_too)
+        (d / "staged.marker").write_text("x")
     return root
 
 
@@ -160,6 +164,19 @@ def test_a_missing_root_is_refused_BY_NAME(artefact_tree, victim):
         assert named == ROOT_VARS
     else:
         assert named == [victim]
+
+
+def test_an_EMPTY_root_is_refused_too(artefact_tree, tmp_path):
+    """startup.sh makes the artefact dir itself before fetching into it, so a bare
+    existence test asks a question it already answered. An empty root is a failed
+    fetch. (Measured on `gate1`: the four derived roots fired and CHLU_CLAUDE_ROOT
+    vacuously passed.)"""
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    r = sh(STARTUP, "--check", "roots", env={"CHLU_CLAUDE_ROOT": str(empty)})
+    assert r.returncode == 2
+    assert "CHLU_CLAUDE_ROOT" in r.stderr
+    assert "EMPTY" in r.stderr
 
 
 def test_roots_default_to_the_csf3_relative_layout(artefact_tree):
