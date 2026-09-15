@@ -309,9 +309,16 @@ def seams(tmp_path: Path):
         return p
 
     return {
-        "ok": _mk("launch_ok.sh", 'echo "fake launch $*"; exit 0'),
+        # `== created chlu-...` is the line that means a VM exists and is billing;
+        # the supervisor prices an attempt on its presence, not on wall clock.
+        "ok": _mk("launch_ok.sh",
+                  'echo "fake launch $*"; echo "== created chlu-j in us-central1-a"; exit 0'),
         "stockout": _mk("launch_stockout.sh",
                         'echo "FATAL: no zone in us-central1 had a free l4."; exit 1'),
+        "quota": _mk("launch_quota.sh",
+                     'echo "[quota] us-central1: REFUSING TO LAUNCH."; exit 1'),
+        "nothing": _mk("launch_nothing.sh",
+                       'echo "FATAL: image is pinned by TAG. Refusing."; exit 1'),
         "never_done": _mk("never.sh", "exit 1"),
         "always_done": _mk("always.sh", "exit 0"),
         "no_vm": _mk("novm.sh", 'echo ""'),
@@ -376,6 +383,27 @@ def test_stockout_backs_off_exponentially_and_is_charged_nothing(seams):
     state = json.loads((seams["dir"] / "state" / "j.json").read_text())
     assert state["stockouts"] == 4
     assert state["usd_estimated"] == 0.0             # a stockout creates no VM
+
+
+def test_a_quota_refusal_stops_instead_of_burning_the_attempt_budget(seams):
+    """Stock comes back; a quota metric of zero does not. Relaunching against it
+    reprints the same refusal until the cap fires."""
+    r = _run_sup(seams, "--job", "j", "--card", "l4", "--spot", "--max-attempts", "9",
+                 "--max-usd", "100", launch="quota")
+    assert r.returncode == 3
+    assert "does not" in r.stdout and "change by retrying" in r.stdout
+    assert "attempts used: 1 of 9" in r.stdout
+
+
+def test_an_attempt_that_created_no_vm_is_charged_nothing(seams):
+    """A refused launch bills nothing, so charging it would make the spend cap
+    refuse for spend that never happened."""
+    r = _run_sup(seams, "--job", "j", "--card", "l4", "--spot", "--max-attempts", "2",
+                 "--max-usd", "100", launch="nothing")
+    assert r.returncode == 4
+    assert "created NO VM" in r.stdout
+    state = json.loads((seams["dir"] / "state" / "j.json").read_text())
+    assert state["usd_estimated"] == 0.0
 
 
 def test_an_already_complete_job_launches_nothing(seams):

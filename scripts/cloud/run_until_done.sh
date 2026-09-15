@@ -160,14 +160,32 @@ while :; do
   T1="$(date -u +%s)"
   ELAPSED=$((T1 - T0))
 
-  # 4. price this attempt. A stockout creates no VM, so it costs nothing -- and
-  #    charging wall-clock for it would make the cap refuse far too early.
-  if grep -qiE "no zone in .* had a free|stock/availability, not quota" "$OUTF"; then
-    STOCKOUTS=$((STOCKOUTS + 1))
-    say "attempt $ATTEMPTS: STOCKOUT after ${ELAPSED}s -- no VM created, \$0.00"
+  # 4. ⛔ A QUOTA REFUSAL IS NOT TRANSIENT. Stock comes back; a quota metric of
+  #    zero does not, and relaunching against it burns the attempt budget to
+  #    reprint the same refusal. Stop, and hand the Head the actionable line the
+  #    preflight already wrote.
+  if grep -qE "REFUSING TO LAUNCH|quota preflight refused this launch" "$OUTF"; then
+    say "⛔ STOPPING: the quota preflight refused this card/region, and that does not"
+    say "   change by retrying. See $OUTF for the metric and the limit."
+    FINAL=quota_refused; break
+  fi
+
+  # 5. price this attempt. ⭐ The basis is WHETHER A VM WAS EVER CREATED, not the
+  #    launcher's wall clock: a stockout, a tag-pinned image and every other
+  #    refusal all create nothing, and charging them would make the spend cap
+  #    refuse far too early -- for spend that never happened.
+  CREATED=0; grep -q "^== created chlu-" "$OUTF" && CREATED=1
+  if [ "$CREATED" = "0" ]; then
+    COST=0
+    if grep -qiE "no zone in .* had a free|stock/availability, not quota" "$OUTF"; then
+      STOCKOUTS=$((STOCKOUTS + 1))
+      say "attempt $ATTEMPTS: STOCKOUT after ${ELAPSED}s -- no VM created, \$0.00"
+    else
+      say "attempt $ATTEMPTS: the launcher created NO VM after ${ELAPSED}s -- \$0.00. See $OUTF."
+    fi
     if is_done; then FINAL=done; break; fi
-    say "backing off ${CUR_BACKOFF}s before the next attempt (stock, not quota)"
-    write_state backoff "stockout; sleeping ${CUR_BACKOFF}s"
+    say "backing off ${CUR_BACKOFF}s before the next attempt (nothing was created, so nothing was spent)"
+    write_state backoff "no VM created; sleeping ${CUR_BACKOFF}s"
     nap "$CUR_BACKOFF"
     CUR_BACKOFF=$(( CUR_BACKOFF * 2 )); [ "$CUR_BACKOFF" -gt "$BACKOFF_MAX" ] && CUR_BACKOFF="$BACKOFF_MAX"
     continue
@@ -195,6 +213,7 @@ say "    attempts used: $ATTEMPTS of $MAX_ATTEMPTS   (stockouts $STOCKOUTS, inco
 say "    estimated spend: \$$SPENT of \$$MAX_USD   ($CHLU_PRICES_AS_OF)"
 say "    state: $STATE"
 [ "$FINAL" = "done" ] && exit 0
+[ "$FINAL" = "quota_refused" ] && exit 3
 [ "$FINAL" = "attempt_cap" ] && exit 4
 [ "$FINAL" = "spend_cap" ] && exit 5
 exit 1
