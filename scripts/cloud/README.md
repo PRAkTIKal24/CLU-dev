@@ -231,6 +231,48 @@ image pull, because all three cost minutes and neither check costs anything.
    * the **staged** decoder declares that recipe itself; and
    * `sha256(decoder_v1_s<seed>.pkl)` matches `pkl_sha256`, per seed.
 
+### ⭐ 5.2b The dataset is DOWNLOADED ON THE VM, never staged
+
+`gen-cloud-artefact-bridge` stages 44 files (1.95 GiB) and deliberately **not**
+`3dshapes.h5`: it comes from a public bucket whose owner pays the egress, so a VM
+download costs **$0.00** while staging it costs storage plus a 255 MiB upload.
+Its report calls this *"the only place the two platforms differ"*, and
+`startup.sh` closes it — the dataset name is read out of the experiment's own
+`--dataset` argument, and `chlu.data.<ds>.download_<ds>(verify=True)` (the
+function `chlu data <ds> --download` itself calls) asserts the sha256 **and** the
+exact byte count, so a truncated fetch fails loudly instead of yielding a short
+file. Measured on `gencell4`:
+
+```
+[dataset] shapes3d/3dshapes.h5: 267573662 bytes sha256=0a0f6ed9…be1785
+```
+
+⛔ **The CLI command is not used**, because it also *builds the split* — which the
+arm builds for itself moments later. The download is the part a job needs.
+
+### ⛔⛔ 5.2c KNOWN BLOCKER — the gen feature cache is PINNED TO THE DEVICE THAT WROTE IT
+
+`exp_gen_store._assert_cache_reencodes` re-encodes 64 cached rows through the
+frozen encoder and requires `max |delta| == 0.0` **exactly**. The shipped cache is
+`float16` and was written on CPU. On an L4, measured twice:
+
+| container env | `max \|delta\|` |
+|---|---|
+| default | `0.00390625` = 2⁻⁸ |
+| `JAX_DEFAULT_MATMUL_PRECISION=highest` + deterministic XLA | `0.001953125` = 2⁻⁹ |
+
+Those are **exactly one float16 ULP** at the affected element's magnitude (the 64
+rows top out at 4.13 ≈ 2², where one float16 ULP *is* 2⁻⁸). ⭐ The re-encode
+therefore agrees with the cache **to the last representable bit of the cache's own
+dtype** — and the check demands zero, which no cross-device float32 matmul can
+deliver. Forcing precision halves the delta and **cannot** reach zero.
+
+⇒ ⛔ **`gen_store` / `gen_cell` cannot run on any GPU against the current cache.**
+This is a `chlu/**` decision (a tolerance of one storage ULP, or a per-device
+cache), not a cloud-path defect: everything up to and including the arm's own
+decoder-hash assertion runs correctly on GCP. **Nothing else about the gen path
+is blocked** — the artefacts, the roots, the decoder and the dataset all work.
+
 ### ⭐⭐ 5.3 `run_until_done.sh` — the relaunch supervisor
 
 ⛔ **A fallback that needs a human to notice and relaunch is not a fallback.**
@@ -264,6 +306,15 @@ scripts/cloud/run_until_done.sh --job <job> --card l4 --spot \
   transition, plus one log per attempt.
 * Unknown flags are passed straight through to `launch.sh`. ⛔ The flag list is
   not re-declared here; two copies is how the two drift apart.
+* **It stops rather than retries on two classes of failure that retrying cannot
+  fix**: a **quota refusal** (stock comes back, a quota metric of zero does not)
+  and **two consecutive payload failures with no pre-emption** (`out/FAILED`
+  present, `out/PREEMPTED` absent — the VM ran and the unit failed, and the next
+  attempt reproduces it exactly). Exit codes: `0` done · `1` incomplete ·
+  `3` quota · `4` attempt cap · `5` spend cap · `6` payload.
+* ⚠ **Do not edit `startup.sh` while a supervisor is running.** `launch.sh`
+  uploads it as metadata at create time, so attempt *N+1* would run a different
+  launcher than attempt *N*.
 
 ### Checkpoint / resume contract
 - **Time-based**, not per-epoch: pre-emption does not wait for an epoch, so
