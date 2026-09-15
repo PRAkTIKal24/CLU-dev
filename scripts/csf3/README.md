@@ -45,12 +45,16 @@ your job exclusive use of its assigned GPUs** — no other job shares them.
 | File | Runs where | Purpose |
 |---|---|---|
 | `env.sh` | cluster (sourced by jobs) | venv activation + headless env vars (`MPLBACKEND=Agg`, `SCIKIT_LEARN_DATA`, JAX compile cache, `PYTHONUNBUFFERED`) |
-| `setup_env_job.sh` | cluster (sbatch, `serial`) | one-time env build **on a compute node** (internet): installs uv, `uv sync --frozen --extra cuda` |
+| `setup_env_job.sh` | cluster (sbatch, `serial`) | one-time env build **on a compute node** (internet): installs uv, `uv sync --frozen --extra cuda --extra eval --extra gen`. ⛔ **The `gen` extra carries h5py** — without it Shapes3D prep downloads 255 MB and dies at the split |
 | `job_cpu_smoke.sh` | cluster (sbatch, `serial`) | ~5-min CPU smoke: CLI, Agg plot, `pytest tests/test_core.py tests/test_data.py` |
 | `job_gpu_single.sh` | cluster (sbatch, `gpuA`) | one experiment on one A100; GPU preflight assert; `--export` knobs `EXP/PROJECT/SEED/EXTRA_ARGS` |
 | `job_gpu_array_seeds.sh` | cluster (sbatch, `gpuA`) | seed-sweep array; one A100 + one `projects/<prefix>_s<seed>` per task |
 | `push_repo.sh` | **laptop** | rsync repo **+ gitignored `uv.lock`** → `~/scratch/CHLU` |
 | `sync_project.sh` | **laptop** | `pull|push` of `projects/<name>/` artifacts (plots/results/models) |
+| `job_gpu_wells.sh` | cluster (sbatch, `gpuA`) | ⭐ route B: learned well placement on one A100. **Checkpointed + resumable** (`RESUME=1`), `--requeue`, `--signal=B:USR1@300`. Preflight asserts the artefact roots and the per-seed cache coverage **before** any GPU work |
+| `job_cpu_gen.sh` | cluster (sbatch, `multicore`) | ⭐ gen CPU sweeps (`exp_gen_atom_mean`, `exp_gen_baselines`) on the **`fatpou01`** account — ⛔ **not `gpu-free`, which has no CPU grant**. `-c` refuses > 84 (`MaxTRESPU`). Checkpointed + per-unit `skip_if_exists` |
+| `stage_artefacts.sh` | **laptop** | ⭐ pushes the gen artefact set (44 files, 1.95 GiB) → `~/scratch/CHLU/artefacts/`. ⛔ `push_repo.sh` excludes `.claude/`, so this is the **only** path for artefacts. Writes `stage_manifest.json` (sha256 + the loader that opens each file) |
+| `verify_artefacts.sh` | cluster (sbatch, `multicore`) | ⭐ re-checksums **and OPENS** every staged artefact through its real loader → `STAGED.json`. ⛔ A checksum-only gate passes a byte-perfect file that will not load |
 | `requirements-csf3.txt` | either | pinned pip fallback, generated from `uv.lock` (see §3.3) |
 
 ---
