@@ -465,3 +465,256 @@ def test_module_refuses_a_stage_that_is_not_its_own(capsys):
     from chlu.experiments.exp_gen_store import main
 
     assert main(["--stage", "encoder"]) == 2
+
+
+# ---------------------------------------------------------------------------
+# ⭐ the cache re-encode gate (``_assert_cache_reencodes``)
+#
+# The gate used to demand BIT-IDENTITY.  On an L40S (cluster job 20603452,
+# 2026-09-15) one element of 64 x 2048 crossed a float16 rounding boundary by
+# exactly 2^-8 — one float16 ULP in [4, 8) — and it convicted an encoder whose
+# parameter hash had already matched, blocking every gen stage on a GPU node.
+#
+# ⭐ The load-bearing test here is ``..._convicts_a_perturbed_encoder``: a gate that
+# cannot fail proves nothing, and loosening one is how a real defect gets through.
+# ---------------------------------------------------------------------------
+
+import equinox as eqx  # noqa: E402
+
+from chlu.core.gen_bridge import encode_images as _real_encode_images  # noqa: E402
+
+
+class _TinyEncoder(eqx.Module):
+    """A real (tiny) encoder: ``(C,H,W) -> (C,H,W)`` through a learned matrix, so
+    perturbing its parameters perturbs its outputs exactly as the frozen bridge
+    encoder would."""
+
+    W: jnp.ndarray
+    feat_shape: tuple = eqx.field(static=True)
+
+    def __call__(self, x):
+        flat = jnp.reshape(x, (-1,))
+        return jnp.reshape(flat @ self.W, self.feat_shape)
+
+
+def _reenc_fixture(n_rows=8, d=64, seed=0):
+    """``(cache_rows, features_float16_through_float32, cman)`` on exact float16 values.
+
+    ⭐ Values are drawn in [4, 8), the binade of the cluster incident, where one
+    float16 ULP is exactly ``0.00390625``.
+    """
+    rng = np.random.default_rng(seed)
+    raw = rng.uniform(4.0, 8.0, size=(n_rows, d)).astype(np.float32)
+    feats = raw.astype(np.float16).astype(np.float32)  # exact float16 values
+    cache_rows = np.arange(n_rows, dtype=np.int64)
+    cman = {"dtype": "float16", "D": d, "feat_shape": (1, 1, d), "n_rows": n_rows}
+    return cache_rows, feats, cman
+
+
+def _run_gate(monkeypatch, cache_rows, feats, cman, fresh_or_encoder, *, real_encoder=False,
+              images=None, n=64):
+    """Drive ``_assert_cache_reencodes`` with the data sources stubbed out.
+
+    Returns ``(stats_or_None, raised_or_None, log_lines)``.  ⭐ The log lines are
+    captured so the reported statistics can be asserted on a FAILING run too — the
+    gate must report always, pass or fail.
+    """
+    from chlu.experiments import exp_gen_store as X
+
+    imgs = np.zeros((cache_rows.size, 1, 1, cman["D"]), np.float32) if images is None else images
+    monkeypatch.setattr(X, "stream_images", lambda *a, **k: imgs)
+    if real_encoder:
+        monkeypatch.setattr(X, "encode_images", _real_encode_images)
+        encoder = fresh_or_encoder
+    else:
+        monkeypatch.setattr(X, "encode_images", lambda *a, **k: np.asarray(fresh_or_encoder))
+        encoder = object()
+
+    lines = []
+    cfg = get_default_config()
+    try:
+        stats = X._assert_cache_reencodes(
+            "shapes3d", cfg, encoder, cache_rows, feats, cman, n=n, log=lines.append
+        )
+        return stats, None, lines
+    except AssertionError as exc:
+        return None, exc, lines
+
+
+def test_reencode_gate_accepts_the_cluster_case_one_float16_ulp(monkeypatch):
+    """⭐ The exact defect: ONE element moved by ONE float16 ULP is the same encoder."""
+    cache_rows, feats, cman = _reenc_fixture()
+    fresh = feats.copy()
+    assert 4.0 <= fresh[3, 7] < 8.0
+    fresh[3, 7] = np.float32(fresh[3, 7] + np.float32(0.00390625))  # 2^-8, one ULP here
+
+    stats, raised, lines = _run_gate(monkeypatch, cache_rows, feats, cman, fresh)
+
+    assert raised is None, f"the gate convicted a one-ULP rounding difference: {raised}"
+    assert stats["max_abs_delta"] == 0.00390625
+    assert stats["max_ulp_delta"] == 1.0
+    assert stats["n_differing"] == 1
+    assert stats["frac_differing"] == 1 / feats.size
+    assert stats["n_checked"] == cache_rows.size  # ⛔ rows, for the two callers that log it
+    assert lines and "1.000 float16 ULP" in lines[0]
+
+
+def test_reencode_gate_tolerance_tracks_magnitude_not_a_global_ulp(monkeypatch):
+    """⛔ A single global ULP is wrong.  The SAME absolute delta must be 1 ULP at 4-8
+    and 8 ULP near 1.0 — so it is accepted there and convicted here."""
+    d = 64
+    cache_rows = np.arange(4, dtype=np.int64)
+    feats = np.full((4, d), 1.0, np.float32)  # ULP near 1.0 is 2^-10 = 0.0009765625
+    cman = {"dtype": "float16", "D": d, "feat_shape": (1, 1, d), "n_rows": 4}
+    fresh = feats.copy()
+    fresh[1, 5] = np.float32(1.0 + 0.00390625)  # the cluster's absolute delta, at 1.0
+
+    stats, raised, lines = _run_gate(monkeypatch, cache_rows, feats, cman, fresh)
+
+    assert raised is not None, "a 4-ULP move near 1.0 was excused by a too-loose bound"
+    assert "4.000 float16 ULP" in lines[0]
+    assert "4.000 ULP" in str(raised)
+
+
+# ⚠ equinox warns on the ``filter_jit(vmap(module))`` idiom that ``encode_images``
+# uses BY DESIGN; the vmapped callable is the whole encoder, which is the point.
+@pytest.mark.filterwarnings("ignore:\\s*\\nPossibly assigning a JAX-transformed callable")
+def test_reencode_gate_convicts_a_perturbed_encoder_POSITIVE_CONTROL(monkeypatch):
+    """⭐⭐ THE POSITIVE CONTROL.  A genuinely wrong encoder is still convicted, by
+    MANY ULP — the gate did not lose its teeth.
+
+    ⛔ An assertion never seen to fail is not evidence; this check is the only thing
+    standing between a swapped encoder and a silently invalid run.
+    """
+    d = 32
+    n_rows = 8
+    key = jax.random.PRNGKey(20_260_915)
+    kw, ki = jax.random.split(key)
+    W = jax.random.normal(kw, (d, d)) * 0.5 + 6.0  # outputs land in the [4, 8) binade
+    enc = _TinyEncoder(W=W, feat_shape=(1, 1, d))
+    imgs = np.asarray(jax.random.uniform(ki, (n_rows, 1, 1, d)), np.float32)
+
+    cache_rows = np.arange(n_rows, dtype=np.int64)
+    feats = (
+        _real_encode_images(enc, imgs, 512)
+        .astype(np.float16).astype(np.float32).reshape((n_rows, d))
+    )
+    cman = {"dtype": "float16", "D": d, "feat_shape": (1, 1, d), "n_rows": n_rows}
+
+    # the TRUE encoder passes at 0 ULP — otherwise the conviction below proves nothing
+    ok, raised_ok, lines_ok = _run_gate(
+        monkeypatch, cache_rows, feats, cman, enc, real_encoder=True, images=imgs
+    )
+    assert raised_ok is None, f"the gate convicted the encoder that wrote the cache: {raised_ok}"
+    assert ok["max_ulp_delta"] == 0.0 and ok["n_differing"] == 0
+
+    # ⭐ now a DIFFERENT encoder: a 1% perturbation of its parameters
+    wrong = eqx.tree_at(lambda m: m.W, enc, enc.W * 1.01)
+    bad, raised, lines = _run_gate(
+        monkeypatch, cache_rows, feats, cman, wrong, real_encoder=True, images=imgs
+    )
+
+    assert bad is None and raised is not None, "the gate did NOT convict a perturbed encoder"
+    assert lines, "the gate must report its statistics on a FAILING run too"
+    ulp = float(lines[0].split("= ")[-1].split(" float16")[0])
+    assert ulp > 10.0, f"a perturbed encoder was only {ulp} ULP away — the gate has no teeth"
+    assert "ULP" in str(raised)
+    # ⭐ the message says what was MEASURED; it does not accuse the (hash-matched) encoder
+    assert "this is NOT the encoder" not in str(raised)
+
+
+def test_reencode_gate_refuses_half_the_tensor_off_by_one_ulp(monkeypatch):
+    """⚠ Every element within 1 ULP is NOT enough: a rounding-boundary crossing touches
+    a handful of elements; half the tensor moving is a different computation."""
+    cache_rows, feats, cman = _reenc_fixture(n_rows=8, d=64)
+    fresh = feats.copy()
+    flat = fresh.reshape(-1)
+    flat[::2] = (flat[::2] + np.float32(0.00390625)).astype(np.float32)  # 1 ULP, 50%
+
+    stats, raised, lines = _run_gate(monkeypatch, cache_rows, feats, cman, fresh)
+
+    assert raised is not None, "half the tensor moved and the fraction bound did not fire"
+    assert "1.000 float16 ULP" in lines[0], "no element exceeded one ULP — the fraction bound fired"
+    assert "50.000%" in str(raised) and "1.000%" in str(raised)
+
+
+def test_reencode_gate_refuses_a_nan(monkeypatch):
+    """⛔ `nan > 0` is False, so a NaN would otherwise sail through every comparison."""
+    cache_rows, feats, cman = _reenc_fixture()
+    fresh = feats.copy()
+    fresh[0, 0] = np.float32("nan")
+
+    stats, raised, _ = _run_gate(monkeypatch, cache_rows, feats, cman, fresh)
+
+    assert raised is not None and "NaN" in str(raised)
+
+
+def test_reencode_gate_reports_the_five_fields_on_a_clean_pass(monkeypatch):
+    cache_rows, feats, cman = _reenc_fixture()
+
+    stats, raised, lines = _run_gate(monkeypatch, cache_rows, feats, cman, feats.copy())
+
+    assert raised is None
+    for field_ in ("max_abs_delta", "max_ulp_delta", "n_differing", "frac_differing", "n_checked"):
+        assert field_ in stats, field_
+    assert stats == {
+        "n_checked": 8, "n_elements": 512, "max_abs_delta": 0.0, "max_ulp_delta": 0.0,
+        "n_differing": 0, "frac_differing": 0.0, "n_nonfinite": 0,
+        "cache_dtype": "float16", "ulp_bound": 1.0, "frac_bound": 0.01,
+    }
+    assert lines and lines[0].lstrip().startswith("⭐ cache re-encode check: 8 rows")
+
+
+# ⚠ the task named FOUR callers; there are in fact 14 import sites, all binding the
+# same object.  The four named ones lead; the rest are pinned so they cannot drift.
+_REENC_CALLERS = [
+    "chlu.experiments.exp_gen_store",
+    "chlu.experiments.exp_gen_classifier",
+    "chlu.experiments.exp_gen_certificate",
+    "chlu.experiments.exp_gen_wells_route_b",
+    "chlu.experiments.exp_gen_atom_mean",
+    "chlu.experiments.exp_gen_attribution",
+    "chlu.experiments.exp_gen_baselines",
+    "chlu.experiments.exp_gen_cell",
+    "chlu.experiments.exp_gen_codebook_alloc",
+    "chlu.experiments.exp_gen_codebook_exponent",
+    "chlu.experiments.exp_gen_compose",
+    "chlu.experiments.exp_gen_dream",
+    "chlu.experiments.exp_gen_dynamical_read",
+    "chlu.experiments.exp_gen_variance_eq",
+]
+
+
+def test_reencode_gate_signature_is_unchanged():
+    """⛔ Callers pass positionally through ``cman``; the signature only ever gains."""
+    import inspect
+
+    from chlu.experiments import exp_gen_store as X
+
+    assert list(inspect.signature(X._assert_cache_reencodes).parameters) == [
+        "dataset", "config", "encoder", "cache_rows", "features", "cman", "n", "log"
+    ]
+
+
+@pytest.mark.parametrize("mod_name", _REENC_CALLERS)
+def test_reencode_gate_callers_still_work_unchanged(monkeypatch, mod_name):
+    """⛔ The signature and the returned dict stay backward compatible: every caller
+    imports the same object and their exact call form still works."""
+    import importlib
+
+    from chlu.experiments import exp_gen_store as X
+
+    mod = importlib.import_module(mod_name)
+    assert mod._assert_cache_reencodes is X._assert_cache_reencodes
+
+    cache_rows, feats, cman = _reenc_fixture()
+    monkeypatch.setattr(X, "stream_images", lambda *a, **k: np.zeros((8, 1, 1, 64), np.float32))
+    monkeypatch.setattr(X, "encode_images", lambda *a, **k: feats.copy())
+    cfg = get_default_config()
+
+    # the exact call form all four sites use: positional through `cman`, then log=
+    out = mod._assert_cache_reencodes(
+        "shapes3d", cfg, object(), cache_rows, feats, cman, log=lambda _m: None)
+    # two callers do `reenc.get('n_checked')` and print it as a ROW count
+    assert out.get("n_checked") == 8
+    assert out["max_abs_delta"] == 0.0
