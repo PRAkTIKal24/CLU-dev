@@ -51,6 +51,21 @@
 #        --return-pack SLUG · --return-out PATH · --return-ingest TAR · --dest DIR
 #        -h|--help
 #
+#   ⭐ THE PER-HUB ARTEFACT REQUIREMENT (§2b). Every artefact a hub's task file names in
+#     backticks is a requirement of that hub's bundle, and an unmet one is a REFUSAL that
+#     names the path. ⛔ A charter can no longer promise an input the bundle omits.
+#     --print-requirements     show the verdict for a task file; build nothing
+#     --require PATH           add a requirement       (repeatable)
+#     --exclude-require PATH   drop one                (repeatable)
+#     --no-charter-requires    ⛔ derive none — the class of omission is open again
+#
+#   ⭐ THE SUPPLEMENT — top up a workspace a hub may ALREADY BE RUNNING IN, ⛔ without
+#     rebuilding 2.1 GB and ⛔ without replacing one byte of it:
+#     scripts/bundle_hub_workspace.sh --supplement --hub hub-refusal --supplement-out ~/s.tar.gz
+#     scripts/bundle_hub_workspace.sh --supplement-apply ~/s.tar.gz --dest <the workspace>
+#     ⛔ apply NEVER overwrites: identical files are kept, differing ones are written
+#        beside the original as `<name>.supplement-<utc>` and reported.
+#
 # ⚠ macOS has no `timeout` and no GNU coreutils by default; everything here is
 #   POSIX-ish + `shasum`/`sha256sum` fallback, the same way stage_artefacts.sh does it.
 
@@ -101,6 +116,248 @@ fi
 bytes_of() { wc -c < "$1" | tr -d ' '; }
 
 # ---------------------------------------------------------------------------
+# ⛔⛔ APPLE DOUBLE ("._*") — 54 OF THEM REACHED THE FAR SIDE AND `git fsck` FAILED.
+#
+# `refs/heads/._main` is a MALFORMED REF (`badRefName`), `.git/objects/XX/._<sha>` are
+# BAD SHA1 FILES, and `._pack-*.idx` SHADOWS the real pack index on every git call.
+# ⚠ `git worktree add` is a hub's literal FIRST move (agent profile §0.2) and
+# `git bundle create` is how its code comes home — both write refs and read the object
+# store. ⛔ This is the hub's critical path, not cosmetics.
+#
+# ⭐⭐ WHY NOBODY SAW IT ON THIS MACHINE, AND IT IS NOT SUBTLE:
+#   macOS `tar` (bsdtar) writes ONE `._<name>` member PER ENTRY — and then HIDES THEM
+#   AGAIN on `tar -t` and `tar -x`, because it knows they are its own metadata. GNU tar,
+#   on the far side, has no such knowledge and writes every one of them out as an
+#   ORDINARY FILE. ⇒ A check run with macOS `tar` sees a clean archive and the far side
+#   still gets broken refs and bad objects.
+#   ⭐ MEASURED on one bundle, same tarball, two readers:
+#       bsdtar `tar -tzf` : 1193 members,    0 AppleDouble
+#       python `tarfile`  : 2386 members, 1193 AppleDouble
+#   ⛔ So "our local .git has ZERO ._ files" was never the question: they are created
+#      IN TRANSIT, by the tar, exactly as reported.
+#
+# ⭐ THE FIX, AT CREATION — ⛔ never by deleting anything on the far side:
+#   1. COPYFILE_DISABLE=1 (+ the legacy COPY_EXTENDED_ATTRIBUTES_DISABLE) and
+#      --no-mac-metadata / --no-xattrs: there is then no metadata to emit, and nothing
+#      for a later copy onto exFAT/SMB to materialise as a sidecar either. ⭐ Probed,
+#      ⛔ not assumed: GNU tar has neither flag, bsdtar has both.
+#   2. --exclude: a `._*` or `.DS_Store` ALREADY on disk is never archived. ⚠ Two
+#      patterns, because both tars match `--exclude` against the whole member path.
+#      ⛔ These are two NAMED patterns, ⛔ never a blanket dotfile filter — a hub's own
+#      `.PREREG` or `.checkpoint` must still travel.
+#   3. `assert_no_apple_double`: every archive this script writes is read back with
+#      PYTHON, which sees what GNU tar will see, and the build REFUSES if any survive.
+# ---------------------------------------------------------------------------
+TAR_CLEAN_OPTS=()
+for _opt in --no-mac-metadata --no-xattrs; do
+    if tar "$_opt" --version >/dev/null 2>&1; then TAR_CLEAN_OPTS+=("$_opt"); fi
+done
+TAR_AD_EXCLUDE=(--exclude '._*' --exclude '*/._*' --exclude '.DS_Store' --exclude '*/.DS_Store')
+
+chlu_tar() {   # ⭐ the ONLY tar in this script, create or extract
+    COPYFILE_DISABLE=1 COPY_EXTENDED_ATTRIBUTES_DISABLE=1 \
+        tar "${TAR_CLEAN_OPTS[@]+"${TAR_CLEAN_OPTS[@]}"}" "${TAR_AD_EXCLUDE[@]}" "$@"
+}
+
+assert_no_apple_double() {   # $1 = archive path
+    # ⛔ Read with python, ⛔ NOT with `tar -t`: macOS tar hides exactly the members
+    #    we are looking for. This is the check the far side would otherwise perform
+    #    for us, six hours in, as a `git fsck` failure.
+    AD_TAR="$1" "$PY_BIN" - <<'ADPY' || die "the archive $1 carries AppleDouble members — ⛔ refusing to ship a tar that breaks git on the far side"
+import os, sys, tarfile
+p = os.environ["AD_TAR"]
+with tarfile.open(p) as t:
+    bad = [n for n in t.getnames() if n.rsplit("/", 1)[-1].startswith("._")]
+if bad:
+    print("FATAL[bundle_hub_workspace]: %d AppleDouble member(s) in %s, e.g. %s"
+          % (len(bad), p, ", ".join(bad[:5])), file=sys.stderr)
+    sys.exit(1)
+print("[bundle] apple-double: 0 members in %s (read with python, ⛔ not with macOS tar)" % p)
+ADPY
+}
+
+# ---------------------------------------------------------------------------
+# ⭐⭐ 2b. THE PER-HUB ARTEFACT REQUIREMENT — DERIVED FROM THE HUB'S OWN CHARTER.
+#
+# ⛔ THE DEFECT THIS CLOSES. `hub-refusal`'s charter calls itself "the cheapest
+# unclaimed target" because "it is scored off artefacts that already exist" — and
+# NEITHER of the two it names was in the bundle. On the far side it was therefore the
+# most EXPENSIVE target, not the cheapest, and the hub would have discovered that after
+# it had already spent hours of its ten.
+#
+# ⛔ Hardcoding those two paths would fix one bundle and leave the CLASS open: the next
+# charter promises a different input and the same silence happens again.
+# ⭐ So the CHARTER IS THE DECLARATION. Every artefact a hub's task file names in
+#   backticks becomes a REQUIREMENT of that hub's bundle, and a requirement that cannot
+#   be resolved is a REFUSAL that names the path. A charter can no longer promise an
+#   input the bundle does not carry, because the bundle is built FROM the promise.
+#
+# ⭐ THE RULES, stated so a charter author can predict them (`--print-requirements`
+#   shows the verdict for any task file without building anything):
+#   * a candidate is a BACKTICKED token containing "/", not absolute, no ".." segment,
+#     and ending either in a file extension or in "/" (a directory).
+#     ⇒ `hub/refusal` (a branch) and `exp_gen_baselines.py:1562` (a call site) are not
+#       candidates; `.claude/outputs/gen-read-cell-arm/runs/` and
+#       `gen-val-split-fix/refusal_scores.json` are.
+#   * ".claude/…" resolves under $CHLU_CLAUDE_ROOT. A bare "slug/…" resolves under
+#     $CHLU_CLAUDE_ROOT/outputs/ when its first segment is an existing output slug or
+#     has a slug's shape — that is how the charter's own `gen-val-split-fix/…` is found.
+#   * ⛔ THE HUB'S OWN WRITE PATH IS NEVER A REQUIREMENT. `.claude/outputs/<slug>/**`
+#     and `<slug>.md` are what the hub PRODUCES (agent profile §0.3); requiring them
+#     would refuse every bundle, since they do not exist yet.
+#   * ⛔ A candidate whose ⛔/⚠/⭐-delimited clause marks it SUPERSEDED / "never quote" /
+#     "never ship" is an EXCLUSION, ⛔ not a requirement — and an exclusion WINS over a
+#     requirement for the same path. This is how `gen-arms-a7-wiring/refusal_scores.json`
+#     stays off the far side while `gen-val-split-fix/refusal_scores.json`, named one
+#     clause earlier ON THE SAME LINE, is shipped.
+#   * everything else in the charter is ignored, ⛔ silently and on purpose.
+#
+# ⭐ Escape hatches, because a derivation must never become a cage:
+#     --require PATH           an extra requirement (repeatable)
+#     --exclude-require PATH   drop one (repeatable)
+#     --no-charter-requires    derive nothing; ⛔ then the class is open again, so say so
+# ---------------------------------------------------------------------------
+derive_hub_requirements() {   # $1=task file  $2=slug  $3=json-summary out ; prints TSV rows
+    HR_TASK="$1" HR_SLUG="$2" HR_JSON="$3" HR_CLAUDE="$SRC_CLAUDE" \
+    HR_EXTRA="$(printf '%s\n' "${REQUIRE_EXTRA[@]+"${REQUIRE_EXTRA[@]}"}")" \
+    HR_DROP="$(printf '%s\n' "${REQUIRE_DROP[@]+"${REQUIRE_DROP[@]}"}")" \
+    "$PY_BIN" - <<'REQPY'
+import json, os, re, sys
+from pathlib import Path
+
+e = os.environ.get
+task = Path(e("HR_TASK"))
+slug = e("HR_SLUG")
+claude = Path(e("HR_CLAUDE"))
+text = task.read_text(encoding="utf-8", errors="replace")
+
+BACKTICK = re.compile(r"`([^`\n]+)`")
+CLAUSE_SPLIT = re.compile(r"[⛔⚠⭐]+")          # ⛔ ⚠ ⭐
+NEGATION = re.compile(r"SUPERSEDED|never quote|never ship|do not ship|do not quote"
+                      r"|not shipping|DEPRECATED|superseded", re.I)
+HAS_SUFFIX = re.compile(r"\.[A-Za-z0-9]{1,6}$")
+SLUG_SHAPE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)+$")
+
+#: ⭐ An artefact with no loader cannot be OPENED, and opening it is the test. ⛔ So an
+#   unmapped suffix is a REFUSAL, not a silently-shipped byte blob.
+BY_SUFFIX = {".json": "json", ".npy": "npy", ".npz": "npz", ".md": "doc", ".txt": "doc",
+             ".log": "doc", ".out": "doc", ".csv": "doc", ".py": "code", ".sh": "code",
+             ".eqx": "eqx_pickle", ".pkl": "eqx_pickle"}
+SKIP_NAMES = {".DS_Store", ".workspace-write-probe.json"}
+
+
+def candidates(raw):
+    """Every backticked token in `raw` that could name an artefact, with its verdict."""
+    for line in raw.splitlines():
+        for clause in CLAUSE_SPLIT.split(line):
+            banned = bool(NEGATION.search(clause))
+            for tok in BACKTICK.findall(clause):
+                # ⛔ rstrip only: `.strip(".")` ate the leading dot of every
+                #    `.claude/…` token and silently turned it into a non-candidate.
+                tok = tok.strip().rstrip(",;: ")
+                if "/" not in tok or tok.startswith("/") or ".." in Path(tok).parts:
+                    continue
+                if not (tok.endswith("/") or HAS_SUFFIX.search(tok)):
+                    continue                       # `hub/refusal` is a branch, not a path
+                yield tok, banned
+
+
+def resolve(tok):
+    """(bundle-relative path, source path) or None when the token is not an artefact."""
+    t = tok.rstrip("/")
+    if t.startswith(".claude/"):
+        return ".claude/" + t[len(".claude/"):], claude / t[len(".claude/"):]
+    head = t.split("/", 1)[0]
+    if (claude / "outputs" / head).is_dir() or SLUG_SHAPE.match(head):
+        return ".claude/outputs/" + t, claude / "outputs" / t
+    return None                                    # `scripts/csf3/stage_artefacts.sh`
+
+
+def is_the_hubs_own_output(rel):
+    return rel in (".claude/outputs/%s.md" % slug,) or \
+        rel.startswith(".claude/outputs/%s/" % slug) or rel == ".claude/outputs/" + slug
+
+
+required, excluded, ignored = {}, {}, []
+for tok, banned in candidates(text):
+    r = resolve(tok)
+    if r is None:
+        ignored.append(tok)
+        continue
+    rel, src = r
+    if is_the_hubs_own_output(rel):
+        ignored.append(tok + "  (the hub's OWN write path — it produces this)")
+        continue
+    (excluded if banned else required)[rel] = (src, tok)
+
+for extra in filter(None, (e("HR_EXTRA") or "").splitlines()):
+    r = resolve(extra if extra.startswith(".claude/") else extra)
+    if r is None:
+        sys.exit("FATAL[bundle_hub_workspace]: --require %r does not resolve under %s"
+                 % (extra, claude))
+    required[r[0]] = (r[1], "--require")
+for drop in filter(None, (e("HR_DROP") or "").splitlines()):
+    r = resolve(drop)
+    if r is not None:
+        excluded[r[0]] = (r[1], "--exclude-require")
+
+# ⛔ An exclusion WINS. A superseded artefact must never reach the far side, even if
+#    some other clause of the same charter also names it.
+for rel in list(required):
+    if rel in excluded:
+        del required[rel]
+
+missing = sorted(rel for rel, (src, _) in required.items() if not (src.is_file() or src.is_dir()))
+if missing:
+    print("FATAL[bundle_hub_workspace]: ⛔ %s declares %d artefact requirement(s) that do "
+          "not exist — ⛔ REFUSING to build a workspace whose charter promises inputs the "
+          "bundle cannot carry:" % (task, len(missing)), file=sys.stderr)
+    for rel in missing:
+        print("  ⛔ MISSING  %-60s (expected at %s)" % (rel, required[rel][0]), file=sys.stderr)
+    print("  ⭐ Fix the charter, stage the artefact, or pass --exclude-require <path>.",
+          file=sys.stderr)
+    sys.exit(3)
+
+rows, resolved, nofit = [], [], []
+for rel in sorted(required):
+    src, tok = required[rel]
+    files = [src] if src.is_file() else sorted(q for q in src.rglob("*") if q.is_file())
+    for f in files:
+        if f.name in SKIP_NAMES or f.name.startswith("._"):
+            continue
+        how = BY_SUFFIX.get(f.suffix)
+        if how is None:
+            nofit.append(str(f))
+            continue
+        sub = ".claude/" + str(f.relative_to(claude)).replace(os.sep, "/")
+        rows.append((sub, str(f), how, "hub-requirement",
+                     "declared by %s as `%s`; ⛔ without it that charter's own premise "
+                     "('scored off artefacts that already exist') is false on the far side"
+                     % (task.name, tok)))
+    resolved.append({"token": tok, "path": rel, "is_dir": src.is_dir(), "n_files": len(files)})
+
+if nofit:
+    print("FATAL[bundle_hub_workspace]: ⛔ no loader for %d required file(s), e.g. %s — "
+          "an artefact that cannot be OPENED cannot be verified, and opening it is the "
+          "test. ⭐ Add the suffix to BY_SUFFIX and a loader to verify_hub_workspace.sh."
+          % (len(nofit), ", ".join(nofit[:3])), file=sys.stderr)
+    sys.exit(3)
+
+for r in rows:
+    print("\t".join(r))
+
+if e("HR_JSON"):
+    Path(e("HR_JSON")).write_text(json.dumps({
+        "hub": slug, "task_file": str(task), "n_files": len(rows),
+        "required": resolved,
+        "excluded": [{"path": rel, "token": tok, "why": "⛔ marked superseded/never-ship "
+                      "in its own clause of the charter"} for rel, (_, tok) in sorted(excluded.items())],
+        "ignored_tokens": sorted(set(ignored)),
+    }, indent=2) + "\n", encoding="utf-8")
+REQPY
+}
+
+# ---------------------------------------------------------------------------
 # Args
 # ---------------------------------------------------------------------------
 SRC_ROOT="${CHLU_ROOT:-$CHLU_ROOT_DEFAULT}"
@@ -121,9 +378,14 @@ RETURN_SLUG=""
 RETURN_OUT=""
 RETURN_TAR=""
 DEST=""
+REQUIRE_EXTRA=()
+REQUIRE_DROP=()
+CHARTER_REQUIRES=1
+SUPP_OUT=""
+SUPP_TAR=""
 PY_BIN="${BUNDLE_PYTHON:-python3}"
 
-usage() { sed -n '2,60p' "${BASH_SOURCE[0]}"; exit "${1:-1}"; }
+usage() { sed -n '2,78p' "${BASH_SOURCE[0]}"; exit "${1:-1}"; }
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -144,6 +406,13 @@ while [ $# -gt 0 ]; do
         --return-out)     RETURN_OUT="${2:?--return-out needs a path}"; shift ;;
         --return-ingest)  MODE="return-ingest"; RETURN_TAR="${2:?--return-ingest needs a tar}"; shift ;;
         --dest)           DEST="${2:?--dest needs a dir}"; shift ;;
+        --require)        REQUIRE_EXTRA+=("${2:?--require needs a path}"); shift ;;
+        --exclude-require) REQUIRE_DROP+=("${2:?--exclude-require needs a path}"); shift ;;
+        --no-charter-requires) CHARTER_REQUIRES=0 ;;
+        --print-requirements)  MODE="print-requirements" ;;
+        --supplement)     MODE="supplement" ;;
+        --supplement-out) SUPP_OUT="${2:?--supplement-out needs a path}"; shift ;;
+        --supplement-apply) MODE="supplement-apply"; SUPP_TAR="${2:?--supplement-apply needs a tar}"; shift ;;
         -h|--help)        usage 0 ;;
         *) echo "unknown flag: $1" >&2; usage 1 ;;
     esac
@@ -152,6 +421,268 @@ done
 
 SRC_ROOT="$(cd "$SRC_ROOT" 2>/dev/null && pwd)" || die "no source root at '$SRC_ROOT'"
 command -v "$PY_BIN" >/dev/null 2>&1 || die "no python at '$PY_BIN' (stdlib json only)"
+
+# ---------------------------------------------------------------------------
+# Shared: resolve one hub's task file (build, --print-requirements and --supplement
+# all need it). ⛔ `die` inside $( ) exits only the subshell, so callers check the rc.
+# ---------------------------------------------------------------------------
+resolve_hub_task() {   # $1=slug $2=index-in-HUBS
+    local hub="$1" idx="$2" override="" src
+    case "$hub" in */*|..*|"") die "hub slug '$hub' must be a bare name" ;; esac
+    if [ "${#HUB_TASKS[@]}" -gt "$idx" ]; then override="${HUB_TASKS[$idx]}"; fi
+    if [ -n "$override" ]; then
+        [ -f "$override" ] || die "--hub-task '$override' does not exist"
+        printf '%s\n' "$override"; return 0
+    fi
+    src="$SRC_CLAUDE/tasks/$hub.md"
+    [ -f "$src" ] || die "no task file at $src.
+  ⛔ A hub with no charter of its own is not a hub — it is ten unsupervised hours with no question.
+  ⭐ Write .claude/tasks/$hub.md first, or pass --hub-task <path> to point at it."
+    printf '%s\n' "$src"
+}
+
+# Collect every hub's requirement rows into $1, and their JSON summaries into $2/.
+collect_hub_requirements() {   # $1=rows out  $2=json dir
+    local out="$1" jdir="$2" i=0 hub taskf
+    : > "$out"
+    mkdir -p "$jdir"
+    [ "$CHARTER_REQUIRES" = "1" ] || {
+        say "requirements: ⛔ SKIPPED (--no-charter-requires) — the class of omission this"
+        say "              closes is open again for this build. ⚠ Say so in the report."
+        return 0
+    }
+    for hub in "${HUBS[@]}"; do
+        taskf="$(resolve_hub_task "$hub" "$i")" || exit 2
+        [ -n "$taskf" ] || exit 2
+        derive_hub_requirements "$taskf" "$hub" "$jdir/$hub.json" >> "$out" \
+            || die "⛔ $hub's charter declares an artefact requirement this machine cannot meet (above). Refusing to build a workspace that would strand it."
+        say "requirements: $hub -> $(wc -l < "$out" | tr -d ' ') file(s) so far (from $(basename "$taskf"))"
+        i=$((i + 1))
+    done
+}
+
+# ===========================================================================
+# ⭐ MODE: print-requirements — the verdict for a charter, ⛔ building nothing.
+# ===========================================================================
+if [ "$MODE" = "print-requirements" ]; then
+    chlu_derive_roots "$SRC_ROOT"
+    SRC_CLAUDE="$CHLU_CLAUDE_ROOT"
+    [ -d "$SRC_CLAUDE" ] || die "no .claude at $SRC_CLAUDE — pass --src <primary checkout>"
+    [ "${#HUBS[@]}" -gt 0 ] || die "--print-requirements needs at least one --hub SLUG"
+    PR_RC=0
+    i=0
+    for hub in "${HUBS[@]}"; do
+        taskf="$(resolve_hub_task "$hub" "$i")" || exit 2
+        J="$(mktemp -t chlu_req.XXXXXX)"
+        say "=== $hub  ($taskf) ==="
+        if derive_hub_requirements "$taskf" "$hub" "$J" >/dev/null; then
+            PR_J="$J" "$PY_BIN" - <<'PRPY'
+import json, os
+d = json.load(open(os.environ["PR_J"], encoding="utf-8"))
+print("  files to ship : %d" % d["n_files"])
+for r in d["required"]:
+    print("  ⭐ REQUIRED  %-58s %s" % (r["path"], "(%d files)" % r["n_files"] if r["is_dir"] else ""))
+for x in d["excluded"]:
+    print("  ⛔ EXCLUDED  %-58s %s" % (x["path"], x["why"]))
+for t in d["ignored_tokens"]:
+    print("     ignored   %s" % t)
+PRPY
+        else
+            PR_RC=1
+        fi
+        rm -f "$J"
+        i=$((i + 1))
+    done
+    exit "$PR_RC"
+fi
+
+# ===========================================================================
+# ⭐ MODE: supplement — a TOP-UP tarball carrying just a hub's declared artefacts.
+# ===========================================================================
+# ⚠ A workspace may already be built, verified and HAVE A HUB RUNNING IN IT. Rebuilding
+# 2.1 GB to add 210 MB would mean rewriting every file underneath that hub. ⛔ So the
+# supplement carries ONLY the §2b requirement rows, and `--supplement-apply` never
+# replaces a byte that is already there.
+if [ "$MODE" = "supplement" ]; then
+    chlu_derive_roots "$SRC_ROOT"
+    SRC_CLAUDE="$CHLU_CLAUDE_ROOT"
+    [ -d "$SRC_CLAUDE" ] || die "no .claude at $SRC_CLAUDE — pass --src <primary checkout>"
+    [ "${#HUBS[@]}" -gt 0 ] || die "--supplement needs --hub SLUG"
+    SUPP_OUT="${SUPP_OUT:-$PWD/${HUBS[0]}.supplement.tar.gz}"
+    case "$SUPP_OUT" in /*) : ;; *) SUPP_OUT="$PWD/$SUPP_OUT" ;; esac
+    if [ -e "$SUPP_OUT" ] && [ "$FORCE" != "1" ]; then
+        die "$SUPP_OUT exists — ⛔ refusing to overwrite (use --force)"
+    fi
+
+    SUP_ROWS="$(mktemp -t chlu_supp_rows.XXXXXX)"
+    SUP_JDIR="$(mktemp -d -t chlu_supp_json.XXXXXX)"
+    SUP_STAGE="$(mktemp -d -t chlu_supp_stage.XXXXXX)"
+    SUP_LIST="$(mktemp -t chlu_supp_list.XXXXXX)"
+    trap 'rm -rf "$SUP_ROWS" "$SUP_JDIR" "$SUP_STAGE" "$SUP_LIST"' EXIT
+    collect_hub_requirements "$SUP_ROWS" "$SUP_JDIR"
+    [ -s "$SUP_ROWS" ] || die "${HUBS[*]} declares no artefact requirement — ⛔ nothing to supplement"
+
+    SUP_MF="$SUP_STAGE/SUPPLEMENT_MANIFEST.json"
+    SP_ROWS="$SUP_ROWS" SP_CLAUDE="$SRC_CLAUDE" SP_HUBS="${HUBS[*]}" SP_MF="$SUP_MF" \
+    SP_LIST="$SUP_LIST" SP_HOST="$(hostname)" SP_ROOT="$SRC_ROOT" \
+    "$PY_BIN" - <<'SPPY' || die "could not build the supplement manifest"
+import datetime as _dt, hashlib, json, os
+from pathlib import Path
+e = os.environ.get
+claude = Path(e("SP_CLAUDE"))
+files, seen, total = [], set(), 0
+with open(e("SP_ROWS"), encoding="utf-8") as fh:
+    for line in fh:
+        line = line.rstrip("\n")
+        if not line:
+            continue
+        rel, src, how, kind, loader = line.split("\t", 4)
+        # members are stored RELATIVE TO `.claude/`, so the tar needs no staging copy
+        sub = rel[len(".claude/"):]
+        if sub in seen:
+            continue
+        seen.add(sub)
+        if sub == "SUPPLEMENT_MANIFEST.json":
+            raise SystemExit("FATAL: an artefact named SUPPLEMENT_MANIFEST.json would "
+                             "collide with the supplement's own manifest")
+        p = Path(src)
+        h = hashlib.sha256()
+        with open(p, "rb") as f:
+            for blk in iter(lambda: f.read(1 << 20), b""):
+                h.update(blk)
+        b = p.stat().st_size
+        total += b
+        files.append({"path": sub, "bytes": b, "sha256": h.hexdigest(),
+                      "loader": loader, "open_with": how, "kind": kind, "required": True})
+files.sort(key=lambda d: d["path"])
+Path(e("SP_LIST")).write_text("".join(f["path"] + "\n" for f in files), encoding="utf-8")
+Path(e("SP_MF")).write_text(json.dumps({
+    "schema": "chlu-hub-workspace-supplement/1",
+    "generated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+    "built_on_host": e("SP_HOST"), "built_from_root": e("SP_ROOT"),
+    "hubs": e("SP_HUBS", "").split(),
+    # ⭐ Every member path is relative to the workspace's `.claude/`. ⛔ Nothing in a
+    #    supplement may ever address anything outside it.
+    "member_root": ".claude",
+    "n_files": len(files), "total_bytes": total, "files": files,
+    "why": ("the artefacts these hubs' own charters declare (§2b). ⭐ Applied with "
+            "--supplement-apply, which tops a workspace up and ⛔ never replaces a byte."),
+}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+print("[bundle] supplement: %d file(s), %.3f GiB" % (len(files), total / 2**30))
+SPPY
+
+    mkdir -p "$(dirname "$SUPP_OUT")"
+    SUPP_TARBALL="${SUPP_OUT%.gz}"
+    chlu_tar -cf "$SUPP_TARBALL" -C "$SRC_CLAUDE" -T "$SUP_LIST"
+    chlu_tar -rf "$SUPP_TARBALL" -C "$SUP_STAGE" "SUPPLEMENT_MANIFEST.json"
+    assert_no_apple_double "$SUPP_TARBALL"
+    gzip -c "$SUPP_TARBALL" > "$SUPP_OUT"
+    rm -f "$SUPP_TARBALL"
+    say "supplement -> $SUPP_OUT  ($(bytes_of "$SUPP_OUT") bytes)"
+    say "sha256($(basename "$SUPP_OUT")) = $(sha256_of "$SUPP_OUT")"
+    say "⭐ apply it: scripts/bundle_hub_workspace.sh --supplement-apply $SUPP_OUT --dest <workspace>"
+    exit 0
+fi
+
+# ===========================================================================
+# ⭐ MODE: supplement-apply — TOP UP a workspace. ⛔ IT NEVER REPLACES A BYTE.
+# ===========================================================================
+if [ "$MODE" = "supplement-apply" ]; then
+    [ -f "$SUPP_TAR" ] || die "no supplement tar at $SUPP_TAR"
+    [ -n "$DEST" ] || die "--supplement-apply needs --dest <the workspace root>"
+    [ -d "$DEST" ] || die "--dest '$DEST' is not a directory — ⛔ a supplement tops up an EXISTING workspace"
+    DEST="$(cd "$DEST" && pwd)"
+    SA_TMP="$(mktemp -d -t chlu_supp_apply.XXXXXX)"
+    trap 'rm -rf "$SA_TMP"' EXIT
+    chlu_tar -xzf "$SUPP_TAR" -C "$SA_TMP"
+    [ -f "$SA_TMP/SUPPLEMENT_MANIFEST.json" ] || die "$SUPP_TAR carries no SUPPLEMENT_MANIFEST.json — ⛔ an undeclared tar is not applied"
+
+    SA_TMP="$SA_TMP" SA_DEST="$DEST" "$PY_BIN" - <<'SAPY'
+import datetime as _dt, hashlib, json, os, shutil, sys
+from pathlib import Path
+
+tmp = Path(os.environ["SA_TMP"]).resolve()
+dest = Path(os.environ["SA_DEST"]).resolve()
+mf = json.loads((tmp / "SUPPLEMENT_MANIFEST.json").read_text(encoding="utf-8"))
+if mf.get("schema") != "chlu-hub-workspace-supplement/1":
+    sys.exit("FATAL[bundle_hub_workspace]: not a chlu-hub-workspace-supplement/1")
+root = dest / mf.get("member_root", ".claude")
+
+def sha256_of(p):
+    h = hashlib.sha256()
+    with open(p, "rb") as f:
+        for blk in iter(lambda: f.read(1 << 20), b""):
+            h.update(blk)
+    return h.hexdigest()
+
+# --- the same refusals --return-ingest makes: nothing may address outside the set ---
+declared = {}
+bad = []
+for rec in mf["files"]:
+    rel = rec["path"]
+    p = Path(rel)
+    if p.is_absolute() or ".." in p.parts:
+        bad.append("%s: traversing path" % rel); continue
+    src = tmp / rel
+    if not src.is_file():
+        bad.append("%s: declared but not in the tar" % rel); continue
+    if src.is_symlink():
+        bad.append("%s: is a symlink" % rel); continue
+    if sha256_of(src) != rec["sha256"]:
+        bad.append("%s: sha256 mismatch" % rel); continue
+    declared[rel] = rec
+for p in sorted(tmp.rglob("*")):
+    if not p.is_file():
+        continue
+    rel = str(p.relative_to(tmp))
+    if rel != "SUPPLEMENT_MANIFEST.json" and rel not in declared:
+        bad.append("%s: present in the tar but NOT declared in the manifest" % rel)
+if bad:
+    print("FATAL[bundle_hub_workspace]: ⛔ refusing the supplement:", file=sys.stderr)
+    for b in bad:
+        print("  ⛔ " + b, file=sys.stderr)
+    sys.exit(2)
+
+stamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+n_new = n_same = n_kept = 0
+for rel, rec in sorted(declared.items()):
+    target = root / rel
+    if not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(tmp / rel, target)
+        n_new += 1
+        continue
+    if target.is_file() and sha256_of(target) == rec["sha256"]:
+        n_same += 1                     # already there, byte-identical: ⭐ a no-op
+        continue
+    # ⛔⛔ A HUB MAY BE RUNNING IN HERE. We do not replace it; we put ours beside it.
+    # ⚠ …but only once. A file that legitimately differs forever (a hub edited it) must
+    #    not gain one stamped copy per apply — that is litter accumulating inside a
+    #    running hub's own workspace, which is its own way of disturbing it.
+    already = [q for q in target.parent.glob(target.name + ".supplement-*")
+               if q.is_file() and sha256_of(q) == rec["sha256"]]
+    if already:
+        n_same += 1
+        continue
+    beside = target.with_name(target.name + ".supplement-" + stamp)
+    shutil.copy2(tmp / rel, beside)
+    n_kept += 1
+    print("[bundle] ⛔ NOT overwriting %s (differs) -> wrote %s" % (target, beside.name))
+
+# the supplement's own manifest lands beside the bundle's, ⛔ never on top of it
+mf_target = dest / "SUPPLEMENT_MANIFEST.json"
+if mf_target.exists():
+    mf_target = dest / ("SUPPLEMENT_MANIFEST-%s.json" % stamp)
+shutil.copy2(tmp / "SUPPLEMENT_MANIFEST.json", mf_target)
+
+print("[bundle] supplement applied to %s" % root)
+print("[bundle]   %d new · %d already identical (no-op) · %d differing, KEPT and written beside"
+      % (n_new, n_same, n_kept))
+print("[bundle]   manifest -> %s" % mf_target)
+print("[bundle] ⭐ re-run ./scripts/verify_hub_workspace.sh — it picks the supplement up.")
+SAPY
+    exit $?
+fi
 
 # ===========================================================================
 # ⭐ MODE: return-pack — run this ON THE FAR SIDE.
@@ -182,7 +713,8 @@ if [ "$MODE" = "return-pack" ]; then
         #    home. Excluded BY NAME — ⛔ never by a blanket dotfile filter, which
         #    would silently drop a hub's own `.PREREG` or `.checkpoint`.
         ( cd "$CHLU_HUB_OUTPUTS" && find "$SLUG" -type f \
-              ! -name ".workspace-write-probe.json" -print ) >> "$LIST"
+              ! -name ".workspace-write-probe.json" \
+              ! -name "._*" ! -name ".DS_Store" -print ) >> "$LIST"
     fi
     [ -s "$LIST" ] || die "nothing to return under $D"
 
@@ -234,8 +766,9 @@ PY
     # ⚠ Two roots, one archive. bsdtar (macOS) stops parsing options at the first
     # file operand, so `-C a f -C b -T list` silently treats `-T` as a filename.
     # Build in two passes instead — every invocation is options-only.
-    tar -cf  "$STAGE/pack.tar" -C "$CHLU_HUB_OUTPUTS" -T "$LIST"
-    tar -rf  "$STAGE/pack.tar" -C "$STAGE" "RETURN_MANIFEST.json"
+    chlu_tar -cf  "$STAGE/pack.tar" -C "$CHLU_HUB_OUTPUTS" -T "$LIST"
+    chlu_tar -rf  "$STAGE/pack.tar" -C "$STAGE" "RETURN_MANIFEST.json"
+    assert_no_apple_double "$STAGE/pack.tar"
     gzip -c  "$STAGE/pack.tar" > "$RETURN_OUT"
     say "packed $N file(s), $TOTAL bytes -> $RETURN_OUT"
     say "sha256($(basename "$RETURN_OUT")) = $(sha256_of "$RETURN_OUT")"
@@ -259,7 +792,7 @@ if [ "$MODE" = "return-ingest" ]; then
 
     TMP="$(mktemp -d -t chlu_ingest.XXXXXX)"
     trap 'rm -rf "$TMP"' EXIT
-    tar -xzf "$RETURN_TAR" -C "$TMP"
+    chlu_tar -xzf "$RETURN_TAR" -C "$TMP"
     [ -f "$TMP/RETURN_MANIFEST.json" ] || die "$RETURN_TAR has no RETURN_MANIFEST.json — ⛔ refusing an unmanifested return"
 
     SLUG="$("$PY_BIN" -c 'import json,sys;print(json.load(open(sys.argv[1]))["hub_slug"])' "$TMP/RETURN_MANIFEST.json")"
@@ -320,7 +853,7 @@ PY
     fi
     mkdir -p "$TARGET_DIR"
     if [ -d "$TMP/$SLUG" ]; then
-        ( cd "$TMP/$SLUG" && tar -cf - . ) | ( cd "$TARGET_DIR" && tar -xf - )
+        ( cd "$TMP/$SLUG" && chlu_tar -cf - . ) | ( cd "$TARGET_DIR" && chlu_tar -xf - )
     fi
     if [ -f "$TMP/$SLUG.md" ]; then cp "$TMP/$SLUG.md" "$TARGET_MD"; fi
     cp "$TMP/RETURN_MANIFEST.json" "$TARGET_DIR/RETURN_MANIFEST.json"
@@ -359,7 +892,7 @@ git -C "$SRC_ROOT" cat-file -e "${PIN}^{commit}" 2>/dev/null || die "pin $PIN is
 TAB="$(printf '\t')"
 ROWS="$(mktemp -t chlu_bundle_rows.XXXXXX)"
 STAGE_MF="$(mktemp -t chlu_bundle_stage.XXXXXX).json"
-trap 'rm -f "$ROWS" "$ROWS.hashed" "$ROWS.seen" "$ROWS.reg" "$ROWS.code" "$STAGE_MF"' EXIT
+trap 'rm -rf "$ROWS" "$ROWS.hashed" "$ROWS.seen" "$ROWS.reg" "$ROWS.code" "$ROWS.req" "$ROWS.reqjson" "$STAGE_MF"' EXIT
 : > "$ROWS"
 
 add_row() {  # $1=relpath(in bundle) $2=abs source $3=open_with $4=kind $5=loader
@@ -427,18 +960,8 @@ done
 # --- each hub's own task file ---------------------------------------------
 i=0
 for hub in "${HUBS[@]}"; do
-    case "$hub" in */*|..*|"") die "hub slug '$hub' must be a bare name" ;; esac
-    override=""
-    if [ "${#HUB_TASKS[@]}" -gt "$i" ]; then override="${HUB_TASKS[$i]}"; fi
-    if [ -n "$override" ]; then
-        [ -f "$override" ] || die "--hub-task '$override' does not exist"
-        src="$override"
-    else
-        src="$SRC_CLAUDE/tasks/$hub.md"
-        [ -f "$src" ] || die "no task file at $src.
-  ⛔ A hub with no charter of its own is not a hub — it is ten unsupervised hours with no question.
-  ⭐ Write .claude/tasks/$hub.md first, or pass --hub-task <path> to point at it."
-    fi
+    src="$(resolve_hub_task "$hub" "$i")" || exit 2
+    [ -n "$src" ] || exit 2
     add_row ".claude/tasks/$hub.md" "$src" doc doc "the hub's own charter (agent profile line 3)"
     i=$((i + 1))
 done
@@ -527,6 +1050,19 @@ PY
 fi
 
 # ---------------------------------------------------------------------------
+# ⭐⭐ 3c. THE PER-HUB ARTEFACT REQUIREMENT (§2b), APPLIED.
+#    ⛔ This is the block whose absence made `hub-refusal` "the cheapest unclaimed
+#    target" on this machine and the most expensive one on the far side. It runs even
+#    under --no-artefacts: a charter's own promise is not an optional extra.
+#    ⚠ Appended AFTER the launcher table on purpose — first-row-wins dedup then keeps
+#    the launcher's verdict for any file both name, which is the row CSF3 also checks.
+# ---------------------------------------------------------------------------
+REQ_ROWS="$ROWS.req"
+REQ_JDIR="$ROWS.reqjson"
+collect_hub_requirements "$REQ_ROWS" "$REQ_JDIR"
+if [ -s "$REQ_ROWS" ]; then cat "$REQ_ROWS" >> "$ROWS"; fi
+
+# ---------------------------------------------------------------------------
 # 4. Resolve every row's source, checksum it, and total it up.
 # ---------------------------------------------------------------------------
 HASHED="$ROWS.hashed"
@@ -589,7 +1125,7 @@ if [ -d "$OUT/.git" ]; then
     say "       ⭐ \`git -C $OUT status\` shows the code state. Delete the bundle to rebuild it clean."
 else
     say "code -> $OUT (git archive @ $PIN)"
-    git -C "$SRC_ROOT" archive --format=tar "$PIN" | ( cd "$OUT" && tar -xf - )
+    git -C "$SRC_ROOT" archive --format=tar "$PIN" | ( cd "$OUT" && chlu_tar -xf - )
 fi
 
 # ---------------------------------------------------------------------------
@@ -630,6 +1166,7 @@ if [ "$GIT_INIT" = "1" ]; then
             echo "# ⭐ generated by bundle_hub_workspace.sh; ⛔ not part of the pin's tree"
             echo "/BUNDLE_MANIFEST.json"
             echo "/WORKSPACE-READY.json"
+            echo "/SUPPLEMENT_MANIFEST*.json"
             echo "/env_hub.sh"
             echo "/README-HUB-BUNDLE.md"
             echo "/.workspace-verify-test.log"
@@ -734,6 +1271,7 @@ BM_OUT="$OUT/BUNDLE_MANIFEST.json" BM_PIN="$PIN" BM_SRC="$SRC_ROOT" BM_TOTAL="$T
 BM_CODEBYTES="$CODE_BYTES" BM_NCODE="$N_CODE" BM_HUBS="${HUBS[*]}" BM_HOST="$(hostname)" \
 BM_STAGE_MF="$STAGE_MF" BM_TOOLCOMMIT="$TOOL_COMMIT" BM_PINTREE="$PIN_TREE" \
 BM_BASETREE="$BUNDLE_BASE_TREE" BM_TREEMATCH="$BUNDLE_TREE_MATCH" \
+BM_REQ_DIR="$REQ_JDIR" \
 "$PY_BIN" - "$HASHED" <<'PY'
 import datetime as _dt, json, os, sys
 e = os.environ.get
@@ -750,6 +1288,39 @@ with open(sys.argv[1]) as fh:
             "required": True,
         })
 files.sort(key=lambda d: d["path"])
+
+# ---------------------------------------------------------------------------
+# ⭐ What each hub's OWN charter declared (§2b), and the SUPERSEDED rows it named.
+#
+# ⚠ `gen-arms-a7-wiring/refusal_scores.json` is the live case and it is NOT simply
+# dropped: the launcher table ships it as `exp_gen_cell.check_preconditions`' own
+# precondition, so deleting it would break a different consumer. ⛔ But `hub-refusal`'s
+# charter says it must never be quoted AS THE RIVAL ROW — so it travels FLAGGED, in the
+# manifest, where the far side is already looking. ⛔ Silence is what this whole task
+# is about.
+# ---------------------------------------------------------------------------
+hub_reqs = {}
+_req_dir = e("BM_REQ_DIR") or ""
+if os.path.isdir(_req_dir):
+    for fn in sorted(os.listdir(_req_dir)):
+        if fn.endswith(".json"):
+            d = json.load(open(os.path.join(_req_dir, fn), encoding="utf-8"))
+            hub_reqs[d["hub"]] = d
+superseded = {x["path"]: (hub, x) for hub, d in hub_reqs.items() for x in d["excluded"]}
+n_flagged = 0
+for f in files:
+    if f["path"] in superseded:
+        hub, x = superseded[f["path"]]
+        f["superseded_for_hub"] = hub
+        f["superseded_note"] = (
+            "⛔ %s's charter marks this SUPERSEDED — never quote it as the rival row. "
+            "It ships only because another consumer opens it (%s)." % (hub, f["loader"][:80])
+        )
+        n_flagged += 1
+if n_flagged:
+    print("[bundle] ⚠ %d shipped file(s) flagged SUPERSEDED by a hub charter — see "
+          "`superseded_note` in the manifest" % n_flagged)
+
 stage = {}
 try:
     stage = json.load(open(e("BM_STAGE_MF")))
@@ -785,6 +1356,9 @@ m = {
     "claude_bytes": int(e("BM_TOTAL", "0")),
     "total_bytes": int(e("BM_TOTAL", "0")) + int(e("BM_CODEBYTES", "0")),
     "artefact_axes": stage.get("axes"),
+    # ⭐ What each hub's OWN charter declared, and what was therefore shipped. ⛔ A
+    #    charter that names an artefact the bundle cannot carry no longer builds at all.
+    "hub_requirements": hub_reqs,
     "env": {
         "CHLU_ROOT": "<the bundle root, wherever it is extracted>",
         "CHLU_CLAUDE_ROOT": "$CHLU_ROOT/.claude",
@@ -934,7 +1508,8 @@ say "wrote $OUT/README-HUB-BUNDLE.md"
 if [ "$DO_TAR" = "1" ]; then
     TARBALL="$OUT.tar.gz"
     say "tarring -> $TARBALL (this is ~$( "$PY_BIN" -c "print('%.2f' % ((${CODE_BYTES}+${TOTAL})/2**30))") GiB uncompressed)"
-    ( cd "$(dirname "$OUT")" && tar -czf "$TARBALL" "$(basename "$OUT")" )
+    ( cd "$(dirname "$OUT")" && chlu_tar -czf "$TARBALL" "$(basename "$OUT")" )
+    assert_no_apple_double "$TARBALL"
     say "sha256($(basename "$TARBALL")) = $(sha256_of "$TARBALL")"
 fi
 

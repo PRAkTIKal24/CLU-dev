@@ -83,11 +83,35 @@ from pathlib import Path
 
 e = os.environ.get
 root = Path(e("VF_ROOT")).resolve()
-manifest = json.loads(Path(e("VF_MANIFEST")).read_text())
+manifest = json.loads(Path(e("VF_MANIFEST")).read_text(encoding="utf-8"))
 skip_load = e("VF_SKIP_LOAD") == "1"
 
 if manifest.get("schema") != "chlu-hub-workspace-bundle/1":
     sys.exit("FATAL: %r is not a chlu-hub-workspace-bundle/1" % e("VF_MANIFEST"))
+
+# ---------------------------------------------------------------------------
+# ⭐ SUPPLEMENTS ARE VERIFIED TOO. `--supplement-apply` tops a workspace up without
+#    touching BUNDLE_MANIFEST.json (⛔ a hub may be running in here), so its rows would
+#    otherwise be the one part of the workspace nothing ever opens — which is exactly
+#    the hole the §2b omission left in the first place.
+#    ⚠ Member paths in a supplement are relative to its `member_root` (`.claude`).
+# ---------------------------------------------------------------------------
+supplements = []
+for sp in sorted(root.glob("SUPPLEMENT_MANIFEST*.json")):
+    sm = json.loads(sp.read_text(encoding="utf-8"))
+    if sm.get("schema") != "chlu-hub-workspace-supplement/1":
+        sys.exit("FATAL: %s is not a chlu-hub-workspace-supplement/1" % sp.name)
+    base = sm.get("member_root", ".claude")
+    known = {f["path"] for f in manifest["files"]}
+    for rec in sm["files"]:
+        rec = dict(rec, path="%s/%s" % (base, rec["path"]))
+        if rec["path"] not in known:
+            manifest["files"].append(rec)
+            known.add(rec["path"])
+    supplements.append({"manifest": sp.name, "hubs": sm.get("hubs"),
+                        "n_files": sm.get("n_files"), "generated_at": sm.get("generated_at")})
+if supplements:
+    print("[verify] supplements: %s" % ", ".join(s["manifest"] for s in supplements))
 
 
 def note(r, msg):
@@ -113,7 +137,7 @@ def sha256_of(p, chunk=1 << 20):
 #    and a stage verified on CSF3 are making the same statement.)
 # ---------------------------------------------------------------------------
 def _load_json(p):
-    d = json.loads(Path(p).read_text())
+    d = json.loads(Path(p).read_text(encoding="utf-8"))
     return {"keys": len(d) if isinstance(d, dict) else None}
 
 
@@ -151,7 +175,7 @@ def _load_winner_hashes(p):
 
 def _load_c_invalid(p):
     from chlu.core.gen_certificate import load_c_requests
-    names = json.loads(Path(p).read_text())["factors"]["names"]
+    names = json.loads(Path(p).read_text(encoding="utf-8"))["factors"]["names"]
     return {"n_records": len(load_c_requests(p, names)), "factors": names}
 
 
@@ -171,13 +195,26 @@ def _load_control_set(p):
     #    filename and shipped filename disagree fails here.
     from chlu.core.gen_request import load_registered_control_requests
     d = Path(p).parent
-    registry = json.loads((d / "query_sets.json").read_text())
+    registry = json.loads((d / "query_sets.json").read_text(encoding="utf-8"))
     name = next((k for k, s in registry.get("sets", {}).items()
                  if s.get("file") == Path(p).name), None)
     if name is None:
         raise KeyError("%s is not named by any set in %s" % (Path(p).name, d / "query_sets.json"))
     sets = load_registered_control_requests(d, registry, [name])
     return {"name": name, "n_records": len(sets[name])}
+
+
+def _load_npz(p):
+    """⭐ A generic ``.npz`` — the shape most §2b hub-requirement artefacts take
+    (energy traces, settled states, decoded tuples). ⛔ `np.load` alone is LAZY: a
+    truncated member only raises when it is actually read, i.e. on the far side, six
+    hours in. So every array is materialised here."""
+    import numpy as np
+    with np.load(p) as z:
+        names = list(z.files)
+        shapes = {k: [list(np.asarray(z[k]).shape), str(np.asarray(z[k]).dtype)]
+                  for k in names}
+    return {"n_arrays": len(names), "arrays": shapes}
 
 
 def _load_npz_index(p):
@@ -206,8 +243,20 @@ DOC_ANCHORS = {
 
 
 def _load_doc(p):
-    rel = str(Path(p).resolve().relative_to(root))
-    txt = Path(p).read_text(errors="replace")
+    # ⭐⭐ `.as_posix()`, ⛔ NOT `str()`. On Windows `Path.relative_to()` yields a path
+    #    whose str() is BACKSLASH-separated, while DOC_ANCHORS is keyed with forward
+    #    slashes ⇒ the lookup ALWAYS missed, `missing` was ALWAYS [], and every document
+    #    returned `loaded: true` having inspected ZERO anchors. ⛔ Check #3 degraded to
+    #    "the file is non-empty", and a truncated charter — the exact thing it exists to
+    #    catch — reported success. ⛔ The fix normalises the KEY; it does not loosen the
+    #    check. (tests/test_hub_workspace.py exercises this source under a Windows path
+    #    flavour, because fixing it by inspection is what this defect proves cannot work.)
+    rel = Path(p).resolve().relative_to(root).as_posix()
+    # ⚠ The encoding is pinned IN THE CODE. The Windows default is cp1252, which turns
+    #    every ⭐/⛔/⚠ in these documents into three replacement characters — a silent
+    #    corruption of the text the anchors are matched against. ⛔ PYTHONUTF8=1 is a
+    #    fine workaround but it is an environment someone has to remember to set.
+    txt = Path(p).read_text(encoding="utf-8", errors="replace")
     if not txt.strip():
         raise ValueError("document is empty")
     missing = [a for a in DOC_ANCHORS.get(rel, []) if a not in txt]
@@ -222,16 +271,17 @@ def _load_code(p):
     byte check and then dies at line 400 on the far side, six hours in."""
     p = Path(p)
     if p.suffix == ".py":
-        src = p.read_text()
+        src = p.read_text(encoding="utf-8")
         compile(src, str(p), "exec")
         return {"lines": src.count("\n") + 1, "parsed": "python"}
     import subprocess
-    r = subprocess.run(["bash", "-n", str(p)], capture_output=True, text=True)
+    r = subprocess.run(["bash", "-n", str(p)], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
     if r.returncode != 0:
         raise SyntaxError("bash -n: %s" % (r.stderr.strip() or r.returncode))
     if not os.access(p, os.X_OK):
         raise PermissionError("%s lost its executable bit in transit" % p.name)
-    return {"lines": p.read_text().count("\n") + 1, "parsed": "bash -n"}
+    return {"lines": p.read_text(encoding="utf-8").count("\n") + 1, "parsed": "bash -n"}
 
 
 LOADERS = {
@@ -246,6 +296,7 @@ LOADERS = {
     "query_registry": _load_query_registry,
     "control_set": _load_control_set,
     "npz_index": _load_npz_index,
+    "npz": _load_npz,
     "doc": _load_doc,
 }
 
@@ -379,7 +430,7 @@ if hub:
         probe.write_text(json.dumps(
             {"written_by": "verify_hub_workspace.sh", "at": stamp,
              "note": "the verifier's own write probe; ⛔ not a hub artefact"}) + "\n")
-        wr["writable"] = json.loads(probe.read_text())["written_by"] == "verify_hub_workspace.sh"
+        wr["writable"] = json.loads(probe.read_text(encoding="utf-8"))["written_by"] == "verify_hub_workspace.sh"
         wr["probe"] = str(probe)      # ⛔ left in place: §0.1, we never delete
     except Exception as exc:                            # noqa: BLE001
         wr["error"] = "%s: %s" % (type(exc).__name__, exc)
@@ -410,6 +461,8 @@ out = {
     "pin": manifest.get("pin"),
     "hubs": manifest.get("hubs"),
     "artefact_axes": manifest.get("artefact_axes"),
+    "hub_requirements": manifest.get("hub_requirements"),
+    "supplements": supplements,
     "n_files": len(results),
     "n_missing": n_missing,
     "n_checksum_mismatch": n_ck_bad,
@@ -423,7 +476,7 @@ out = {
     "files": results,
 }
 Path(e("VF_OUT")).parent.mkdir(parents=True, exist_ok=True)
-with open(e("VF_OUT"), "w") as fh:
+with open(e("VF_OUT"), "w", encoding="utf-8") as fh:
     json.dump(out, fh, indent=2, sort_keys=True, default=str)
     fh.write("\n")
 print("[verify] -> %s" % e("VF_OUT"))
@@ -466,12 +519,12 @@ say "targeted test: $TEST_STATUS"
 RD_OUT="$READY_OUT" RD_TEST="$TEST_STATUS" RD_RC="$TEST_RC" "$PY_BIN" - <<'PY'
 import json, os
 p = os.environ["RD_OUT"]
-d = json.load(open(p))
+d = json.load(open(p, encoding="utf-8"))
 d["targeted_test"] = os.environ["RD_TEST"]
 if os.environ["RD_RC"] != "0" or os.environ["RD_TEST"].startswith(("NOT RUN", "SKIPPED", "FAILED")):
     d["status"] = "NOT-READY"
-json.dump(d, open(p, "w"), indent=2, sort_keys=True, default=str)
-open(p, "a").write("\n")
+json.dump(d, open(p, "w", encoding="utf-8"), indent=2, sort_keys=True, default=str)
+open(p, "a", encoding="utf-8").write("\n")
 print("[verify] status=%s" % d["status"])
 PY
 
