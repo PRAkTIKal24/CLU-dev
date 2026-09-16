@@ -512,7 +512,7 @@ def _reenc_fixture(n_rows=8, d=64, seed=0):
 
 
 def _run_gate(monkeypatch, cache_rows, feats, cman, fresh_or_encoder, *, real_encoder=False,
-              images=None, n=64):
+              images=None, n=64, **gate_kw):
     """Drive ``_assert_cache_reencodes`` with the data sources stubbed out.
 
     Returns ``(stats_or_None, raised_or_None, log_lines)``.  ⭐ The log lines are
@@ -534,7 +534,8 @@ def _run_gate(monkeypatch, cache_rows, feats, cman, fresh_or_encoder, *, real_en
     cfg = get_default_config()
     try:
         stats = X._assert_cache_reencodes(
-            "shapes3d", cfg, encoder, cache_rows, feats, cman, n=n, log=lines.append
+            "shapes3d", cfg, encoder, cache_rows, feats, cman, n=n, log=lines.append,
+            **gate_kw,
         )
         return stats, None, lines
     except AssertionError as exc:
@@ -661,6 +662,9 @@ def test_reencode_gate_reports_the_five_fields_on_a_clean_pass(monkeypatch):
         "n_checked": 8, "n_elements": 512, "max_abs_delta": 0.0, "max_ulp_delta": 0.0,
         "n_differing": 0, "frac_differing": 0.0, "n_nonfinite": 0,
         "cache_dtype": "float16", "ulp_bound": 1.0, "frac_bound": 0.01,
+        # ⭐ the scoping record: strict by default, and it would not have failed
+        "enforced": True, "enforced_reason": "",
+        "would_have_failed": False, "would_have_failed_why": [],
     }
     assert lines and lines[0].lstrip().startswith("⭐ cache re-encode check: 8 rows")
 
@@ -685,15 +689,23 @@ _REENC_CALLERS = [
 ]
 
 
-def test_reencode_gate_signature_is_unchanged():
-    """⛔ Callers pass positionally through ``cman``; the signature only ever gains."""
+def test_reencode_gate_signature_only_ever_GAINS_and_the_gain_is_strict_by_default():
+    """⛔ Callers pass positionally through ``cman``; the signature only ever gains —
+    and ⭐ every gain is **keyword-only** with a **strict** default, so a caller that
+    passes nothing gets exactly today's abort."""
     import inspect
 
     from chlu.experiments import exp_gen_store as X
 
-    assert list(inspect.signature(X._assert_cache_reencodes).parameters) == [
-        "dataset", "config", "encoder", "cache_rows", "features", "cman", "n", "log"
+    sig = inspect.signature(X._assert_cache_reencodes)
+    assert list(sig.parameters) == [
+        "dataset", "config", "encoder", "cache_rows", "features", "cman", "n", "log",
+        "will_extend", "reason",
     ]
+    for name in ("will_extend", "reason"):
+        assert sig.parameters[name].kind is inspect.Parameter.KEYWORD_ONLY, name
+    # ⭐⭐ THE default. ⛔ If this ever flips, every un-opted caller silently loses its gate.
+    assert sig.parameters["will_extend"].default is True
 
 
 @pytest.mark.parametrize("mod_name", _REENC_CALLERS)
@@ -718,3 +730,310 @@ def test_reencode_gate_callers_still_work_unchanged(monkeypatch, mod_name):
     # two callers do `reenc.get('n_checked')` and print it as a ROW count
     assert out.get("n_checked") == 8
     assert out["max_abs_delta"] == 0.0
+    # ⭐ a caller that says nothing is ENFORCED — including the 10 modules this spoke
+    # did not touch
+    assert out["enforced"] is True
+
+
+# ---------------------------------------------------------------------------
+# ⭐⭐ Scoping the re-encode gate to the hazard it guards (`will_extend`)
+#
+# The gate exists because a run that EXTENDS the cache through an encoder that does
+# not reproduce the rows already in it writes inconsistent features, and ⛔ nothing
+# downstream notices.  A run that encodes NOTHING NEW cannot trigger that hazard —
+# and route B's own coverage gate, two lines above the call, reports
+# `33864/33864 — 0 shortfall`.
+#
+# ⛔⛔ These tests exist to prove the teeth are still there.  `will_extend` decides
+# whether the bounds BIND; it never changes what they are.  The bounds themselves
+# (1.0 ULP, 1% of elements) are asserted UNCHANGED below.
+# ---------------------------------------------------------------------------
+
+_COVERED = "the coverage gate reports 0 shortfall: this run encodes nothing new"
+
+
+def _disagreeing_fixture(n_rows=8, d=64, seed=0):
+    """Like :func:`_reenc_fixture`, but drawn from **[4.0, 7.5)**.
+
+    ⚠ Measured, not assumed: on the [4, 8) fixture, adding 0.03125 to a value just
+    under 8.0 crosses the binade, where float16's step doubles to 0.0078125 and
+    round-half-to-even lands the result 0.03515625 away — **9** ULP of the cached
+    value, not 8.  Keeping the whole fixture clear of the boundary makes the
+    perturbation exactly 8 ULP at EVERY element, so these tests assert an exact
+    number instead of an inequality.
+    """
+    rng = np.random.default_rng(seed)
+    raw = rng.uniform(4.0, 7.5, size=(n_rows, d)).astype(np.float32)
+    feats = raw.astype(np.float16).astype(np.float32)  # exact float16 values
+    cache_rows = np.arange(n_rows, dtype=np.int64)
+    cman = {"dtype": "float16", "D": d, "feat_shape": (1, 1, d), "n_rows": n_rows}
+    return cache_rows, feats, cman
+
+
+def _disagreeing(feats):
+    """A re-encode that fails BOTH bounds at today's values: every element moved, each
+    by exactly 8 float16 ULP at its own magnitude.  ⛔ Use with
+    :func:`_disagreeing_fixture`, never with the [4, 8) one."""
+    return (feats + np.float32(8 * 0.00390625)).astype(np.float32)
+
+
+def test_scoped_gate_STILL_ABORTS_when_the_run_will_extend(monkeypatch):
+    """⭐⭐ ACCEPTANCE 1 — THE TEETH.  A run that WILL extend the cache and whose
+    encoder disagrees still aborts, at today's bounds."""
+    cache_rows, feats, cman = _disagreeing_fixture()
+
+    stats, raised, lines = _run_gate(
+        monkeypatch, cache_rows, feats, cman, _disagreeing(feats),
+        will_extend=True, reason="this run will extend the cache",
+    )
+
+    assert stats is None and raised is not None, "the gate lost its teeth on an extending run"
+    assert "8.000 ULP" in str(raised) and "bound 1)" in str(raised)
+    assert any("⭐ ENFORCED (enforced=true)" in ln for ln in lines)
+
+
+def test_scoped_gate_is_STRICT_when_the_caller_says_nothing(monkeypatch):
+    """⭐ ACCEPTANCE 3 — the default.  No new parameter ⇒ exactly today's behaviour."""
+    cache_rows, feats, cman = _disagreeing_fixture()
+
+    stats, raised, lines = _run_gate(monkeypatch, cache_rows, feats, cman, _disagreeing(feats))
+
+    assert stats is None and raised is not None
+    assert "8.000 ULP" in str(raised)
+
+
+def test_a_fully_covered_run_PASSES_with_the_disagreement_on_the_record(monkeypatch):
+    """⭐ ACCEPTANCE 2 — the same disagreement, on a run that cannot extend the cache:
+    it passes, and ⛔ it leaves a trace nobody can mistake for a clean check."""
+    cache_rows, feats, cman = _disagreeing_fixture()
+
+    stats, raised, lines = _run_gate(
+        monkeypatch, cache_rows, feats, cman, _disagreeing(feats),
+        will_extend=False, reason=_COVERED,
+    )
+
+    assert raised is None, f"a covered run was refused on a capability it never uses: {raised}"
+    # the five statistics are still computed and still returned
+    for field_ in ("max_abs_delta", "max_ulp_delta", "n_differing", "frac_differing", "n_checked"):
+        assert field_ in stats, field_
+    assert stats["max_ulp_delta"] == 8.0 and stats["frac_differing"] == 1.0
+    # ⭐ enforced: false, the reason, and what the bounds WOULD have said
+    assert stats["enforced"] is False
+    assert stats["enforced_reason"] == _COVERED
+    assert stats["would_have_failed"] is True
+    assert stats["would_have_failed_why"] == ["ulp", "fraction"]
+    # ⛔ the bounds are still the bounds — recorded, unwidened
+    assert stats["ulp_bound"] == 1.0 and stats["frac_bound"] == 0.01
+    # ⭐ and the log says all of it, loudly
+    blob = "\n".join(lines)
+    assert "⚠ NOT ENFORCED (enforced=false)" in blob and _COVERED in blob
+    assert "WOULD HAVE ABORTED THIS RUN (ulp, fraction)" in blob
+    assert "8.000 float16 ULP" in lines[0]
+
+
+def test_an_unenforced_check_that_would_have_passed_says_so(monkeypatch):
+    """⛔ A reader must be able to tell a skipped check from a passed one — in BOTH
+    directions."""
+    cache_rows, feats, cman = _reenc_fixture()
+
+    stats, raised, lines = _run_gate(
+        monkeypatch, cache_rows, feats, cman, feats.copy(),
+        will_extend=False, reason=_COVERED,
+    )
+
+    assert raised is None and stats["enforced"] is False
+    assert stats["would_have_failed"] is False and stats["would_have_failed_why"] == []
+    assert any("not enforced, and it would have PASSED anyway" in ln for ln in lines)
+
+
+def test_relaxing_the_gate_without_a_reason_is_an_error(monkeypatch):
+    """⛔ The relaxation must be ASKED FOR, in the open. A reasonless skip is a
+    ValueError, not a quiet pass."""
+    from chlu.experiments import exp_gen_store as X
+
+    cache_rows, feats, cman = _reenc_fixture()
+    with pytest.raises(ValueError, match="requires a `reason`"):
+        X._assert_cache_reencodes(
+            "shapes3d", get_default_config(), object(), cache_rows, feats, cman,
+            log=lambda _m: None, will_extend=False,
+        )
+    with pytest.raises(ValueError, match="requires a `reason`"):
+        X._assert_cache_reencodes(
+            "shapes3d", get_default_config(), object(), cache_rows, feats, cman,
+            log=lambda _m: None, will_extend=False, reason="   ",
+        )
+
+
+def test_the_bounds_are_not_reachable_from_any_caller():
+    """⛔⛔ The Hub has twice mistaken this gate for the problem.  There is no keyword,
+    on any caller, that can widen either bound — only whether they bind."""
+    import inspect
+
+    from chlu.experiments import exp_gen_store as X
+
+    src = inspect.getsource(X._assert_cache_reencodes)
+    assert "ULP_BOUND = 1.0" in src and "FRAC_BOUND = 1e-2" in src
+    params = set(inspect.signature(X._assert_cache_reencodes).parameters)
+    assert not (params & {"ulp_bound", "frac_bound", "tol", "atol", "rtol", "bound"})
+
+
+# --- ⭐⭐ item 4: the hazard is caught AT THE POINT OF EXTENSION ---------------
+
+def _gather_fixture(monkeypatch, fresh_maker):
+    """Stub `gather_features`' two data sources.  ``fresh_maker(feats, n)`` returns the
+    re-encoded block for ``n`` images."""
+    from chlu.experiments import exp_gen_store as X
+
+    X._REENCODE_VERIFIED.clear()
+    cache_rows, feats, cman = _disagreeing_fixture(n_rows=8, d=64)
+    cman = dict(cman, encoder_param_hash="deadbeef")
+
+    monkeypatch.setattr(
+        X, "stream_images",
+        lambda _ds, rows, _root, _blk: np.zeros((np.asarray(rows).size, 1, 1, 64), np.float32),
+    )
+    monkeypatch.setattr(
+        X, "encode_images",
+        lambda _enc, imgs, _batch: fresh_maker(feats, int(np.asarray(imgs).shape[0])),
+    )
+    return cache_rows, feats, cman
+
+
+def test_extension_path_ABORTS_when_the_encoder_disagrees(monkeypatch):
+    """⭐⭐ ACCEPTANCE 4.  `gather_features` is where the hazard actually lives: it
+    returns cached rows interleaved with freshly encoded ones.  A row the cache does
+    not hold puts it on the extension path, and there the check is ENFORCED."""
+    from chlu.experiments import exp_gen_store as X
+
+    cache_rows, feats, cman = _gather_fixture(
+        monkeypatch, lambda f, n: _disagreeing(f)[:n]
+    )
+    lines = []
+    with pytest.raises(AssertionError, match="ULP"):
+        X.gather_features(
+            "shapes3d", get_default_config(), object(), cache_rows, feats, cman,
+            np.array([0, 1, 99], np.int64), log=lines.append,
+        )
+    assert any("re-encode check runs ENFORCED here" in ln for ln in lines)
+
+
+def test_an_UNENFORCED_preflight_does_not_excuse_a_later_extension(monkeypatch):
+    """⛔⛔ THE HOLE THIS MUST NOT OPEN.  A run passes an unenforced preflight (it was
+    covered) and then encodes a new row anyway — the extension path asserts at FULL
+    strength, and the unenforced pass buys it nothing."""
+    from chlu.experiments import exp_gen_store as X
+
+    cache_rows, feats, cman = _gather_fixture(
+        monkeypatch, lambda f, n: _disagreeing(f)[:n]
+    )
+
+    pre = X._assert_cache_reencodes(
+        "shapes3d", get_default_config(), object(), cache_rows, feats, cman,
+        log=lambda _m: None, will_extend=False, reason=_COVERED,
+    )
+    assert pre["enforced"] is False and pre["would_have_failed"] is True
+    # ⛔ and it did NOT discharge the extension-point check
+    assert X._cache_identity(cache_rows, cman) not in X._REENCODE_VERIFIED
+
+    with pytest.raises(AssertionError, match="ULP"):
+        X.gather_features(
+            "shapes3d", get_default_config(), object(), cache_rows, feats, cman,
+            np.array([0, 99], np.int64), log=lambda _m: None,
+        )
+
+
+def test_a_covered_gather_never_pays_for_the_check_at_all(monkeypatch):
+    """⭐ The scoping, end to end: every requested row is cached, so `gather_features`
+    never enters the extension path — and the disagreeing encoder is never consulted."""
+    from chlu.experiments import exp_gen_store as X
+
+    seen = []
+
+    def _fresh(f, n):
+        seen.append(n)
+        return _disagreeing(f)[:n]
+
+    cache_rows, feats, cman = _gather_fixture(monkeypatch, _fresh)
+    out = X.gather_features(
+        "shapes3d", get_default_config(), object(), cache_rows, feats, cman,
+        np.array([0, 3, 7], np.int64), log=lambda _m: None,
+    )
+    assert out.shape == (3, 64)
+    np.testing.assert_array_equal(out, feats[[0, 3, 7]])
+    assert seen == [], "a fully-cached gather encoded something"
+
+
+def test_an_agreeing_encoder_still_extends_the_cache(monkeypatch):
+    """⛔ A gate that cannot pass is as useless as one that cannot fail: the extension
+    path still WORKS when the encoder does reproduce the cache."""
+    from chlu.experiments import exp_gen_store as X
+
+    cache_rows, feats, cman = _gather_fixture(monkeypatch, lambda f, n: f[:n].copy())
+    lines = []
+    out = X.gather_features(
+        "shapes3d", get_default_config(), object(), cache_rows, feats, cman,
+        np.array([0, 99], np.int64), log=lines.append,
+    )
+    assert out.shape == (2, 64)
+    np.testing.assert_array_equal(out[0], feats[0])
+    np.testing.assert_array_equal(out[1], feats[0])  # the stub encodes row 0's values
+    assert any("extending cache coverage: 1 row(s)" in ln for ln in lines)
+    # ⭐ charged ONCE per (cache, encoder) per process
+    assert X._cache_identity(cache_rows, cman) in X._REENCODE_VERIFIED
+
+
+def test_an_enforced_pass_discharges_the_extension_check_once(monkeypatch):
+    """⭐ The preflight that DID enforce is not paid for twice."""
+    from chlu.experiments import exp_gen_store as X
+
+    calls = []
+
+    def _fresh(f, n):
+        calls.append(n)
+        return f[:n].copy()
+
+    cache_rows, feats, cman = _gather_fixture(monkeypatch, _fresh)
+    X._assert_cache_reencodes(
+        "shapes3d", get_default_config(), object(), cache_rows, feats, cman,
+        log=lambda _m: None,
+    )
+    assert len(calls) == 1
+    X.gather_features(
+        "shapes3d", get_default_config(), object(), cache_rows, feats, cman,
+        np.array([0, 99], np.int64), log=lambda _m: None,
+    )
+    assert len(calls) == 2, "the extension re-ran a check an ENFORCED preflight had passed"
+
+
+# --- ⭐ the four scoped call sites -------------------------------------------
+
+def test_route_b_uses_the_COVERAGE_GATES_OWN_answer(monkeypatch):
+    """⛔ Coverage must never be re-derived at the re-encode call: two derivations can
+    disagree about the same run.  Route B passes gate (4)'s own `cov`."""
+    import inspect
+
+    from chlu.experiments import exp_gen_wells_route_b as B
+
+    src = inspect.getsource(B.preflight)
+    assert 'will_extend=bool(cov["n_shortfall"] > 0)' in src
+    # ⛔ exactly one coverage derivation in the whole module
+    assert src.count("assert_cache_coverage(") == 1
+    assert "searchsorted" not in src
+
+
+@pytest.mark.parametrize("mod_name,fn_name", [
+    ("chlu.experiments.exp_gen_store", "run_seed"),
+    ("chlu.experiments.exp_gen_classifier", "run_seed"),
+    ("chlu.experiments.exp_gen_certificate", "run_seed"),
+])
+def test_the_three_callers_without_a_coverage_gate_stay_ENFORCED(mod_name, fn_name):
+    """⭐ These modules call `gather_features` and have no coverage gate to relax on,
+    so they say `will_extend=True` explicitly — in the open, at the call site."""
+    import importlib
+    import inspect
+
+    mod = importlib.import_module(mod_name)
+    src = inspect.getsource(getattr(mod, fn_name))
+    assert "_assert_cache_reencodes(" in src
+    assert "will_extend=True" in src
+    assert "will_extend=False" not in src
