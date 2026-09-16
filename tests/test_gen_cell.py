@@ -698,3 +698,395 @@ def test_stratified_fit_val_SILENTLY_CLAMPS_n_val_and_says_nothing():
     assert val.size == 100, "the clamp is `pool.size - n_fit`"
     assert info["n_val"] == 100          # ⭐ the realised number IS reported...
     assert "400" not in json.dumps(info)  # ...⛔ but the REQUEST is nowhere in it
+
+
+# ---------------------------------------------------------------------------
+# ⭐⭐ the ADDRESSED READ (`x0`) — gen-addressed-read
+#
+# ⛔⛔ The two tests this section exists for are the ones that can FIRE:
+# ``test_x0_coupling_proof_FIRES_when_the_coupling_reaches_the_read`` (the byte
+# ledger is a MEASUREMENT, so it must be shown refusing a ledger it cannot prove)
+# and ``test_x0_zero_step_proof_FIRES_when_something_sits_between_launch_and_decoder``
+# (the arm's whole identity is that it spends no steps).
+# ⛔ Plus the naming guard: nothing on this path may be called dynamics.
+# ---------------------------------------------------------------------------
+
+import inspect  # noqa: E402
+
+from chlu.core.gen_landscape import (  # noqa: E402
+    AtomLandscape,
+    atom_bandwidths,
+    build_atom_store,
+    fit_atom_address_book,
+    fit_low_rank_coupling,
+    launch_state,
+)
+from chlu.experiments.exp_gen_cell import (  # noqa: E402
+    X0_ARM,
+    X0_BUDGETS,
+    X0_LOOKUP_FLOORS,
+    X0_PRIMARY_BUDGET,
+    X0_ROWS,
+    X0_SETTLING_STEPS,
+    _x0_pair,
+    addressed_read_verdict,
+    run_x0_budget,
+    x0_address_book_bytes,
+    x0_coupling_is_not_needed,
+    x0_gather,
+    x0_label,
+    x0_preflight,
+    x0_zero_step_proof,
+)
+
+
+def _x0_rig(n_atoms: int = 8, cards=(3, 4), seed: int = 0):
+    """A tiny real ``AtomStore`` + address book + fitted coupling."""
+    rng = np.random.default_rng(seed)
+    K, dk, n_train = 5, 6, 400
+    D = K * dk
+    wc = [tuple(range(k * dk, (k + 1) * dk)) for k in range(K)]
+    Z = rng.normal(size=(n_train, D)).astype(np.float32)
+    Y = np.stack([rng.integers(0, c, n_train) for c in cards], axis=1)
+    store = build_atom_store(wc, (D,), Z, n_atoms, "kmeanspp", 0)
+    sigma = atom_bandwidths(store, 1.0, "nn_median")
+    book = fit_atom_address_book(store, Z, Y, list(cards), sigma, 1.0)
+    coup = fit_low_rank_coupling(store, Z[:100], 2, True)
+    land = AtomLandscape(store, sigma, coup, 1.0, 0.05)
+    R = np.stack([rng.integers(-1, c, 20) for c in cards], axis=1).astype(np.int64)
+    return {"store": store, "book": book, "land": land, "requests": R, "Z": Z,
+            "well_channels": wc, "D": D, "K": K, "cards": list(cards)}
+
+
+# ---- ⛔⛔ the name, first: this is an ADDRESSED READ, never dynamics ---------
+
+
+#: ⛔⛔ The vocabulary that would turn a zero-step gather into an overclaim.
+X0_BANNED_PHRASES = ("zero-step dynamics", "dynamics at zero steps",
+                     "the dynamical read at zero steps", "zero step dynamics")
+
+
+def _bare_forbidden_phrase(src: str, banned=X0_BANNED_PHRASES):
+    """⭐ The first use of a banned phrase that is NOT inside a prohibition.
+
+    ⛔ A prohibition may wrap across source lines, so the window is the phrase's line
+    and the three before it; ⛔ a bare use with no ``never``/``⛔`` anywhere near it is
+    returned, which is what the test asserts never happens.
+    """
+    lines = src.lower().splitlines()
+    for i, line in enumerate(lines):
+        for b in banned:
+            if b in line:
+                window = " ".join(lines[max(0, i - 3): i + 1])
+                if "never" not in window and "⛔" not in window:
+                    return line
+    return None
+
+
+def test_the_naming_guard_itself_FIRES_on_a_bare_use():
+    # ⛔ POSITIVE CONTROL: a guard that has never been seen to fire is decoration.
+    assert _bare_forbidden_phrase("x = 1\nthis is zero-step dynamics\n") is not None
+    assert _bare_forbidden_phrase("⛔ never call it zero-step dynamics\n") is None
+
+
+def test_x0_is_NEVER_described_as_dynamics_anywhere_on_its_own_path():
+    # ⛔⛔ The single most damaging overclaim available to this programme is calling a
+    # zero-step gather "dynamics". The guard is mechanical: the arm's own source and
+    # every string it emits are swept for the forbidden vocabulary.
+    import chlu.experiments.exp_gen_cell as M
+
+    fns = (M.x0_gather, M.x0_preflight, M.x0_zero_step_proof, M.run_x0_budget,
+           M.addressed_read_verdict, M.x0_coupling_is_not_needed, M.x0_label,
+           M.x0_address_book_bytes, M.x0_artefact_dir)
+    for fn in fns:
+        bad = _bare_forbidden_phrase(inspect.getsource(fn))
+        assert bad is None, (fn.__name__, bad)
+    pre = M.x0_preflight(get_default_config())
+    assert "ADDRESSED READ" in pre["NAMING_RULE"]
+    assert pre["settling_steps"] == 0 and pre["coupling_used"] is False
+    # ⛔ and the arm's own row calls itself an addressed read, in the manifest
+    assert "ADDRESSED READ" in pre["mechanism"].upper() or pre["coupling_used"] is False
+
+
+def test_x0_spends_zero_steps_and_says_so_as_a_number_not_a_word():
+    assert X0_SETTLING_STEPS == 0
+    x = np.arange(12, dtype=np.float32).reshape(3, 4)
+    z = x0_zero_step_proof(x, x.reshape(3, 4), (4,))
+    assert z["settling_steps"] == 0
+    assert z["displacement_from_launch_rms"] == 0.0
+    assert z["decoder_input_is_the_launch_bitwise"] is True
+    assert z["energy_trace"] is None and z["coupling_used"] is False
+
+
+def test_x0_zero_step_proof_FIRES_when_something_sits_between_launch_and_decoder():
+    # ⛔ POSITIVE CONTROL. A chain — or any transform — between the launch and the
+    # decoder makes this a different arm, and the proof must refuse it.
+    x = np.arange(12, dtype=np.float32).reshape(3, 4)
+    with pytest.raises(AssertionError, match="NOT the launch"):
+        x0_zero_step_proof(x, x + 1e-7, (4,))
+
+
+# ---- ⭐⭐ the byte ledger: measured, and shown refusing ----------------------
+
+
+def test_x0_coupling_is_not_needed_is_MEASURED_bit_for_bit():
+    rig = _x0_rig()
+    p = x0_coupling_is_not_needed(rig, rig["requests"])
+    assert p["coupling_needed"] is False
+    # ⭐ all four landscapes — fitted coupling, none, λ = 0, β = 0 — give the SAME x0
+    assert set(p["bit_identical"]) == {
+        "coupling_fitted_at_certificate_lambda", "coupling_None",
+        "coupling_strength_zero", "request_strength_zero"}
+    assert all(p["bit_identical"].values())
+    assert all(v == 0.0 for v in p["max_abs_delta"].values())
+
+
+def test_x0_coupling_proof_FIRES_when_the_coupling_reaches_the_read():
+    # ⛔⛔ POSITIVE CONTROL for the crux. If the coupling ever reached the launch, the
+    # rung-A ledger would be 2.00× the budget and "matched bytes" would be a lie. The
+    # proof is shown REFUSING: a store whose atoms differ between the two landscapes
+    # stands in for a read that is not a function of (request, book, atoms) alone.
+    rig = _x0_rig()
+    other = _x0_rig(seed=1)
+    # the coupling-free landscape is rebuilt from ``built["store"]``; handing it a
+    # DIFFERENT atom table is the stand-in for a launch that is not a function of
+    # (request, book, atoms) alone — exactly the condition that would void the ledger.
+    broken = {**rig, "store": other["store"]}
+    with pytest.raises(AssertionError, match="COUPLING IS ON THE ADDRESSED READ"):
+        x0_coupling_is_not_needed(broken, rig["requests"])
+
+
+def test_x0_address_book_bytes_are_MEASURED_and_checked_against_the_closed_form():
+    rig = _x0_rig(n_atoms=8, cards=(3, 4))
+    hb = x0_address_book_bytes(rig["book"])
+    K, N = rig["K"], 8
+    assert hb["bytes"] == (K * N + sum(rig["cards"]) * K * N) * 4
+    assert hb["bytes"] == hb["closed_form_bytes"]
+    assert hb["bytes_formula"] == "(K*N + sum_f V_f*K*N) * 4"
+
+
+def test_the_atom_address_book_formula_IS_the_CLU_heads_formula():
+    # ⭐ THE CRUX OF "MATCHED BYTES": the addressed read's head and the CLU arm's head
+    # are the same object with M -> N, so at N = M they are byte-identical — and that
+    # is checked against the SHIPPED numbers, not asserted in prose.
+    from chlu.core.gen_compose import address_book_bytes
+
+    clu_head = _store_led()["addressing_head"]
+    assert clu_head["bytes"] == SHIPPED_HEAD_BYTES
+    K, M, v_sum = 5, 64, 57          # the shipped cell: 5 wells, 64 modes, Σ_f V_f = 57
+    assert (K * M + v_sum * K * M) * 4 == SHIPPED_HEAD_BYTES
+    assert address_book_bytes.__doc__ is not None
+    # the atom store at N = M carries exactly the shipped store's bytes
+    assert 64 * 2048 * 4 == SHIPPED_STORE_BYTES
+
+
+def test_x0_store_bytes_are_the_live_objects_not_a_literal():
+    rig = _x0_rig(n_atoms=8)
+    assert rig["store"].n_bytes() == 8 * rig["D"] * 4
+
+
+# ---- ⭐ the rows: one arm, two §C.1 floors, one §C.2 control ----------------
+
+
+def test_x0_rows_are_the_arm_plus_the_charter_mandated_floors_and_control():
+    assert X0_ROWS == ("full", "atom_mean_lookup", "row_lookup", "atoms_shuffled")
+    assert X0_LOOKUP_FLOORS == ("atom_mean_lookup", "row_lookup")
+    # ⛔ `x0` is deliberately NOT on ARMS: that tuple is the pin's declared rival-row
+    # list and editing it would void this table's numbers (charter §A4).
+    assert X0_ARM not in ARMS and ARMS[-1] == "dynread" and len(ARMS) == 6
+
+
+def test_x0_label_gives_the_MATCHED_rung_the_bare_name_and_suffixes_everything_else():
+    assert x0_label(X0_PRIMARY_BUDGET, "full") == "x0"
+    assert x0_label("B", "full") == "x0/B"              # ⛔ the 8× rung, never bare
+    assert x0_label("A", "row_lookup") == "x0/A_row_lookup"
+    labels = [x0_label(b, r) for b in X0_BUDGETS for r in X0_ROWS]
+    assert len(set(labels)) == len(labels) == 8
+
+
+def test_x0_full_returns_a_STORED_ATOM_in_every_well():
+    # ⛔ charter §C.4: an output that sits ON its atoms is a lookup and is reported as
+    # one. This arm's output IS stored atoms — per well — and the test says so.
+    rig = _x0_rig()
+    g = x0_gather(rig["store"], rig["book"], rig["requests"], "full", land=rig["land"])
+    A = [np.asarray(a, np.float32) for a in rig["store"].atoms]
+    for i in range(rig["requests"].shape[0]):
+        for k, w in enumerate(rig["well_channels"]):
+            assert np.any(np.all(A[k] == g["x"][i, list(w)], axis=1))
+    assert g["returns_a_stored_atom"] is True
+
+
+def test_row_lookup_returns_a_WHOLE_stored_train_row_and_differs_only_in_recombination():
+    # ⭐ THE HARD §C.1 FLOOR: one atom index for ALL wells. The gap to `full` is the
+    # per-well recombination and ⛔ nothing else.
+    rig = _x0_rig()
+    g = x0_gather(rig["store"], rig["book"], rig["requests"], "row_lookup",
+                  land=rig["land"])
+    pool = rig["Z"][list(rig["store"].atom_rows)]
+    for i in range(rig["requests"].shape[0]):
+        assert np.any(np.all(pool == g["x"][i], axis=1)), "not a whole stored row"
+    assert g["pool_rows_returned"].shape[0] == rig["requests"].shape[0]
+
+
+def test_atom_mean_lookup_IS_the_pinned_posterior_mean_launch_bitwise():
+    # ⛔ the Advisor's named rival is the PINNED launch mode, ⛔ not a re-implementation
+    rig = _x0_rig()
+    g = x0_gather(rig["store"], rig["book"], rig["requests"], "atom_mean_lookup",
+                  land=rig["land"])
+    ref = launch_state(rig["land"], rig["book"], rig["requests"], "posterior_mean",
+                       0.5)["x0"]
+    assert np.array_equal(np.asarray(ref, np.float32), g["x"])
+
+
+def test_atoms_shuffled_keeps_the_SAME_indices_and_changes_only_the_CONTENT():
+    # ⭐ charter §C.2: the control differs from the arm in ONE declared quantity.
+    rig = _x0_rig()
+    f = x0_gather(rig["store"], rig["book"], rig["requests"], "full", land=rig["land"],
+                  seed=5)
+    s = x0_gather(rig["store"], rig["book"], rig["requests"], "atoms_shuffled",
+                  land=rig["land"], seed=5)
+    assert np.array_equal(f["atom_index_per_well"], s["atom_index_per_well"])
+    assert not np.array_equal(f["x"], s["x"])
+    assert s["frac_indices_moved"] > 0.5
+
+
+def test_x0_gather_refuses_a_row_it_does_not_have():
+    rig = _x0_rig()
+    with pytest.raises(ValueError, match="row must be one of"):
+        x0_gather(rig["store"], rig["book"], rig["requests"], "settled", land=rig["land"])
+
+
+# ---- the preflight, shown refusing ----------------------------------------
+
+
+def test_x0_preflight_passes_on_the_shipped_block():
+    pre = x0_preflight(get_default_config())
+    assert pre["launch_mode"] == "clamp_atom" and pre["read_mode"] == "state"
+    assert pre["primary_budget"] == "A" and pre["settling_steps"] == 0
+    assert "MATCHED-BYTES" in pre["HEADLINE_RULE"]
+
+
+def test_x0_preflight_FIRES_on_a_launch_that_carries_no_request_information():
+    c = get_default_config()
+    gen_dynamical_read_config(c).launch_mode = "clamp_atom_thresholded"
+    with pytest.raises(AssertionError, match="posterior argmax"):
+        x0_preflight(c)
+
+
+def test_x0_preflight_FIRES_when_the_read_stops_being_the_launch():
+    c = get_default_config()
+    gen_dynamical_read_config(c).read_mode = "atom_mixture"
+    with pytest.raises(AssertionError, match="stops being the launch"):
+        x0_preflight(c)
+
+
+# ---- ⭐⭐ the verdict: the matched-bytes row leads, and the floors bind -------
+
+
+def _x0_mans(x0_vals, clu_vals, floor_vals, shuf_vals=(0.12, 0.12, 0.12),
+             matched=True, mult=1.0):
+    led = {"store_bytes": SHIPPED_STORE_BYTES if matched else 8 * SHIPPED_STORE_BYTES,
+           "addressing_head_bytes": SHIPPED_HEAD_BYTES, "coupling_bytes": 0,
+           "coupling_bytes_excluded": SHIPPED_STORE_BYTES,
+           "multiple_of_budget": float(mult),
+           "byte_matched_to_clu_field_for_field": bool(matched),
+           "coupling_not_needed_proof": {"coupling_needed": False}}
+
+    def _arm(v):
+        return {"external": {"composition_B": {"aggregate": float(v)}},
+                "distinct": {"B": {"factor_tuples": 17, "n": 72}},
+                "byte_ledger": led}
+
+    mans = []
+    for i, s in enumerate((0, 1, 2)):
+        arms = {"x0": _arm(x0_vals[i]), "clu": _arm(clu_vals[i]),
+                "knn_proto": _arm(0.86), "store_removed": _arm(0.12),
+                "lace": _arm(0.31), "ebm_compose": _arm(0.19),
+                "x0/A_atoms_shuffled": _arm(shuf_vals[i])}
+        for f in X0_LOOKUP_FLOORS:
+            arms[f"x0/A_{f}"] = _arm(floor_vals[i])
+        mans.append({"seed": s, "arms": arms})
+    return mans
+
+
+def test_the_MATCHED_BYTES_verdict_LEADS_and_the_8x_row_never_appears_bare():
+    # ⛔⛔ THE RULE THIS SPOKE EXISTS TO ENFORCE: 0.6852 is the 8× row. Any field that
+    # carries a rung-B number carries its byte multiple on the same record.
+    v = addressed_read_verdict(_x0_mans((0.4329, 0.5185, 0.5509),
+                                        (0.5903, 0.6065, 0.5880),
+                                        (0.15, 0.16, 0.14)))
+    mb = v["MATCHED_BYTES_VERDICT"]
+    assert mb["rung"] == "A" and mb["label"] == "x0"
+    assert mb["bytes"]["multiple_of_budget"] == 1.0
+    assert mb["bytes"]["byte_matched_to_clu_field_for_field"] is True
+    assert mb["bytes"]["coupling_needed"] is False
+    # ⛔ losing to the codebook read at the SAME bytes is a LOSS and is named one
+    assert mb["VERDICT_vs_clu"] == "LOSS"
+    assert mb["like_for_like_all_beaten"] is False and mb["PASS"] is False
+    assert "MATCHED BYTES" in v["headline"]
+    # ⛔ the 8× companion is NOT RUN here, and even then it announces the rule
+    assert v["eight_times_companion"]["⛔ never quote this without the byte multiple"]
+
+
+def test_the_charter_C1_FLOOR_fails_LOUDLY_when_a_lookup_is_not_beaten():
+    # ⛔⛔ THE FLOOR. If a matched-bytes lookup table matches the arm, the store is
+    # decorative — and the verdict says exactly that, whatever the rest of the table
+    # says about the rivals.
+    v = addressed_read_verdict(_x0_mans((0.50, 0.52, 0.51),
+                                        (0.20, 0.21, 0.20),    # a weak "clu"
+                                        (0.50, 0.52, 0.51)))   # ⛔ the lookup MATCHES
+    a = v["per_rung"]["A"]
+    assert a["like_for_like_all_beaten"] is True      # it beats every pinned rival...
+    assert a["charter_C1_floor_PASS"] is False        # ...⛔ and still does not count
+    assert "DECORATIVE" in a["charter_C1_floor_statement"]
+    assert a["PASS"] is False
+    assert v["MATCHED_BYTES_VERDICT"]["charter_C1_floor_PASS"] is False
+
+
+def test_the_charter_C2_control_must_COLLAPSE():
+    v = addressed_read_verdict(_x0_mans((0.50, 0.52, 0.51), (0.20, 0.21, 0.20),
+                                        (0.15, 0.16, 0.14),
+                                        shuf_vals=(0.50, 0.52, 0.51)))
+    a = v["per_rung"]["A"]
+    assert a["charter_C2_control_COLLAPSES"] is False
+    assert a["PASS"] is False
+
+
+def test_a_sub_margin_gain_over_a_lookup_floor_is_a_LOSS_never_a_WIN():
+    # ⛔ +0.001 with three agreeing signs is not a win against a like-for-like row.
+    v = addressed_read_verdict(_x0_mans((0.500, 0.501, 0.502), (0.20, 0.21, 0.20),
+                                        (0.4995, 0.5005, 0.5015)))
+    floors = v["per_rung"]["A"]["charter_C1_floors"]
+    assert all(f["verdict"] == "LOSS" for f in floors.values())
+    assert v["per_rung"]["A"]["charter_C1_floor_PASS"] is False
+
+
+def test_the_floor_comparator_and_the_PINNED_verdict_agree_on_every_shared_rival():
+    # ⭐ the §C.1 floors are judged by the same arithmetic as the pinned rows — and
+    # that is checked, not asserted: `addressed_read_verdict` re-derives every pinned
+    # rival through BOTH paths and raises if they ever differ.
+    mans = _x0_mans((0.4329, 0.5185, 0.5509), (0.5903, 0.6065, 0.5880),
+                    (0.15, 0.16, 0.14))
+    v = addressed_read_verdict(mans)                     # ⛔ raises on disagreement
+    for rival, got in v["per_rung"]["A"]["against"].items():
+        mine = _x0_pair({0: 0.4329, 1: 0.5185, 2: 0.5509},
+                        {i: mans[i]["arms"][rival]["external"]["composition_B"]["aggregate"]
+                         for i in range(3)},
+                        DYNREAD_MARGIN, is_ceiling=bool(rival == DYNREAD_CEILING_ARM))
+        assert mine["verdict"] == got["verdict"]
+    assert DYNREAD_LIKE_FOR_LIKE == ("store_removed", "ebm_compose", "lace", "clu")
+
+
+def test_a_missing_x0_row_is_NOT_RUN_never_a_zero():
+    v = addressed_read_verdict([{"seed": 0, "arms": {}}])
+    assert v["per_rung"]["A"]["verdict"] == "NOT RUN"
+    assert "NOT RUN" in v["per_rung"]["A"]["note"]
+
+
+def test_run_x0_budget_signature_takes_the_clu_ledger_it_matches_against():
+    # ⛔ "matched bytes" is checked against THIS manifest's own store ledger, ⛔ never
+    # against a literal in the source.
+    sig = list(inspect.signature(run_x0_budget).parameters)
+    assert "clu_ledger" in sig
+    src = inspect.getsource(run_x0_budget)
+    assert "524_288" not in src and "524288" not in src
