@@ -310,7 +310,13 @@ def run_seed(
         f"  ⭐ FROZEN: encoder {enc_hash[:16]}… probe {probe_hash[:16]}… "
         f"cache scope={cman['scope']} n={cman['n_rows']}"
     )
-    reencode = _assert_cache_reencodes(dataset, config, encoder, cache_rows, features, cman, log=log)
+    # ⭐ ENFORCED. ⛔ No coverage gate in this module, and `gather_features` (leg 2)
+    # extends the cache for any row it does not hold — the hazard is live here.
+    reencode = _assert_cache_reencodes(
+        dataset, config, encoder, cache_rows, features, cman, log=log,
+        will_extend=True,
+        reason="exp_gen_classifier has no cache-coverage gate; gather_features may extend",
+    )
     decoder, dec_info, _ = resolve_decoder(config, bdir, int(seed), log)
 
     grid = split.grid

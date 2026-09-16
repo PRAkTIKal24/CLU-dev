@@ -210,6 +210,26 @@ def matched_seen_rows(dataset: str, split, values: np.ndarray, exclude: np.ndarr
 
 
 
+#: ⭐ Cache identities whose re-encode check has PASSED **under enforcement** in this
+#: process.  ⛔ An UNENFORCED check never lands here — that is the whole point: a run
+#: that skipped the preflight because it was fully covered, and then extends the cache
+#: anyway, still pays for a full-strength check at the point of extension.
+#: Keyed on the cache MANIFEST (encoder hash + dtype + D + row count), so two distinct
+#: caches in one process are never conflated and no object identity is relied on.
+_REENCODE_VERIFIED: set[tuple] = set()
+
+
+def _cache_identity(cache_rows, cman: dict) -> tuple:
+    """A stable key for "this cache, written by this encoder"."""
+    return (
+        str(cman.get("encoder_param_hash", "")),
+        str(cman.get("dtype", "")),
+        int(cman.get("D", 0)),
+        int(cman.get("n_rows", -1)),
+        int(np.asarray(cache_rows).size),
+    )
+
+
 def gather_features(
     dataset: str,
     config: CHLUConfig,
@@ -250,6 +270,21 @@ def gather_features(
         out[hit] = features_for_rows(cache_rows, features, rows[hit]).reshape((-1, d))
     n_miss = int((~hit).sum())
     if n_miss:
+        # ⭐⭐ THE HAZARD, CAUGHT AT THE POINT OF EXTENSION.  Rows encoded here are
+        # returned interleaved with rows READ FROM THE CACHE; if this encoder does not
+        # reproduce the cache, the two populations are a different computation and
+        # ⛔ nothing downstream would ever notice.
+        # ⛔ The preflight may legitimately have run UNENFORCED — a run that the
+        # coverage gate said was fully covered.  That is exactly why the check is
+        # repeated HERE, at FULL STRENGTH, with no parameter that can ask for less.
+        # ⚠ Charged once per (cache, encoder) per process: the check is deterministic,
+        # and `_REENCODE_VERIFIED` is only ever populated by an ENFORCED pass.
+        if _cache_identity(cache_rows, cman) not in _REENCODE_VERIFIED:
+            log("    ⭐ cache extension requested — re-encode check runs ENFORCED here")
+            _assert_cache_reencodes(
+                dataset, config, encoder, cache_rows, features, cman, log=log,
+                reason="gather_features is about to EXTEND the cache (point of extension)",
+            )
         log(f"    extending cache coverage: {n_miss} row(s) encoded through the frozen encoder")
         missing = rows[~hit]
         slot = np.flatnonzero(~hit)
@@ -271,7 +306,8 @@ def gather_features(
     return out
 
 
-def _assert_cache_reencodes(dataset, config, encoder, cache_rows, features, cman, n=64, log=print):
+def _assert_cache_reencodes(dataset, config, encoder, cache_rows, features, cman, n=64,
+                            log=print, *, will_extend: bool = True, reason: str = ""):
     """⭐ Verify that re-encoding CACHED rows reproduces the cache **to within one
     representable step of the format the cache is stored in**.
 
@@ -320,12 +356,51 @@ def _assert_cache_reencodes(dataset, config, encoder, cache_rows, features, cman
     ⭐ On a real mismatch the message states what was **measured**, in ULP.  It does not
     say "this is NOT the encoder" — the parameter hash is asserted separately and by
     the time this runs it has already matched; the reader draws the conclusion.
+
+    ⭐⭐ **``will_extend`` — what the gate BINDS on, and why it is not a tolerance.**
+    The hazard this gate exists to prevent is a run that **writes new rows** into the
+    cache's feature space through an encoder that does not reproduce the rows already
+    there (:func:`gather_features`' extension path).  A run that encodes **nothing new**
+    cannot trigger that hazard: it reads cached rows and returns them, and a
+    re-encode disagreement changes not one number it computes.  Such a run was still
+    being refused — on a capability it never exercises.
+
+    ⛔ **The bounds are NOT relaxed and there is no parameter that can relax them.**
+    ``will_extend`` decides only whether the (unchanged) bounds **bind**:
+
+    * ``will_extend=True`` — **the default, and today's behaviour exactly**.  A caller
+      that passes nothing gets the abort.  ⛔ There is no silent loosening: the
+      relaxation must be *asked for*, per call site, in the open.
+    * ``will_extend=False`` — the caller has *evidence in hand* that this run cannot
+      extend the cache (in ``exp_gen_wells_route_b``, the coverage gate's own
+      ``cov["n_shortfall"] == 0``, two lines above the call — ⛔ never re-derived here,
+      so the two can never disagree).  The statistics are still computed and still
+      logged, the returned dict carries ``enforced: False`` plus the caller's
+      ``reason``, and ⭐ ``would_have_failed`` / ``would_have_failed_why`` record
+      whether the check *would* have aborted — so a reader can never mistake a skipped
+      check for a passed one.  ⛔ A ``reason`` is **mandatory** here; omitting it is a
+      :class:`ValueError`, not a quiet skip.
+
+    ⭐ Scoping the preflight does **not** open a hole behind it.  An unenforced pass
+    deliberately does **not** register in ``_REENCODE_VERIFIED``, so if such a run
+    reaches :func:`gather_features` with an uncached row after all, the check re-runs
+    there at full strength and aborts.  ⛔ Preflight is not the only place the hazard
+    lives, and it is not the only place it is caught.
     """
     # ⭐ Declared here, in force for every caller, recorded in the returned dict so the
-    # manifest carries the bound that was applied.  ⛔ Deliberately NOT a keyword
-    # argument: there must be no per-caller, per-device way to widen or disable this.
+    # manifest carries the bound that was applied.  ⛔ Deliberately NOT keyword
+    # arguments: there is no per-caller, per-device way to widen or disable EITHER
+    # bound — ``will_extend`` governs whether they BIND, never how wide they are.
     ULP_BOUND = 1.0
     FRAC_BOUND = 1e-2
+
+    if not will_extend and not str(reason).strip():
+        raise ValueError(
+            "⛔ _assert_cache_reencodes(will_extend=False) requires a `reason`. An "
+            "unenforced check that leaves no trace is indistinguishable in the log and "
+            "in the manifest from a check that passed — which is how this comes back as "
+            "a mystery. Name the evidence that this run cannot extend the cache."
+        )
 
     take = np.asarray(cache_rows[: int(n)], np.int64)
     cached = features_for_rows(cache_rows, features, take).reshape((take.size, -1))
@@ -361,6 +436,9 @@ def _assert_cache_reencodes(dataset, config, encoder, cache_rows, features, cman
         "cache_dtype": str(cache_dtype),
         "ulp_bound": float(ULP_BOUND),
         "frac_bound": float(FRAC_BOUND),
+        # ⭐ whether the bounds BOUND on this call, and on whose word
+        "enforced": bool(will_extend),
+        "enforced_reason": str(reason),
     }
     log(
         f"  ⭐ cache re-encode check: {stats['n_checked']} rows, "
@@ -369,14 +447,25 @@ def _assert_cache_reencodes(dataset, config, encoder, cache_rows, features, cman
         f"{cache_dtype} ULP (bounds: {ULP_BOUND:g} ULP, {FRAC_BOUND:.1%} of elements)"
     )
 
+    log(
+        f"  {'⭐ ENFORCED' if will_extend else '⚠ NOT ENFORCED'} "
+        f"(enforced={str(bool(will_extend)).lower()}): "
+        f"{reason or 'no caller opinion — the strict default applies'}"
+    )
+
+    # ⭐ Every conviction is computed the same way whether or not it will be raised, so
+    # the record of an unenforced run says exactly what an enforced one would have done.
+    verdicts: list[tuple[str, str]] = []
     if n_nonfinite:
-        raise AssertionError(
+        verdicts.append((
+            "nonfinite",
             f"re-encode check: {n_nonfinite} of {n_elem} element(s) are NaN or Inf in "
             f"the cache or in the re-encoded features, so the comparison is undefined "
             f"— {stats}"
-        )
+        ))
     if stats["max_ulp_delta"] > ULP_BOUND:
-        raise AssertionError(
+        verdicts.append((
+            "ulp",
             f"re-encoding {stats['n_checked']} cached rows did not reproduce the cache "
             f"to within one {cache_dtype} ULP: max |delta| = "
             f"{stats['max_abs_delta']:.6g} = {stats['max_ulp_delta']:.3f} ULP of the "
@@ -384,16 +473,43 @@ def _assert_cache_reencodes(dataset, config, encoder, cache_rows, features, cman
             f"({stats['frac_differing']:.3%}) differ.  ⭐ That is further than a "
             f"rounding step of the stored format, so the loaded encoder does not "
             f"reproduce these cached values — {stats}"
-        )
+        ))
     if stats["frac_differing"] > FRAC_BOUND:
-        raise AssertionError(
+        verdicts.append((
+            "fraction",
             f"re-encoding {stats['n_checked']} cached rows stayed within one "
             f"{cache_dtype} ULP (max {stats['max_ulp_delta']:.3f} ULP) but "
             f"{n_diff}/{n_elem} elements ({stats['frac_differing']:.3%}) moved, over "
             f"the {FRAC_BOUND:.3%} bound: a rounding-boundary crossing touches a "
             f"handful of elements, a population this size is a different computation "
             f"— {stats}"
+        ))
+
+    # ⭐ The record of what the bounds SAID, independent of whether they bound.  ⚠ The
+    # verdict messages above stringify `stats` as it was when they were built, so they
+    # do not echo these two keys — they are for the returned dict and the manifest,
+    # where a reader compares a skipped check against a passed one.
+    stats["would_have_failed"] = bool(verdicts)
+    stats["would_have_failed_why"] = [k for k, _ in verdicts]
+
+    if will_extend:
+        if verdicts:
+            raise AssertionError(verdicts[0][1])
+        # ⭐ Only an ENFORCED pass discharges the extension-point check in this process.
+        _REENCODE_VERIFIED.add(_cache_identity(cache_rows, cman))
+        return stats
+
+    if verdicts:
+        log(
+            f"  ⛔⛔ THE RE-ENCODE CHECK WOULD HAVE ABORTED THIS RUN "
+            f"({', '.join(k for k, _ in verdicts)}) and was NOT enforced, because: "
+            f"{reason}. ⭐ The run encodes nothing new, so no inconsistent feature can "
+            f"be written — but the encoder does NOT reproduce this cache on this "
+            f"machine, and any run that extends the cache here WILL abort.\n"
+            f"      {verdicts[0][1]}"
         )
+    else:
+        log("  ⭐ (the check was not enforced, and it would have PASSED anyway)")
     return stats
 
 
@@ -637,7 +753,15 @@ def run_seed(
         f"  feature cache verified: {cman['n_rows']} rows (scope={cman['scope']}), "
         f"D={cman['D']}, {cman['dtype']}"
     )
-    reenc = _assert_cache_reencodes(dataset, config, encoder, crows, feats, cman, log=log)
+    # ⭐ ENFORCED. ⛔ This module has NO coverage gate, and `gather()` below routes
+    # every row set through `gather_features`, whose extension path encodes anything
+    # the cache does not already hold — so this run can extend the cache and the
+    # bounds must bind. ⛔ Do not relax this without a coverage gate to relax it ON.
+    reenc = _assert_cache_reencodes(
+        dataset, config, encoder, crows, feats, cman, log=log,
+        will_extend=True,
+        reason="exp_gen_store has no cache-coverage gate; gather_features may extend",
+    )
 
     ms_rows = matched_seen_rows(dataset, split, values, rows["store_train"])
     probe_rows = rows["store_train"][: int(cfg.n_probe_train)]
