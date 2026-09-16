@@ -112,8 +112,12 @@ from ..core.gen_dream import (  # noqa: E402
     requests_from_labels,
 )
 from ..core.gen_landscape import (  # noqa: E402
+    AtomLandscape,
     arm_key,
+    atom_posterior,
     convergence_report,
+    launch_state,
+    read_settled,
     save_trace,
 )
 from ..core.gen_request import (  # noqa: E402
@@ -1029,6 +1033,490 @@ def run_dynread_budget(
 
 
 # ---------------------------------------------------------------------------
+# 4b. ⭐⭐ THE ADDRESSED READ (``x0``) — ⛔⛔ AND THE NAME IT MUST NEVER BE GIVEN
+# ---------------------------------------------------------------------------
+#
+# ⭐ ``x0`` is **request -> address-book posterior ARGMAX over the written atoms ->
+# decode**.  It is an **ADDRESSED READ**.
+#
+# ⛔⛔ It is **NEVER** described as dynamics, as settling, as a landscape read, or as
+# "the dynamical read at zero steps".  **It spends no steps, it uses no coupling, and
+# it has no energy trace.**  ``settle_chain`` does not appear on its path;
+# :func:`x0_zero_step_proof` proves that as arithmetic (the decoder's input IS the
+# launch, displacement exactly 0.0) rather than asserting it in a docstring, and
+# ``test_x0_path_calls_no_chain`` pins it at the source level.
+#
+# ⭐⭐ **Why this arm exists.**  ``gen-read-cell-arm`` measured, as a WIRING
+# DIAGNOSTIC, that the launch its chain starts from scores 0.5008 (rung A) and 0.6852
+# (rung B) while the settled state scores 0.2083 / 0.2114.  ⛔ Those were diagnostics,
+# not table rows: no byte ledger, no controls, no floor.  This section promotes the
+# launch to a scored arm **with its own measured ledger and the charter §C floors**, so
+# the question "does addressing ALONE carry the generation table?" has an answer that a
+# referee can check.
+#
+# ⛔⛔ **THE ONE SENTENCE THAT MAY NOT BE MIS-SAID.**  0.6852 is the **8x-BYTES** row.
+# The MATCHED-BYTES row is rung A, and at matched bytes this arm is measured against
+# ``clu``'s 0.5949 at the SAME 524,288 B.  ⛔ Quoting 0.6852 against 0.5949 without the
+# byte multiple attached on the same line is forbidden (PREREG §7.1).
+
+#: ⭐ The arm's name on the table.  ⛔ Deliberately NOT appended to :data:`ARMS`: that
+#: tuple is the PIN's declared rival-row list (charter §A4 / the pin table) and editing
+#: it would void this spoke's numbers.  ``x0`` is selected explicitly (``--arm x0``),
+#: exactly as ``dynread`` is.
+X0_ARM = "x0"
+#: ⭐ The two byte points, inherited from ``gen-dynamical-read``'s PREREG §3 so the rows
+#: are comparable with the dynamical read's at the same atom counts.  ⭐ ``A`` is the
+#: **MATCHED-BYTES** rung and carries the arm's bare name; ``B`` is **8x** and is ⛔
+#: never quoted as matched.
+X0_BUDGETS = ("A", "B")
+X0_PRIMARY_BUDGET = "A"
+#: ⛔ The launch this arm IS.  The posterior **argmax** — ⛔ never the thresholded
+#: variant, which degenerates to the prior's argmax (0.00 of 5 wells clear 0.5).
+X0_LAUNCH_MODE = "clamp_atom"
+#: ⭐ The atom-mean lookup is spelled as a PINNED launch mode, ⛔ not re-implemented.
+X0_LOOKUP_LAUNCH_MODE = "posterior_mean"
+#: ⭐ The read this arm's output is decoded through — the SAME one every landscape row
+#: on this table uses.  At ``"state"`` it is a reshape, so the decoder's input is the
+#: launch itself, bit-for-bit.
+X0_READ_MODE = "state"
+#: ⭐ One arm (``full``) and **three floors/controls the charter makes mandatory**:
+#:
+#: ``atom_mean_lookup``  §C.1, **the Advisor's named rival** — the posterior-weighted
+#:                       MEAN of the same atoms, at **exactly** the same bytes.
+#: ``row_lookup``        §C.1, the *harder* floor — the single best-scoring **whole
+#:                       stored train row** (ONE atom index shared by all wells).  It
+#:                       removes the per-well recombination and ⛔ nothing else, so the
+#:                       gap to ``full`` **is** what composing across wells buys.
+#: ``atoms_shuffled``    §C.2, the landscape-removed control — the SAME indices, an
+#:                       atom table permuted independently per well.  If this does not
+#:                       collapse, the output does not depend on what was written.
+#:
+#: ⛔ None of the three is a second arm; each is a row the charter refuses to score
+#: ``full`` without.
+X0_ROWS = ("full", "atom_mean_lookup", "row_lookup", "atoms_shuffled")
+#: ⭐ The floors §C.1 binds the arm against.  ⛔ Losing to EITHER means the store is
+#: decorative and the arm is reported as such.
+X0_LOOKUP_FLOORS = ("atom_mean_lookup", "row_lookup")
+#: ⛔ Steps spent. Zero. It is not a budget, not a default and not a knob — it is what
+#: the arm IS, and :func:`x0_zero_step_proof` measures it rather than declaring it.
+X0_SETTLING_STEPS = 0
+
+
+def x0_label(budget: str, row: str) -> str:
+    """``(rung, row) -> the label the table carries``.
+
+    ⭐ The MATCHED rung's ``full`` row is plain ``x0`` — the one row the generation
+    table gains.  Everything else is suffixed on the ``lace/<sampler>`` precedent so a
+    reader can never mistake a floor, a control, or the **8x** rung for it.
+    """
+    if str(budget) == X0_PRIMARY_BUDGET and str(row) == "full":
+        return X0_ARM
+    suffix = "" if str(row) == "full" else f"_{row}"
+    return f"{X0_ARM}/{budget}{suffix}"
+
+
+def x0_address_book_bytes(book) -> dict:
+    """⭐ The atom address book's bytes, **measured on the live object**.
+
+    ⛔ Not computed from the formula and then believed: the leaves are summed, and the
+    closed form ``(K*N + sum_f V_f*K*N)*4`` is checked **against** the measurement.
+    That closed form is ``gen_compose.address_book_bytes``' formula with ``M -> N``, so
+    at ``N = M`` this head is byte-identical to the CLU arm's, which is what makes the
+    rung-A comparison a match rather than a resemblance.
+    """
+    leaves = jax.tree_util.tree_leaves(eqx.filter(book, eqx.is_inexact_array))
+    measured = int(sum(int(np.asarray(x).size) for x in leaves) * 4)
+    K, N = int(book.n_wells), int(book.n_atoms)
+    v_sum = int(sum(int(np.asarray(lc).shape[0]) for lc in book.log_cond))
+    closed = int((K * N + v_sum * K * N) * 4)
+    if measured != closed:
+        raise AssertionError(
+            f"⛔ the atom address book measures {measured} B but the closed form "
+            f"(K*N + sum_f V_f*K*N)*4 = {closed} B — the ledger and the object "
+            "disagree and ⛔ no byte claim may be made from either.")
+    return {"bytes": measured, "closed_form_bytes": closed, "n_wells": K,
+            "n_atoms": N, "sum_cardinalities": v_sum,
+            "bytes_formula": "(K*N + sum_f V_f*K*N) * 4", "dtype": "float32",
+            "role": ("⭐ the ADDRESSED READ's request-addressing head — the same "
+                     "role, the same formula and (at N = M) the same SIZE as the CLU "
+                     "arm's; ⛔ excluded from store_bytes by the same convention, so "
+                     "the two arms are compared field for field")}
+
+
+def x0_gather(store, book, requests: np.ndarray, row: str, land=None,
+              clamp_threshold: float = 0.5, seed: int = 0) -> dict:
+    """``requests -> the decoder's input``, for one of :data:`X0_ROWS`.
+
+    ⭐ ``full`` and ``atom_mean_lookup`` are :func:`~chlu.core.gen_landscape.launch_state`
+    **called**, ⛔ not re-implemented — the pinned argmax and the pinned posterior-mean.
+    ``row_lookup`` and ``atoms_shuffled`` are derived from the pinned
+    :func:`~chlu.core.gen_landscape.atom_posterior` and differ from ``full`` in **one**
+    declared quantity each:
+
+    * ``row_lookup``     — one atom index for ALL wells (``S.sum(axis=1).argmax()``)
+      instead of one per well.  ⭐ The atoms share a row index across wells by
+      construction (``atoms[k] = Z[rows][:, cols_k]``), so this returns a **genuine
+      stored train row**, whole.
+    * ``atoms_shuffled`` — the SAME per-well indices ``full`` uses, read out of an atom
+      table permuted independently per well.  ⛔ Same bytes, same book, same indices;
+      only the CONTENT the index points at changes.
+    """
+    if row not in X0_ROWS:
+        raise ValueError(f"row must be one of {X0_ROWS}, got {row!r}")
+    R = np.asarray(requests, np.int64)
+    if row in ("full", "atom_mean_lookup"):
+        mode = X0_LAUNCH_MODE if row == "full" else X0_LOOKUP_LAUNCH_MODE
+        lau = launch_state(land, book, R, mode, float(clamp_threshold))
+        idx = np.asarray(lau["atom_index"], np.int64)
+        return {"x": np.asarray(lau["x0"], np.float32), "launch_mode": mode,
+                "mean_confidence": float(lau["mean_confidence"]),
+                "mean_n_clamped": float(lau["mean_n_clamped"]),
+                "atom_index_per_well": idx,
+                "n_distinct_index_tuples": int(np.unique(idx, axis=0).shape[0]),
+                "returns_a_stored_atom": bool(row == "full"),
+                "what": ("⭐ the posterior-ARGMAX atom in every well, concatenated — "
+                         "the ADDRESSED READ" if row == "full" else
+                         "⭐ §C.1 FLOOR: the posterior-weighted MEAN of the same "
+                         "atoms, at exactly the same bytes")}
+    S = atom_posterior(book, R)                       # (n, K, N) log-scores
+    x = np.zeros((int(R.shape[0]), int(store.dim)), np.float32)
+    if row == "row_lookup":
+        # ⛔ the per-well normalisers are constant in the atom index, so summing the
+        # UNNORMALISED per-well log-scores is the joint argmax over whole rows.
+        idx = np.asarray(S, np.float64).sum(axis=1).argmax(axis=-1)   # (n,)
+        for k, w in enumerate(store.well_channels):
+            x[:, np.asarray(w, np.int64)] = np.asarray(store.atoms[k], np.float32)[idx]
+        rows_into_pool = np.asarray(store.atom_rows, np.int64)[idx]
+        return {"x": x, "launch_mode": "row_lookup",
+                "atom_index_shared": idx.astype(np.int64),
+                "pool_rows_returned": rows_into_pool,
+                "n_distinct_rows_returned": int(np.unique(idx).size),
+                "returns_a_stored_atom": True,
+                "what": ("⭐ §C.1 FLOOR, the harder one: the single best-scoring WHOLE "
+                         "stored train row. ⛔ One index for all wells — it differs "
+                         "from `full` in the per-well recombination and NOTHING else")}
+    idx = np.asarray(S, np.float64).argmax(axis=-1)                   # (n, K)
+    rng = np.random.default_rng(int(seed) * 7919 + 20_260_916)
+    n_distinct = int(np.unique(idx, axis=0).shape[0])
+    perms = []
+    for k, w in enumerate(store.well_channels):
+        A = np.asarray(store.atoms[k], np.float32)
+        p = rng.permutation(A.shape[0])
+        perms.append(p)
+        x[:, np.asarray(w, np.int64)] = A[p][idx[:, k]]
+    return {"x": x, "launch_mode": "atoms_shuffled",
+            "atom_index_per_well": idx.astype(np.int64),
+            "permutation_seed": int(int(seed) * 7919 + 20_260_916),
+            "n_distinct_index_tuples": n_distinct,
+            "n_wells_permuted": len(perms),
+            "frac_indices_moved": float(np.mean([float((p != np.arange(p.size)).mean())
+                                                 for p in perms])),
+            "returns_a_stored_atom": True,
+            "what": ("⭐ §C.2 LANDSCAPE-REMOVED CONTROL: the SAME indices, an atom "
+                     "table permuted independently per well. ⛔ If this does not "
+                     "collapse, the output does not depend on what was written")}
+
+
+def x0_coupling_is_not_needed(built: dict, requests: np.ndarray,
+                              clamp_threshold: float = 0.5) -> dict:
+    """⛔⭐ **THE CRUX, MEASURED — PREREG §4 assertion A3.**
+
+    The rung-A ledger is ``clu``'s **only if the addressed read does not need the
+    low-rank coupling**.  ⛔ That is not assumed here and it is not read off
+    :func:`~chlu.core.gen_landscape.launch_state`'s source.  ``x0`` is recomputed on
+    four landscapes that differ **only** in the coupling and the two strengths — the
+    fitted coupling at the certificate's ``lambda``, ``coupling=None``, ``lambda = 0``
+    and ``beta = 0`` — and all four must be **bit-identical** (``np.array_equal``).
+
+    ⛔ If any differ, the coupling IS on the read path, ``P2`` is FALSE, the rung-A
+    ledger is 2.00x the budget, **"matched bytes" is withdrawn** and the run aborts
+    rather than publishing a match it does not have.
+    """
+    land = built["land"]
+    store, book = built["store"], built["book"]
+    R = np.asarray(requests, np.int64)
+    ref = np.asarray(
+        launch_state(land, book, R, X0_LAUNCH_MODE, float(clamp_threshold))["x0"],
+        np.float32)
+    variants = {
+        "coupling_fitted_at_certificate_lambda": land,
+        "coupling_None": AtomLandscape(store, np.asarray(land.sigma), None,
+                                       float(land.request_strength),
+                                       float(land.coupling_strength)),
+        "coupling_strength_zero": land.with_strengths(coupling_strength=0.0),
+        "request_strength_zero": land.with_strengths(request_strength=0.0),
+    }
+    same, maxdiff = {}, {}
+    for name, lv in variants.items():
+        got = np.asarray(
+            launch_state(lv, book, R, X0_LAUNCH_MODE, float(clamp_threshold))["x0"],
+            np.float32)
+        same[name] = bool(np.array_equal(got, ref))
+        maxdiff[name] = float(np.max(np.abs(got - ref))) if got.shape == ref.shape else float("inf")
+    if not all(same.values()):
+        raise AssertionError(
+            "⛔⛔ THE COUPLING IS ON THE ADDRESSED READ'S PATH: x0 is NOT bit-identical "
+            f"across {list(variants)} (bit-identical: {same}, max |delta|: {maxdiff}). "
+            "⇒ PREREG §5 P2 is FALSE, the rung-A ledger is 2.00x the budget and "
+            "'matched bytes' is WITHDRAWN. Refusing to score a match that is not one.")
+    return {
+        "bit_identical": same, "max_abs_delta": maxdiff,
+        "n_requests": int(R.shape[0]),
+        "coupling_needed": False,
+        "verdict": ("⭐⭐ MEASURED, NOT ASSUMED: x0 is bit-identical with the fitted "
+                    "coupling, with NO coupling, at lambda = 0 and at beta = 0. ⇒ the "
+                    "addressed read is a function of (request, address book, atoms) "
+                    "ONLY, the coupling is NOT deployed, and the arm's ledger is "
+                    "STORE + ADDRESSING HEAD — ⭐ half the dynamical read's."),
+    }
+
+
+def x0_zero_step_proof(x: np.ndarray, read: np.ndarray, feat_shape) -> dict:
+    """⛔⭐ **"It spends zero steps" as ARITHMETIC** — PREREG §4 assertion A4.
+
+    At ``read_mode="state"`` the read is a reshape, so the decoder's input **is** the
+    launch.  This measures that: the displacement from launch to decoder input is
+    **exactly** 0.0, bit-for-bit.  ⛔ A row that cannot show this has a chain on its
+    path and is not this arm.
+    """
+    flat = np.asarray(read, np.float32).reshape((int(np.asarray(read).shape[0]), -1))
+    xa = np.asarray(x, np.float32)
+    if not np.array_equal(flat, xa):
+        raise AssertionError(
+            "⛔ the decoder's input is NOT the launch, bit-for-bit — something is on "
+            f"this arm's path between them (max |delta| = {np.max(np.abs(flat - xa))})")
+    return {
+        "settling_steps": int(X0_SETTLING_STEPS),
+        "displacement_from_launch_rms": 0.0,
+        "displacement_from_launch_max": 0.0,
+        "decoder_input_is_the_launch_bitwise": True,
+        "energy_trace": None,
+        "coupling_used": False,
+        "read_mode": str(X0_READ_MODE),
+        "feat_shape": [int(v) for v in feat_shape],
+        "what": ("⭐ MEASURED: the decoder's input is the launch itself, bit-for-bit. "
+                 "⛔ No chain, no steps, no energy trace, no coupling. ⛔⛔ This arm is "
+                 "an ADDRESSED READ and is NEVER called dynamics, settling, a "
+                 "landscape read, or 'the dynamical read at zero steps'."),
+    }
+
+
+def x0_preflight(config: CHLUConfig) -> dict:
+    """⛔ The traps for an ADDRESSED read, as assertions rather than comments."""
+    c = gen_dynamical_read_config(config)
+    if str(c.launch_mode) != X0_LAUNCH_MODE:
+        raise AssertionError(
+            f"⛔ launch_mode={c.launch_mode!r}; this arm IS the posterior argmax "
+            f"({X0_LAUNCH_MODE!r}). ⛔ The thresholded variant degenerates to the "
+            "prior's argmax and would carry no request information at all.")
+    if str(c.read_mode) != X0_READ_MODE:
+        raise AssertionError(
+            f"⛔ read_mode={c.read_mode!r}; at anything but {X0_READ_MODE!r} the read "
+            "is not a reshape and the decoder's input stops being the launch, which "
+            "is the one thing this arm's zero-step claim rests on.")
+    return {
+        "arm": X0_ARM,
+        "mechanism": ("request -> address-book posterior ARGMAX over the written "
+                      "atoms -> decode"),
+        "launch_mode": str(c.launch_mode),
+        "clamp_threshold": float(c.clamp_threshold),
+        "read_mode": str(c.read_mode),
+        "settling_steps": int(X0_SETTLING_STEPS),
+        "coupling_used": False,
+        "budgets": list(X0_BUDGETS),
+        "primary_budget": X0_PRIMARY_BUDGET,
+        "rows": list(X0_ROWS),
+        "lookup_floors": list(X0_LOOKUP_FLOORS),
+        "NAMING_RULE": ("⛔⛔ This arm is an ADDRESSED READ. It is NEVER described as "
+                        "dynamics, as settling, as a landscape read, or as 'the "
+                        "dynamical read at zero steps'. It spends ZERO steps, uses NO "
+                        "coupling and has NO energy trace."),
+        "HEADLINE_RULE": ("⛔⛔ The headline is the MATCHED-BYTES rung (A). The rung-B "
+                          "row is 8x the bytes and is quoted ONLY with its byte "
+                          "multiple attached on the same line."),
+        "NOT_RUN": ("⛔ no ladder, no tuning rungs, no settling, no temperature, no "
+                    "second mechanism — declared, not silent."),
+    }
+
+
+def run_x0_budget(
+    config: CHLUConfig, budget: str, X_store, lab_store: np.ndarray, well_channels,
+    feat_shape, names, cards, seed: int, req_arr: dict, art_dir: Path,
+    record: Callable, clu_ledger: dict, already: Sequence = (), log: Callable = print,
+) -> dict:
+    """⭐ One byte point of the addressed read, scored **on this cell**.
+
+    ⛔ Nothing here re-implements the read.  The store, the bandwidths and the address
+    book are ``gen-dynamical-read``'s :func:`build_landscape` over THIS cell's store
+    rows and THIS cell's well partition — so the atoms are bit-for-bit the ones the
+    ``dynread`` rows launched from — and the gather is
+    :func:`~chlu.core.gen_landscape.launch_state`.  What this function owns is the
+    **measured byte ledger**, the **floors**, and handing each row to the **same**
+    ``_record`` every other arm on this table goes through.
+    """
+    c = gen_dynamical_read_config(config)
+    t0 = time.time()
+    wanted = [x0_label(budget, r) for r in X0_ROWS]
+    if all(w in set(already) for w in wanted):
+        log(f"  [x0/{budget}] every row is already on disk — skipped")
+        return {"budget": str(budget), "rows": [], "skipped": True}
+    log(f"  ⭐ [x0] byte point {budget}: the ADDRESSED READ — ⛔ ZERO settling steps, "
+        "⛔ no coupling, ⛔ no energy trace")
+    # ⚠ ``build_landscape`` logs its own ledger, which INCLUDES the coupling and reads
+    # "2.00x budget".  ⛔ That is the DYNAMICAL read's ledger.  The correction below is
+    # logged immediately after so no reader of this log can inherit the wrong number.
+    built = dynread_build_landscape(config, str(budget), X_store, lab_store,
+                                    well_channels, feat_shape, cards, int(seed), log=log)
+    spec, store, book = built["spec"], built["store"], built["book"]
+
+    # ---- ⭐⭐ THE BYTE LEDGER — measured on the live objects, PREREG §4 A1-A3 ----
+    coupling_proof = x0_coupling_is_not_needed(built, req_arr["B"],
+                                               float(c.clamp_threshold))
+    head = x0_address_book_bytes(book)
+    store_bytes = int(store.n_bytes())
+    if store_bytes != int(built["byte_ledger"]["store"]["store_bytes"]):
+        raise AssertionError(
+            f"⛔ the live store measures {store_bytes} B, the declared ledger says "
+            f"{built['byte_ledger']['store']['store_bytes']} B")
+    if store_bytes != int(spec["budget_bytes"]):
+        raise AssertionError(
+            f"⛔ the live store measures {store_bytes} B and rung {budget}'s declared "
+            f"budget is {spec['budget_bytes']} B — the ledger and the object disagree")
+    matched = bool(int(store_bytes) == int(clu_ledger["deployed_bytes"])
+                   and int(head["bytes"]) == int(clu_ledger["addressing_head"]["bytes"]))
+    if str(budget) == X0_PRIMARY_BUDGET and not matched:
+        raise AssertionError(
+            f"⛔⛔ rung {budget} is THE MATCHED-BYTES rung and it does not match: store "
+            f"{store_bytes} vs clu {clu_ledger['deployed_bytes']}, head {head['bytes']} "
+            f"vs clu {clu_ledger['addressing_head']['bytes']}. ⛔ Refusing to publish a "
+            "matched-bytes verdict without matched bytes.")
+    ledger = {
+        "arm": X0_ARM, "rung": str(spec["label"]), "rung_role": str(spec["role"]),
+        "budget_bytes": int(clu_ledger["deployed_bytes"]),
+        "deployed_bytes": int(store_bytes),
+        "store_bytes": int(store_bytes),
+        "addressing_head_bytes": int(head["bytes"]),
+        "addressing_head": head,
+        "coupling_bytes": 0,
+        "coupling_bytes_excluded": int(built["byte_ledger"]["coupling"]["coupling_bytes"]),
+        "coupling_excluded_reason": coupling_proof["verdict"],
+        "coupling_not_needed_proof": coupling_proof,
+        "n_atoms_per_well": int(spec["n_atoms"]),
+        "multiple_of_budget": float(store_bytes) / float(clu_ledger["deployed_bytes"]),
+        "byte_matched_to_clu_field_for_field": matched,
+        "clu_reference": {"store_bytes": int(clu_ledger["deployed_bytes"]),
+                          "addressing_head_bytes":
+                              int(clu_ledger["addressing_head"]["bytes"]),
+                          "source": "⭐ read from THIS manifest's own store ledger, "
+                                    "⛔ not from a literal in this file"},
+        "bytes_formula": "N * D * 4 (store) ; (K*N + sum_f V_f*K*N)*4 (addressing head)",
+        "what": ("the stored ATOMS (genuine train rows) plus the request-addressing "
+                 "head; the read is one stored atom per well, concatenated, at the "
+                 "store's FULL FLOAT WIDTH"),
+        "budget_note": (
+            "⭐⭐ MATCHED, AND MEASURED: the atom table is 524,288 B and the addressing "
+            "head 74,240 B — ⭐ EXACTLY the CLU arm's two numbers, field for field, at "
+            "N = M = 64. ⛔ The low-rank coupling is NOT on this read's path (proved "
+            "bit-for-bit above) so its bytes are NOT deployed: the dynamical read "
+            "carried 2.00x the budget at this rung, the addressed read carries 1.00x."
+            if matched else
+            "⛔ DECLARED LARGER, NEVER MATCHED: this rung's atom table is "
+            f"{float(store_bytes) / float(clu_ledger['deployed_bytes']):.2f}x the "
+            "524,288 B budget. ⛔ Its number is quoted ONLY with that multiple "
+            "attached on the same line."),
+    }
+    log(f"    ⭐⭐ [x0/{budget}] MEASURED LEDGER: store {store_bytes:,} B + addressing "
+        f"head {head['bytes']:,} B = {ledger['multiple_of_budget']:.2f}x the "
+        f"{clu_ledger['deployed_bytes']:,} B budget · coupling "
+        f"{ledger['coupling_bytes_excluded']:,} B ⛔ NOT DEPLOYED (bit-identical x0 "
+        f"without it) · byte-matched to clu field-for-field: {matched}")
+
+    rows_done = []
+    for row in X0_ROWS:
+        label = x0_label(budget, row)
+        if label in already:
+            log(f"    [{label}] already on disk for this seed — skipped")
+            continue
+        feats, per_set, arte = {}, {}, {}
+        for rs in REQUEST_SETS:
+            g = x0_gather(store, book, req_arr[rs], row, land=built["land"],
+                          clamp_threshold=float(c.clamp_threshold), seed=int(seed))
+            read = read_settled(built["land"], g["x"], X0_READ_MODE)
+            zero = x0_zero_step_proof(g["x"], read, feat_shape)
+            feats[rs] = np.asarray(read, np.float32)
+            sp = art_dir / f"x0_states_s{int(seed)}_{budget}_{rs}_{row}.npz"
+            sp.parent.mkdir(parents=True, exist_ok=True)
+            # ⛔ arrays go to the npz, ⛔ never into the manifest as a length: a count
+            # standing where an index array was is how a manifest stops meaning
+            # anything.  The manifest keeps the SCALARS only.
+            np.savez_compressed(
+                sp, x0=np.asarray(g["x"], np.float32),
+                requests=np.asarray(req_arr[rs], np.int16),
+                **{k: np.asarray(v) for k, v in g.items()
+                   if k != "x" and isinstance(v, np.ndarray)})
+            per_set[rs] = {"n_requests": int(np.asarray(req_arr[rs]).shape[0]),
+                           "zero_step_proof": zero,
+                           "arrays_on_disk": sorted(
+                               k for k, v in g.items()
+                               if k != "x" and isinstance(v, np.ndarray)),
+                           **{k: v for k, v in g.items()
+                              if k != "x" and not isinstance(v, np.ndarray)}}
+            arte[rs] = {"x0_states": str(sp)}
+        extra = {
+            "addressed_read": {
+                "budget": str(budget), "role": spec["role"],
+                "row": str(row),
+                "is_the_arm": bool(row == "full"),
+                "role_on_the_table": (
+                    "⭐ THE ARM" if row == "full" else
+                    "⭐ charter §C.1 MATCHED-BYTES LOOKUP FLOOR" if row in X0_LOOKUP_FLOORS
+                    else "⭐ charter §C.2 LANDSCAPE-REMOVED CONTROL"),
+                "n_atoms_per_well": int(spec["n_atoms"]),
+                "settling_steps": int(X0_SETTLING_STEPS),
+                "coupling_used": False,
+                "energy_trace": None,
+                "byte_ledger": ledger,
+                "atoms_are_train_rows": built["atoms_are_train_rows"],
+                "declared_channel": built["declared_channel"],
+                "request_sets": per_set,
+                "artefacts": arte,
+                "QUOTABLE": True,
+                "quotable_rule": ("⭐ an addressed read has no chain, so there is no "
+                                  "still-descending fraction and no convergence "
+                                  "caveat: the number IS the read. ⛔ What bounds it "
+                                  "instead is the BYTE MULTIPLE in its ledger."),
+            },
+            # ⛔ `arm_byte_ledger` is a PINNED byte-ledger assertion and this spoke may
+            # not edit it; the measured ledger is supplied here instead, where
+            # `_record`'s `**extra` places it over the default.
+            "byte_ledger": ledger,
+            "mechanism": (
+                "⭐ request -> address-book posterior ARGMAX over the written atoms -> "
+                "decode. ⛔⛔ AN ADDRESSED READ: zero settling steps, no coupling, no "
+                "energy trace. ⛔ NEVER 'dynamics', 'settling' or 'the dynamical read "
+                "at zero steps'."
+                if row == "full" else
+                "⭐ charter §C.1 FLOOR — the posterior-weighted MEAN of the same atoms "
+                "at exactly the same bytes. ⛔ If the arm does not beat this, the "
+                "store is decorative."
+                if row == "atom_mean_lookup" else
+                "⭐ charter §C.1 FLOOR (the harder one) — the single best-scoring WHOLE "
+                "stored train row, ONE index for all wells. ⛔ It differs from the arm "
+                "in the per-well recombination and NOTHING else."
+                if row == "row_lookup" else
+                "⭐ charter §C.2 CONTROL — the SAME indices into an atom table permuted "
+                "independently per well. ⛔ If this does not collapse, the output does "
+                "not depend on what was written."),
+            "channel_bits": None,
+        }
+        record(label, feats, extra)
+        rows_done.append(label)
+    return {"budget": str(budget), "spec": spec, "rows": rows_done,
+            "byte_ledger": ledger, "coupling_not_needed": coupling_proof,
+            "wall_clock_s": float(time.time() - t0)}
+
+
+# ---------------------------------------------------------------------------
 # 5. ⭐ THE BYTE LEDGER — a table COLUMN, never a footnote (R26.3)
 # ---------------------------------------------------------------------------
 
@@ -1508,6 +1996,14 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
             if wanted_rows <= set(manifest["arms"]):
                 tlog("  [dynread] every rung already on disk for this seed — skipped")
                 continue
+        elif arm == X0_ARM:
+            # ⭐ ``x0`` is EIGHT rows (2 byte points x {the arm, two §C.1 lookup
+            # floors, the §C.2 control}), so the resume check is per ROW, ⛔ not per
+            # arm name.
+            wanted_rows = {x0_label(b, r) for b in X0_BUDGETS for r in X0_ROWS}
+            if wanted_rows <= set(manifest["arms"]):
+                tlog("  [x0] every row is already on disk for this seed — skipped")
+                continue
         elif arm in manifest["arms"]:
             tlog(f"  [{arm}] already on disk for this seed — skipped")
             continue
@@ -1593,8 +2089,33 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
                 manifest["dynread"] = {"preflight": pre, "artefact_dir": str(art),
                                        "budgets": runs}
                 _write_json(manifest, man_path)
+            elif arm == X0_ARM:
+                # ⭐⭐ THE ADDRESSED READ.  ⛔⛔ Zero settling steps, no coupling, no
+                # energy trace — and ⛔ never described as dynamics (§4b).
+                pre = x0_preflight(config)
+                manifest["x0_preflight"] = pre
+                art = Path(x0_artefact_dir(config, dataset, pretext, int(seed)))
+                art.mkdir(parents=True, exist_ok=True)
+                tlog(f"  ⭐ [x0] artefacts -> {art}")
+
+                def _rec_x0(label: str, feats: dict, extra: dict) -> None:
+                    _record(label, feats, extra, 0)
+
+                snapshot = set(manifest["arms"])
+                x0_runs = {}
+                for budget in X0_BUDGETS:
+                    x0_runs[budget] = run_x0_budget(
+                        config, budget, X_store, lab_store, wc, feat_shape, names,
+                        cards, int(seed), req_arr, art, _rec_x0, store_led,
+                        already=snapshot, log=tlog)
+                manifest["x0"] = {"preflight": pre, "artefact_dir": str(art),
+                                  "budgets": x0_runs}
+                _write_json(manifest, man_path)
             else:
-                raise ValueError(f"unknown arm {arm!r} (have {ARMS})")
+                raise ValueError(
+                    f"unknown arm {arm!r} (have {ARMS} + {X0_ARM!r}; ⛔ {X0_ARM!r} is "
+                    "deliberately NOT on ARMS — that tuple is the pin's declared "
+                    "rival-row list and editing it would void this table's numbers)")
         except Exception as exc:  # ⛔ NOT RUN, never a zero and never a silent gap
             manifest["NOT_RUN"][arm] = {"reason": f"{type(exc).__name__}: {exc}"}
             _write_json(manifest, man_path)
@@ -1760,6 +2281,8 @@ def aggregate_runs(run_dirs, log: Callable = print) -> dict:
     }
     # ⭐⭐ the generation-table verdict, in PREREG §2b's words and no others
     out["dynread_verdict"] = dynread_verdict(mans)
+    # ⭐⭐ the ADDRESSED READ's verdict — the SAME rule, plus the charter §C.1 floors
+    out["x0_verdict"] = addressed_read_verdict(mans)
     out["dynread_convergence"] = {
         int(m["seed"]): {
             a: {"B": (((r.get("dynread") or {}).get("request_sets") or {})
@@ -1914,6 +2437,216 @@ def dynread_verdict(mans: list, arm: str = "dynread",
            f"  ⛔ NOT BEATEN OUTRIGHT: {', '.join(not_beaten)} — reported as LOSS(es)"))
     return out
 
+
+def x0_artefact_dir(config: CHLUConfig, dataset: str, pretext: str, seed: int) -> Path:
+    """⭐ Where this arm's launches land — under ``.claude/`` and therefore untracked."""
+    r = os.environ.get("CHLU_GEN_X0_ARTEFACTS")
+    root = Path(r).expanduser() if r else (
+        _cell_root(config) / "outputs" / "gen-addressed-read" / "runs")
+    return root / f"{dataset}_{pretext}" / f"seed_{int(seed)}"
+
+
+def _x0_pair(ours: dict, theirs: dict, margin: float, is_ceiling: bool = False) -> dict:
+    """⭐ ONE paired comparison, in PREREG §2b's vocabulary and no other.
+
+    ⛔ This is :func:`dynread_verdict`'s rule, spelled once so the charter §C.1 floors
+    — which are NOT on the pin's :data:`DYNREAD_LIKE_FOR_LIKE` tuple and ⛔ may not be
+    added to it — are judged by **exactly** the same arithmetic.  The agreement is not
+    left to inspection: :func:`addressed_read_verdict` re-derives every pinned rival
+    through *both* paths and ⛔ aborts if they ever disagree.
+    """
+    shared = sorted(set(ours) & set(theirs))
+    if not shared:
+        return {"verdict": "NOT RUN", "why": "⛔ no seed carries both rows"}
+    d = [ours[s] - theirs[s] for s in shared]
+    delta = float(np.mean(d))
+    a_m, a_s = float(np.mean([ours[s] for s in shared])), float(np.std([ours[s] for s in shared]))
+    b_m, b_s = float(np.mean([theirs[s] for s in shared])), float(np.std([theirs[s] for s in shared]))
+    all_pos = bool(all(x > 0 for x in d))
+    same_sign = bool(all_pos or all(x < 0 for x in d))
+    overlap = bool(not (a_m - a_s > b_m + b_s or b_m - b_s > a_m + a_s))
+    if is_ceiling:
+        if delta > margin and all_pos:
+            v = "WIN"
+        elif 0.0 < delta <= margin and all_pos:
+            v = "TIE (favourable)"
+        elif abs(delta) <= margin and overlap:
+            v = "TIE"
+        elif delta < -margin:
+            v = "LOSS"
+        else:
+            v = "INDETERMINATE"
+    else:
+        v = ("BEATEN OUTRIGHT" if (delta > 0.0 and all_pos and not overlap) else "LOSS")
+    return {"seeds": shared, "ours_mean": a_m, "ours_std": a_s,
+            "theirs_mean": b_m, "theirs_std": b_s, "delta": delta,
+            "paired_per_seed": {int(s): float(ours[s] - theirs[s]) for s in shared},
+            "same_sign_3_of_3": same_sign,
+            "intervals_overlap_mean_pm_sd": overlap, "verdict": v}
+
+
+def addressed_read_verdict(mans: list, margin: float = DYNREAD_MARGIN) -> dict:
+    """⭐⭐ **THE ADDRESSED READ'S VERDICT — the matched-bytes row first, always.**
+
+    ⛔⛔ The headline of this arm is the **MATCHED-BYTES** rung (A, 524,288 B, the byte
+    ledger ``clu`` deploys field for field).  The rung-B row is **8x the bytes** and is
+    emitted only inside ``eight_times_companion``, with ``byte_multiple`` on the same
+    record — ⛔ there is no field in this output that carries the 8x number without it.
+
+    Three things are computed per rung:
+
+    1. the pinned :func:`dynread_verdict` against ``knn_proto`` (ceiling) and the four
+       like-for-like rows — ⭐ including ``clu``, **the codebook read at the same bytes**;
+    2. ⭐ the **charter §C.1 floors** — the matched-bytes lookups.  ⛔ An arm that does
+       not beat BOTH is one whose store is decorative, and it is reported as such
+       whatever the rest of the table says;
+    3. the **charter §C.2 control** — the permuted atom table, which must collapse.
+    """
+    out = {
+        "arm": X0_ARM,
+        "metric": DYNREAD_HEADLINE,
+        "margin_m": float(margin),
+        "what_the_arm_is": ("⭐ request → address-book posterior ARGMAX over the "
+                            "written atoms → decode. ⛔⛔ AN ADDRESSED READ: zero "
+                            "settling steps, no coupling, no energy trace. ⛔ NEVER "
+                            "'dynamics', 'settling', or 'the dynamical read at zero "
+                            "steps'."),
+        "reporting_rule": ("⛔⛔ THE HEADLINE IS THE MATCHED-BYTES RUNG. The 8x row "
+                           "never appears without its byte multiple on the same line."),
+        "per_rung": {},
+    }
+    for budget in X0_BUDGETS:
+        label = x0_label(budget, "full")
+        ours = _paired_by_seed(mans, label)
+        rung = {"label": label, "byte_point": str(budget)}
+        led = next((m["arms"][label]["byte_ledger"]
+                    for m in mans if label in m.get("arms", {})), None)
+        if led:
+            rung["bytes"] = {
+                "store_bytes": int(led.get("store_bytes", 0)),
+                "addressing_head_bytes": int(led.get("addressing_head_bytes", 0)),
+                "coupling_bytes": int(led.get("coupling_bytes", 0)),
+                "coupling_bytes_excluded": int(led.get("coupling_bytes_excluded", 0)),
+                "multiple_of_budget": float(led.get("multiple_of_budget", float("nan"))),
+                "byte_matched_to_clu_field_for_field":
+                    bool(led.get("byte_matched_to_clu_field_for_field", False)),
+                "coupling_needed": bool(
+                    (led.get("coupling_not_needed_proof") or {}).get("coupling_needed",
+                                                                     True)),
+            }
+        if not ours:
+            rung["verdict"] = "NOT RUN"
+            rung["note"] = f"⛔ {label!r} is on no seed's manifest — ⛔ NOT RUN, never a zero"
+            out["per_rung"][budget] = rung
+            continue
+        rung["ours"] = {"per_seed": ours, "mean": float(np.mean(list(ours.values()))),
+                        "std": float(np.std(list(ours.values())))}
+        rung["distinct_factor_tuples_B"] = _ms(
+            [m["arms"][label]["distinct"]["B"]["factor_tuples"]
+             for m in mans if label in m.get("arms", {})])
+        pinned = dynread_verdict(mans, arm=label, margin=margin)
+        rung["against"] = pinned["against"]
+        rung["verdict_vs_ceiling"] = pinned["verdict"]
+        rung["like_for_like"] = pinned["like_for_like"]
+        rung["like_for_like_all_beaten"] = pinned["like_for_like_all_beaten"]
+        # ⛔ the two paths must agree, or neither is trusted
+        for rival, got in pinned["against"].items():
+            mine = _x0_pair(ours, _paired_by_seed(mans, rival), margin,
+                            is_ceiling=bool(rival == DYNREAD_CEILING_ARM))
+            if str(mine["verdict"]) != str(got["verdict"]):
+                raise AssertionError(
+                    f"⛔ the floor comparator and the pinned `dynread_verdict` disagree "
+                    f"on {rival!r}: {mine['verdict']!r} vs {got['verdict']!r}. ⛔ No "
+                    "verdict is written from two rules that differ.")
+        # ---- ⭐ charter §C.1 — THE MATCHED-BYTES LOOKUP FLOORS -----------------
+        floors = {}
+        for f in X0_LOOKUP_FLOORS:
+            flabel = x0_label(budget, f)
+            floors[flabel] = {
+                "role": ("⭐ charter §C.1 matched-bytes lookup — ⛔ the arm must beat "
+                         "it beyond seed spread or the store is DECORATIVE"),
+                "their_per_seed": _paired_by_seed(mans, flabel),
+                **_x0_pair(ours, _paired_by_seed(mans, flabel), margin),
+            }
+        rung["charter_C1_floors"] = floors
+        judged = [v["verdict"] for v in floors.values() if v["verdict"] != "NOT RUN"]
+        rung["charter_C1_floor_PASS"] = bool(
+            judged and all(v == "BEATEN OUTRIGHT" for v in judged))
+        rung["charter_C1_floor_statement"] = (
+            "⭐ the arm BEATS every matched-bytes lookup outright — the store is "
+            "load-bearing on this metric"
+            if rung["charter_C1_floor_PASS"] else
+            "⛔⛔ THE ARM DOES NOT BEAT A MATCHED-BYTES LOOKUP TABLE ⇒ the store is "
+            "DECORATIVE and this row does NOT count as a positive (charter §C.1), "
+            "whatever the rest of the table says")
+        # ---- ⭐ charter §C.2 — the landscape-removed control -------------------
+        clabel = x0_label(budget, "atoms_shuffled")
+        ctrl = _paired_by_seed(mans, clabel)
+        rung["charter_C2_control"] = {
+            "label": clabel,
+            "role": ("⭐ the SAME indices into an atom table permuted independently "
+                     "per well — it must COLLAPSE"),
+            "their_per_seed": ctrl,
+            **_x0_pair(ours, ctrl, margin),
+        }
+        rung["charter_C2_control_COLLAPSES"] = bool(
+            rung["charter_C2_control"].get("verdict") == "BEATEN OUTRIGHT")
+        # ---- the rung's own PASS ---------------------------------------------
+        rung["PASS"] = bool(
+            pinned["like_for_like_all_beaten"]
+            and rung["charter_C1_floor_PASS"]
+            and rung["charter_C2_control_COLLAPSES"]
+            and pinned["verdict"] in ("WIN", "TIE (favourable)", "TIE"))
+        out["per_rung"][budget] = rung
+
+    a = out["per_rung"].get(X0_PRIMARY_BUDGET, {})
+    clu_row = (a.get("against") or {}).get("clu", {})
+    out["MATCHED_BYTES_VERDICT"] = {
+        "⛔ read this field first": ("⭐⭐ THIS IS THE HEADLINE. The arm's number at the "
+                                     "bytes the codebook read deploys."),
+        "rung": X0_PRIMARY_BUDGET,
+        "label": a.get("label"),
+        "bytes": a.get("bytes"),
+        "ours": a.get("ours"),
+        "distinct_factor_tuples_B": a.get("distinct_factor_tuples_B"),
+        "vs_clu_the_codebook_read_at_the_same_bytes": clu_row,
+        "VERDICT_vs_clu": clu_row.get("verdict", "NOT RUN"),
+        "VERDICT_vs_ceiling_knn_proto": a.get("verdict_vs_ceiling", "NOT RUN"),
+        "like_for_like": a.get("like_for_like"),
+        "like_for_like_all_beaten": a.get("like_for_like_all_beaten"),
+        "charter_C1_floor_PASS": a.get("charter_C1_floor_PASS"),
+        "charter_C1_floor_statement": a.get("charter_C1_floor_statement"),
+        "charter_C2_control_COLLAPSES": a.get("charter_C2_control_COLLAPSES"),
+        "PASS": a.get("PASS"),
+    }
+    b = out["per_rung"].get("B", {})
+    bm = ((b.get("bytes") or {}).get("multiple_of_budget"))
+    out["eight_times_companion"] = {
+        "⛔ never quote this without the byte multiple": True,
+        "label": b.get("label"),
+        "byte_multiple": bm,
+        "one_line": (
+            f"{b.get('label')} = {(b.get('ours') or {}).get('mean', float('nan')):.4f} "
+            f"± {(b.get('ours') or {}).get('std', float('nan')):.4f} "
+            f"**at {bm:.2f}× the bytes** (⛔ NOT byte-matched; the matched-bytes row is "
+            f"`{a.get('label')}`)" if bm else "⛔ NOT RUN"),
+        "vs_clu_at_8x_bytes": (b.get("against") or {}).get("clu", {}),
+        "charter_C1_floor_PASS": b.get("charter_C1_floor_PASS"),
+        "PASS": b.get("PASS"),
+    }
+    out["headline"] = (
+        f"⭐⭐ MATCHED BYTES ({a.get('bytes', {}).get('store_bytes', '?')} B store + "
+        f"{a.get('bytes', {}).get('addressing_head_bytes', '?')} B head = "
+        f"{(a.get('bytes') or {}).get('multiple_of_budget', float('nan')):.2f}× budget): "
+        f"`{a.get('label')}` = {(a.get('ours') or {}).get('mean', float('nan')):.4f} ± "
+        f"{(a.get('ours') or {}).get('std', float('nan')):.4f} vs `clu` "
+        f"{clu_row.get('theirs_mean', float('nan')):.4f} ± "
+        f"{clu_row.get('theirs_std', float('nan')):.4f} ⇒ **{clu_row.get('verdict', 'NOT RUN')}** "
+        f"(Δ = {clu_row.get('delta', float('nan')):+.4f}, m = {margin:.3f}) · "
+        f"§C.1 floor {'PASS' if a.get('charter_C1_floor_PASS') else '⛔ FAIL'} · "
+        f"ceiling {a.get('verdict_vs_ceiling', 'NOT RUN')} · "
+        f"PASS: {'YES' if a.get('PASS') else 'NO'}")
+    return out
 
 # ---------------------------------------------------------------------------
 # 8. Plot
