@@ -287,7 +287,13 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path,
     log(f"{_stamp(t0)} frozen encoder {got[:16]} · condition={condition} · bridge={bdir}")
 
     crows, feats, cman = load_feature_cache(bdir, verify=scfg.verify_cache_checksum)
-    reenc = _assert_cache_reencodes(dataset, config, encoder, crows, feats, cman, log=log)
+    # ⭐ ENFORCED. ⛔ No coverage gate in this module, and `gather_features` is called
+    # twice below — it extends the cache for any row it does not hold.
+    reenc = _assert_cache_reencodes(
+        dataset, config, encoder, crows, feats, cman, log=log,
+        will_extend=True,
+        reason="exp_gen_certificate has no cache-coverage gate; gather_features may extend",
+    )
     feat_shape = tuple(int(x) for x in cman["feat_shape"])
 
     X_store = gather_features(dataset, config, encoder, crows, feats, cman,

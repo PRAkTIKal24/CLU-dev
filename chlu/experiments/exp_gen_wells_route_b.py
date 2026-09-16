@@ -372,9 +372,24 @@ def preflight(config: CHLUConfig, dataset: str, pretext: str, seed: int,
         log(f"  ⭐ cache coverage: {cov['n_covered']}/{cov['n_rows_needed']} rows cached "
             f"(seed {seed}, scope={cov['cache_scope']!r}) — 0 shortfall")
 
-    # (5) re-encoding CACHED rows must reproduce the cache bit-for-bit.
+    # (5) ⭐ re-encoding CACHED rows must reproduce the cache — BINDING exactly when
+    # this run can write new rows into it.  ⛔ The verdict is gate (4)'s OWN answer,
+    # three lines above: `cov["n_shortfall"]`.  Coverage is NEVER re-derived here, so
+    # the coverage gate and the re-encode gate cannot disagree about the same run.
+    # ⚠ `run_seed` gathers `store_train` and a prefix of `eval_a`, both inside gate
+    # (4)'s `needed` set — and if that ever stops being true, `gather_features` runs
+    # the check itself, ENFORCED, at the point of extension.
     rep["checks"]["cache_reencode"] = _assert_cache_reencodes(
-        dataset, config, encoder, crows, feats, cman, log=log)
+        dataset, config, encoder, crows, feats, cman, log=log,
+        will_extend=bool(cov["n_shortfall"] > 0),
+        reason=(
+            f"cache-coverage gate: {cov['n_covered']}/{cov['n_rows_needed']} rows cached, "
+            f"{cov['n_shortfall']} shortfall (seed {seed}, scope={cov['cache_scope']!r}) "
+            + ("⇒ this run WILL extend the cache"
+               if cov["n_shortfall"] > 0
+               else "⇒ this run encodes nothing new and cannot extend the cache")
+        ),
+    )
 
     # (6) ⛔ the decoder trap.
     if bool(c.assert_dec_recipe):
