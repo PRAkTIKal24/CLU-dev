@@ -864,14 +864,22 @@ work lives on its branch in this repository, and `git push` is forbidden to it.
 
 ```bash
 # on the SECOND machine (the hub's branch, everything since the pin):
-git -C "$CHLU_ROOT" bundle create ~/<hub-slug>.gitbundle main..agent/autonomous-hub/<hub-slug>
+git -C "$CHLU_ROOT" bundle create ~/<hub-slug>.gitbundle agent/autonomous-hub/<hub-slug>
+git -C "$CHLU_ROOT" bundle verify ~/<hub-slug>.gitbundle   # "records a complete history"
 # on the PRIMARY machine — ⛔ fetch into a namespaced ref; never onto a local branch:
-git fetch /path/<hub-slug>.gitbundle     'refs/heads/agent/autonomous-hub/<hub-slug>:refs/remotes/farside/<hub-slug>'
-git log --oneline main..refs/remotes/farside/<hub-slug>
+git fetch /path/<hub-slug>.gitbundle 'refs/heads/agent/autonomous-hub/<hub-slug>:refs/remotes/farside/<hub-slug>'
+git diff --stat <pin> refs/remotes/farside/<hub-slug>      # the hub's whole code delta
 ```
 
-⛔ `refs/remotes/farside/*` cannot fast-forward `main` or any local branch, so the
-worst case is an unreferenced ref, never a lost commit. The Hub reviews and merges.
+⛔⛔ **`git bundle create … main..<branch>` DOES NOT WORK, and it fails only on arrival.**
+A range bundle is *thin*: its prerequisite is this repository's own synthetic base
+commit, which the primary machine has never seen, so the fetch dies with
+`Repository lacks these prerequisite commits`. ⭐ Bundle the branch WHOLE. Measured:
+~3 MB, self-contained. ⚠ Take the 3 MB.
+
+⛔ `refs/remotes/farside/*` cannot fast-forward `main` or any local branch — the fetched
+history shares no ancestor with it — so the worst case is an unreferenced ref, never a
+lost commit. The Hub reviews, then cherry-picks or merges deliberately.
 
 ⭐ **The base commit of this repository holds the pin's tree verbatim** — `git log`'s
 root commit. `verify_hub_workspace.sh` asserts its tree hash against the manifest, so
