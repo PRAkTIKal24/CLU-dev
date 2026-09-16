@@ -39,7 +39,6 @@ import json
 import math
 import multiprocessing as mp
 import os
-import resource
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -823,6 +822,12 @@ def host_rss(*, with_children: bool = True) -> Dict[str, float]:
         rec["rss_gb"] = st.get("VmRSS", float("nan")) * 1024.0 * _GB
         rec["hwm_gb"] = st.get("VmHWM", float("nan")) * 1024.0 * _GB
     else:
+        # ⛔ `resource` is a Unix-only stdlib module and does NOT exist on Windows,
+        # where a top-level import took the whole `chlu` CLI down with it.
+        # Imported HERE because this is the only call site, and it is already on
+        # the non-Linux fallback branch (`/proc` was unavailable).
+        import resource  # noqa: PLC0415
+
         ru = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
         rec["rss_gb"] = _ps_rss_kb(os.getpid()) * 1024.0 * _GB
         rec["hwm_gb"] = ru * (1.0 if sys.platform == "darwin" else 1024.0) * _GB
