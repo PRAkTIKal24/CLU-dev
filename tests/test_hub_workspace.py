@@ -391,6 +391,9 @@ def test_bundle_is_idempotent_and_dry_run_writes_nothing(tmp_path: Path, claude_
         "--seeds", str(SEED), claude=claude_root,
     )
     assert "copied 0," in p2.stdout, p2.stdout
+    # ⛔ and the second build must NOT have re-extracted the code over it: a hub may
+    #    have edits in `chlu/**` by then, and `git archive` would overwrite them.
+    assert "NOT re-extracting" in p2.stdout, p2.stdout
 
 
 @needs_bundle
@@ -436,13 +439,21 @@ def test_the_bundles_root_commit_tree_is_the_pin_tree(tmp_path: Path, claude_roo
     assert m["code"]["bundle_base_tree_matches_pin"] is True
     assert m["code"]["pin_tree"] == _git("rev-parse", f"{pin}^{{tree}}")
 
-    # ⭐ and the ENTIRE deviation from the pin is the three declared plumbing files
-    changed = _git("show", "--name-only", "--format=", "HEAD", cwd=b).split()
-    assert sorted(changed) == sorted(m["code"]["tooling_overlay"]["files"])
-    assert sorted(changed) == [
+    # ⭐ and the ENTIRE deviation from the pin lies inside the three DECLARED plumbing
+    #    files — ⛔ nothing else moved.
+    #    ⚠ SUBSET, not equality: a tooling file the pin already carries byte-identically
+    #    contributes no diff, so the delta is a subset of the declaration and never a
+    #    superset. (Equality held only while the pin predated all three — it broke the
+    #    moment a test pinned a commit that already had them.)
+    #    ⛔ Measured root..HEAD, not `git show HEAD`: a REBUILT bundle carries a second
+    #    overlay commit and `show` would then report only the last delta.
+    declared = set(m["code"]["tooling_overlay"]["files"])
+    assert declared == {
         "scripts/bundle_hub_workspace.sh", "scripts/verify_hub_workspace.sh",
         "tests/test_hub_workspace.py",
-    ]
+    }
+    changed = set(_git("diff", "--name-only", base, "HEAD", cwd=b).split())
+    assert changed <= declared, changed - declared
 
 
 @needs_bundle

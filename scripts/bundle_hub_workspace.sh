@@ -576,8 +576,21 @@ OUT="$(cd "$OUT" && pwd)"
 if [ "$OUT" = "$SRC_ROOT" ]; then die "⛔ --out is the source root. That would write the bundle over the repo."; fi
 case "$OUT" in "$SRC_ROOT"/*) die "⛔ --out is inside the source root ($SRC_ROOT). Bundle somewhere else." ;; esac
 
-say "code -> $OUT (git archive @ $PIN)"
-git -C "$SRC_ROOT" archive --format=tar "$PIN" | ( cd "$OUT" && tar -xf - )
+# ⛔⛔ EXTRACT THE CODE ONLY INTO A FRESH BUNDLE.
+#
+# ⚠ If `$OUT/.git` exists, this bundle has already been built — and a hub may have
+# been WORKING in it. Re-extracting `git archive <pin>` over that would overwrite the
+# hub's own edits to `chlu/**` with the pin's versions, silently, with no diff to see
+# afterwards. ⛔ That is data loss, not a refresh.
+# ⭐ The `.claude` set below is still re-checked and repaired on every run; the code is
+#    under git, so `git status` in the bundle shows any corruption there.
+if [ -d "$OUT/.git" ]; then
+    say "code : ⛔ NOT re-extracting — $OUT/.git exists, so a hub may have edits here."
+    say "       ⭐ \`git -C $OUT status\` shows the code state. Delete the bundle to rebuild it clean."
+else
+    say "code -> $OUT (git archive @ $PIN)"
+    git -C "$SRC_ROOT" archive --format=tar "$PIN" | ( cd "$OUT" && tar -xf - )
+fi
 
 # ---------------------------------------------------------------------------
 # ⭐⭐ MAKE THE BUNDLE A GIT REPOSITORY — and prove the code IS the pin.
@@ -593,8 +606,10 @@ git -C "$SRC_ROOT" archive --format=tar "$PIN" | ( cd "$OUT" && tar -xf - )
 #   HEAD~1  = the pin's tree, VERBATIM. Its tree hash is compared against
 #             `git rev-parse <PIN>^{tree}` on this machine and recorded in the
 #             manifest — a one-line cryptographic proof, not a promise.
-#   HEAD    = + the declared tooling overlay, and nothing else. `git show --stat HEAD`
-#             is the whole deviation from the pin, readable in one command.
+#   HEAD    = + the declared tooling overlay, and nothing else.
+#             ⭐ `git diff --stat $(git rev-list --max-parents=0 HEAD) HEAD` is the whole
+#             deviation from the pin. ⚠ ⛔ NOT `git show HEAD` — a REBUILT bundle adds a
+#             second overlay commit and `show` would then display only the last delta.
 #
 # ⛔ Generated files (the manifest, env_hub.sh, the READMEs, WORKSPACE-READY.json)
 #    go in `.git/info/exclude`, ⛔ NOT in `.gitignore` — that file is tracked, at the
@@ -677,7 +692,8 @@ The pin predates this tooling, so a bundle built from it alone could neither ver
 itself nor return a result. ⛔ None of these files is imported by \`chlu\`; ⛔ none is
 part of the scoring harness the charter freezes.
 Overlaid from $TOOL_COMMIT."
-        say "git  : overlay committed — \`git show --stat HEAD\` is the full deviation from the pin"
+        say "git  : overlay committed — the full deviation from the pin is"
+        say "git  :   git diff --stat \$(git rev-list --max-parents=0 HEAD) HEAD"
     else
         say "git  : no overlay delta to commit (already current)"
     fi
@@ -890,8 +906,12 @@ git -C "$CHLU_ROOT" rev-parse "$(git -C "$CHLU_ROOT" rev-list --max-parents=0 HE
 python -c "import json;print(json.load(open('BUNDLE_MANIFEST.json'))['code']['pin_tree'])"
 ```
 
-`git show --stat HEAD` on a freshly built bundle lists the **entire** deviation from
-the pin: three plumbing files, nothing else.
+```bash
+git -C "$CHLU_ROOT" diff --stat "$(git -C "$CHLU_ROOT" rev-list --max-parents=0 HEAD)" HEAD
+```
+lists the **entire** deviation from the pin: three plumbing files, nothing else (plus
+whatever the hub itself has since committed). ⛔ Not `git show --stat HEAD` — a rebuilt
+bundle carries a second overlay commit and `show` would display only the last delta.
 
 ## Safety of the results ingest
 
