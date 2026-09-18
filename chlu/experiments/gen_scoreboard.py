@@ -45,18 +45,33 @@ by trust.
 §3 ⭐⭐ The refusal pair, and the thing that makes it non-free
 ---------------------------------------------------------------
 Rows 5 and 6 report the pair ``(reject_invalid, accept_unseen_valid)``, ⛔ never one
-number.  ``accept_unseen_valid`` is measured on **row 2's** requests, by the **same
-threshold at the same setting** — :func:`score_refusal_row` *checks* that identity
-against the arm's own reported threshold and setting fingerprint and scores the row
-**0** when it does not hold.  The scalar is the geometric mean, so:
+number.  ``accept_unseen_valid`` is measured on ⭐ **row 1's** requests
+(:data:`ACCEPT_LEG_ROW`), by the **same threshold at the same setting** —
+:func:`score_refusal_row` *checks* that identity against the arm's own reported
+threshold and setting fingerprint and scores the row **0** when it does not hold.  The
+scalar is the geometric mean, so:
 
 - an arm that refuses everything scores ``sqrt(1.0 * 0.0) = 0``;
 - an arm that accepts everything scores ``sqrt(0.0 * 1.0) = 0``.
 
-⭐ The separation that is the whole claim: row 2 → **accept**, row 5 → **refuse**,
-row 6 → **refuse**.  A prototype table has no entry for any of the three and refuses
-all three, scoring 0 on the pair.  ⛔ That failure must be **measured and reported** —
-which is why ``knn_proto`` is a mandatory row rather than a sentence in a paper.
+⭐⭐ **AMENDMENT 1 (Head ruling, option 1): the accept-leg is row 1, not row 2.**  The
+first emission paired row 5 against row 2 and the pair was measured to be **free** —
+see §4.  Row 2 is off-grid *by definition* and row 5 is on-grid *by definition*, so a
+grid look-up separates them at 1.0000 with zero deployed bytes; and on the hue axis the
+two are the same request with opposite answers, so no store could satisfy both.  Row 1
+is on-grid *like* row 5 and **stored** *unlike* row 5, so the pair now asks the one
+question the taxonomy means: ⭐ **render what you hold, refuse what you do not.**
+⛔ Row 2 is now an **accept-only** row (``hub/unseen-valid``'s target) and is consumed
+by no refusal row.
+
+⭐ The separation that is the whole claim: row 1 → **accept**, row 5 → **refuse**.
+A prototype table has no entry for either and refuses both, scoring 0 on the pair.
+⛔ That failure must be **measured and reported** — which is why ``knn_proto`` is a
+mandatory row rather than a sentence in a paper.
+
+⚠ Under this pairing ``basis_head`` may pass row 5 trivially — it never saw the
+held-out value either.  ⛔ That is **not a defect, it is the comparison**: the two arms
+are scored side by side at matched bytes, and a property they *share* is not a CLU win.
 
 ⛔⛔ §4 THE LAUNDERING CONTROL — read before quoting a refusal row
 -------------------------------------------------------------------
@@ -67,13 +82,32 @@ factor grid and nothing else::
             and  no term is outside its factor's realised range
             and  at least one term is off-grid but strictly inside the range
 
-It accepts row 2 and refuses rows 5 and 6, so it scores a **perfect pair on both
-refusal rows with no store in it**.  It is shipped here as a mandatory row
-(:data:`LAUNDERING_ARM`) for the same reason ``knn_proto`` is: an arm that does not
-beat it has demonstrated nothing about the store's geometry.  ⚠ See
-``.claude/outputs/w3-value-holdout-harness.md`` §5 — this is a property of the
-taxonomy's own definitions of rows 2 and 5 (off-grid vs on-grid), ⛔ not a defect of
-the query sets, and it is ⛔ not removable by re-drawing them.
+Against the ORIGINAL pairing it accepted row 2 and refused rows 5 and 6, scoring a
+**perfect (1.0000, 1.0000) pair on both refusal rows with no store in it** — the
+finding reported in ``.claude/outputs/w3-value-holdout-harness.md`` §0.  ⭐ Under
+AMENDMENT 1's pairing it **collapses**: row 1 is all-on-grid, so the rule refuses the
+accept-leg too, ``accept_unseen_valid = 0`` and the pair scores **0**.  That collapse
+is acceptance check §4.1 of the amendment and is measured, not asserted.
+
+It stays a mandatory row (:data:`LAUNDERING_ARM`) for the same reason ``knn_proto``
+is: ⛔ no refusal number ships without the no-model rule's score printed beside it.
+
+⚠ What the amendment does and does not buy.  It does **not** make row 5 undecidable
+without a store — a rule that simply *names the held-out values* still wins.  It makes
+that rule **pay for the split**: the winning rule must encode which values the store
+holds, and that is a (tiny, degenerate) store, not a syntactic rule.  ⭐ The rules that
+need **no** knowledge of the split no longer reach the pair.  The measured family is in
+the amendment section of the output artifact.
+
+§4a ⛔ Row 6 is a SANITY CHECK, never evidence
+-----------------------------------------------
+Out-of-range is decidable from the factor grid alone — the pin says so itself in
+``definitional_features`` — so row 6 can **never** be non-free, at any pairing.  It is
+kept as the degenerate-arm guard and is marked ``evidential: false`` in the artifact;
+:func:`build_scoreboard` ⛔ **refuses to emit a row-6 verdict phrased as evidence for
+the store** and writes the sanity-check verdict instead.  :data:`ROW_EVIDENCE_RANKING`
+carries the ordering: **row 7 evidential, row 5 evidential under the new pairing, row 6
+sanity only.**
 
 §5 Configuration
 ----------------
@@ -93,13 +127,16 @@ from typing import Any, Mapping, Optional, Sequence
 import numpy as np
 
 from ..data.gen_splits import write_json_with_checksum
-from ..data.gen_value_holdout import VALUE_HOLDOUT_SCOPE
+from ..data.gen_value_holdout import ROW_EVIDENCE_RANKING, VALUE_HOLDOUT_SCOPE
 
 __all__ = [
+    "ACCEPT_LEG_ROW",
     "CONTROL_ARMS",
     "LAUNDERING_ARM",
     "PRIMARY_CONTROL",
+    "NON_EVIDENTIAL_ROWS",
     "REFUSAL_ROWS",
+    "ROW_EVIDENCE_RANKING",
     "ROW_IDS",
     "ROW_SPEC",
     "ScoreboardConfig",
@@ -110,6 +147,7 @@ __all__ = [
     "grid_syntax_outcome",
     "make_outcome",
     "refuse_everything_outcome",
+    "sanity_check_verdict",
     "score_accuracy_row",
     "score_deletion_row",
     "score_novelty_row",
@@ -137,10 +175,16 @@ ROW_IDS = (
 ROW_SPEC: dict[str, dict] = {
     "r1_seen": {
         "index": 1,
-        "requests": "a stored value-combination",
+        "requests": "a stored value-combination (ON-grid, every value in the fit pool)",
         "scored_as": "judge accuracy + valid tuples",
         "metric": "accuracy",
-        "query_set": "base (train rows)",
+        "query_set": "row1_seen",
+        "note": (
+            "⭐⭐ AMENDMENT 1: also the ACCEPT-LEG of every refusal row (5, 6 and 7's "
+            "deleted half). It is structurally matched to row5_held_out — same "
+            "record-key set, term count, id shape and per-kind count — so the pair "
+            "differs only in whether the store holds the value."
+        ),
     },
     "r2_unseen_valid": {
         "index": 2,
@@ -148,7 +192,11 @@ ROW_SPEC: dict[str, dict] = {
         "scored_as": "judge accuracy + valid tuples",
         "metric": "accuracy",
         "query_set": "row2_unseen",
-        "note": "⭐ also the ACCEPT side of both refusal pairs — see §3.",
+        "note": (
+            "⛔ AMENDMENT 1: ACCEPT-ONLY. Row 2 is `hub/unseen-valid`'s target and keeps "
+            "its own scoring; it is ⛔ consumed by NO refusal row. Pairing it against "
+            "row 5 was the leak: off-grid by definition vs on-grid by definition."
+        ),
     },
     "r3_comp_2way": {
         "index": 3,
@@ -177,7 +225,11 @@ ROW_SPEC: dict[str, dict] = {
         "scored_as": "the refusal pair (reject_invalid, accept_unseen_valid)",
         "metric": "refusal",
         "query_set": "c_invalid",
-        "note": "⛔ build_c_invalid's format. There is no second invalid format.",
+        "note": (
+            "⛔ build_c_invalid's format. There is no second invalid format. "
+            "⛔⛔ AMENDMENT 1: SANITY CHECK ONLY (`evidential: false`) — out-of-range is "
+            "decidable from the grid alone, so this row can never be non-free."
+        ),
     },
     "r7_deletion": {
         "index": 7,
@@ -189,6 +241,22 @@ ROW_SPEC: dict[str, dict] = {
 }
 
 REFUSAL_ROWS = ("r5_comp_refusal", "r6_invalid_refusal")
+#: ⭐⭐ AMENDMENT 1: the accept-leg of every refusal pair. ⛔ WAS ``r2_unseen_valid``.
+ACCEPT_LEG_ROW = "r1_seen"
+#: ⛔ Rows whose number is a SANITY CHECK and ⛔ never evidence for the store.
+NON_EVIDENTIAL_ROWS = tuple(
+    sorted(k for k, v in ROW_EVIDENCE_RANKING.items() if not v["evidential"])
+)
+
+# ⭐ The ranking is defined ONCE (chlu.data.gen_value_holdout) and folded into the row
+# spec here, so the artifact and the condition's metadata cannot drift apart.
+for _rid, _rank in ROW_EVIDENCE_RANKING.items():
+    ROW_SPEC[_rid]["evidential"] = bool(_rank["evidential"])
+    ROW_SPEC[_rid]["evidence_rank"] = int(_rank["rank"])
+    ROW_SPEC[_rid]["evidence_note"] = _rank["why"]
+for _rid in ROW_IDS:
+    ROW_SPEC[_rid].setdefault("evidential", True)
+del _rid
 #: ⭐ The like-for-like, FIRST. ``knn_proto`` is the second row. ⛔ Neither is optional.
 PRIMARY_CONTROL = "basis_head"
 CONTROL_ARMS = (PRIMARY_CONTROL, "knn_proto")
@@ -367,45 +435,52 @@ def score_novelty_row(outcome: Mapping, seen_tuples: Sequence[Sequence[int]]) ->
 
 def score_refusal_row(
     outcome: Mapping,
-    row2_outcome: Mapping,
+    accept_leg_outcome: Mapping,
     row_id: str = "",
+    accept_leg_row: str = ACCEPT_LEG_ROW,
 ) -> dict:
     """Rows 5-6: the **pair** ``(reject_invalid, accept_unseen_valid)``.
 
     ⛔ Never one number, and ⛔ never free:
 
     - ``reject_invalid`` is measured on this row's requests;
-    - ``accept_unseen_valid`` is measured on **row 2's** requests, by the **same
+    - ``accept_unseen_valid`` is measured on ⭐ **row 1's** requests
+      (:data:`ACCEPT_LEG_ROW`; ⛔ it was row 2's before AMENDMENT 1), by the **same
       threshold at the same setting** — checked here against the arm's own reported
       ``threshold`` and ``setting``, ⛔ not left to prose;
     - the scalar is the geometric mean, so refusing everything scores **0** and
       accepting everything scores **0**;
     - if the identity check fails, the row scores **0** and the reason is recorded.
+
+    ⚠ The key ``accept_unseen_valid`` keeps its name because the Head's taxonomy names
+    the metric that way; ⛔ the LEG is row 1 and is reported as ``accept_leg_row``, so
+    nothing has to be inferred from the key.
     """
     reject = float(1.0 - outcome["accept"].mean()) if outcome["accept"].size else 0.0
-    a2 = row2_outcome["accept"]
+    a2 = accept_leg_outcome["accept"]
     accept_unseen = float(a2.mean()) if a2.size else 0.0
+    leg = accept_leg_row
 
     faults: list[str] = []
-    if outcome["threshold"] != row2_outcome["threshold"]:
+    if outcome["threshold"] != accept_leg_outcome["threshold"]:
         faults.append(
-            f"threshold {outcome['threshold']!r} != row 2's "
-            f"{row2_outcome['threshold']!r} — accept_unseen_valid was NOT measured at "
-            "the same threshold, so the pair is not a pair"
+            f"threshold {outcome['threshold']!r} != {leg}'s "
+            f"{accept_leg_outcome['threshold']!r} — accept_unseen_valid was NOT measured "
+            "at the same threshold, so the pair is not a pair"
         )
     if json.dumps(outcome["setting"], sort_keys=True, default=str) != json.dumps(
-        row2_outcome["setting"], sort_keys=True, default=str
+        accept_leg_outcome["setting"], sort_keys=True, default=str
     ):
         faults.append(
-            "setting fingerprint differs from row 2's — the two halves of the pair "
+            f"setting fingerprint differs from {leg}'s — the two halves of the pair "
             "come from different configurations"
         )
     if outcome["byte_ledger"]["deployed_bytes"] != (
-        row2_outcome["byte_ledger"]["deployed_bytes"]
+        accept_leg_outcome["byte_ledger"]["deployed_bytes"]
     ):
         faults.append(
-            f"deployed_bytes {outcome['byte_ledger']['deployed_bytes']} != row 2's "
-            f"{row2_outcome['byte_ledger']['deployed_bytes']} — a different object "
+            f"deployed_bytes {outcome['byte_ledger']['deployed_bytes']} != {leg}'s "
+            f"{accept_leg_outcome['byte_ledger']['deployed_bytes']} — a different object "
             "answered the two halves of the pair"
         )
 
@@ -416,8 +491,15 @@ def score_refusal_row(
         "n_requests": int(outcome["accept"].size),
         "reject_invalid": reject,
         "accept_unseen_valid": accept_unseen,
-        "accept_unseen_valid_source": "r2_unseen_valid",
-        "n_row2_requests": int(a2.size),
+        "accept_unseen_valid_source": leg,
+        "accept_leg_row": leg,
+        "accept_leg_note": (
+            "⭐ AMENDMENT 1: the accept-leg is ROW 1 — a STORED, on-grid request. Both "
+            "halves are well-formed on-grid requests; they differ only in whether the "
+            "store holds the value. ⛔ It was row 2 (off-grid by definition), and that "
+            "pairing was measured free at (1.0000, 1.0000) with zero deployed bytes."
+        ),
+        "n_accept_leg_requests": int(a2.size),
         "pair": [reject, accept_unseen],
         "refusal_gmean": gmean,
         "same_setting": not faults,
@@ -434,7 +516,7 @@ def score_refusal_row(
 def score_deletion_row(
     survivor_outcome: Mapping,
     deleted_outcome: Mapping,
-    row2_outcome: Mapping,
+    accept_leg_outcome: Mapping,
     seen_tuples: Sequence[Sequence[int]],
     pre_deletion_refusal: Optional[Mapping] = None,
     fit_fingerprint: Optional[tuple] = None,
@@ -448,12 +530,16 @@ def score_deletion_row(
     - ⭐ ``delta_reject`` — the change in ``reject_invalid`` for the deleted value
       between before and after — is the ⛔ **only** part of the refusal claim a no-model
       syntactic rule cannot produce (§4): the grid does not move when a value is
-      deleted from the store, so a grid rule's delta is exactly 0.
+      deleted from the store, so a grid rule's delta is exactly 0.  ⭐ AMENDMENT 1 §3
+      ranks this row FIRST in evidential weight for exactly that reason
+      (:data:`ROW_EVIDENCE_RANKING`).
     - ``fit_fingerprint`` is ``(pre, post)``; they must be EQUAL, which is what "no
       retraining" means mechanically.
     """
     survivors = score_novelty_row(survivor_outcome, seen_tuples)
-    deleted = score_refusal_row(deleted_outcome, row2_outcome, row_id="r7_deletion")
+    deleted = score_refusal_row(
+        deleted_outcome, accept_leg_outcome, row_id="r7_deletion"
+    )
     faults = list(deleted["faults"])
     if fit_fingerprint is not None:
         pre, post = fit_fingerprint
@@ -687,6 +773,42 @@ def verdict_vs_control(arm_score: float, control_score: float, margin: float) ->
     }
 
 
+def sanity_check_verdict(
+    row_id: str, arm_score: Optional[float], control_score: Optional[float]
+) -> dict:
+    """⛔⛔ The verdict slot of a NON-EVIDENTIAL row — never phrased as evidence.
+
+    :func:`verdict_vs_control` writes "beats basis+head beyond the declared margin",
+    which is a sentence about the store.  For a row that is free **by construction** —
+    row 6, where out-of-range is decidable from the factor grid alone — that sentence
+    would be false however the numbers came out.  So this is written instead, and
+    ``beats_control`` is ⛔ absent rather than ``False``: a hub cannot read a win out of
+    it and cannot read a loss out of it either.
+    """
+    rank = ROW_EVIDENCE_RANKING.get(row_id, {})
+    return {
+        "evidential": False,
+        "verdict": (
+            f"⛔ SANITY CHECK ONLY — {row_id} is NOT evidence for the store. "
+            + str(rank.get("why", ""))
+        ),
+        "delta_vs_basis_head": (
+            float(arm_score - control_score)
+            if (arm_score is not None and control_score is not None)
+            else None
+        ),
+        "delta_note": (
+            "⚠ Reported so the degenerate-arm guard is visible (refuse-everything → 0, "
+            "accept-everything → 0). ⛔ It is NOT a margin over a control and must not "
+            "be quoted as one."
+        ),
+        "quotable_as": "degenerate-arm guard; scoreboard plumbing check",
+        "not_quotable_as": (
+            "evidence that the store computes a refusal barrier, at any margin"
+        ),
+    }
+
+
 def build_scoreboard(
     primary_arm: str,
     outcomes: Mapping[str, Mapping[str, Mapping]],
@@ -749,8 +871,9 @@ def build_scoreboard(
             elif spec["metric"] == "novelty":
                 per_arm[arm] = score_novelty_row(out, seen_tuples)
             elif spec["metric"] == "refusal":
+                # ⭐⭐ AMENDMENT 1: the accept-leg is ROW 1, ⛔ not row 2.
                 per_arm[arm] = score_refusal_row(
-                    out, rows["r2_unseen_valid"], row_id=row_id
+                    out, rows[ACCEPT_LEG_ROW], row_id=row_id
                 )
             elif spec["metric"] == "deletion":
                 d = (deletion or {}).get(arm)
@@ -767,7 +890,7 @@ def build_scoreboard(
                     per_arm[arm] = score_deletion_row(
                         d["survivor"],
                         d["deleted"],
-                        rows["r2_unseen_valid"],
+                        rows[ACCEPT_LEG_ROW],
                         seen_tuples,
                         pre_deletion_refusal=d.get("pre"),
                         fit_fingerprint=d.get("fit_fingerprint"),
@@ -775,6 +898,16 @@ def build_scoreboard(
             per_arm[arm]["byte_ledger"] = ledger[arm][row_id]
         control = per_arm.get(PRIMARY_CONTROL, {}).get("score")
         arm_score = per_arm.get(primary_arm, {}).get("score")
+        if row_id in NON_EVIDENTIAL_ROWS:
+            # ⛔⛔ AMENDMENT 1 §2.4: build_scoreboard REFUSES to emit a verdict for a
+            # non-evidential row phrased as evidence for the store. The numbers are
+            # still emitted under "arms" — a sanity check that is not reported is not a
+            # sanity check — but the verdict slot says what they are and are not.
+            verdict = sanity_check_verdict(row_id, arm_score, control)
+        elif arm_score is not None and control is not None:
+            verdict = verdict_vs_control(arm_score, control, cfg.decoration_margin)
+        else:
+            verdict = {"verdict": "⛔ NOT SCORED — arm or control row missing"}
         rows_out[row_id] = {
             **spec,
             "row_id": row_id,
@@ -782,11 +915,7 @@ def build_scoreboard(
             # can quote a row without it.
             "value_holdout_scope": VALUE_HOLDOUT_SCOPE,
             "arms": per_arm,
-            "verdict": (
-                verdict_vs_control(arm_score, control, cfg.decoration_margin)
-                if (arm_score is not None and control is not None)
-                else {"verdict": "⛔ NOT SCORED — arm or control row missing"}
-            ),
+            "verdict": verdict,
         }
 
     return {
@@ -800,6 +929,16 @@ def build_scoreboard(
         # ⭐ Top level AND per row: the field every hub's report inherits.
         "value_holdout_scope": VALUE_HOLDOUT_SCOPE,
         "primary_arm": primary_arm,
+        # ⭐ AMENDMENT 1 §3: the ranking, in the artifact, so no hub re-derives it.
+        "row_evidence_ranking": ROW_EVIDENCE_RANKING,
+        "accept_leg_row": ACCEPT_LEG_ROW,
+        "amendment_1": (
+            "⭐ Row 5's accept-leg is ROW 1 (a stored, on-grid value), ⛔ not row 2. "
+            "Row 2 is accept-only and is consumed by no refusal row. Row 6 is "
+            "`evidential: false` — a sanity check, never evidence for the store. "
+            "Row 7's delta_reject is the programme's strongest instrument: deleting a "
+            "value does not move the factor grid, so a no-model rule's delta is 0.0."
+        ),
         "controls": {
             "like_for_like": PRIMARY_CONTROL,
             "second_row": "knn_proto",

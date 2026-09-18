@@ -78,9 +78,11 @@ names its structural control:
 =========================  ===================  ==========================================
 kind                       control              why
 =========================  ===================  ==========================================
-``held_out_hue``           ``row2_unseen``      the separation that IS the claim
-``held_out_shape``         ``row2_unseen``      same
-``out_of_range``           ``row2_unseen``      same; 6 terms on both sides
+``held_out_hue``           ``row1_seen``        ⭐ AMENDMENT 1 — the separation that IS
+                                                the claim: on-grid & stored vs on-grid &
+                                                never stored
+``held_out_shape``         ``row1_seen``        same
+``out_of_range``           ``row1_seen``        same; 6 terms on both sides
 ``duplicate_factor``       ``a7_redundant``     ⛔ 7 terms — a 6-term control would hand
                                                 back the term-count giveaway R26.1 killed
 =========================  ===================  ==========================================
@@ -88,8 +90,30 @@ kind                       control              why
 ⭐ :func:`grid_reach_auroc` is a **declared extra diagnostic**, reported and ⛔ never
 asserted on: it asks whether a bare grid look-up decides a row.  It does for row 6's
 ``out_of_range`` half (that IS what out-of-range means — the pin says so in
-``definitional_features``) and it does **not** for row 5, which is the whole reason
-row 5 is the load-bearing refusal row and row 6 is not.
+``definitional_features``) and it does **not** for row 5 against row 1, which is the
+whole reason row 5 is the load-bearing static refusal row and row 6 is not.
+
+6. ⭐⭐ AMENDMENT 1 — row 5's accept-leg is ROW 1, not row 2 (Head ruling, option 1)
+------------------------------------------------------------------------------------
+The first emission of this module paired row 5 (refuse) against row 2 (accept) and
+**measured the pair to be free**: a rule reading only the request and the factor grid
+scored ``(1.0000, 1.0000)`` at **zero deployed bytes**.  ⛔ The cause was the
+**pairing**, not the query sets.  Row 2 is *off-grid by definition* and row 5 is
+*on-grid by definition*, so ``n_offgrid_terms`` separates them at AUROC 1.0000 by
+construction; and on the hue axis the two rows are the *same request* with opposite
+answers (row 2 asks 0.35 and says accept, row 5 asks 0.5 and says refuse), so ⛔ no
+store can satisfy both.
+
+⭐ :func:`build_row1_seen` emits the accept-leg the pair actually needs: an **on-grid
+request whose every value is stored**.  Both halves are then well-formed on-grid
+requests, indistinguishable to any syntactic rule, differing only in ⭐ **whether the
+store holds the value** — render what you hold, refuse what you do not.
+
+⚠ Row 5 is now a test the ``basis_head`` control also passes trivially if it refuses
+on the same geometry — it never saw the held-out value either.  ⛔ That is not a
+defect, it is *the comparison*: the pair is scored side by side at matched bytes, and
+a shared property is not a CLU win.  :data:`ROW_EVIDENCE_RANKING` says so in the
+artifact.
 """
 
 from __future__ import annotations
@@ -129,6 +153,8 @@ from .gen_splits import (
 __all__ = [
     "HELD_OUT_HUE_RATIONALE",
     "HELD_OUT_SHAPE_RATIONALE",
+    "ROW1_SEEN_RATIONALE",
+    "ROW_EVIDENCE_RANKING",
     "VALUE_HOLDOUT_CONDITION",
     "VALUE_HOLDOUT_SCOPE",
     "VALUE_HOLDOUT_VARIANT",
@@ -136,6 +162,8 @@ __all__ = [
     "assert_value_absent_from_train",
     "build_nway_cells",
     "build_pair_cells",
+    "assert_row1_matches_row5",
+    "build_row1_seen",
     "build_row2_unseen",
     "build_row5_held_out",
     "build_value_cells",
@@ -145,6 +173,8 @@ __all__ = [
     "grid_reach_auroc",
     "grid_reach_features",
     "main",
+    "row1_positive_control",
+    "validate_row1",
     "validate_row2",
     "validate_row5",
     "value_holdout_metadata",
@@ -152,6 +182,57 @@ __all__ = [
 
 VALUE_HOLDOUT_CONDITION = "value_holdout"
 VALUE_HOLDOUT_VARIANT = "value_cells_plus_combination_cells"
+
+#: ⭐⭐ AMENDMENT 1 (Head ruling, option 1).  The refusal rows are NOT equal evidence,
+#: and the ranking is written into every artifact so no hub has to rediscover it.
+#:
+#: ``row 7`` is the programme's strongest instrument: deleting a value from the store
+#: ⛔ **does not move the factor grid**, so the §4 no-model rule's ``delta_reject`` is
+#: exactly ``0.0`` — an arm that changes its refusal after a deletion, with no
+#: retraining, has done something no syntactic rule can do.
+#:
+#: ``row 5`` is evidential **under the new pairing only**: its accept-leg is ROW 1 (a
+#: STORED, on-grid request), so both halves are well-formed on-grid requests that look
+#: identical to any syntactic rule and differ only in ⭐ whether the store holds the
+#: value.  ⛔ Under the ORIGINAL pairing (accept-leg = row 2) it was free: row 2 is
+#: off-grid by definition and row 5 on-grid by definition, so a grid look-up separated
+#: them at 1.0000 with zero deployed bytes.
+#:
+#: ``row 6`` can ⛔ **never** be non-free: out-of-range is decidable from the grid
+#: alone, and the pin already says so (``definitional_features``).  It is kept as the
+#: degenerate-arm guard (refuse-everything → 0, accept-everything → 0) and is marked
+#: ``evidential: false`` in the scoreboard artifact.
+ROW_EVIDENCE_RANKING = {
+    "r7_deletion": {
+        "evidential": True,
+        "rank": 1,
+        "why": (
+            "⭐ THE strongest instrument. Deleting a value from the store does not move "
+            "the factor grid, so the no-model rule's delta_reject is exactly 0.0. A "
+            "changed refusal after a deletion, with NO retraining, is not producible by "
+            "any syntactic rule."
+        ),
+    },
+    "r5_comp_refusal": {
+        "evidential": True,
+        "rank": 2,
+        "why": (
+            "⭐ Evidential UNDER THE AMENDED PAIRING ONLY: the accept-leg is row 1, a "
+            "STORED on-grid request. Both halves are well-formed on-grid requests and "
+            "differ only in whether the store holds the value. ⛔ With row 2 as the "
+            "accept-leg it was free (grid look-up, 1.0000, zero bytes)."
+        ),
+    },
+    "r6_invalid_refusal": {
+        "evidential": False,
+        "rank": 3,
+        "why": (
+            "⛔ SANITY CHECK ONLY, and it can never be anything else: out-of-range is "
+            "decidable from the factor grid alone. Kept as the degenerate-arm guard; "
+            "⛔ a row-6 number is NOT evidence that the store computes a barrier."
+        ),
+    },
+}
 
 #: ⛔ §2 of the task, verbatim.  Written into EVERY artifact this module emits and
 #: inherited by every scoreboard row (:mod:`chlu.experiments.gen_scoreboard`).
@@ -234,6 +315,72 @@ HELD_OUT_SHAPE_RATIONALE = {
     },
 }
 
+#: ⭐⭐ AMENDMENT 1: why THESE two retained values carry the row-1 accept-leg.
+#:
+#: Row 1 is row 5's accept-leg, so it has one job: be a request that is ⛔ structurally
+#: indistinguishable from a row-5 request and differs only in **whether the store holds
+#: the value**.  Two properties do that work, and both are checked in the emitter:
+#:
+#: 1. ⭐ **One value per kind, held constant across the kind's 256 records** — exactly
+#:    as row 5 holds ``object_hue = 0.5`` (resp. ``shape = 0.0``) constant across its
+#:    own 256.  ⚠ Drawing row 1's axis value uniformly over the retained values instead
+#:    would hand a *transductive* rule a free separator: "the file whose axis value is
+#:    CONSTANT is the refusal file".  A matched control has to match that too.
+#: 2. ⭐ **The same distance from the factor's range boundary as the value it mirrors.**
+#:    ``object_hue`` holds out index 5 of 0..9 → ``min(5, 9-5) = 4``; the retained index
+#:    4 also gives ``min(4, 9-4) = 4``.  ``shape`` holds out index 0 of 0..3 → distance
+#:    ``0``; the retained index 3 also gives distance ``0``.  ⇒ an UNSIGNED "is a term at
+#:    a range boundary?" rule — which needs no knowledge of the split and is therefore
+#:    genuinely free — fires identically on both legs and cannot separate them.
+#:    ⚠ A SIGNED rule ("at the MINIMUM specifically") still separates the shape kind;
+#:    that residual is measured, not hidden — see the amendment section of
+#:    ``.claude/outputs/w3-value-holdout-harness.md``.
+ROW1_SEEN_RATIONALE = {
+    "object_hue": {
+        "value": 0.4,
+        "grid_index": 4,
+        "mirrors": {"value": 0.5, "grid_index": 5},
+        "boundary_distance": 4,
+        "mirrored_boundary_distance": 4,
+        "why": (
+            "the retained hue whose grid index sits at the SAME distance from the "
+            "realised range boundary as the held-out index 5, so an unsigned "
+            "boundary/interior rule is blind to the difference"
+        ),
+        "rejected": {
+            "a uniform draw over all 9 retained hues": (
+                "⛔ row 5 holds its hue CONSTANT; a control whose hue varies is "
+                "separable by a transductive constant-detector with no model in it"
+            ),
+            "0.0 / 0.9": (
+                "boundary distance 0 against the held-out value's 4 — an unsigned "
+                "boundary rule would separate the legs for free"
+            ),
+        },
+    },
+    "shape": {
+        "value": 3.0,
+        "grid_index": 3,
+        "label": "oblong/capsule",
+        "mirrors": {"value": 0.0, "grid_index": 0, "label": "cube"},
+        "boundary_distance": 0,
+        "mirrored_boundary_distance": 0,
+        "why": (
+            "the only retained shape at the SAME boundary distance (0) as the held-out "
+            "cube, i.e. the other end of the shape axis. ⚠ HELD_OUT_SHAPE_RATIONALE "
+            "rejects 3.0 as a HOLD-OUT (a retained near-neighbour would weaken refusal); "
+            "that argument does not apply to an ACCEPT-leg, whose job is to be a value "
+            "the store demonstrably holds."
+        ),
+        "rejected": {
+            "1.0 (cylinder) / 2.0 (sphere)": (
+                "boundary distance 1 against the held-out cube's 0 — an unsigned "
+                "boundary rule would separate the legs for free"
+            ),
+        },
+    },
+}
+
 #: ⭐ The 2-way (row 3) cells are placed on the SAME two axes the value hold-out uses,
 #: so "unseen PAIR of seen values" (row 3) and "unseen VALUE" (row 5) differ in exactly
 #: one thing and the contrast between the rows is clean.
@@ -266,7 +413,15 @@ class ValueHoldoutConfig:
     #: Row-4 cells: Montero-shaped 6-factor conjunctions. ⭐ >= 49 is the wave-3
     #: multi-corner estimand (w3-hub-common §3); the default meets it exactly.
     n_nway_cells: int = 49
+    #: ⭐ AMENDMENT 1: the ROW-1 accept-leg.  Both values are ON the grid and RETAINED
+    #: (the store holds them), and each is chosen to sit at the **same distance from
+    #: its factor's range boundary** as the held-out value it mirrors — see
+    #: :data:`ROW1_SEEN_RATIONALE`.  ⛔ Neither may equal a held-out value; the builder
+    #: raises if it does.
+    row1_seen_hue_value: float = 0.4
+    row1_seen_shape_value: float = 3.0
     #: Records per query set.
+    row1_n_per_kind: int = 256
     row2_n_requests: int = 512
     row5_n_per_kind: int = 256
     c_invalid_n_per_kind: int = 256
@@ -274,6 +429,7 @@ class ValueHoldoutConfig:
     #: Seeds.  ⛔ Every draw in this module is seeded; nothing is tuned to a count.
     pair_seed: int = 0
     nway_seed: int = 0
+    row1_seed: int = 0
     row2_seed: int = 0
     row5_seed: int = 0
     c_invalid_seed: int = 0
@@ -629,6 +785,240 @@ def assert_value_absent_from_train(
 # ---------------------------------------------------------------------------
 # the query sets: row 2 (unseen-valid) and row 5 (held-out value)
 # ---------------------------------------------------------------------------
+
+ROW1_SCHEMA = {
+    "version": 1,
+    "description": (
+        "Row 1, SEEN: an ON-GRID request whose EVERY value is stored — the request "
+        "denotes a TRAIN row, so the store's fit pool literally contains it. The "
+        "correct answer is ACCEPT. ⭐ AMENDMENT 1: this is row 5's accept-leg. Both "
+        "halves of the refusal pair are now well-formed on-grid requests that look "
+        "identical to any syntactic rule and differ ONLY in whether the store holds "
+        "the value."
+    ),
+    "record": {
+        "id": "stable string id, unique within the file",
+        "kind": "'seen_hue' | 'seen_shape'",
+        "request": "list of {factor, factor_index, value} terms; every factor once",
+        "violated_factor": (
+            "⚠ NOTHING IS VIOLATED. The key name is fixed by the pin's "
+            "EXCLUDED_RECORD_KEYS allowlist and is carried so row 1's record-key SET is "
+            "identical to row 5's — otherwise `record_key_count` becomes a new giveaway. "
+            "Here it names the AXIS: the factor carrying the mirrored, STORED value."
+        ),
+        "reason": "statement of which stored value the axis factor carries",
+        "row": "the TRAIN row this request denotes — the store held it",
+    },
+    "note": (
+        "⛔ Structurally matched to row5_held_out by construction: same term count, same "
+        "factor order, same id format, the SAME record-key set, the same per-kind record "
+        "count, and the axis value held CONSTANT within a kind exactly as row 5 does."
+    ),
+    "scope": VALUE_HOLDOUT_SCOPE,
+}
+
+
+def build_row1_seen(
+    grid: FactorGrid, split: GenSplit, cfg: ValueHoldoutConfig
+) -> dict:
+    """⭐ Row 1: on-grid requests whose every value is STORED.  Row 5's accept-leg.
+
+    ⛔ Deliberately the same code shape as :func:`build_row5_held_out` — same plan
+    tuple, same seeded ``rng.choice`` over a sorted pool, same record layout — because
+    the two files have to be structurally indistinguishable and the cheapest way to
+    guarantee that is to build them the same way.  The ONLY differences are the value
+    (retained vs held out) and the pool (train vs test).
+    """
+    rng = np.random.default_rng(int(cfg.row1_seed))
+    in_train = np.zeros(grid.n_rows, dtype=bool)
+    in_train[split.train_rows] = True
+    records: list[dict] = []
+    held_out = {
+        cfg.held_out_hue_factor: float(cfg.held_out_hue_value),
+        cfg.held_out_shape_factor: float(cfg.held_out_shape_value),
+    }
+    plan = (
+        ("seen_hue", cfg.held_out_hue_factor, float(cfg.row1_seen_hue_value)),
+        ("seen_shape", cfg.held_out_shape_factor, float(cfg.row1_seen_shape_value)),
+    )
+    for kind, factor, value in plan:
+        # ⛔ the two things that would silently turn row 1 back into row 5 or row 2
+        if value == held_out[factor]:
+            raise ValueError(
+                f"row 1/{kind}: {factor}={value} IS the held-out value — the accept-leg "
+                "would be a refusal item"
+            )
+        _grid_index_of_value(grid, factor, value)  # raises if it is off-grid
+        k = grid.index_of(factor)
+        vals = split.grid.values_of(split.train_rows)[:, k]
+        pool = np.asarray(split.train_rows)[vals == value]
+        if pool.size == 0:
+            raise ValueError(
+                f"row 1/{kind}: no TRAIN row carries {factor}={value} — the value is "
+                "not in the store's fit pool and cannot be an accept-leg"
+            )
+        n = int(cfg.row1_n_per_kind)
+        take = np.sort(rng.choice(pool, size=n, replace=pool.size < n))
+        for i, row in enumerate(take.tolist()):
+            if not in_train[row]:  # pragma: no cover - defended, not expected
+                raise ValueError(f"row 1/{kind}: row {row} is not in the fit pool")
+            rv = grid.values_of(np.array([row]))[0].tolist()
+            records.append(
+                {
+                    "id": f"{grid.dataset}-row1-{kind}-{i:04d}",
+                    "kind": kind,
+                    "request": _terms(grid, rv),
+                    # ⚠ nothing is violated — see ROW1_SCHEMA. This is the AXIS key,
+                    # carried so the record-key SET matches row 5's exactly.
+                    "violated_factor": factor,
+                    "reason": (
+                        f"{factor}={value} is ON the grid AND the STORE held rows "
+                        "carrying it; this request denotes a train row, so every value "
+                        "it names is stored (see the condition's scope statement)"
+                    ),
+                    "row": int(row),
+                }
+            )
+    return {
+        "schema": ROW1_SCHEMA,
+        "scope": VALUE_HOLDOUT_SCOPE,
+        "dataset": grid.dataset,
+        "condition": VALUE_HOLDOUT_CONDITION,
+        "seed": int(cfg.row1_seed),
+        "n_per_kind": int(cfg.row1_n_per_kind),
+        "seen": {
+            cfg.held_out_hue_factor: float(cfg.row1_seen_hue_value),
+            cfg.held_out_shape_factor: float(cfg.row1_seen_shape_value),
+        },
+        "mirrors_held_out": held_out,
+        "rationale": ROW1_SEEN_RATIONALE,
+        "factors": {
+            "names": list(grid.names),
+            "cardinalities": list(grid.cardinalities),
+            "ranges": [[float(v[0]), float(v[-1])] for v in grid.values],
+        },
+        "records": records,
+    }
+
+
+def validate_row1(payload: dict, grid: FactorGrid, split: GenSplit) -> int:
+    """Assert every row-1 record is ON-grid, denotes its own row, and is IN TRAIN.
+
+    ⛔ The mirror image of :func:`validate_row5`, and the third clause is the one that
+    matters: a row-1 record that had drifted into the test pool would be a REFUSAL item
+    sitting in the accept-leg, and the pair would score the arm for refusing correctly.
+    :func:`row1_positive_control` injects exactly that fault and requires this to raise.
+    """
+    records = payload["records"]
+    if not records:
+        raise AssertionError("row 1 set is empty")
+    in_train = np.zeros(grid.n_rows, dtype=bool)
+    in_train[split.train_rows] = True
+    n_f = grid.n_factors
+    for rec in records:
+        req = rec["request"]
+        if len(req) != n_f:
+            raise AssertionError(f"{rec['id']}: {len(req)} terms, expected {n_f}")
+        vals = []
+        for k, term in enumerate(req):
+            if tuple(term.keys()) != TERM_KEYS:
+                raise AssertionError(f"{rec['id']}: term keys {tuple(term.keys())}")
+            if int(term["factor_index"]) != k or grid.names[k] != term["factor"]:
+                raise AssertionError(f"{rec['id']}: factor/index mismatch at {k}")
+            v = float(term["value"])
+            if not np.any(grid.values[k] == v):
+                raise AssertionError(
+                    f"{rec['id']}: value {v} of {term['factor']!r} is OFF-GRID — row 1 "
+                    "is a STORED on-grid request, not a row-2 interpolant"
+                )
+            vals.append(v)
+        row = int(rec["row"])
+        if not np.array_equal(grid.values_of(np.array([row]))[0], np.array(vals)):
+            raise AssertionError(f"{rec['id']}: request does not denote its own row")
+        if not in_train[row]:
+            raise AssertionError(
+                f"{rec['id']}: row {row} is NOT in the store's fit pool — the accept-leg "
+                "would be scored on a request the store never held"
+            )
+        axis = rec["violated_factor"]
+        if float(vals[grid.index_of(axis)]) != float(payload["seen"][axis]):
+            raise AssertionError(
+                f"{rec['id']}: axis {axis!r} does not carry the declared stored value"
+            )
+        if float(vals[grid.index_of(axis)]) == float(payload["mirrors_held_out"][axis]):
+            raise AssertionError(
+                f"{rec['id']}: axis {axis!r} carries the HELD-OUT value"
+            )
+    return len(records)
+
+
+def assert_row1_matches_row5(row1: dict, row5: dict) -> dict:
+    """⭐ The structural match, asserted rather than asserted-in-prose.
+
+    Same record count, same per-kind count, same record-key SET, same term count, same
+    factor order, same id token shape.  ⛔ These are the properties the pin's
+    ``diagnostic_features`` measures (``record_key_count``, ``id_token_count``,
+    ``id_numeric_suffix``); a mismatch on any of them is a new giveaway.
+    """
+    r1, r5 = row1["records"], row5["records"]
+    facts = {}
+    if len(r1) != len(r5):
+        raise AssertionError(f"row 1 has {len(r1)} records, row 5 has {len(r5)}")
+    facts["n_records"] = len(r1)
+    for name, recs in (("row1", r1), ("row5", r5)):
+        facts[f"{name}_record_keys"] = sorted({k for r in recs for k in r})
+        facts[f"{name}_n_kinds"] = len({r["kind"] for r in recs})
+        facts[f"{name}_term_counts"] = sorted({len(r["request"]) for r in recs})
+        facts[f"{name}_id_token_counts"] = sorted(
+            {len(str(r["id"]).split("-")) for r in recs}
+        )
+        facts[f"{name}_record_key_counts"] = sorted({len(r) for r in recs})
+    for prop in (
+        "record_keys",
+        "n_kinds",
+        "term_counts",
+        "id_token_counts",
+        "record_key_counts",
+    ):
+        a, b = facts[f"row1_{prop}"], facts[f"row5_{prop}"]
+        if a != b:
+            raise AssertionError(
+                f"structural mismatch on {prop}: row 1 {a!r} vs row 5 {b!r} — a control "
+                "that differs from the set it controls is a NEW giveaway, not a control"
+            )
+    return facts
+
+
+def row1_positive_control(payload: dict, grid: FactorGrid, split: GenSplit) -> str:
+    """⛔ The positive control for :func:`validate_row1`: inject a TEST row, require a raise.
+
+    A validator that never fires is indistinguishable from one that is not called.  This
+    takes the emitted payload, rewrites its first record to denote a **held-out** row
+    (which is exactly the fault that would silently turn the accept-leg into a second
+    refusal set), and requires :func:`validate_row1` to reject it.  Returns the message
+    that was raised, so the emitter's report carries the PROOF and not a boolean.
+    """
+    if not split.test_rows.size:  # pragma: no cover - assert_non_empty_test covers it
+        raise AssertionError("no test row exists to inject")
+    bad_row = int(split.test_rows[0])
+    rv = grid.values_of(np.array([bad_row]))[0].tolist()
+    injected = {
+        **payload,
+        "records": [
+            {**payload["records"][0], "request": _terms(grid, rv), "row": bad_row},
+            *payload["records"][1:],
+        ],
+    }
+    try:
+        validate_row1(injected, grid, split)
+    except AssertionError as exc:
+        return str(exc)
+    raise AssertionError(
+        f"⛔ POSITIVE CONTROL FAILED: validate_row1 accepted an injected TEST row "
+        f"({bad_row}) as a row-1 accept-leg record. The validator does not check the "
+        "one thing it exists to check."
+    )
+
 
 ROW2_SCHEMA = {
     "version": 1,
@@ -1003,6 +1393,19 @@ def grid_reach_auroc(
 #: and is not edited); ``audit_query_sets`` reads the FILE, so the merge is what makes
 #: rows 2/5 reachable by ``assert_no_model_detector_at_chance``.
 EXTRA_QUERY_SETS: dict[str, dict] = {
+    "row1_seen": {
+        "role": "valid",
+        "file": "row1_seen.json",
+        "builder": "chlu.data.gen_value_holdout.build_row1_seen",
+        "n_terms": "n_factors",
+        "description": (
+            "row 1 (seen): an ON-GRID request whose EVERY value is STORED — it denotes "
+            "a train row. ⭐ AMENDMENT 1: this is the accept-leg of BOTH refusal rows. "
+            "It is structurally matched to row5_held_out (same record-key set, same "
+            "term count, same id shape, same per-kind count, axis value constant per "
+            "kind), so the two differ only in whether the store holds the value."
+        ),
+    },
     "row2_unseen": {
         "role": "valid",
         "file": "row2_unseen.json",
@@ -1019,11 +1422,16 @@ EXTRA_QUERY_SETS: dict[str, dict] = {
         "file": "row5_held_out.json",
         "builder": "chlu.data.gen_value_holdout.build_row5_held_out",
         "n_terms": "n_factors",
-        # ⭐ Both kinds are controlled by row 2: that pairing IS the claim — row 2
-        # accept vs row 5 refuse, from requests that are structurally identical.
+        # ⭐⭐ AMENDMENT 1 (Head ruling, option 1). Both kinds are controlled by ROW 1.
+        # ⛔ They WERE controlled by row 2, and that was the leak: row 2 is OFF-GRID by
+        # definition and row 5 is ON-GRID by definition, so a grid look-up separated
+        # them perfectly at zero deployed bytes. Worse, on the hue axis the two rows are
+        # the SAME request with opposite answers (0.35 accept / 0.5 refuse), so no store
+        # could satisfy both. Row 1 is on-grid like row 5 and stored unlike row 5 —
+        # ⭐ render what you hold, refuse what you do not.
         "controls": {
-            "held_out_hue": "row2_unseen",
-            "held_out_shape": "row2_unseen",
+            "held_out_hue": "row1_seen",
+            "held_out_shape": "row1_seen",
         },
         "description": (
             "row 5 (compositional refusal): an ON-GRID value the STORE never held. "
@@ -1034,11 +1442,13 @@ EXTRA_QUERY_SETS: dict[str, dict] = {
 }
 
 #: ⭐ Row 6's control map, overridden onto the pin's ``c_invalid`` entry.  The
-#: ``out_of_range`` half is scored against ROW 2 (both 6 terms) because row 2 is the
-#: accept side of the refusal pair.  ⛔ ``duplicate_factor`` keeps ``a7_redundant``:
-#: it carries ``n_factors + 1`` terms and a 6-term control would hand back the exact
-#: term-count giveaway R26 ruling 1 killed.
-ROW6_CONTROLS = {"duplicate_factor": "a7_redundant", "out_of_range": "row2_unseen"}
+#: ``out_of_range`` half is scored against ROW 1 (both 6 terms) — ⭐ AMENDMENT 1 moved
+#: it off row 2 along with row 5's, keeping the invariant that a kind's structural
+#: control is **the accept side of the refusal pair it is scored in**.  ⛔ Row 2 is now
+#: an accept-only row and is consumed by no refusal row.  ⛔ ``duplicate_factor`` keeps
+#: ``a7_redundant``: it carries ``n_factors + 1`` terms and a 6-term control would hand
+#: back the exact term-count giveaway R26 ruling 1 killed.
+ROW6_CONTROLS = {"duplicate_factor": "a7_redundant", "out_of_range": "row1_seen"}
 
 
 def value_holdout_metadata(
@@ -1053,6 +1463,9 @@ def value_holdout_metadata(
         "dataset": split.dataset,
         "condition": VALUE_HOLDOUT_CONDITION,
         "variant": VALUE_HOLDOUT_VARIANT,
+        # ⭐ AMENDMENT 1 §3: written into the artifact so no hub re-derives it.
+        "row_evidence_ranking": ROW_EVIDENCE_RANKING,
+        "row1_seen_rationale": ROW1_SEEN_RATIONALE,
         "config": cfg.to_dict(),
         "held_out_values": {
             cfg.held_out_hue_factor: float(cfg.held_out_hue_value),
@@ -1145,13 +1558,21 @@ def emit_value_holdout(
     n_a7 = validate_a7_redundant(a7_set, grid)
     a7_path, a7_sha = write_json_with_checksum(a7_set, out_dir / "a7_redundant.json")
 
-    # -- rows 2 and 5 --------------------------------------------------------
+    # -- rows 1, 2 and 5 -----------------------------------------------------
+    row1 = build_row1_seen(grid, split, cfg)
+    n_row1 = validate_row1(row1, grid, split)
+    # ⛔ the validator is proved to fire BEFORE the file is written, not after.
+    row1_control_msg = row1_positive_control(row1, grid, split)
+    row1_path, row1_sha = write_json_with_checksum(row1, out_dir / "row1_seen.json")
+
     row2 = build_row2_unseen(grid, split, cfg)
     n_row2 = validate_row2(row2, grid, split)
     row2_path, row2_sha = write_json_with_checksum(row2, out_dir / "row2_unseen.json")
 
     row5 = build_row5_held_out(grid, split, cfg)
     n_row5 = validate_row5(row5, grid, split)
+    # ⭐ the accept-leg must be structurally indistinguishable from the set it controls
+    row1_match = assert_row1_matches_row5(row1, row5)
     row5_path, row5_sha = write_json_with_checksum(row5, out_dir / "row5_held_out.json")
 
     # -- the registry: the pin's three sets + ours, with row 6 re-controlled --
@@ -1169,10 +1590,17 @@ def emit_value_holdout(
     payload["scope"] = VALUE_HOLDOUT_SCOPE
     payload["sets"]["c_invalid"]["controls"] = dict(ROW6_CONTROLS)
     payload["sets"]["c_invalid"]["control_note"] = (
-        "⭐ out_of_range is re-controlled onto ROW 2 (the accept side of the refusal "
-        "pair); duplicate_factor keeps a7_redundant because it carries n_factors+1 "
-        "terms and a 6-term control would restore the R26.1 term-count giveaway."
+        "⭐ AMENDMENT 1: out_of_range is re-controlled onto ROW 1 (the accept side of "
+        "the refusal pair, which is now row 1 for BOTH refusal rows); duplicate_factor "
+        "keeps a7_redundant because it carries n_factors+1 terms and a 6-term control "
+        "would restore the R26.1 term-count giveaway."
     )
+    payload["row_evidence_ranking"] = ROW_EVIDENCE_RANKING
+    payload["sets"]["row1_seen"] = {
+        **EXTRA_QUERY_SETS["row1_seen"],
+        "sha256": row1_sha,
+        "n_records": int(n_row1),
+    }
     payload["sets"]["row2_unseen"] = {
         **EXTRA_QUERY_SETS["row2_unseen"],
         "sha256": row2_sha,
@@ -1200,6 +1628,13 @@ def emit_value_holdout(
             "held_out_fraction": float(split.n_test / split.n_total),
         },
         "assertions": assertions,
+        "row_evidence_ranking": ROW_EVIDENCE_RANKING,
+        # ⭐ the PROOF the row-1 validator fires, carried as the raised message itself
+        "row1_positive_control": {
+            "injected": "the first test row, as the first row-1 record",
+            "validate_row1_raised": row1_control_msg,
+        },
+        "row1_structural_match_to_row5": row1_match,
         "artifacts": {
             "factor_index.npz": {"path": str(index_path), "sha256": index_sha},
             "value_cells.json": {"path": str(meta_path), "sha256": meta_sha},
@@ -1208,6 +1643,9 @@ def emit_value_holdout(
             },
             "a7_redundant.json": {
                 "path": str(a7_path), "sha256": a7_sha, "n_records": int(n_a7)
+            },
+            "row1_seen.json": {
+                "path": str(row1_path), "sha256": row1_sha, "n_records": int(n_row1)
             },
             "row2_unseen.json": {
                 "path": str(row2_path), "sha256": row2_sha, "n_records": int(n_row2)
@@ -1230,15 +1668,23 @@ def emit_value_holdout(
             "note": (
                 "⛔ REPORTED, NEVER ASSERTED. A bare grid look-up decides row 6's "
                 "out_of_range half (the pin measures the same statistic at 1.0000 and "
-                "declares it); it decides NOTHING on row 5, whose values are all "
-                "on-grid. That asymmetry is why row 5 is the load-bearing refusal row."
+                "declares it); it decides NOTHING on row 5 vs row 1, both of which are "
+                "all-on-grid. ⭐ AMENDMENT 1: 'row5_vs_row2_SUPERSEDED' is retained "
+                "because it is the FINDING — 1.0000 on n_offgrid_terms is why row 2 "
+                "could not be row 5's accept-leg."
             ),
-            "row5_vs_row2": grid_reach_auroc(
+            # ⭐ AMENDMENT 1: measured against the NEW accept-leg. Both legs are
+            # all-on-grid, so both reach features are identically 0 on both sides and
+            # the AUROC is exactly 0.5 — the grid look-up decides nothing here.
+            "row5_vs_row1": grid_reach_auroc(
+                row5["records"], row1["records"], grid
+            ),
+            "row5_vs_row2_SUPERSEDED": grid_reach_auroc(
                 row5["records"], row2["records"], grid
             ),
-            "row6_out_of_range_vs_row2": grid_reach_auroc(
+            "row6_out_of_range_vs_row1": grid_reach_auroc(
                 [r for r in c_set["records"] if r["kind"] == "out_of_range"],
-                row2["records"],
+                row1["records"],
                 grid,
             ),
             "row6_duplicate_factor_vs_a7": grid_reach_auroc(
