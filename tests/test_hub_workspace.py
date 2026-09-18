@@ -556,7 +556,15 @@ class _WindowsFlavourPath:
 
     def read_text(self, encoding=None, errors="strict"):
         data = self._p.read_bytes()
-        return data.decode(encoding or "cp1252", errors)
+        text = data.decode(encoding or "cp1252", errors)
+        # ⛔ Real ``Path.read_text`` opens in TEXT mode and folds universal newlines;
+        # ``read_bytes`` does not.  On Windows the fixture is written through a real
+        # ``write_text``, which expands ``\n`` -> ``\r\n``, so without this the mock
+        # returned two characters per newline and the UTF-8 assertion failed for a
+        # reason that had nothing to do with encoding.  ⭐ The mock claims to be "the
+        # real file on the real disk" apart from two named behaviours; this keeps that
+        # claim true.
+        return text.replace("\r\n", "\n").replace("\r", "\n")
 
     def __str__(self):
         return str(self._p)
