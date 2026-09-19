@@ -54,6 +54,11 @@ from . import exp_gen_factor_wells as fw
 #: ⭐ Captured AT IMPORT, before :func:`read_dial` ever replaces anything.  Everything in
 #: this module that needs wave 3's own builder calls THIS, so the dial can never recurse
 #: into itself and the store an arm reads is always wave 3's object.
+#: Rival refusals recorded BY THE READ, keyed by arm.  A rival is never cached (its
+#: callable is a closure), so a per-object dict would be thrown away between calls; this
+#: is module-level so the reason a rival declined a row survives to the table.
+_REFUSALS: dict = {}
+
 _FW_BUILD_ARM = fw.build_arm
 _FW_ARM_FEATURES = fw.arm_features
 from ..core.gen_read import (
@@ -668,23 +673,35 @@ def arm_features(obj: dict, values: np.ndarray, grid) -> tuple:
         part = np.isnan(V).any(axis=1)
         out = np.zeros((V.shape[0], int(fw.PINS["D"])), np.float32)
         oor = np.zeros(V.shape[0], bool)
+        _REFUSALS.setdefault(obj["arm"], {})
+
+        def _ask(fn, rows, tag):
+            """Answer ``rows`` with ``fn``; on a RIVAL'S OWN refusal, decline them.
+
+            ⛔ A refusal is the rival's decision, not a failure of mine, and it is NOT
+            answered by substituting another object or a fabricated feature.  The rows are
+            flagged out-of-range so the shared acceptance rule declines them, and the
+            reason is recorded on the arm so the table prints a DASH with the rival's own
+            words instead of a number it never produced.
+            """
+            if fn is None:
+                _REFUSALS[obj["arm"]][tag] = "no such variant is fitted"
+                oor[rows] = True
+                return
+            try:
+                f, o = fn(V[rows])
+            except Exception as exc:                       # RivalRefusal and friends
+                _REFUSALS[obj["arm"]][tag] = (
+                    f"{type(exc).__name__}: {str(exc)[:220]}")
+                oor[rows] = True
+                return
+            out[rows] = np.asarray(f, np.float32)
+            oor[rows] = np.asarray(o, bool)
+
         if (~part).any():
-            f, o = obj["rival"](V[~part])
-            out[~part] = np.asarray(f, np.float32)
-            oor[~part] = np.asarray(o, bool)
+            _ask(obj["rival"], ~part, "full_request")
         if part.any():
-            rp = obj.get("rival_partial")
-            if rp is None:
-                # ⛔ No variant of this rival can answer a partial request.  The rows are
-                # flagged out-of-range so the shared acceptance rule declines them, and
-                # `partial_answerable=False` in arm.json makes build_table print rows
-                # 1/2/5/6 for this rival as a DECLARED NOT-RUN rather than as a refusal
-                # the rival never chose.
-                oor[part] = True
-            else:
-                f, o = rp(V[part])
-                out[part] = np.asarray(f, np.float32)
-                oor[part] = np.asarray(o, bool)
+            _ask(obj.get("rival_partial"), part, "partial_request")
         return out, oor
     if verb == "proto":
         return _FW_ARM_FEATURES(obj, values, grid)
@@ -886,6 +903,14 @@ def build_table(out_dir: Path, primary: str = "tensor_addr", margin: float = 1.0
                            "judge_accuracy": float(j.mean()),
                            "ceiling_per_corner": float(cap.mean()),
                            "frac_of_ceiling": float((v / cap).mean())}
+        rp = out_dir / "arms" / a / "refusals.json"
+        if rp.exists():
+            with open(rp, encoding="utf-8") as fh:
+                blk["rival_refusals"] = json.load(fh)
+            if "full_request" in blk["rival_refusals"]:
+                blk["query_set_rows"] = (
+                    "DECLARED NOT-RUN on the rows this rival declined -- its own reason "
+                    "is in rival_refusals. A dash, never a null.")
         if meta.get("partial_answerable") is False:
             blk["query_set_rows"] = (
                 "DECLARED NOT-RUN: this rival has no variant fitted for a request with "
@@ -1063,7 +1088,13 @@ def stage_run(arm: str, out_dir: Path, max_seconds: float, log: Callable = print
             # and this footnote on every row, and it is never counted as a win for us.
             return {"arm": arm, "not_run": obj["not_run"], "incomplete": False,
                     "n_done": 0}
-        return fw.run_arm(arm, out_dir, max_seconds=max_seconds, log=log)
+        res = fw.run_arm(arm, out_dir, max_seconds=max_seconds, log=log)
+        ref = _REFUSALS.get(arm) or {}
+        if ref:
+            # the rival declined some rows in its own words; record them beside the arm
+            fw._jdump(ref, Path(out_dir) / "arms" / arm / "refusals.json")
+            log(f"  arm {arm}: rival refusals recorded -> {list(ref)}")
+        return res
 
 
 def _cache_manifest(seed: int) -> dict:
