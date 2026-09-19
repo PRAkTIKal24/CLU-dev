@@ -132,6 +132,7 @@ class FieldSpec:
         coupling_alpha: float = 1.0,
         coupling_prior_strength: float = 32.0,
         coupling_rank: int = 8,
+        decontaminate: float = 0.0,
         coupling_shrink: float = 2.0,
         coupling_eta: float = 1.0,
         coupling_gain_clip: float = 2.0,
@@ -151,6 +152,7 @@ class FieldSpec:
         self.coupling_alpha = float(coupling_alpha)
         self.coupling_prior_strength = float(coupling_prior_strength)
         self.coupling_rank = int(coupling_rank)
+        self.decontaminate = float(decontaminate)
         self.coupling_shrink = float(coupling_shrink)
         self.coupling_eta = float(coupling_eta)
         self.coupling_gain_clip = float(coupling_gain_clip)
@@ -390,7 +392,9 @@ def assert_no_refit(before: FieldStore, after: FieldStore) -> dict:
     This is the mechanical content of "deletion is never a refit".
     """
     frozen = ("well_of_channel", "well_sigma", "basin_sigma", "basin_gap",
-              "term_mu", "term_n", "global_mu", "coupling", "basin_n")
+              "term_mu", "term_n", "global_mu", "coupling", "coupling_w",
+              "coupling_u", "coupling_v", "coupling_dp_fg", "coupling_dp_gf",
+              "basin_n")
     out = {}
     bad = []
     for nm in frozen:
@@ -581,6 +585,8 @@ def build_field(
         ("basin_n", np.int32, (T,), "provenance"),
         ("coupling", np.float32, (NC,), "interface"),
         ("coupling_w", np.float32, (NC,), "interface"),
+        ("coupling_dp_fg", np.float32, (NC,), "interface"),
+        ("coupling_dp_gf", np.float32, (NC,), "interface"),
         ("coupling_u", np.float32, (NC, int(spec.coupling_rank)), "interface"),
         ("coupling_v", np.float32,
          (len(clay["pairs"]), int(spec.coupling_rank), D), "interface"),
@@ -757,6 +763,18 @@ def build_field(
         n_surv += int((pmi != 0).sum())
         cp[off:off + C] = pmi.astype(np.float32).ravel()
         cw[off:off + C] = w.astype(np.float32).ravel()
+        # The CONDITIONAL IMBALANCE of the pool, which is the thing that contaminates a
+        # marginal term coordinate.  dp_fg[v, u] = p(g=u | f=v) - p(g=u): exactly zero on a
+        # balanced pool, and non-zero only where the fit pool is missing a conjunction.
+        J = cnt.reshape(Vf, Vg)
+        nf = np.maximum(J.sum(axis=1, keepdims=True), 1.0)
+        ng = np.maximum(J.sum(axis=0, keepdims=True), 1.0)
+        pg = J.sum(axis=0) / max(float(N), 1.0)
+        pf = J.sum(axis=1) / max(float(N), 1.0)
+        field.view("coupling_dp_fg")[off:off + C] = (
+            J / nf - pg[None, :]).astype(np.float32).ravel()
+        field.view("coupling_dp_gf")[off:off + C] = (
+            J / ng - pf[:, None]).astype(np.float32).ravel()
         # -- the coordinate correction: the 2-way ANOVA interaction, rank r ------
         cellsum = H.T @ X
         cell = np.where(cnt[:, None] > 0, cellsum / np.maximum(cnt, 1.0)[:, None], 0.0)
@@ -843,7 +861,8 @@ def field_byte_ledger(field: FieldStore, budget_bytes: int = 524_288) -> dict:
         "per_segment": per_seg,
         "coupling_bytes": int(sum(field.segs[n].nbytes for n in
                                   ("coupling", "coupling_w", "coupling_u",
-                                   "coupling_v", "coupling_hole"))),
+                                   "coupling_v", "coupling_hole",
+                                   "coupling_dp_fg", "coupling_dp_gf"))),
         "term_map_bytes": int(field.segs["term_mu"].nbytes
                               + field.segs["global_mu"].nbytes),
         "note": ("the ATOMS carry the store ledger and are matched to the budget; the "
@@ -953,6 +972,9 @@ def address_from_term_weights(field: FieldStore, W: np.ndarray,
     cw = field.view("coupling_w")
     cu = field.view("coupling_u")
     cv = field.view("coupling_v")
+    dec = float(field.meta["spec"].get("decontaminate", 0.0))
+    dfg = field.view("coupling_dp_fg")
+    dgf = field.view("coupling_dp_gf")
     pair_used = np.zeros(W.shape[0], np.float32)
     for pi, ((f, g), off) in enumerate(zip(field.meta["coupling_pairs"],
                                            field.meta["coupling_offsets"])):
@@ -966,6 +988,21 @@ def address_from_term_weights(field: FieldStore, W: np.ndarray,
         cell = cell * cw[off:off + Vf * Vg][None, :]
         mu += (cell @ cu[off:off + Vf * Vg]) @ cv[pi]
         pair_used += cell.sum(axis=1)
+        if dec != 0.0:
+            # DE-CONTAMINATION, one step, applied only where the pool is unbalanced.
+            # A marginal coordinate m_f[v] = E[x | f=v] carries the other factors' effects
+            # in the proportions the pool happened to hold them: to first order
+            #   a_f[v] = b_f[v] - sum_g sum_u (p(u | f=v) - p(u)) b_g[u]
+            # with b = term_mu - global_mu.  The bracket is exactly zero on a balanced
+            # pool, so this touches nothing except the cells a held-out conjunction
+            # actually distorted -- which is what separates it from re-fitting the whole
+            # map by backfitting, and backfitting measured worse.
+            Bf = tm[toff[f]:toff[f] + Vf] - gm[None, :]
+            Bg = tm[toff[g]:toff[g] + Vg] - gm[None, :]
+            Dfg = dfg[off:off + Vf * Vg].reshape((Vf, Vg))
+            Dgf = dgf[off:off + Vf * Vg].reshape((Vf, Vg))
+            mu -= dec * ((Wf @ Dfg) @ Bg).astype(np.float32)
+            mu -= dec * ((Wg @ Dgf.T) @ Bf).astype(np.float32)
     return mu, pair_used
 
 
@@ -1170,12 +1207,40 @@ def gap_read(field: FieldStore, values: np.ndarray,
 # ---------------------------------------------------------------------------
 
 
-def _items_holding(field: FieldStore, f: int, v: int) -> np.ndarray:
-    """Which live items were written holding ``(f, v)``.  Write/delete-time only."""
+def _items_holding(field: FieldStore, f: int, v: int) -> tuple:
+    """Which live items occupy basin ``(f, v)`` -- by PROVENANCE and by GEOMETRY.
+
+    Provenance alone is not enough, and the difference is not cosmetic.  Deleting a value
+    has to leave its basin EMPTY, because "the basin is empty" is what refusal reads.  An
+    atom written for a neighbouring value can still be the nearest atom to this basin's
+    coordinate, and if it is left behind the basin still looks occupied and the deleted
+    value is still answered.  MEASURED: evicting by provenance alone left 1 live atom in
+    the basin and refusal on the deleted value stayed at 0.0417 instead of going to 1.0000.
+    So eviction takes both sets.  It is still an operation on atoms, it takes strictly
+    MORE of them, and more is the conservative direction for an erasure.
+    """
     t = term_index(field.cardinalities, f, v)
+    cards = field.cardinalities
+    toff = np.asarray(field.meta["term_offsets"], np.int64)
     ab = field.view("atom_basin")
     alive = field.view("atom_alive")
-    return np.flatnonzero((ab[:, int(f)] == t) & (alive > 0))
+    life = field.view("atom_life")
+    live = (np.asarray(alive, np.uint8) > 0) & (np.asarray(life, np.float32) > LIFETIME_EPS)
+    prov = np.flatnonzero((ab[:, int(f)] == t) & live)
+    k = int(field.meta["host_of_factor"][int(f)])
+    ch = np.asarray(field.meta["well_channels"][k], np.int64)
+    tm = field.view("term_mu")
+    bs = field.view("basin_sigma")
+    ts = [int(toff[int(f)] + u) for u in range(cards[int(f)])]
+    A = np.asarray(field.atoms_of_well(k), np.float64)
+    C = np.asarray(tm[ts][:, ch], np.float64)
+    d = np.sqrt(np.maximum((A * A).sum(1)[:, None] - 2.0 * A @ C.T
+                           + (C * C).sum(1)[None, :], 0.0))
+    near = np.argmin(d, axis=1)
+    tau = float(field.meta["spec"]["basin_live_tau"])
+    within = d[np.arange(d.shape[0]), near] <= tau * max(float(bs[t]), 1e-9)
+    geom = np.flatnonzero(live & (near == int(v)) & within)
+    return np.union1d(prov, geom), prov, geom
 
 
 def evict_term(field: FieldStore, f: int, v: int, log=None) -> dict:
@@ -1187,7 +1252,7 @@ def evict_term(field: FieldStore, f: int, v: int, log=None) -> dict:
     the caller can assert the acceptance property against them.
     """
     log = log or (lambda *_: None)
-    ids = _items_holding(field, f, v)
+    ids, prov, geom = _items_holding(field, f, v)
     ranges = []
     for i in ids:
         ranges += field.item_byte_ranges(int(i))
@@ -1205,6 +1270,8 @@ def evict_term(field: FieldStore, f: int, v: int, log=None) -> dict:
         f"{sum(e - s for s, e in ranges):,} B of the image belong to them")
     return {"op": "evict_term", "factor": int(f), "value": int(v),
             "n_items_evicted": int(ids.size), "item_ids": ids.tolist(),
+            "n_by_provenance": int(prov.size), "n_by_geometry": int(geom.size),
+            "n_geometry_only": int(np.setdiff1d(geom, prov).size),
             "permitted_ranges": ranges,
             "permitted_bytes": int(sum(e - s for s, e in ranges)),
             "refit": False}

@@ -124,6 +124,12 @@ PINS.update({
     # / 0.2406 (full), against the incumbent head's 0.2798 -- r=8 is the smallest rank
     # that beats the head, and its table is 1,025,344 B inside the head's 1,766,400 B.
     "field_coupling_rank": 8,
+    # SELECTED ON VAL. One-step de-contamination of the marginal term coordinates, applied
+    # only where the fit pool is unbalanced. It buys the SHAPE read-back on the two-way
+    # corners (0.453 -> 0.568 at 0.5, -> 0.629 at 1.0) and costs object_hue (0.998 -> 0.969
+    # -> 0.893) and row-1 exact-tuple accuracy (0.584 -> 0.578 -> 0.522). 0.5 is where the
+    # row-3 gain is bought without paying for it on row 1.
+    "field_decontaminate": 0.5,
     "field_coupling_shrink": 2.0,
     "field_coupling_eta": 0.0,
     # CALIBRATED ON VAL. The gap rule is a distance cut, not a discriminator: at tau=1.5
@@ -321,6 +327,7 @@ def field_spec(store_seed: int = 0) -> "object":
         coupling_shrink=float(PINS["field_coupling_shrink"]),
         coupling_eta=float(PINS["field_coupling_eta"]),
         atom_select=str(PINS["field_atom_select"]),
+        decontaminate=float(PINS["field_decontaminate"]),
         term_map=str(PINS["field_term_map"]),
         gap_tau=float(PINS["field_gap_tau"]),
         basin_live_tau=float(PINS["field_basin_live_tau"]),
@@ -876,6 +883,7 @@ def sweep(out: Path, seed: int = 0, log: Callable = print) -> dict:
                                    PINS["field_coupling_prior_strength"]),
                                coupling_rank=int(PINS["field_coupling_rank"]),
                                atom_select=str(PINS["field_atom_select"]),
+        decontaminate=float(PINS["field_decontaminate"]),
         term_map=str(PINS["field_term_map"]),
                                coupling_shrink=float(PINS["field_coupling_shrink"]),
                                atom_seed=int(PINS["field_atom_seed"])
