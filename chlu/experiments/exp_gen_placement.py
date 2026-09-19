@@ -466,12 +466,16 @@ def screen(out_dir: Path, n_pairs: int = SCREEN_PAIRS, max_seconds: float = 5400
 # Three numbers bracket every placement result on this hub, all on the SAME pinned pairs:
 #   FLOOR    the size-matched random partition -- what zero placement information buys.
 #   REACHED  the candidate.
-#   CEILING  the RELAXED ORACLE: each well is allowed the best 410 channels for its own
-#            factor with the disjointness constraint DROPPED, so a channel may serve
-#            several wells at once.  No partition can beat that, because every partition is
-#            a feasible point of the relaxed problem and the relaxed optimum dominates it.
-#            It is therefore a valid UPPER BOUND, and a loose one, which is the honest
-#            direction for a ceiling.
+#   RELAXED  the RELAXED REFERENCE: each well is allowed the best 410 channels for its own
+#            factor by relevance, with the disjointness constraint DROPPED, so a channel may
+#            serve several wells at once.
+#            CORRECTED 2026-09-19, before this number was reported: this is a RELAXED
+#            REFERENCE and NOT a proven upper bound on `exact`.  Dropping disjointness does
+#            relax the problem, but the channels are ordered by RELEVANCE, which maximises
+#            the owned factor's TRANSFER and not `exact`; `exact` also pays for leakage onto
+#            the other five factors.  A partition that transfers its factor slightly less
+#            and leaks much less can therefore score a higher `exact` than this reference.
+#            It bounds CONTROL, not `exact`, and it is reported in those words.
 #   JUDGE    identity_ceiling -- no swap at all.  Nothing can beat the judge's own accuracy.
 #
 # The per-factor curve is the part that actually answers the question: if this encoder
@@ -543,11 +547,17 @@ def encoder_ceiling(out_dir: Path, n_pairs: int = SCREEN_PAIRS, norm: str = "ran
                     log: Callable = print) -> dict:
     """FLOOR / REACHED / CEILING / JUDGE for the placement dial, on the pinned pairs.
 
-    The relaxed oracle drops disjointness: well ``w`` takes the best ``cap`` channels for
+    The relaxed reference drops disjointness: well ``w`` takes the best ``cap`` channels for
     its own factor by normalised relevance, and the same channel may be taken by several
-    wells.  Every real partition is feasible for the relaxed problem, so the relaxed score
-    upper-bounds every partition's score -- which makes it a ceiling and not a rival arm.
-    It is reported as an UPPER BOUND and never as an achievable configuration.
+    wells.  It is NOT an achievable configuration -- a channel cannot really sit in two
+    wells -- so it is never reported as an arm.
+
+    ⚠ CORRECTED BEFORE REPORTING: it is also **not a proven upper bound on** ``exact``.
+    The relaxation is real, but the channel ordering is by RELEVANCE, which targets the
+    owned factor's transfer, whereas ``exact`` additionally pays for leakage onto the other
+    five factors.  So it bounds ``control`` and is a REFERENCE for ``exact``.  The honest
+    encoder-ceiling statement is the per-factor one in ``transfer_curve``: among
+    relevance-ranked sets, no set of this encoder moves ``scale`` past 0.172 at well scale.
     """
     from ..core import gen_swap_probe as SP
     art = out_dir / "ceiling.json"
@@ -593,7 +603,8 @@ def encoder_ceiling(out_dir: Path, n_pairs: int = SCREEN_PAIRS, norm: str = "ran
     judge_ceiling = SP.identity_ceiling(judge, Xi, Yi_, int(W.PINS["eval_batch"]))
     out = {
         "relaxed_oracle_per_factor": per_factor,
-        "relaxed_oracle_ceiling_exact": ceiling,
+        "relaxed_reference_exact": ceiling,
+        "relaxed_oracle_ceiling_exact": ceiling,   # kept: attribution reads this key
         "relaxed_oracle_owned_factors": ceiling_owned,
         "relaxed_oracle_unowned_factor": [nm for nm in names if nm not in ceiling_owned],
         "judge_ceiling_exact": judge_ceiling["exact"],
@@ -601,10 +612,14 @@ def encoder_ceiling(out_dir: Path, n_pairs: int = SCREEN_PAIRS, norm: str = "ran
         "cap_per_well": int(cap), "K": K, "n_pairs": int(n_pairs),
         "normalisation": norm,
         "feature_cache": W.feature_cache_manifest(int(W.PINS["seed"])),
-        "is_an_upper_bound_because": (
-            "disjointness is dropped, so a channel may serve several wells at once; every "
-            "real partition is a feasible point of the relaxed problem, therefore no "
-            "partition can exceed this number"),
+        "what_this_bounds": (
+            "CONTROL, not exact. Disjointness is dropped, which relaxes the problem, but "
+            "the channels are ordered by RELEVANCE, which targets the owned factor's "
+            "transfer and not the exact composite; exact also pays for leakage onto the "
+            "other five factors, so a partition that leaks less can exceed this number. "
+            "Reported as a RELAXED REFERENCE, never as a proven upper bound on exact."),
+        "not_achievable_because": (
+            "a channel cannot sit in two wells at once; this is never an arm"),
     }
     W._jdump(out, art)
     return out
@@ -623,25 +638,53 @@ def attribution(out_dir: Path, baseline: str = "mi_balanced",
     floor_key = "random_" + baseline if "random_" + baseline in C else None
     floor = C[floor_key]["exact"] if floor_key else None
     b, a = C[baseline]["exact"], C[reached]["exact"]
-    cap = ce["relaxed_oracle_ceiling_exact"]
+    cap = ce["relaxed_oracle_ceiling_exact"]      # the RELAXED REFERENCE (see above)
+    # ⭐ What the relaxed configuration DOES bound is CONTROL: every well is handed the best
+    # relevance-ranked channels for its own factor with disjointness dropped, and control is
+    # exactly the owned factor's transfer.  So control/control_bound is the defensible
+    # "how much of what this encoder allows did placement actually take" number, and it is
+    # the one the report quotes.
+    pf = ce["relaxed_oracle_per_factor"]
+    owned = ce["relaxed_oracle_owned_factors"]
+    control_bound = float(np.mean([pf[nm]["own_transfer"] for nm in owned]))
+    cb = {
+        "control_bound_relaxed": control_bound,
+        "control_bound_owned_factors": owned,
+        "baseline_control": C[baseline]["control"],
+        "reached_control": C[reached]["control"],
+        "floor_control": (C[floor_key]["control"] if floor_key else None),
+        "fraction_of_control_bound_taken_by_baseline":
+            C[baseline]["control"] / control_bound if control_bound > 0 else None,
+        "fraction_of_control_bound_taken_by_reached":
+            C[reached]["control"] / control_bound if control_bound > 0 else None,
+        "why_this_is_the_defensible_fraction": (
+            "the relaxed configuration hands every well the best relevance-ranked channels "
+            "for its own factor with disjointness dropped, and CONTROL is exactly that "
+            "factor's transfer -- so it bounds control even though it does not bound exact"),
+    }
     out = {
         "floor_size_matched_random": floor, "floor_candidate": floor_key,
         "baseline": baseline, "baseline_exact": b,
         "reached": reached, "reached_exact": a,
-        "relaxed_oracle_ceiling": cap,
+        "relaxed_reference": cap,
         "judge_ceiling": ce["judge_ceiling_exact"],
         "gain_over_baseline": a - b,
-        "headroom_baseline_to_ceiling": cap - b,
-        "fraction_of_available_headroom_taken": (
-            (a - b) / (cap - b) if cap > b else None),
-        "fraction_of_floor_to_ceiling_span_held_by_baseline": (
-            (b - floor) / (cap - floor) if (floor is not None and cap > floor) else None),
-        "fraction_of_floor_to_ceiling_span_held_by_reached": (
-            (a - floor) / (cap - floor) if (floor is not None and cap > floor) else None),
+        "gain_over_floor": (a - floor) if floor is not None else None,
+        "baseline_gain_over_floor": (b - floor) if floor is not None else None,
+        "reached_exceeds_relaxed_reference": bool(a > cap),
+        "reading_if_it_exceeds": (
+            "the arm bought its exact by LEAKING LESS, not by transferring more: its control "
+            "sits below the relaxed control bound while its exact sits above the relaxed "
+            "configuration's exact. Decontamination, not transfer."),
+        "control": cb,
+        "leak": {"baseline": C[baseline]["leak"], "reached": C[reached]["leak"],
+                 "floor": (C[floor_key]["leak"] if floor_key else None)},
         "reading": (
-            "the numerator is what PLACEMENT bought on a fixed encoder; the denominator is "
-            "what this encoder allows any partition to buy. A large fraction means the "
-            "dial is close to exhausted, not that the gain is small."),
+            "the numerator is what PLACEMENT bought on a fixed encoder. The denominator is "
+            "a RELAXED REFERENCE, not a proven bound on exact: if reached EXCEEDS it, that "
+            "is not a contradiction -- it means the arm bought its exact by leaking less "
+            "rather than by transferring more, and the per-factor transfer curve is then "
+            "the encoder-ceiling statement to quote."),
     }
     W._jdump(out, out_dir / "attribution.json")
     log("  attribution: " + json.dumps(
