@@ -410,7 +410,16 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         if mp.exists():
             with open(mp, encoding="utf-8") as fh:
                 meta = json.load(fh)
-        obj = {"arm": arm, "read": "rival", "rival": r,
+        obj = {"arm": arm, "read": "rival", "kind": "rival", "rival": r,
+               # fw.run_arm fingerprints "the object that must not have been refitted
+               # between the two halves of row 7".  A rival exposes no parameters through
+               # the callable, so the fingerprint is EMPTY and that is declared here
+               # rather than left to look like a passing check.
+               "protos": (),
+               "fingerprint_note": ("a rival's parameters are not exposed by spoke A's "
+                                    "callable, so its row-7 fit fingerprint is empty and "
+                                    "proves nothing; the rival has no deletion operation "
+                                    "and its row 7 is a dash"),
                "byte_ledger": {"deployed_bytes": int(meta.get("byte_ledger", {})
                                                      .get("bytes", 0)),
                                "what": f"spoke A's fitted {name}, generation 2",
@@ -435,6 +444,7 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         obj = _FW_BUILD_ARM("knn_proto", out_dir, log=log)
         obj = dict(obj)
         obj["read"] = "proto"
+        obj.setdefault("kind", "knn_proto")
         arm_dir.mkdir(parents=True, exist_ok=True)
         with open(done, "wb") as fh:
             pickle.dump(obj, fh)
@@ -447,7 +457,8 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         chunk = int(READ_PINS["addr_chunk"])
         tbl = PerValueMeanTable(cards).fit(
             Y, (fw.gather(F, pool[s:s + chunk]) for s in range(0, pool.size, chunk)))
-        obj = {"arm": arm, "read": "pvm_table", "table": tbl,
+        obj = {"arm": arm, "read": "pvm_table", "kind": "pvm_table", "table": tbl,
+               "protos": tuple([tbl.mu] + list(tbl.dev)),
                "byte_ledger": tbl.byte_ledger(),
                "address_bytes": {"address_bytes": 0,
                                  "note": "the table IS its own address book"},
@@ -474,7 +485,8 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         store = perturb_store(store, PRE_FIT_PERTURB[arm], int(fw.PINS["seed"]))
 
     basis = span_basis(store)
-    obj = {"arm": arm, "read": verb, "store": store, "heads": heads, "spec": spec,
+    obj = {"arm": arm, "read": verb, "kind": "span",
+           "store": store, "heads": heads, "spec": spec,
            "basis": basis, "partition": base.get("partition"),
            "byte_ledger": base["byte_ledger"], "store_ledger": base.get("store_ledger"),
            "head_bytes": base["head_bytes"], "labels": base.get("labels"),
@@ -526,7 +538,14 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
             "note": "the per-value-mean table, used as the address and then projected "
                     "into span(G_k) -- the target file's named first mechanism"}
     else:
-        obj["address_bytes"] = dict(base["head_bytes"])
+        # the incumbent read's address book IS its head; name it the same way so the two
+        # reads are compared on one ledger line and not on two differently-named ones.
+        hb = dict(base["head_bytes"])
+        obj["address_bytes"] = {"address_bytes": int(hb.get("head_bytes", 0)),
+                                "per_well": hb.get("head_bytes_per_well"),
+                                "dtype": hb.get("dtype"),
+                                "bytes_formula": hb.get("bytes_formula"),
+                                "note": "the incumbent ridge head -- this read's address book"}
 
     # -- perturbations applied AFTER the address book is fitted ------------
     if arm in POST_FIT_PERTURB:
@@ -655,6 +674,7 @@ def read_dial():
     as wave 3's and the diff between the hubs is the dial and nothing else.
     """
     fw_build, fw_read, fw_arms = fw.build_arm, fw.arm_features, fw.ARMS
+    fw_del = fw.delete_value_from_head
 
     def _build(arm, out_dir, log=print):
         if arm in ("factor_aligned_balanced", "basis_head", "knn_proto"):
@@ -664,14 +684,19 @@ def read_dial():
     fw.build_arm = _build
     fw.arm_features = arm_features
     fw.ARMS = ARMS
+    fw.delete_value_from_head = lambda o, f, v: (
+        delete_value_from_address(o, f, v) if o.get("read", "").startswith("tensor")
+        else fw_del(o, f, v))
     try:
-        yield {"replaced": ["build_arm", "arm_features", "ARMS"]}
+        yield {"replaced": ["build_arm", "arm_features", "ARMS",
+                            "delete_value_from_head"]}
     finally:
         if fw.arm_features is not arm_features:
             raise AssertionError(
                 "arm_features was replaced again inside the dial -- the read is not the "
                 "only thing that moved")
         fw.build_arm, fw.arm_features, fw.ARMS = fw_build, fw_read, fw_arms
+        fw.delete_value_from_head = fw_del
 
 
 
@@ -789,6 +814,40 @@ def build_table(out_dir: Path, primary: str = "tensor_addr", margin: float = 1.0
     log(f"  table written -> {out_dir / 'READ-TABLE.json'}")
     return table
 
+
+
+def delete_value_from_address(obj: dict, f: int, v: int) -> dict:
+    """Row 7 for a PRODUCT address: delete one (factor, value) from the address book.
+
+    The incumbent's ``fw.delete_value_from_head`` zeroes the head's columns for
+    ``(f, v)``.  The product address has no such column: a value is a ROW of ``E_f``, and
+    the address is the product of one row per factor.  Zeroing that row makes the whole
+    product zero, so the request can no longer reach any atom -- the exact analogue, and
+    it is one row of one table instead of a main-effect column plus every pair block that
+    contains it.
+
+    ⛔ DECLARED, in the same words the incumbent declares: **this is an operation on the
+    INTERFACE, not on atoms.**  Charter B.4 wants deletion to be an operation on atoms and
+    under a shared-basis read it cannot be -- every well's atoms are fitted over the whole
+    pool and no atom belongs to one value.  Row 7 here measures address-book deletion and
+    is reported as exactly that.  It is this hub's reported row, never its claimed one.
+    """
+    import copy
+
+    if obj.get("read") not in ("tensor", "tensor_sum", "tensor_argmax", "tensor_convex"):
+        return fw.delete_value_from_head(obj, f, v)
+    addr = copy.deepcopy(obj["address"])
+    addr.E[int(f)] = np.array(addr.E[int(f)], np.float64, copy=True)
+    addr.E[int(f)][int(v), :] = 0.0
+    out = dict(obj)
+    out["address"] = addr
+    out["deleted"] = {"factor_index": int(f), "value_index": int(v),
+                      "n_address_rows_zeroed": 1,
+                      "store_modes_touched": False,
+                      "mechanism": ("the value's row of E_f is zeroed, so the product "
+                                    "address for any request naming it is the zero "
+                                    "vector and reaches no atom")}
+    return out
 
 
 def lookup_diagnostics(arm: str, out_dir: Path, n_sample: int = 1024,
