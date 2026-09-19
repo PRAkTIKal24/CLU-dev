@@ -50,6 +50,9 @@ BARS = (
 #: configuration was selected at the retired 688,128 B budget.  That favours the RIVAL, so this
 #: comparison is conservative in our direction and is reported with the caveat attached.
 RIVAL_FACING = (
+    # ⭐ the INCUMBENT's version of bar 2, added once bar 2 failed on seed 1: does the
+    # label-MI partition beat the no-label equal-wells partition where MY arm does not?
+    ("factor_aligned_balanced", "ward_balanced", "nway"),
     ("place_norm_rank", "knn_proto", "nway"),
     ("factor_aligned_balanced", "knn_proto", "nway"),
     ("place_norm_rank", "knn_proto", "pair"),
