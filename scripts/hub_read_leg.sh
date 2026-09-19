@@ -68,4 +68,7 @@ for arm in "${ARMS[@]}"; do
     --out "$OUT" --seed "$SEED" --condition "$COND" --arm "$arm" \
     --max-seconds "$MAX_SECONDS"
 done
+# the table: every arm classed, the paired estimand under the PREREG's margin
+python -u -m chlu.experiments.exp_gen_read --stage table   --out "$OUT" --seed "$SEED" --condition "$COND"   --primary "${PRIMARY:-tensor_addr}" --margin "${MARGIN:-1.0}"
+
 echo "[leg] done: $LEG"
