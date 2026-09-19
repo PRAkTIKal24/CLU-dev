@@ -40,6 +40,22 @@ BARS = (
      "delta >= 0.0 -- row 3 is a HOLD, not a win; it must not be paid for"),
 )
 
+#: ⭐⭐ THE ONE RIVAL-FACING COMPARISON THIS HUB CAN MAKE CLEANLY.
+#: w4-common section 1 names the **prototype table** as one of the rivals, and it is the ONE rival
+#: that enters this hub's own estimand natively: ``knn_proto`` is fitted on THIS hub's split, scored
+#: on THIS hub's 49 corners, judged by the SAME instrument.  ⛔ The six learner rivals cannot: they
+#: are fitted on the CELL harness's split, which overlaps 40.4 % of this hub's hold-out, and they are
+#: scored on a single 72-request cell against an estimand that requires >= 49 paired corners.
+#: ⚠ DECLARED: ``knn_proto`` is NOT byte-matched (475,136 B against a 524,288 B budget) and its shipped
+#: configuration was selected at the retired 688,128 B budget.  That favours the RIVAL, so this
+#: comparison is conservative in our direction and is reported with the caveat attached.
+RIVAL_FACING = (
+    ("place_norm_rank", "knn_proto", "nway"),
+    ("factor_aligned_balanced", "knn_proto", "nway"),
+    ("place_norm_rank", "knn_proto", "pair"),
+    ("factor_aligned_balanced", "knn_proto", "pair"),
+)
+
 #: Charter section C.2 / C.1 controls.  Bar 4 wants a COLLAPSE, bar 5 a non-lookup.
 COLLAPSE_CONTROLS = ("place_norm_rank_removed", "place_norm_rank_shuffled")
 COLLAPSE_MAX_FRACTION = 0.25
@@ -223,6 +239,23 @@ def build(root: Path, seeds=(0, 1, 2), log=print) -> dict:
                 f"{pe['mean_paired_delta']:+.3f} ci95={np.round(pe['bootstrap_ci95'], 3).tolist()} "
                 f"wins={pe['corners_arm_wins']}/{pe['n_corners']} p={pe['sign_test_p_two_sided']:.3g} "
                 f"PASS={pe['passes']}")
+        for arm, ctl, fam in RIVAL_FACING:
+            if not rows[fam].get(arm) or not rows[fam].get(ctl):
+                continue
+            re_ = W.paired_estimand(rows[fam][arm], rows[fam][ctl], METRIC, 0.0, arm, ctl)
+            re_["is_a_bar"] = False
+            re_["note"] = (
+                "RIVAL-FACING. knn_proto is the prototype table, one of w4-common section 1's "
+                "named rivals, and the only one that enters this hub's estimand natively. "
+                "NOT byte-matched (475,136 B vs a 524,288 B budget) and selected at the "
+                "retired 688,128 B budget -- that favours the RIVAL, so this is conservative "
+                "in our direction.")
+            entry["paired"][f"rival_{arm}_vs_{ctl}_{fam}"] = re_
+            log(f"  seed {s} RIVAL ({fam}): {arm} vs {ctl} delta="
+                f"{re_['mean_paired_delta']:+.3f} "
+                f"ci95={np.round(re_['bootstrap_ci95'], 3).tolist()} "
+                f"wins={re_['corners_arm_wins']}/{re_['n_corners']} "
+                f"p={re_['sign_test_p_two_sided']:.3g}")
         for arm, ctl, fam, expect in SOUNDNESS:
             if not rows[fam].get(arm) or not rows[fam].get(ctl):
                 continue
