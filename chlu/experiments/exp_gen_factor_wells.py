@@ -149,6 +149,73 @@ ROW_IDS = (
     "r5_comp_refusal", "r6_invalid_refusal", "r7_deletion",
 )
 
+# ---------------------------------------------------------------------------
+# 0b. hub/placement's ADDITIVE hook -- w4, added 2026-09-19
+#
+# ⛔ NOTHING ABOVE THIS LINE MOVED.  Every inherited arm resolves through the same
+# ``ARM_PARTITION`` dict, fits the same store, reuses the same Gram and is scored by the
+# same judge as before.  This hook only lets an arm NAME a partition that
+# ``exp_gen_placement`` computed, so a new placement enters the scoreboard through the
+# existing path instead of a re-implementation of it.  The proof it is additive is the
+# SAME-PARTITION check: ``place_mi_balanced`` must reproduce ``factor_aligned_balanced``
+# bit-identically, and ``--stage sameproof`` asserts exactly that.
+# ---------------------------------------------------------------------------
+
+#: An arm named ``place_<partition>`` deploys the partition ``<partition>`` from
+#: ``out_dir/extra_partitions.npz``, with the suffixes below layered on top.
+PLACEMENT_PREFIX = "place_"
+
+#: Charter section C.2 / C.1 suffixes, so every placement arm carries its own controls
+#: rather than borrowing another arm's.
+ARM_SUFFIXES = {
+    "_removed": "landscape_removed",
+    "_shuffled": "landscape_shuffled",
+    "_lookupargmax": "lookup_argmax",
+    "_lookupconvex": "lookup_convex",
+}
+
+
+def arm_role(arm: str) -> str:
+    """``span`` | ``landscape_removed`` | ``landscape_shuffled`` | ``lookup_*``.
+
+    One place decides what an arm's name means, so the placement arms and the inherited
+    arms cannot drift apart.
+    """
+    if arm in ("landscape_removed", "landscape_shuffled", "lookup_argmax",
+               "lookup_convex"):
+        return arm
+    for suf, role in ARM_SUFFIXES.items():
+        if arm.startswith(PLACEMENT_PREFIX) and arm.endswith(suf):
+            return role
+    return "span"
+
+
+def arm_partition(arm: str) -> Optional[str]:
+    """Which partition an arm deploys.  Inherited arms answer from ``ARM_PARTITION``."""
+    if arm in ARM_PARTITION:
+        return ARM_PARTITION[arm]
+    if not arm.startswith(PLACEMENT_PREFIX):
+        raise KeyError(
+            f"unknown arm {arm!r}: an arm is either in ARM_PARTITION or is named "
+            f"{PLACEMENT_PREFIX}<partition>[suffix]")
+    body = arm[len(PLACEMENT_PREFIX):]
+    if body.endswith("_nopair"):
+        body = body[: -len("_nopair")]
+    for suf in ARM_SUFFIXES:
+        if body.endswith(suf):
+            body = body[: -len(suf)]
+            break
+    return body
+
+
+def extra_partitions(out_dir: Path) -> dict:
+    """Label vectors handed over by ``exp_gen_placement``, if any.  Read-only."""
+    p = Path(out_dir) / "extra_partitions.npz"
+    if not p.exists():
+        return {}
+    z = np.load(p)
+    return {k: np.asarray(z[k], np.int64) for k in z.files}
+
 
 def _now() -> float:
     return time.time()
@@ -184,6 +251,49 @@ def data_root() -> Path:
 def bridge_seed_dir(seed: int) -> Path:
     return (Path(os.environ["CHLU_GEN_BRIDGE_ROOT"])
             / f"{PINS['dataset']}_{PINS['pretext']}" / f"seed_{int(seed)}")
+
+
+def features_root() -> Path:
+    """Where the FEATURE CACHE lives -- ``CHLU_GEN_FEATURES_ROOT`` wins if it is set.
+
+    w4-common section 2: every scored number is computed on cache **GENERATION 2**, which
+    Spoke A re-encoded from pixels on one CPU device for bridge seeds 0, 1 and 2 and
+    which lives outside the frozen bridge tree.  ``CHLU_GEN_BRIDGE_ROOT`` still names the
+    frozen bridge, because the external classifier is found relative to it and that path
+    must NOT move; only the features are redirected.  Unset, this is the bridge root and
+    the behaviour is byte-identical to the pin.
+
+    MEASURED, and it is why the redirection exists rather than a copy: generation 2 seed 0
+    hashes ``ef6359a4cd54b082`` while generation 1 seed 0 hashes ``d6728f01d102b0d0``,
+    so the two generations are NOT the same features and a number may never cross between
+    them in either direction.
+    """
+    return Path(os.environ.get("CHLU_GEN_FEATURES_ROOT")
+                or os.environ["CHLU_GEN_BRIDGE_ROOT"])
+
+
+def features_seed_dir(seed: int) -> Path:
+    return (features_root() / f"{PINS['dataset']}_{PINS['pretext']}"
+            / f"seed_{int(seed)}")
+
+
+def feature_cache_manifest(seed: int) -> dict:
+    """The feature cache's own manifest, carried into every artifact this hub writes.
+
+    A hub that quotes a number without saying which cache generation produced it has
+    given the reader no way to obey w4-common section 2, so the generation travels with
+    the number.
+    """
+    p = features_seed_dir(seed) / "feature_cache.json"
+    if not p.exists():
+        return {"generation": None, "note": f"no manifest at {p}"}
+    with open(p, encoding="utf-8") as fh:
+        m = json.load(fh)
+    return {"generation": m.get("generation", 1), "n_rows": m.get("n_rows"),
+            "scope": m.get("scope"),
+            "features_sha256": m.get("features_sha256"),
+            "encoder_param_hash": m.get("encoder_param_hash"),
+            "root": str(features_root())}
 
 
 def classifier_dir(seed: int) -> Path:
@@ -231,7 +341,7 @@ def load_condition() -> dict:
 
 
 def features_mmap(seed: int):
-    return np.load(bridge_seed_dir(seed) / "features.npy", mmap_mode="r")
+    return np.load(features_seed_dir(seed) / "features.npy", mmap_mode="r")
 
 
 def gather(F, rows: np.ndarray, chunk: int = 16_384) -> np.ndarray:
@@ -508,6 +618,25 @@ def build_partitions(out_dir: Path, log: Callable = print) -> dict:
               "ward_balanced": lab_wb,
               "random_ward": lab_rw, "random_factor": lab_rf,
               "random_balanced": lab_rb, "k1": lab_k1}
+    # hub/placement's additive hook: partitions computed by exp_gen_placement on the SAME
+    # fit pool. ⛔ A handed-over vector may never overwrite one of the eight above -- if it
+    # tried, an inherited arm's numbers would move, which is exactly what must not happen.
+    extra = extra_partitions(out_dir)
+    clash = sorted(set(extra) & set(labels))
+    if clash:
+        raise AssertionError(
+            f"extra_partitions.npz would overwrite the inherited partition(s) {clash} -- "
+            "refused: an inherited arm's numbers must not move")
+    for k_, v_ in extra.items():
+        v_ = np.asarray(v_, np.int64)
+        if v_.shape != (int(PINS["D"]),):
+            raise AssertionError(f"extra partition {k_} has shape {v_.shape}, want "
+                                 f"({int(PINS['D'])},)")
+        if int(v_.max()) + 1 != int(PINS["K"]) or int(v_.min()) != 0:
+            raise AssertionError(
+                f"extra partition {k_} realises {int(v_.max()) + 1} wells, not "
+                f"K={int(PINS['K'])} -- the read channel width would move")
+        labels[k_] = v_
     info = {
         "pins": {k: (list(v) if isinstance(v, tuple) else v) for k, v in PINS.items()},
         "fit_pool": {"n": int(pool.size), "rng_seed": int(PINS["pool_rng_seed"]),
@@ -685,7 +814,8 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         _jdump({k: v for k, v in obj.items() if k != "protos"}, arm_dir / "arm.json")
         return obj
 
-    part = ARM_PARTITION[arm]
+    part = arm_partition(arm)
+    role = arm_role(arm)
     labels = np.asarray(parts["labels"][part], np.int64)
     X_store = gather(F, pool[: int(PINS["n_store_train"])])
     log(f"  arm {arm}: partition={part} sizes={np.bincount(labels).tolist()}")
@@ -698,9 +828,9 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
             f"{PINS['store_bytes']} B -- the byte ledger has moved")
     del X_store
 
-    if arm == "landscape_shuffled":
+    if role == "landscape_shuffled":
         pass          # the shuffle is applied AFTER the head is solved, below
-    if arm == "landscape_removed":
+    if role == "landscape_removed":
         # charter section C.2: the laundering control. Atoms zeroed; the ledger is
         # UNCHANGED (the bytes are still deployed), so the row stays byte-matched and
         # the collapse is attributable to the atoms and not to a smaller object.
@@ -732,7 +862,7 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         log(f"  gram: accumulated over {n_head} rows -> {A_p.name}")
 
     heads = solve_head(A, Mx, store, float(PINS["head_ridge"]))
-    if arm == "landscape_shuffled":
+    if role == "landscape_shuffled":
         # charter section C.2, the INFORMATIVE half: the atoms are the same atoms and the
         # ledger is byte-identical; only which mode index names which atom is permuted,
         # AFTER the head was solved for the unpermuted store. The reachable span is
@@ -750,8 +880,8 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
     obj = {
         "arm": arm, "kind": "span", "partition": part, "labels": labels,
         "store": store, "heads": heads, "spec": spec,
-        "read_mode": ("argmax" if arm == "lookup_argmax"
-                      else "convex" if arm == "lookup_convex" else "linear"),
+        "read_mode": ("argmax" if role == "lookup_argmax"
+                      else "convex" if role == "lookup_convex" else "linear"),
         "byte_ledger": {
             "deployed_bytes": int(led["store_bytes"]),
             "budget_bytes": int(PINS["store_bytes"]),
