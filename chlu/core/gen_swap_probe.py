@@ -30,7 +30,7 @@ size-matched RANDOM set transfers <= 0.086.  Transfer is alignment, not budget.
 
 from __future__ import annotations
 
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence
 
 import numpy as np
 
@@ -45,13 +45,32 @@ WELL_SCALE_NOTE = "intervention scale = the well itself; no free size parameter"
 
 
 def make_pairs(Y: np.ndarray, n_pairs: int, rng_seed: int = PAIR_RNG_SEED,
-               require_all_differ: bool = True, max_tries: int = 2_000_000) -> np.ndarray:
-    """``(n_pairs, 2)`` index pairs into ``Y`` whose tuples differ in EVERY factor.
+               require_all_differ: bool = True, max_tries: int = 2_000_000,
+               vary: Optional[Sequence[int]] = None,
+               fix: Optional[Sequence[int]] = None) -> np.ndarray:
+    """``(n_pairs, 2)`` index pairs into ``Y``, drawn to match a request distribution.
 
-    Every factor must differ or the swap is uninformative for that factor: ``follow-j``
-    and ``follow-i`` would be the same event and the rate would be unreadable.
+    Default (``vary``/``fix`` unset): the tuples differ in EVERY factor, so every factor's
+    transfer is readable in one pass.  That is how this hub's first screen was run.
+
+    MEASURED, AND IT COST THIS HUB ITS BAR (2026-09-19).  The symmetric draw treats the six
+    factors alike; **the scoreboard does not.**  Every row-3 and row-4 corner holds ``shape``
+    CONSTANT and varies ``scale`` across three values, so a probe that rewards moving
+    ``shape`` selects a partition that spends its scarce fifth well on a factor the estimand
+    never exercises -- which is exactly what happened: the selected arm gained +11.958
+    novel tuples/corner on the 24 val corners and only **+1.388 (p = 0.135)** on the 49
+    scored ones, failing a pre-registered bar of +1.0 with the CI95 low above +1.0.
+
+    ⭐ ``vary`` / ``fix`` exist so a surrogate can be drawn from the SAME request
+    distribution the estimand uses: ``fix=[shape_index]`` makes both images share a shape,
+    and ``vary`` restricts which factors must differ.  A hub screening a dial against a
+    corner-based estimand should pass them.
     """
     Yl = np.asarray(Y, np.int64)
+    F = int(Yl.shape[1])
+    fixl = [int(x) for x in (fix or [])]
+    varyl = ([int(x) for x in vary] if vary is not None
+             else [f for f in range(F) if f not in fixl])
     rng = np.random.default_rng(int(rng_seed))
     n = int(Yl.shape[0])
     out = []
@@ -61,12 +80,16 @@ def make_pairs(Y: np.ndarray, n_pairs: int, rng_seed: int = PAIR_RNG_SEED,
         tries += 1
         if a == b:
             continue
-        if require_all_differ and not bool((Yl[a] != Yl[b]).all()):
+        if fixl and not bool((Yl[a, fixl] == Yl[b, fixl]).all()):
+            continue
+        if require_all_differ and varyl and not bool(
+                (Yl[a, varyl] != Yl[b, varyl]).all()):
             continue
         out.append((a, b))
     if len(out) < int(n_pairs):
         raise RuntimeError(
-            f"only {len(out)} of {n_pairs} all-factors-differ pairs in {tries} tries")
+            f"only {len(out)} of {n_pairs} pairs with vary={varyl} fix={fixl} "
+            f"in {tries} tries")
     return np.asarray(out, np.int64)
 
 

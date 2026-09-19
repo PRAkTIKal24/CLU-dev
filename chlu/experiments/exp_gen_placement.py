@@ -399,33 +399,101 @@ def build_candidates(out_dir: Path, log: Callable = print) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _probe_inputs(out_dir: Path, n_pairs: int, log: Callable = print):
+#: ⭐⭐ THE ESTIMAND'S OWN REQUEST DISTRIBUTION, read off the corner definitions and not
+#: guessed.  Every row-3 and row-4 corner holds ``shape`` CONSTANT and varies ``scale``
+#: across three values (``exp_gen_placement`` stage ``geometry``).  A surrogate drawn with
+#: all six factors differing therefore rewards moving a factor the target never exercises.
+#: ⛔ MEASURED: that mismatch cost this hub its bar -- the symmetric screen picked an arm
+#: that gained +11.958 novel tuples/corner on val and only +1.388 (p = 0.135) on the 49
+#: scored corners.  ``ESTIMAND_FIXED_FACTORS`` names what the estimand holds still.
+ESTIMAND_FIXED_FACTORS = ("shape",)
+
+
+def estimand_fix_indices(grid) -> list:
+    return [list(grid.names).index(n) for n in ESTIMAND_FIXED_FACTORS]
+
+
+def _probe_inputs(out_dir: Path, n_pairs: int, log: Callable = print,
+                  match_estimand: bool = False):
+    """Pinned pair set. ``match_estimand`` draws it the way the corners are built.
+
+    With ``match_estimand=True`` both images of every pair share the factors the estimand
+    holds constant, so the probe stops rewarding control of a factor no corner varies.
+    """
     from ..core import gen_swap_probe as SP
     cond = W.load_condition()
     grid = cond["grid"]
     z = np.load(out_dir / "candidates.npz")
     pool = np.asarray(z["pool"], np.int64)
     Y = grid.factor_indices_of(pool)
-    pairs = SP.make_pairs(Y, int(n_pairs))
+    fix = estimand_fix_indices(grid) if match_estimand else None
+    pairs = SP.make_pairs(Y, int(n_pairs), fix=fix)
     F = W.features_mmap(int(W.PINS["seed"]))
     Xi = W.gather(F, pool[pairs[:, 0]])
     Xj = W.gather(F, pool[pairs[:, 1]])
-    log(f"  probe: {pairs.shape[0]} pinned pairs, all 6 factors differ in each")
+    if match_estimand:
+        log(f"  probe: {pairs.shape[0]} pinned pairs, ESTIMAND-MATCHED "
+            f"({'/'.join(ESTIMAND_FIXED_FACTORS)} held constant, the rest differ)")
+    else:
+        log(f"  probe: {pairs.shape[0]} pinned pairs, all 6 factors differ in each")
     return grid, Xi, Xj, Y[pairs[:, 0]], Y[pairs[:, 1]], pairs
 
 
+def corner_geometry(log: Callable = print) -> dict:
+    """Which factors each corner family VARIES, from the condition file. No model.
+
+    This is four lines of arithmetic and it decides whether a surrogate is aimed at the
+    right thing.  ⛔ This hub wrote its PREREG without reading it, and the bar failed for
+    exactly that reason, so it is now a stage that any hub can run in a second.
+    """
+    out = {}
+    for cond_name in ("test", "val"):
+        prev = W.PINS["condition"]
+        W.PINS["condition"] = cond_name
+        cond = W.load_condition()
+        grid = cond["grid"]
+        fams = ([("nway", W.nway_corners(cond)), ("pair", W.pair_subcorners(cond))]
+                if cond_name == "test" else [("val", W.val_corners(cond))])
+        for fam, corners in fams:
+            widths = {n: [] for n in grid.names}
+            for c in corners:
+                Y = grid.factor_indices_of(c["rows"])
+                for f, n in enumerate(grid.names):
+                    widths[n].append(int(np.unique(Y[:, f]).size))
+            out[f"{cond_name}_{fam}"] = {
+                "n_corners": len(corners),
+                "distinct_values_per_factor": {n: float(np.mean(v))
+                                               for n, v in widths.items()},
+                "constant_in_every_corner": sorted(
+                    n for n, v in widths.items() if max(v) == 1),
+                "varies_in_every_corner": sorted(
+                    n for n, v in widths.items() if min(v) > 1),
+            }
+            log(f"  {cond_name}/{fam}: {len(corners)} corners; CONSTANT="
+                f"{out[f'{cond_name}_{fam}']['constant_in_every_corner']} VARIES="
+                f"{out[f'{cond_name}_{fam}']['varies_in_every_corner']}")
+        W.PINS["condition"] = prev
+    return out
+
+
 def screen(out_dir: Path, n_pairs: int = SCREEN_PAIRS, max_seconds: float = 5400.0,
-           only: Optional[list] = None, log: Callable = print) -> dict:
-    """Score every candidate with the swap loss.  Resumable per candidate."""
+           only: Optional[list] = None, log: Callable = print,
+           match_estimand: bool = False) -> dict:
+    """Score every candidate with the swap loss.  Resumable per candidate.
+
+    ``match_estimand`` writes to a SEPARATE artifact, so the symmetric screen that was
+    actually used for the scored run stays on disk unaltered beside the corrected one.
+    """
     from ..core import gen_swap_probe as SP
     cands = build_candidates(out_dir, log=log)
-    art = out_dir / "screen.json"
+    art = out_dir / ("screen_estimand_matched.json" if match_estimand else "screen.json")
     res = {}
     if art.exists():
         with open(art, encoding="utf-8") as fh:
             res = json.load(fh)
         log(f"  screen: resuming with {len(res.get('candidates', {}))} already scored")
-    grid, Xi, Xj, Yi, Yj, pairs = _probe_inputs(out_dir, n_pairs, log=log)
+    grid, Xi, Xj, Yi, Yj, pairs = _probe_inputs(out_dir, n_pairs, log=log,
+                                                match_estimand=match_estimand)
     judge = W._JUDGE[0] if W._JUDGE else W.Judge(int(W.PINS["seed"]), log=log)
     if not W._JUDGE:
         W._JUDGE.append(judge)
@@ -435,7 +503,11 @@ def screen(out_dir: Path, n_pairs: int = SCREEN_PAIRS, max_seconds: float = 5400
         log(f"  ceiling (no swap): exact={res['ceiling']['exact']:.4f}")
     res["meta"] = {"n_pairs": int(pairs.shape[0]), "condition": W.PINS["condition"],
                    "pair_rng_seed": SP.PAIR_RNG_SEED, "judge": judge.info,
-                   "factor_names": list(grid.names)}
+                   "factor_names": list(grid.names),
+                   "match_estimand": bool(match_estimand),
+                   "fixed_factors": (list(ESTIMAND_FIXED_FACTORS) if match_estimand
+                                     else []),
+                   "feature_cache": W.feature_cache_manifest(int(W.PINS["seed"]))}
     names = list(cands["labels"]) if only is None else list(only)
     t0 = _now()
     for nm in names:
@@ -702,13 +774,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--stage", required=True,
                    choices=("candidates", "screen", "curve", "ceiling",
-                            "attribution", "refine", "export"))
+                            "attribution", "geometry", "refine", "export"))
     p.add_argument("--out", required=True)
     p.add_argument("--condition", choices=("val", "test"), default=None)
     p.add_argument("--pairs", type=int, default=None)
     p.add_argument("--only", default=None, help="comma-separated candidate names")
     p.add_argument("--init", default="mi_balanced")
     p.add_argument("--max-seconds", type=float, default=5400.0)
+    p.add_argument("--match-estimand", action="store_true",
+                   help="draw the probe pairs the way the corners are built")
     return p
 
 
@@ -732,7 +806,10 @@ def main(argv=None) -> int:
         build_candidates(out, log=log)
     elif a.stage == "screen":
         screen(out, n_pairs=int(a.pairs or SCREEN_PAIRS),
-               max_seconds=float(a.max_seconds), only=only, log=log)
+               max_seconds=float(a.max_seconds), only=only, log=log,
+               match_estimand=bool(a.match_estimand))
+    elif a.stage == "geometry":
+        W._jdump(corner_geometry(log=log), out / "corner_geometry.json")
     elif a.stage == "curve":
         transfer_curve(out, n_pairs=int(a.pairs or 128), log=log)
     elif a.stage == "ceiling":
