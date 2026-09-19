@@ -669,8 +669,125 @@ def read_dial():
         fw.build_arm, fw.arm_features, fw.ARMS = fw_build, fw_read, fw_arms
 
 
+
+
 # ---------------------------------------------------------------------------
-# 5. Stages
+# 6. The table -- every arm, every row, and the estimand that decides 3 and 4
+# ---------------------------------------------------------------------------
+
+#: How each arm is labelled on every table.  ⛔ w4-common section 1 is mechanical here:
+#: a win over a RIVAL is a RESULT, a win over anything else is an ABLATION and says so.
+ARM_CLASS = {
+    "tensor_addr": "ARM",
+    "oracle_span": "NOT AN ARM (ceiling)",
+    "span_head": "ABLATION (the deployed read)",
+    "corr_linear": "ABLATION (correlation split + linear head)",
+    "tensor_addr_sum": "ABLATION (same rank, address summed not multiplied)",
+    "pvm_span": "ABLATION (per-value-mean address, projected into the span)",
+    "pvm_table": "SPECIALIST (the plain per-value-mean table, no store)",
+    "knn_proto": "SPECIALIST (prototype table, rebuilt here)",
+    "landscape_removed": "CONTROL (charter C.2, atoms zeroed)",
+    "landscape_shuffled": "CONTROL (charter C.2, atom values permuted)",
+    "random_span_refit": "CONTROL (random atoms, address book refit)",
+    "span_rotated": "CONTROL (predicted NO-OP: the span is unchanged)",
+    "lookup_argmax": "FLOOR (charter C.1/C.4, matched-bytes lookup)",
+    "lookup_convex": "FLOOR (charter C.1, the mixture)",
+}
+ARM_CLASS.update({f"rival_{n}": "RIVAL" for n in RIVAL_NAMES})
+
+
+def _corner_rows(arm_dir: Path, corners, grid, seen_mask) -> list:
+    z = np.load(arm_dir / "rows.npz", allow_pickle=True)
+    return fw._per_corner(corners, z["corners"].item(), grid, seen_mask)
+
+
+def build_table(out_dir: Path, primary: str = "tensor_addr", margin: float = 1.0,
+                log: Callable = print) -> dict:
+    """Every arm on every row, plus the paired estimand, plus the floor checks.
+
+    ⛔ The verdict on rows 3 and 4 is the multi-corner PAIRED estimand and never a single
+    cell: the corner is the unit, the statistic is the mean paired difference, and the
+    margin was declared in the PREREG before the first held-out number.
+    """
+    out_dir = Path(out_dir)
+    cond = fw.load_condition()
+    grid = cond["grid"]
+    seen_mask = fw.seen_tuple_mask(grid, cond["train_rows"])
+    n4 = fw.nway_corners(cond)
+    n3 = fw.pair_subcorners(cond)
+
+    have, not_run = [], {}
+    for a in ARMS:
+        d = out_dir / "arms" / a
+        if (d / "rows.npz").exists():
+            have.append(a)
+        elif (d / "NOT_RUN.json").exists():
+            with open(d / "NOT_RUN.json", encoding="utf-8") as fh:
+                not_run[a] = json.load(fh).get("not_run")
+    log(f"  arms with rows: {have}")
+    log(f"  declared NOT-RUN: {list(not_run)}")
+
+    per_corner, summary = {}, {}
+    for a in have:
+        rows = _corner_rows(out_dir / "arms" / a, n3 + n4, grid, seen_mask)
+        by_id = {r["corner_id"]: r for r in rows}
+        per_corner[a] = by_id
+        with open(out_dir / "arms" / a / "arm.json", encoding="utf-8") as fh:
+            meta = json.load(fh)
+        blk = {"class": ARM_CLASS.get(a, "?"),
+               "store_bytes": meta.get("byte_ledger", {}).get("deployed_bytes"),
+               "address_bytes": (meta.get("address_bytes") or {}).get("address_bytes"),
+               "param_count": meta.get("byte_ledger", {}).get("param_count")}
+        for row_id, cs in (("r3_comp_2way", n3), ("r4_comp_nway", n4)):
+            v = np.array([by_id[c["corner_id"]]["distinct_valid_novel_tuples"]
+                          for c in cs], float)
+            j = np.array([by_id[c["corner_id"]]["judge_accuracy"] for c in cs], float)
+            blk[row_id] = {"n_corners": int(v.size),
+                           "novel_tuples_per_corner": float(v.mean()),
+                           "sd": float(v.std(ddof=1)) if v.size > 1 else 0.0,
+                           "judge_accuracy": float(j.mean())}
+        z = np.load(out_dir / "arms" / a / "rows.npz", allow_pickle=True)
+        if "qrows" in z.files:
+            q = z["qrows"].item()
+            for row_id in ("r1_seen", "r2_unseen_valid", "r5_comp_refusal",
+                           "r6_invalid_refusal"):
+                if row_id in q:
+                    blk[row_id] = {
+                        "accept": float(np.asarray(q[row_id]["accept"], bool).mean()),
+                        "valid": float(np.asarray(q[row_id]["valid"], bool).mean())}
+        summary[a] = blk
+
+    estimands = {}
+    if primary in per_corner:
+        for other in have:
+            if other == primary:
+                continue
+            for row_id, cs in (("r3_comp_2way", n3), ("r4_comp_nway", n4)):
+                ids = [c["corner_id"] for c in cs]
+                A = [per_corner[primary][i] for i in ids]
+                Bc = [per_corner[other][i] for i in ids]
+                estimands[f"{row_id}:{primary}_vs_{other}"] = dict(
+                    fw.paired_estimand(A, Bc, "distinct_valid_novel_tuples",
+                                       float(margin), primary, other),
+                    comparison_class=ARM_CLASS.get(other, "?"),
+                    verdict_rule=("a win over a RIVAL is a RESULT; a win over anything "
+                                  "else is an ABLATION (w4-common section 1)"))
+    table = {"primary": primary, "margin_declared": float(margin),
+             "arms": summary, "not_run": not_run, "estimands": estimands,
+             "corner_counts": {"r3_comp_2way": len(n3), "r4_comp_nway": len(n4)},
+             "labels_note": ("labels are used ONCE at fit time to align wells and at the "
+                             "address book, and nowhere else (charter B.6, w4-common 5)"),
+             "pins": {"read": READ_PINS, "fw": {k: (list(v) if isinstance(v, tuple) else v)
+                                                for k, v in fw.PINS.items()}}}
+    fw._jdump(table, out_dir / "READ-TABLE.json")
+    fw._jdump(per_corner, out_dir / "READ-PER-CORNER.json")
+    log(f"  table written -> {out_dir / 'READ-TABLE.json'}")
+    return table
+
+
+
+# ---------------------------------------------------------------------------
+# 7. Stages
 # ---------------------------------------------------------------------------
 
 
@@ -727,6 +844,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--rank", type=int, default=None)
     p.add_argument("--sweeps", type=int, default=None)
     p.add_argument("--ridge", type=float, default=None)
+    p.add_argument("--primary", default="tensor_addr")
+    p.add_argument("--margin", type=float, default=1.0)
     return p
 
 
@@ -764,6 +883,15 @@ def main(argv=None) -> int:
         return 0
     if a.stage == "run":
         log(json.dumps(stage_run(a.arm, out, a.max_seconds, log=log), default=str))
+        return 0
+    if a.stage == "table":
+        with read_dial():
+            t = build_table(out, primary=a.primary, margin=a.margin, log=log)
+        for name, blk in t["arms"].items():
+            r4 = blk.get("r4_comp_nway", {})
+            log(f"    {name:22s} {blk['class']:34s} "
+                f"r4={r4.get('novel_tuples_per_corner', float('nan')):7.3f} "
+                f"judge={r4.get('judge_accuracy', float('nan')):.4f}")
         return 0
     raise SystemExit(f"stage {a.stage} not implemented yet")
 
