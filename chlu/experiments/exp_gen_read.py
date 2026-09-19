@@ -178,6 +178,33 @@ def out_leg(base: Path, seed: int, condition: str) -> Path:
     return Path(base) / f"{condition}_seed{int(seed)}"
 
 
+def bind_instrument(log: Callable = print) -> dict:
+    """Point the frozen instrument at the right cache without moving any recipe.
+
+    ⭐ Why this exists, stated rather than hidden.  ``fw.classifier_dir`` derives the
+    external classifier's location from the FEATURE CACHE's path
+    (``CHLU_GEN_BRIDGE_ROOT.parent.parent / "gen-external-classifier"``).  Every scored
+    run on this wave uses spoke A's **cache generation 2**, which lives in a different
+    tree from the generation-1 cache, so that derivation would send the judge looking for
+    a classifier that is not there.  Setting ``CHLU_GEN_CLASSIFIER_ROOT`` rebinds the
+    lookup and **nothing else**: the classifier that is loaded is the same file, with the
+    same hash, that ``Judge`` asserts against its own manifest on every arm of every row.
+    ⛔ If the hash moved, the judge raises before a number exists.
+    """
+    root = os.environ.get("CHLU_GEN_CLASSIFIER_ROOT")
+    if not root:
+        return {"classifier_root": "derived from the cache path (generation 1 layout)"}
+    base = Path(root)
+
+    def _cdir(seed: int, _base=base):
+        return _base / f"seed_{int(seed)}"
+
+    fw.classifier_dir = _cdir
+    log(f"  instrument: classifier root rebound to {base}")
+    return {"classifier_root": str(base),
+            "note": "the classifier FILE is unchanged and is still hash-asserted by Judge"}
+
+
 # ---------------------------------------------------------------------------
 # 1. The per-value-mean table -- the specialist this hub must beat or admit to
 # ---------------------------------------------------------------------------
@@ -670,6 +697,24 @@ def stage_run(arm: str, out_dir: Path, max_seconds: float, log: Callable = print
         return fw.run_arm(arm, out_dir, max_seconds=max_seconds, log=log)
 
 
+def _cache_manifest(seed: int) -> dict:
+    """The feature cache this leg will actually read, with its declared hash.
+
+    ⛔ w4-common section 2: every scored run is on cache GENERATION 2 and a generation-1
+    number is never quoted beside one.  This copies the cache's own
+    ``feature_cache.json`` into the leg's pins so the generation a number came from is a
+    property of the artifact and not of a memory.
+    """
+    p = fw.bridge_seed_dir(int(seed)) / "feature_cache.json"
+    if not p.exists():
+        return {"missing": str(p)}
+    with open(p, encoding="utf-8") as fh:
+        m = json.load(fh)
+    return {k: m.get(k) for k in ("dataset", "dtype", "n_rows", "scope",
+                                  "features_sha256", "rows_sha256",
+                                  "encoder_param_hash")}
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--stage", required=True,
@@ -694,6 +739,7 @@ def main(argv=None) -> int:
     if a.ridge is not None:
         READ_PINS["ridge"] = float(a.ridge)
     set_condition(a.seed, a.condition)
+    _inst = bind_instrument(log=lambda m: print(m, flush=True))
     base = Path(a.out)
     out = out_leg(base, a.seed, a.condition)
     out.mkdir(parents=True, exist_ok=True)
@@ -704,7 +750,10 @@ def main(argv=None) -> int:
     log(f"stage={a.stage} arm={a.arm} out={out} seed={a.seed} condition={a.condition} "
         f"rank={READ_PINS['rank']} sweeps={READ_PINS['sweeps']}")
     if a.stage == "pins":
-        fw._jdump({"read_pins": READ_PINS, "fw_pins": fw.PINS}, out / "pins.json")
+        fw._jdump({"read_pins": READ_PINS, "fw_pins": fw.PINS,
+                   "instrument": _inst,
+                   "bridge_root": os.environ.get("CHLU_GEN_BRIDGE_ROOT"),
+                   "feature_cache": _cache_manifest(int(a.seed))}, out / "pins.json")
         print(json.dumps({"read_pins": READ_PINS}, indent=1, default=str))
         return 0
     if a.stage == "prepare":

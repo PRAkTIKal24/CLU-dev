@@ -25,6 +25,14 @@ export OPENBLAS_NUM_THREADS="$THREADS" NUMEXPR_NUM_THREADS="$THREADS"
 export XLA_FLAGS="--xla_force_host_platform_device_count=1 ${XLA_FLAGS:-}"
 export JAX_PLATFORMS=cpu
 
+# The external classifier's location is DERIVED from the cache path by
+# exp_gen_factor_wells.classifier_dir, so moving the cache to generation 2 would send the
+# judge looking for a classifier that is not there.  Pin it explicitly; the file, and its
+# asserted hash, are unchanged.
+: "${CHLU_GEN_CLASSIFIER_ROOT:=$(python -c "import os,pathlib;print(pathlib.Path(os.environ['CHLU_GEN_BRIDGE_ROOT']).parent.parent / 'gen-external-classifier')")}"
+export CHLU_GEN_CLASSIFIER_ROOT
+echo "[leg] classifier root -> $CHLU_GEN_CLASSIFIER_ROOT"
+
 if [ -n "${CHLU_GEN_BRIDGE_ROOT_OVERRIDE:-}" ]; then
   export CHLU_GEN_BRIDGE_ROOT="$CHLU_GEN_BRIDGE_ROOT_OVERRIDE"
   echo "[leg] cache root -> $CHLU_GEN_BRIDGE_ROOT (generation 2)"
