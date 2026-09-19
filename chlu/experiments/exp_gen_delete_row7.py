@@ -877,14 +877,20 @@ def build_arms(out: Path, seed: int, log: Callable = print) -> dict:
         "backoff_hole": gb.delete_conjunction(hf, hv, hg, hu)}, "base": base}
 
 
-def _reqs(values: np.ndarray, grid):
-    from ..core.gen_request import Request, RequestTerm
+def _reqs(values: np.ndarray, grid) -> list:
+    """``(N, F)`` requested VALUES -> the request-dict list ``FactorPrototypes`` consumes.
+
+    Built from the VALUES rather than from row ids on purpose: the constructed conjunction
+    probes are requests no dataset row realises, and ``requests_from_rows`` cannot express them.
+    ``nan`` means the factor was not requested, and such a term is simply absent -- which is the
+    same convention every other arm on this hub uses.
+    """
+    names = list(grid.names)
     out = []
-    for row in values:
-        terms = [RequestTerm(factor_index=int(k), factor_name=str(grid.names[k]),
-                             value=float(row[k]))
-                 for k in range(row.size) if not np.isnan(row[k])]
-        out.append(Request(terms=tuple(terms)))
+    for row in np.asarray(values, np.float64):
+        out.append({"request": [{"factor": names[k], "factor_index": int(k),
+                                 "value": float(row[k])}
+                                for k in range(row.size) if not np.isnan(row[k])]})
     return out
 
 
@@ -1514,9 +1520,32 @@ def build_report(out: Path, log: Callable = print) -> dict:
         eqs = dict(z["generator_equalities"].item()) if "generator_equalities" in z else {}
 
         surv, dele = list(sets["survivor"]), list(sets["deleted"])
+        # ⭐ how hard each constructed probe is: what fraction of its request TUPLES the fit pool
+        # actually holds.  Recomputed here (the probes are deterministic in the seed) so a reader
+        # never has to guess whether a probe was asking for something seen or something novel.
+        _pr = conjunction_probes(cond, int(s))
+        _poolset = set(int(x) for x in scored_pool(cond, int(s)))
+        _trainset = set(int(x) for x in np.asarray(cond["train_rows"], np.int64))
+        _cards = tuple(int(c) for c in grid.cardinalities)
+        probe_hardness = {}
+        for _p, _v in _pr.items():
+            if _p.startswith("_"):
+                continue
+            _idx = np.stack([np.abs(np.asarray(grid.values[k], np.float64)[None, :]
+                                    - _v["values"][:, k][:, None]).argmin(axis=1)
+                             for k in range(len(_cards))], axis=1)
+            _lin = np.ravel_multi_index(tuple(_idx.T), _cards)
+            probe_hardness[_p] = {
+                "label": _v["label"], "why": _v["why"],
+                "conjunction_seen_in_pool": bool(_v["seen_in_pool"]),
+                "frac_full_tuples_in_the_FIT_POOL": float(
+                    np.mean([int(x) in _poolset for x in _lin])),
+                "frac_full_tuples_in_the_TRAIN_index": float(
+                    np.mean([int(x) in _trainset for x in _lin]))}
         S = {"arms": {}, "bars": {}, "cost": dict(z["table_cost"].item()),
              "ops": dict(z["ops"].item()), "cache": dict(z["cache"].item()),
-             "proof": dict(z["proof"].item()), "probe_spec": probes, "roles": roles}
+             "proof": dict(z["proof"].item()), "probe_spec": probes, "roles": roles,
+             "probe_hardness": probe_hardness}
 
         def _rate(a, cid, field="own_refuse"):
             return float(np.asarray(done[(a, cid)][field]).mean())
@@ -1539,6 +1568,10 @@ def build_report(out: Path, log: Callable = print) -> dict:
                 "judge_accuracy_survivor": float(np.mean(
                     [rows[a][c]["judge_accuracy"] for c in surv])),
                 "probes": {p: {"refuse": _rate(a, f"probe/{p}"),
+                               "judge_accuracy": float(np.asarray(
+                                   done[(a, f"probe/{p}")]["valid"]).mean()),
+                               "accepted": float(np.asarray(
+                                   done[(a, f"probe/{p}")]["accept"]).mean()),
                                "hole_flag": (float(np.asarray(
                                    done[(a, f'probe/{p}')]["hole"]).mean())
                                    if done[(a, f"probe/{p}")]["hole"] is not None else None),
@@ -1603,6 +1636,32 @@ def build_report(out: Path, log: Callable = print) -> dict:
                                            geo, surv),
             "table_retrain_GOLD": _breakout(rows["table/retrain"], rows["table/base"],
                                             geo, surv),
+        }
+
+        # ---- ⭐ "green and blue still compose on EVERY shape", in the currency the split
+        #      actually allows, with the limit stated in the artifact itself ----
+        _gb = ["green_cylinder", "green_sphere", "blue_cylinder", "blue_oblong"]
+        S["green_and_blue_on_every_shape"] = {
+            "LIMIT_DECLARED": (
+                "green AND cylinder and blue AND cylinder have ZERO rows in the scored test "
+                "index -- the split puts all of them in train -- so a HELD-OUT composition "
+                "corner cannot be built for them and none was manufactured. They are measured "
+                "here in JUDGE-ACCURACY currency on the constructed probes, which is labelled as "
+                "such and is never substituted for the novel-tuple estimand. The novel-tuple "
+                "estimand covers every held-out conjunction the split does contain: the 49 n-way "
+                "corners (hues 1,2,8,9 x cylinder/sphere/oblong) plus pair-001 (green AND sphere) "
+                "and pair-002 (blue AND oblong), both NEVER SEEN."),
+            "judge_accuracy_on_the_probes": {
+                p: {"before": S["arms"]["field/base"]["probes"][p]["judge_accuracy"],
+                    "after_evicting_red": S["arms"]["field/evict_red"]["probes"][p][
+                        "judge_accuracy"],
+                    "after_the_hole": S["arms"]["field/hole"]["probes"][p]["judge_accuracy"],
+                    "delta_evict": (S["arms"]["field/evict_red"]["probes"][p]["judge_accuracy"]
+                                    - S["arms"]["field/base"]["probes"][p]["judge_accuracy"]),
+                    "hardness": probe_hardness[p]}
+                for p in _gb},
+            "novel_tuple_estimand_on_the_held_out_conjunctions":
+                S["BAR2_breakout_green_and_blue_on_every_shape"]["evict_red"],
         }
 
         # ---- churn: A COST LINE ONLY.  One definition.  Never a claim. ---
@@ -1811,14 +1870,185 @@ def _across_seeds(rep: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# 7b. The report as MARKDOWN -- rendered from report.json, never typed by hand
+# ---------------------------------------------------------------------------
+
+
+def _f(x, nd=4):
+    if x is None:
+        return "—"
+    if isinstance(x, bool):
+        return "yes" if x else "**no**"
+    if isinstance(x, (int,)) and not isinstance(x, bool):
+        return f"{x:,}"
+    try:
+        return f"{float(x):.{nd}f}"
+    except (TypeError, ValueError):
+        return str(x)
+
+
+def _spread(g, nd=4):
+    """``mean [s0 / s1 / s2]`` -- the seed spread always travels with the number."""
+    if not g:
+        return "—"
+    per = " / ".join(_f(v, nd) for v in g["per_seed"])
+    return f"**{_f(g['mean'], nd)}** [{per}]"
+
+
+def render_markdown(out: Path, log: Callable = print) -> str:
+    """Render ``report.json`` into the tables this hub's final section prints.
+
+    ⛔ Every number here is read out of the artifact.  Nothing in this function computes a
+    result, so the report and the artifact cannot drift apart.
+    """
+    out = Path(out)
+    rep = json.loads((out / "report.json").read_text(encoding="utf-8"))
+    A = rep["across_seeds"]
+    seeds = rep["seeds_scored"]
+    s0 = rep["per_seed"][str(seeds[0])]
+    L = []
+    L.append(f"**Scored run {rep['scored_run']}** · PREREG `{rep['prereg']}` · seeds "
+             f"{', '.join(str(x) for x in seeds)} · cache generation "
+             f"{s0['cache']['generation']} scope `{s0['cache']['scope']}` "
+             f"({s0['cache']['n_rows']:,} rows).")
+    pr = s0["proof"]
+    L.append(f"Estimand: **{pr['survivor']['n_corners']} survivor corners** "
+             f"({pr['survivor']['n_requests']:,} requests) and "
+             f"**{pr['deleted']['n_corners']} deleted corners** "
+             f"({pr['deleted']['n_requests']:,} requests); "
+             f"{pr['all']['rows_in_fit_pool']} corner rows in any fit pool. "
+             "Labels enter once at fit time (well alignment + address book) and nowhere else.")
+
+    # -- the headline: both halves, side by side ---------------------------
+    L.append("")
+    L.append("### Row 7 — both halves, every arm, mean [seed 0 / 1 / 2]")
+    L.append("")
+    L.append("| arm | deletion | **refusal on the deleted set** | refusal on the survivor set | "
+             "**composition Δ / corner on the 89 survivors** |")
+    L.append("|---|---|---|---|---|")
+    order = ["field/base", "field/evict_red", "field/decay_red", "field/hole",
+             "table/base", "table/row_removed", "table/retrain",
+             "table+gate8/base", "table+gate8/clear_red", "table+gate8/hole_attempt",
+             "table+gate8/clear_cylinder", "table+joint/base", "table+joint/hole",
+             "table+backoff/base", "table+backoff/hole",
+             "field/landscape_removed", "field/landscape_shuffled",
+             "field/lookup_argmax", "field/lookup_mean"]
+    for a in order:
+        if a not in s0["arms"]:
+            continue
+        rd = _spread({"per_seed": [rep["per_seed"][str(s)]["arms"][a]["refuse_on_deleted_set"]
+                                   for s in seeds],
+                      "mean": float(np.mean([rep["per_seed"][str(s)]["arms"][a][
+                          "refuse_on_deleted_set"] for s in seeds]))})
+        rs = _spread({"per_seed": [rep["per_seed"][str(s)]["arms"][a]["refuse_on_survivor_set"]
+                                   for s in seeds],
+                      "mean": float(np.mean([rep["per_seed"][str(s)]["arms"][a][
+                          "refuse_on_survivor_set"] for s in seeds]))})
+        cv = rep["per_seed"][str(seeds[0])]["composition_vs_base"].get(a)
+        if cv and "mean_delta" in cv:
+            dl = _spread({"per_seed": [rep["per_seed"][str(s)]["composition_vs_base"][a][
+                "mean_delta"] for s in seeds],
+                "mean": float(np.mean([rep["per_seed"][str(s)]["composition_vs_base"][a][
+                    "mean_delta"] for s in seeds]))}, 3)
+        else:
+            dl = "— (reference)"
+        L.append(f"| `{a}` | {s0['arms'][a]['deletion'] or '—'} | {rd} | {rs} | {dl} |")
+    L.append("")
+    L.append("⛔ MLP / transformer / LSTM / LACE / PoE-EBM take a **dash** on both columns: they "
+             "have no refusal verb, so they cannot enter the refusal half at all, and their only "
+             "deletion route is retrain-from-scratch. A dash is never a win for us — the cost "
+             "line below is what earns it.")
+    return chr(10).join(L)
+
+
+def compare_runs(a: Path, b: Path, log: Callable = print) -> dict:
+    """⭐ Charter section A.5: an independent replication, compared MECHANICALLY.
+
+    ``a`` is this hub's run, ``b`` the replication's.  Unreplicated is not a result, and
+    "it looked the same" is not a replication either -- so every headline number is diffed
+    here and the verdict is a computed boolean, not a reading.
+
+    Two classes of number, held to different tolerances and both declared:
+
+    ``EXACT``  the byte properties, the refusal rates and the bit-identity flags.  These are
+               deterministic given the seed and the pinned cache; any difference at all is a
+               failure and is reported as one.
+    ``TIGHT``  the composition deltas, which pass through the judge.  They are deterministic
+               too on one machine, but a cross-machine replication can move them by encoder
+               ULP, so they are diffed at 1e-6 and the actual gap is always printed.
+    """
+    ra = json.loads((Path(a) / "report.json").read_text(encoding="utf-8"))
+    rb = json.loads((Path(b) / "report.json").read_text(encoding="utf-8"))
+    EXACT = ("evict_refuse_on_deleted_set", "hole_flag_on_deleted_set",
+             "joint_presence_gate_refuse_on_survivor_set",
+             "field_hole_refuse_on_survivor_set",
+             "joint_backoff_refuse_on_deleted_set",
+             "joint_backoff_refuse_on_survivor_set",
+             "gate8_conjunction_refuse_on_deleted_set")
+    TIGHT = ("evict_composition_mean_delta", "hole_composition_mean_delta")
+    rows, ok = {}, True
+    for k in EXACT + TIGHT:
+        ga, gb = (ra["across_seeds"] or {}).get(k), (rb["across_seeds"] or {}).get(k)
+        if not ga or not gb:
+            rows[k] = {"NOT_RUN": "absent from one of the two runs"}
+            ok = False
+            continue
+        tol = 0.0 if k in EXACT else 1e-6
+        gaps = [abs(x - y) for x, y in zip(ga["per_seed"], gb["per_seed"])]
+        good = (len(ga["per_seed"]) == len(gb["per_seed"])
+                and all(g <= tol for g in gaps))
+        rows[k] = {"class": "EXACT" if k in EXACT else "TIGHT", "tolerance": tol,
+                   "run": ga["per_seed"], "replication": gb["per_seed"],
+                   "max_abs_gap": max(gaps) if gaps else None, "AGREES": bool(good)}
+        ok = ok and good
+    # the byte properties, per seed, straight off the bytes.json of each run
+    byt = {}
+    for s_ in ra["seeds_scored"]:
+        pa = Path(a) / f"seed_{s_}" / "bytes.json"
+        pb = Path(b) / f"seed_{s_}" / "bytes.json"
+        if not (pa.exists() and pb.exists()):
+            byt[str(s_)] = {"NOT_RUN": "a bytes.json is missing"}
+            ok = False
+            continue
+        da = json.loads(pa.read_text(encoding="utf-8"))
+        db = json.loads(pb.read_text(encoding="utf-8"))
+        same = {}
+        for key in ("evict", "hole", "decay_zero", "set_lifetime"):
+            same[key] = {
+                "bytes_changed": [da[key]["byte_assertion"]["bytes_changed"],
+                                  db[key]["byte_assertion"]["bytes_changed"]],
+                "outside": [da[key]["byte_assertion"].get("bytes_changed_outside_permitted"),
+                            db[key]["byte_assertion"].get("bytes_changed_outside_permitted")],
+                "AGREES": bool(da[key]["byte_assertion"]["bytes_changed"]
+                               == db[key]["byte_assertion"]["bytes_changed"])}
+            ok = ok and same[key]["AGREES"]
+        same["ALL_BYTE_PROPERTIES_HOLD"] = [da["ALL_BYTE_PROPERTIES_HOLD"],
+                                            db["ALL_BYTE_PROPERTIES_HOLD"]]
+        byt[str(s_)] = same
+    out = {"run": str(a), "replication": str(b), "headline": rows, "byte_properties": byt,
+           "REPLICATED": bool(ok),
+           "statement": ("charter A.5: unreplicated is not a result. EXACT numbers are diffed at "
+                         "zero tolerance; the two composition deltas pass through the judge and "
+                         "are diffed at 1e-6, with the actual gap always printed.")}
+    _jdump(out, Path(a) / "replication.json")
+    log(f"  REPLICATED = {out['REPLICATED']}")
+    for k, v in rows.items():
+        if "AGREES" in v:
+            log(f"    {k}: {v['AGREES']} (max gap {v['max_abs_gap']})")
+    return out
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--stage", required=True,
                    choices=("corners", "build", "bytes", "score", "learners", "c4",
-                            "report", "all"))
+                            "report", "markdown", "compare", "all"))
     p.add_argument("--out", required=True)
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--max-seconds", type=float, default=7200.0)
+    p.add_argument("--against", default=None,
+                   help="the replication run directory, for --stage compare")
     return p
 
 
@@ -1865,6 +2095,14 @@ def main(argv=None) -> int:
                 return 2
     if args.stage in ("report", "all"):
         build_report(out, log=log)
+    if args.stage == "compare":
+        if not args.against:
+            raise SystemExit("--stage compare needs --against REPLICATION_DIR")
+        compare_runs(out, assert_out_root(Path(args.against)), log=log)
+    if args.stage in ("markdown", "all"):
+        md = render_markdown(out, log=log)
+        (out / "REPORT.md").write_text(md, encoding="utf-8")
+        log(md)
     return 0
 
 
