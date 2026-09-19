@@ -49,6 +49,20 @@ LOOKUP_CONTROLS = ("place_norm_rank_lookupargmax", "place_norm_rank_lookupconvex
 #: Context rows: reported on every table, never a bar.
 CONTEXT = ("basis_head", "random_dmatched_balanced")
 
+#: ⭐ INSTRUMENT SOUNDNESS CHECK, reported and never a bar.  w4-common section 4.2 states, as a
+#: fact this hub was told and did not fit, that factor-aligned wells beat ``basis_head`` on row 4 by
+#: **+11.612 tuples/corner** (49 corners, p = 9.3e-06) and TIE on row 3 (+1.200, p = 0.322).
+#: Reproducing that ordering here -- on THIS hub's code path, on cache generation 2, on three
+#: seeds -- is evidence the whole pipeline is sound, which is what makes this hub's NEGATIVE
+#: trustworthy rather than a plumbing failure.  ⛔ It is a CHECK, not a claim: the numbers are on a
+#: different cache generation from wave 3's and may not be quoted beside them (w4-common section 2).
+SOUNDNESS = (
+    ("factor_aligned_balanced", "basis_head", "nway",
+     "w4-common 4.2 says +11.612 tuples/corner for factor-aligned over basis_head on row 4"),
+    ("factor_aligned_balanced", "basis_head", "pair",
+     "w4-common 4.2 says a TIE on row 3 (+1.200, p = 0.322)"),
+)
+
 
 def per_corner(seed_dir: Path, arm: str, seen, cards, family: str) -> list:
     """One row per corner of ``family``, in a fixed corner order, for the pairing."""
@@ -209,6 +223,22 @@ def build(root: Path, seeds=(0, 1, 2), log=print) -> dict:
                 f"{pe['mean_paired_delta']:+.3f} ci95={np.round(pe['bootstrap_ci95'], 3).tolist()} "
                 f"wins={pe['corners_arm_wins']}/{pe['n_corners']} p={pe['sign_test_p_two_sided']:.3g} "
                 f"PASS={pe['passes']}")
+        for arm, ctl, fam, expect in SOUNDNESS:
+            if not rows[fam].get(arm) or not rows[fam].get(ctl):
+                continue
+            se = W.paired_estimand(rows[fam][arm], rows[fam][ctl], METRIC, 0.0, arm, ctl)
+            se["is_a_bar"] = False
+            se["w4_common_4_2_says"] = expect
+            se["note"] = (
+                "INSTRUMENT SOUNDNESS CHECK, not a claim. Reproducing w4-common 4.2's "
+                "ordering on this hub's own code path is what makes this hub's negative "
+                "trustworthy. Generation 2 -- NOT to be quoted beside wave 3's numbers.")
+            entry["paired"][f"soundness_{arm}_vs_{ctl}_{fam}"] = se
+            log(f"  seed {s} SOUNDNESS ({fam}): {arm} vs {ctl} delta="
+                f"{se['mean_paired_delta']:+.3f} "
+                f"ci95={np.round(se['bootstrap_ci95'], 3).tolist()} "
+                f"wins={se['corners_arm_wins']}/{se['n_corners']} "
+                f"p={se['sign_test_p_two_sided']:.3g}  [{expect}]")
         # bar 4: the charter C.2 collapse
         base = (entry["means"].get("nway", {}).get("place_norm_rank") or {}).get(
             "novel_per_corner")
