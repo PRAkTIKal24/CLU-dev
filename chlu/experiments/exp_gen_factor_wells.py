@@ -121,6 +121,7 @@ ARMS = (
     "factor_aligned_nopair",   # the ablation the target file demands BEFORE any scored run
     "basis_head_nopair",       # its matched control
     "balanced_nopair",         # the ablation on the balanced arm
+    "ward_balanced",           # the CONFOUND arm: correlation grouping, equal wells
 )
 
 #: Which partition each arm deploys.  ``None`` means the arm does not deploy a store.
@@ -140,6 +141,7 @@ ARM_PARTITION = {
     "factor_aligned_nopair": "factor",
     "basis_head_nopair": "ward",
     "balanced_nopair": "balanced",
+    "ward_balanced": "ward_balanced",
 }
 
 ROW_IDS = (
@@ -474,12 +476,36 @@ def build_partitions(out_dir: Path, log: Callable = print) -> dict:
     lab_bal, info_bal = factor_aligned_balanced_labels(
         R, int(PINS["K"]), dead=dead, merge_rule=str(PINS["merge_rule"]),
         factor_names=list(grid.names))
+    # THE CONFOUND ARM. A referee will ask whether the win is "factor-aligned" or merely
+    # "equal wells": my factor partition has equal wells and the shipped ward cut does not.
+    # This is the target file's own suggested variant -- "a balanced variant cutting the
+    # dendrogram leaf order gives equal wells at any K. Both keep the correlation structure
+    # and neither sees a label." Same K, same bytes, same rank, equal wells, NO label.
+    from scipy.cluster.hierarchy import leaves_list, linkage
+    live_idx = np.flatnonzero(~dead)
+    Zl = linkage(np.abs(corr[np.ix_(live_idx, live_idx)]), method="ward")
+    order = live_idx[leaves_list(Zl)]
+    lab_wb = np.zeros(int(PINS["D"]), np.int64)
+    base = order.size // int(PINS["K"])
+    cap = np.full(int(PINS["K"]), base, np.int64)
+    cap[: order.size - base * int(PINS["K"])] += 1
+    pos = 0
+    for j, c in enumerate(cap):
+        lab_wb[order[pos:pos + int(c)]] = j
+        pos += int(c)
+    cnt = np.bincount(lab_wb[live_idx], minlength=int(PINS["K"])).astype(np.int64)
+    for c in np.flatnonzero(dead):
+        j = int(np.argmin(cnt))
+        lab_wb[c] = j
+        cnt[j] += 1
+
     lab_rw = random_grouping(lab_ward, seed)
     lab_rf = random_grouping(lab_factor, seed)
     lab_rb = random_grouping(lab_bal, seed)
     lab_k1 = np.zeros(int(PINS["D"]), np.int64)
 
     labels = {"factor": lab_factor, "balanced": lab_bal, "ward": lab_ward,
+              "ward_balanced": lab_wb,
               "random_ward": lab_rw, "random_factor": lab_rf,
               "random_balanced": lab_rb, "k1": lab_k1}
     info = {
