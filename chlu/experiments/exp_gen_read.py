@@ -743,8 +743,14 @@ def build_table(out_dir: Path, primary: str = "tensor_addr", margin: float = 1.0
     cond = fw.load_condition()
     grid = cond["grid"]
     seen_mask = fw.seen_tuple_mask(grid, cond["train_rows"])
-    n4 = fw.nway_corners(cond)
-    n3 = fw.pair_subcorners(cond)
+    if fw.PINS["condition"] == "val":
+        # the SELECTION condition scores only the val corners; they are the row-4
+        # geometry and they are labelled r4 so the DEV table and the scored table read
+        # the same way, with the condition printed beside every number.
+        n4, n3 = fw.val_corners(cond), []
+    else:
+        n4 = fw.nway_corners(cond)
+        n3 = fw.pair_subcorners(cond)
 
     have, not_run = [], {}
     for a in ARMS:
@@ -803,6 +809,7 @@ def build_table(out_dir: Path, primary: str = "tensor_addr", margin: float = 1.0
                     verdict_rule=("a win over a RIVAL is a RESULT; a win over anything "
                                   "else is an ABLATION (w4-common section 1)"))
     table = {"primary": primary, "margin_declared": float(margin),
+             "condition": fw.PINS["condition"], "seed": int(fw.PINS["seed"]),
              "arms": summary, "not_run": not_run, "estimands": estimands,
              "corner_counts": {"r3_comp_2way": len(n3), "r4_comp_nway": len(n4)},
              "labels_note": ("labels are used ONCE at fit time to align wells and at the "
