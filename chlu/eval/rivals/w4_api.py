@@ -70,7 +70,16 @@ from . import w4_learners as L
 DEFAULT_ROOT = (Path(os.environ.get("CHLU_HUB_OUTPUTS", "C:/chlu/outputs"))
                 / "spoke-a-rivals" / "rivals")
 
-LEARNER_FAMILIES = ("mlp", "cont_mlp", "transformer", "lstm")
+BASE_FAMILIES = ("mlp", "mlp_180k", "cont_mlp", "transformer", "lstm")
+#: Every loadable learner name: each family in its full-only (primary) and
+#: request-dropout variants.
+LEARNER_FAMILIES = tuple(
+    [f for f in BASE_FAMILIES] + [f"{f}_dropout" for f in BASE_FAMILIES])
+
+
+def base_family(name: str) -> str:
+    """The architecture behind a variant name (``mlp_dropout`` -> ``mlp``)."""
+    return name[: -len("_dropout")] if name.endswith("_dropout") else name
 
 
 class RivalRefusal(RuntimeError):
@@ -89,6 +98,7 @@ def _ckpt_dir(seed: int, root: Optional[Path] = None) -> Path:
 
 
 def save_table(seed: int, protos, grid, cache_manifest: dict,
+               population: Optional[dict] = None,
                root: Optional[Path] = None) -> Path:
     """Pickle the fitted prototype table plus what a caller needs to use it."""
     d = _ckpt_dir(seed, root)
@@ -99,12 +109,14 @@ def save_table(seed: int, protos, grid, cache_manifest: dict,
                      "grid_values": [np.asarray(v, np.float64) for v in grid.values],
                      "cardinalities": [int(c) for c in grid.cardinalities],
                      "generation": 2,
+                     "population": population or {},
                      "features_sha256": cache_manifest["features_sha256"]}, fh)
     return p
 
 
 def save_learner(seed: int, name: str, model, width: int, in_kind: str, grid,
                  out_dim: int, cache_manifest: dict,
+                 population: Optional[dict] = None,
                  root: Optional[Path] = None) -> Path:
     """Serialise a fitted learner with the metadata needed to rebuild its shape."""
     d = _ckpt_dir(seed, root)
@@ -115,6 +127,7 @@ def save_learner(seed: int, name: str, model, width: int, in_kind: str, grid,
             "grid_values": [[float(x) for x in np.asarray(v)] for v in grid.values],
             "param_count": L.count_params(model),
             "generation": 2,
+            "population": population or {},
             "features_sha256": cache_manifest["features_sha256"]}
     with open(d / f"{name}.rival.json", "w", encoding="utf-8") as fh:
         json.dump(meta, fh, indent=2, sort_keys=True)
@@ -154,11 +167,34 @@ class RivalRead:
         self.grid_values = [np.asarray(v, np.float64) for v in meta["grid_values"]]
         self.cardinalities = [int(c) for c in meta["cardinalities"]]
         self.generation = int(meta.get("generation", 2))
+        # WHAT THIS RIVAL'S FIT POOL CONTAINED. A caller gets out_of_range=0 on a
+        # value this rival was fitted on, which is correct and says nothing about
+        # whether the comparison is like-for-like. The counts are here so the
+        # mismatch reaches the call site rather than only a reader of the README.
+        self.population = dict(meta.get("population") or {})
+        self.fit_population = self.population.get("fit_population")
+        self.n_per_value = self.population.get("n_per_value") or {}
 
     def __repr__(self) -> str:
         return (f"RivalRead({self.name!r}, seed={self.seed}, generation="
-                f"{self.generation}, offgrid={self.offgrid_ok}, "
-                f"partial={self.partial_ok})")
+                f"{self.generation}, fit_population={self.fit_population!r}, "
+                f"offgrid={self.offgrid_ok}, partial={self.partial_ok})")
+
+    def like_for_like(self, held_out: dict) -> dict:
+        """Is this rival comparable with an arm that held these values out?
+
+        ``held_out`` is ``{factor_name: [values]}``. Returns a verdict naming any
+        value this rival DID fit rows for. Call it before scoring a value-holdout
+        row: a clean ``out_of_range = 0`` says the value is inside the grid, NOT
+        that the rival is a fair comparison for an arm that never saw it.
+        """
+        from .w4_population import assert_not_fitted_on
+
+        if not self.population:
+            return {"like_for_like": None,
+                    "verdict": ("this checkpoint carries no population record; "
+                                "re-run the backfill or refit")}
+        return assert_not_fitted_on(self.population, held_out)
 
     def _analyse(self, values: np.ndarray):
         V = np.asarray(values, np.float64)
@@ -188,9 +224,14 @@ class RivalRead:
                 "on that row; it does not get a nearest-grid-value number.")
         if (~present).any() and not self.partial_ok:
             n = int((~present).any(axis=1).sum())
+            alt = (f" Load {self.name}_dropout instead: same architecture, same "
+                   "matched parameter count, trained with request dropout so a "
+                   "partially specified request is in distribution for it."
+                   if not self.name.endswith("_dropout") and self.name != "table"
+                   else "")
             raise RivalRefusal(
-                f"{self.name!r} requires a fully specified request: {n} of "
-                f"{V.shape[0]} requests leave a factor unrequested.")
+                f"{self.name!r} was trained on fully specified requests only, and "
+                f"{n} of {V.shape[0]} requests leave a factor unrequested.{alt}")
         feats = self._fn(V, present)
         return np.asarray(feats, np.float32), oor
 
@@ -272,7 +313,7 @@ def load_rival(seed: int, name: str, root: Optional[Path] = None) -> RivalRead:
 
     bs = L.builders(meta["cardinalities"], int(meta["out_dim"]),
                     jax.random.PRNGKey(0))
-    build, kind = bs[name]
+    build, kind = bs[base_family(name)]
     skeleton = build(int(meta["width"]))
     model = eqx.tree_deserialise_leaves(d / f"{name}.rival.eqx", skeleton)
     got = L.count_params(model)
@@ -280,8 +321,12 @@ def load_rival(seed: int, name: str, root: Optional[Path] = None) -> RivalRead:
         raise AssertionError(
             f"{name!r} seed {seed}: deserialised {got} parameters, manifest says "
             f"{meta['param_count']}")
+    # A full-only learner can ENCODE a partial request but was never trained on
+    # one. It refuses, and names the variant that was - so nobody quotes an
+    # out-of-distribution number by accident when an in-distribution one exists.
     return RivalRead(name, seed, meta, _learner_fn(model, meta),
-                     offgrid_ok=(kind == "continuous"), partial_ok=True)
+                     offgrid_ok=(kind == "continuous"),
+                     partial_ok=name.endswith("_dropout"))
 
 
 def available(seed: int, root: Optional[Path] = None) -> dict:
@@ -292,7 +337,16 @@ def available(seed: int, root: Optional[Path] = None) -> dict:
             r = load_rival(seed, name, root)
             out[name] = {"callable": True, "offgrid": r.offgrid_ok,
                          "partial": r.partial_ok,
-                         "param_count": r.meta.get("param_count")}
+                         "param_count": r.meta.get("param_count"),
+                         "fit_population": r.fit_population,
+                         "values_never_fitted":
+                             r.population.get("values_never_fitted", {}),
+                         "population_caveat": (
+                             "fitted on the Montero combination pool, which "
+                             "contains EVERY factor value. NOT like-for-like with a "
+                             "value-holdout arm on rows 2 and 5 - call "
+                             "load_rival(...).like_for_like({factor: [values]}) to "
+                             "check.")}
         except RivalRefusal as exc:
             out[name] = {"callable": False, "reason": str(exc)}
         except FileNotFoundError as exc:

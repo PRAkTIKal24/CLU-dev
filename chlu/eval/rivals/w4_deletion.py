@@ -254,7 +254,12 @@ def cost_line(methods: dict, part: dict) -> dict:
     gold = methods.get("table_retrain_from_scratch", {})
     cheap = methods.get("table_edit_mean_substitution", {})
     tg, tc = float(gold.get("wall_clock_s", 0.0)), float(cheap.get("wall_clock_s", 0.0))
-    ratio = (tg / tc) if tc > 0 else float("inf")
+    # The edit is one O(D) row copy and lands below the clock's resolution. A
+    # ratio against a measured zero is not a measurement, so it is reported as
+    # what it is rather than as "inf".
+    TIMER_FLOOR = 1e-4
+    below_resolution = tc < TIMER_FLOOR
+    ratio = None if below_resolution else tg / tc
     gf = (gold.get("scores", {}).get("forget") or {}).get("judge_on_deleted_factor")
     cf = (cheap.get("scores", {}).get("forget") or {}).get("judge_on_deleted_factor")
     gr = (gold.get("scores", {}).get("retain") or {}).get("judge_on_deleted_factor")
@@ -266,18 +271,28 @@ def cost_line(methods: dict, part: dict) -> dict:
         "rows_refitted_by_edit": 0,
         "wall_clock_gold_standard_s": tg,
         "wall_clock_edit_s": tc,
+        "edit_below_timer_resolution": bool(below_resolution),
         "cost_ratio_gold_over_edit": ratio,
+        "cost_ratio_note": (
+            "not reported as a ratio: the edit is a single O(D) row copy and falls "
+            "below the clock's resolution, so a ratio against it would be an "
+            "artifact of the timer" if below_resolution else
+            "gold-standard wall clock over edit wall clock"),
         "judge_on_deleted_factor": {
             "gold_forget": gf, "edit_forget": cf,
             "gold_retain": gr, "edit_retain": cr,
         },
         "one_line": (
             f"deleting {part['factor']}={part['value']} costs {tg:.2f}s and a refit of "
-            f"{part['n_fit_after']} rows by the gold standard, against {tc:.4f}s and 0 "
-            f"rows by mean-substitution ({ratio:.0f}x); on the forget set the judge "
-            f"reads the deleted factor at {gf if gf is None else round(gf, 4)} "
-            f"(gold) vs {cf if cf is None else round(cf, 4)} (edit), and on the retain "
-            f"set {gr if gr is None else round(gr, 4)} vs "
+            f"{part['n_fit_after']:,} rows by the gold standard, against "
+            + ("an O(D) copy of one prototype row and 0 refitted rows by "
+               "mean-substitution (below timer resolution, so no ratio is quoted)"
+               if below_resolution else
+               f"{tc:.4f}s and 0 rows by mean-substitution ({ratio:.0f}x)")
+            + f"; on the forget set the judge reads the deleted factor at "
+            f"{gf if gf is None else round(gf, 4)} (gold) vs "
+            f"{cf if cf is None else round(cf, 4)} (edit), and on the retain set "
+            f"{gr if gr is None else round(gr, 4)} vs "
             f"{cr if cr is None else round(cr, 4)}"),
         "scope": SCOPE,
     }

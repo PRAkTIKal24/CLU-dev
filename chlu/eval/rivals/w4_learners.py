@@ -61,6 +61,18 @@ BATCH = 256
 #: How far a realised parameter count may sit from the target.
 PARAM_TOLERANCE = 0.10
 
+#: Families whose budget is NOT the prototype table's.
+#:
+#: ``mlp_180k`` exists because no arm on the read hub can be parameter-matched to
+#: the rival set: the pinned store alone is 131,072 parameters (524,288 B), 10.3 %
+#: above the table's 118,784, and that hub's arm (store + product address book,
+#: R=128) is 179,968. That is a property of the programme's byte pin, not a choice
+#: anyone made. Without a rival at that budget, "you only won on a budget gap" can
+#: only be answered with an argument; with one it is answered with a number.
+#: It is named distinctly so the matched-to-the-table row and the
+#: matched-to-that-arm row can both appear - they answer different questions.
+FAMILY_BUDGETS = {"mlp_180k": 179_968}
+
 
 # ---------------------------------------------------------------------------
 # Parameter counting and width matching
@@ -331,6 +343,8 @@ def builders(cardinalities: Sequence[int], out_dim: int, key) -> dict:
 
     return {
         "mlp": (lambda w: MLPRival(in_oh, w, out_dim, key), "onehot"),
+        # Same architecture as `mlp`, a different budget. See FAMILY_BUDGETS.
+        "mlp_180k": (lambda w: MLPRival(in_oh, w, out_dim, key), "onehot"),
         "cont_mlp": (lambda w: ContMLPRival(2 * n_tok, w, out_dim, key), "continuous"),
         "transformer": (
             lambda w: TransformerRival(vocab, n_tok, w, 2, _heads(w), out_dim, key),
@@ -449,17 +463,36 @@ def val_mse(model, Xin: np.ndarray, Y: np.ndarray) -> float:
 
 
 def fit_family(name: str, build: Callable, in_kind: str, width: int, ctx: dict,
-               key, log: Callable = print) -> dict:
-    """Tune on the short schedule, then retrain the selection at full length."""
+               key, dropout: bool = False, log: Callable = print) -> dict:
+    """Tune on the short schedule, then retrain the selection at full length.
+
+    Two training distributions, and which one is right depends on the row:
+
+    ``dropout=False`` (the PRIMARY variant) trains on fully specified requests
+        only. Rows 3 and 4 - the pair and n-way corners - ask full six-factor
+        requests, so this is the stronger rival on the population where the
+        learners are actually judged, and shipping only the weaker one would be
+        weakening a competitor through our own code.
+    ``dropout=True`` trains with half the requests partially specified. Rows 1, 2,
+        5 and 6 reach the learners through the query sets, where an unrequested
+        factor really is ``nan``; the full-only variant would be answering those
+        blind.
+
+    Both are at the same matched parameter count. Which variant produced a number
+    is recorded in the artifact and must be carried with it.
+    """
     cards = ctx["cardinalities"]
     n_f = len(cards)
     n_fit = int(ctx["req_fit"].n)
-    # Training inputs are re-drawn each epoch with a fresh request-dropout mask, so
-    # a partially-specified request (rows 3 and 4) is in distribution rather than
-    # something the rival is asked to answer having never seen one.
-    def Xf(rng):
-        return encode_inputs(in_kind, ctx["req_fit"], cards,
-                             dropout_present(n_fit, n_f, rng))
+
+    if dropout:
+        # Re-drawn each epoch: a fresh mask covers far more of the partial-request
+        # space than one fixed draw.
+        def Xf(rng):
+            return encode_inputs(in_kind, ctx["req_fit"], cards,
+                                 dropout_present(n_fit, n_f, rng))
+    else:
+        Xf = encode_inputs(in_kind, ctx["req_fit"], cards)
 
     # Validation is on FULL requests: that is the statistic the matched comparison
     # is made on, and keeping it unaugmented is what makes the cost of the
@@ -518,6 +551,14 @@ def fit_family(name: str, build: Callable, in_kind: str, width: int, ctx: dict,
                           encode_inputs(in_kind, ctx["req_val"], cards, pmask), Yv)
     return {
         "family": name, "width": int(width), "input_kind": in_kind,
+        "variant": "dropout" if dropout else "full_only",
+        "trained_on": ("half fully specified requests, half a random subset of 1-5 "
+                       "factors, re-drawn every epoch"
+                       if dropout else "fully specified six-factor requests only"),
+        "use_for": (["rows 1, 2, 5, 6 - the query sets, where an unrequested factor "
+                     "is genuinely nan"] if dropout else
+                    ["rows 3 and 4 - the pair and n-way corners, whose runner builds "
+                     "FULL six-factor requests"]),
         "param_count": count_params(model),
         "tuning": {
             "budget": len(trials), "realised": len(trials), "entitled": 36,
@@ -531,8 +572,14 @@ def fit_family(name: str, build: Callable, in_kind: str, width: int, ctx: dict,
         "val_mse_full_schedule": val_mse(model, Xv, Yv),
         "val_mse_partial_requests": float(partial_mse),
         "partial_requests": {
-            "supported": True,
-            "p_full_request_in_training": P_FULL_REQUEST,
+            "supported": bool(dropout),
+            "p_full_request_in_training": P_FULL_REQUEST if dropout else 1.0,
+            "caveat": (None if dropout else
+                       "this variant never saw a partially specified request in "
+                       "training; val_mse_partial_requests below is what it does "
+                       "with one anyway, and is NOT a number to quote as this "
+                       "rival's partial-request performance - use the _dropout "
+                       "variant for that"),
             "absent_encoding": {
                 "onehot": "the factor's one-hot block is all zeros",
                 "tokens": "a reserved token per factor, sum(C_k) + factor_index",

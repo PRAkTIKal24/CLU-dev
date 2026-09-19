@@ -403,7 +403,7 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
     # -- the rivals: spoke A's fitted objects, loaded, never refitted here ---
     if arm.startswith("rival_"):
         name = arm[len("rival_"):]
-        from ...eval.rivals.w4_api import load_rival, available  # noqa: F401
+        from ..eval.rivals.w4_api import load_rival, available  # noqa: F401
         try:
             r = load_rival(int(fw.PINS["seed"]), name)
         except Exception as exc:                       # RivalRefusal or not-yet-fitted
@@ -436,12 +436,21 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
                 f"{[str(x) for x in grid.names]} -- a silent reorder would score the "
                 "rival on a request it never received")
         meta = {}
-        mp = (Path(os.environ.get("CHLU_RIVALS_ROOT",
-                                  "C:/chlu/outputs/spoke-a-rivals/rivals"))
-              / f"seed_{int(fw.PINS['seed'])}" / f"{name}.rival.json")
-        if mp.exists():
-            with open(mp, encoding="utf-8") as fh:
-                meta = json.load(fh)
+        root = Path(os.environ.get("CHLU_RIVALS_ROOT",
+                                   "C:/chlu/outputs/spoke-a-rivals/rivals"))
+        for cand in (f"{name}.rival.json", f"{name}.json"):
+            mp = root / f"seed_{int(fw.PINS['seed'])}" / cand
+            if mp.exists():
+                with open(mp, encoding="utf-8") as fh:
+                    meta = json.load(fh)
+                break
+        if not meta.get("param_count"):
+            # spoke A's own availability record is authoritative for the parameter count
+            try:
+                meta["param_count"] = (available(int(fw.PINS["seed"])) or {}).get(
+                    name, {}).get("param_count")
+            except Exception:
+                pass
         obj = {"arm": arm, "read": "rival", "kind": "rival", "rival": r,
                "rival_partial": r_partial,
                "partial_policy": ("the _dropout variant answers a request with an "
@@ -470,9 +479,13 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
                                        "val_mse_partial_requests", "n_rows_fit")},
                "fit_seconds": 0.0}
         arm_dir.mkdir(parents=True, exist_ok=True)
-        with open(done, "wb") as fh:
-            pickle.dump(obj, fh)
-        fw._jdump({k: v for k, v in obj.items() if k != "rival"}, arm_dir / "arm.json")
+        # ⛔ A rival is NOT pickled: spoke A's callable is a closure over their fitted
+        # object and cannot be serialised, and caching a rival would in any case risk
+        # scoring a stale copy of someone else's arm.  It is re-loaded from their
+        # artifact tree on every call, which is cheap and always current.
+        fw._jdump({k: v for k, v in obj.items()
+                   if k not in ("rival", "rival_partial", "protos")},
+                  arm_dir / "arm.json")
         log(f"  arm {arm}: loaded spoke A rival '{name}' "
             f"(params={obj['byte_ledger'].get('param_count')})")
         return obj
