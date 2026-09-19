@@ -76,6 +76,62 @@ def per_corner(seed_dir: Path, arm: str, seen, cards, family: str) -> list:
     return out
 
 
+def query_rows(seed_dir: Path, arm: str) -> dict:
+    """Rows 1, 2, 5, 6 and 7 for one arm, from the artifact ``run_arm`` already wrote.
+
+    w4-common section 3: **fill all seven rows.**  This hub is judged on rows 3 and 4; the
+    other five are REPORTED and never claimed.  Two of them carry declared caveats that
+    travel with the number and are written into the output rather than left to a reader:
+
+    * **Row 2** is reported here on the TOP-1 judge only.  w4-common section 3 requires the
+      declared SECOND JUDGE (the oracle-referenced readout) for row 2, and section 4.5 is
+      explicit that top-1 judging cannot separate a perfect arm from a perfect lookup on
+      that row.  So this hub's row-2 number is ``top1_only`` and is not a row-2 result.
+    * **Row 7** is the inherited deletion leg (``object_hue``, no retraining, fit
+      fingerprint equal before and after).  It is a property of the HEAD, not of the
+      partition, so a placement change is expected to leave it alone -- which is itself
+      worth reporting, because a placement that broke deletion would be disqualifying.
+    """
+    p = seed_dir / "arms" / arm / "rows.npz"
+    if not p.exists():
+        return {}
+    z = np.load(p, allow_pickle=True)
+    out = {}
+    if "qrows" in z:
+        q = z["qrows"].item()
+        for row_id, d in q.items():
+            out[row_id] = {"n": int(np.asarray(d["accept"]).size),
+                           "accept": float(np.asarray(d["accept"]).mean()),
+                           "valid": float(np.asarray(d["valid"]).mean())}
+        if "r2_unseen_valid" in out:
+            out["r2_unseen_valid"]["judge"] = "top1_only"
+            out["r2_unseen_valid"]["caveat"] = (
+                "w4-common section 3 requires the declared SECOND JUDGE for row 2 and "
+                "section 4.5 says top-1 judging cannot separate a perfect arm from a "
+                "perfect lookup there. This is NOT a row-2 result.")
+    if "deletion" in z:
+        d = z["deletion"].item()
+        pre, post = d["pre"], d["post"]
+        fp, fp_post = d["fit_fingerprint"]
+        out["r7_deletion"] = {
+            "deleted_factor": d["deleted_factor"], "deleted_value": d["deleted_value"],
+            "n_deleted_requests": int(d["n_deleted_requests"]),
+            "accept_on_deleted_requests_pre": float(np.asarray(pre["accept"]).mean()),
+            "accept_on_deleted_requests_post": float(np.asarray(post["accept"]).mean()),
+            "valid_pre": float(np.asarray(pre["valid"]).mean()),
+            "valid_post": float(np.asarray(post["valid"]).mean()),
+            "n_survivor_corners": int(d["n_survivor_corners"]),
+            "survivor_novel_per_corner": float(np.mean([
+                int(np.unique(v["tuples"][v["valid"]], axis=0).shape[0])
+                for v in d["survivors"].values()])) if d["survivors"] else None,
+            "modes_untouched": bool(tuple(fp) == tuple(fp_post)),
+            "caveat": ("the deletion leg is a property of the HEAD, not of the partition; "
+                       "a placement change is expected to leave it alone, and a placement "
+                       "that BROKE it would be disqualifying"),
+        }
+    return out
+
+
 def build(root: Path, seeds=(0, 1, 2), log=print) -> dict:
     W.PINS["condition"] = "test"
     cond = W.load_condition()
@@ -84,7 +140,21 @@ def build(root: Path, seeds=(0, 1, 2), log=print) -> dict:
     seen = W.seen_tuple_mask(grid, cond["train_rows"])
     res = {"metric": METRIC, "margin_declared_in_advance": MARGIN,
            "prereg": "PREREG-hub-placement-1.md", "condition": "test",
-           "seeds": list(seeds), "per_seed": {}, "bars": {}, "arms_present": {}}
+           "seeds": list(seeds), "per_seed": {}, "bars": {}, "arms_present": {},
+           "seven_rows": {
+               "r1_seen": "reported", "r2_unseen_valid": "reported, TOP-1 JUDGE ONLY -- "
+               "not a row-2 result (w4-common sections 3 and 4.5)",
+               "r3_comp_2way": "TARGET (bar 6, a hold)",
+               "r4_comp_nway": "TARGET (bars 1-5)",
+               "r5_comp_refusal": "reported", "r6_invalid_refusal": "reported",
+               "r7_deletion": "reported; a property of the head, not the partition"},
+           "labels_caption": (
+               "labels are used ONCE at fit time to align wells, and at the address book "
+               "(w4-common section 5). Zero-supervision structure is NOT claimed."),
+           "ablation_vs_result": (
+               "beating factor_aligned_balanced (the label-MI partition) is an ABLATION win "
+               "by w4-common section 1, and is labelled so. The RESULT half -- row 4 against "
+               "the full rival set -- is a separate leg; see the LOG and PREREG section 7.")}
 
     for s in seeds:
         sd = root / f"seed{s}"
@@ -154,6 +224,17 @@ def build(root: Path, seeds=(0, 1, 2), log=print) -> dict:
                          "arm_at_least": bool(base >= v)}
                 log(f"  seed {s} bar 5: {c} = {v:.3f}, arm - control = {base - v:+.3f}")
             entry["bar5_lookup"] = c5
+        entry["rows_1_2_5_6_7"] = {a: query_rows(sd, a) for a in arms}
+        entry["rows_1_2_5_6_7"] = {a: v for a, v in entry["rows_1_2_5_6_7"].items() if v}
+        for a, v in entry["rows_1_2_5_6_7"].items():
+            if "r1_seen" in v:
+                log(f"  seed {s} {a}: r1 valid={v['r1_seen']['valid']:.4f} "
+                    f"r2(top1 only) valid={v.get('r2_unseen_valid', {}).get('valid', float('nan')):.4f} "
+                    f"r5 accept={v.get('r5_comp_refusal', {}).get('accept', float('nan')):.4f} "
+                    f"r6 accept={v.get('r6_invalid_refusal', {}).get('accept', float('nan')):.4f} "
+                    f"r7 accept {v.get('r7_deletion', {}).get('accept_on_deleted_requests_pre', float('nan')):.4f}"
+                    f"->{v.get('r7_deletion', {}).get('accept_on_deleted_requests_post', float('nan')):.4f} "
+                    f"modes_untouched={v.get('r7_deletion', {}).get('modes_untouched')}")
         res["per_seed"][str(s)] = entry
         res.setdefault("per_corner", {})[str(s)] = rows
 
