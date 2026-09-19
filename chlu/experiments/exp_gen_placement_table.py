@@ -197,6 +197,14 @@ def build(root: Path, seeds=(0, 1, 2), log=print) -> dict:
                                 and (pe["bootstrap_ci95"][0] > m if bar == 1
                                      else pe["mean_paired_delta"] >= m))
             entry["paired"][f"bar{bar}_{arm}_vs_{ctl}_{fam}"] = pe
+            # the PREREG's declared secondary metrics, reported always and never a bar
+            for sm in ("judge_accuracy", "distinct_valid_tuples"):
+                se = W.paired_estimand(rows[fam][arm], rows[fam][ctl], sm, 0.0, arm, ctl)
+                se["is_a_bar"] = False
+                se["note_secondary"] = (
+                    "PREREG section 4 declared this a SECONDARY metric, reported always "
+                    "and never a bar. It cannot rescue a bar the headline metric failed.")
+                entry["paired"][f"secondary_{sm}_{arm}_vs_{ctl}_{fam}"] = se
             log(f"  seed {s} bar {bar}: {arm} vs {ctl} ({fam}) delta="
                 f"{pe['mean_paired_delta']:+.3f} ci95={np.round(pe['bootstrap_ci95'], 3).tolist()} "
                 f"wins={pe['corners_arm_wins']}/{pe['n_corners']} p={pe['sign_test_p_two_sided']:.3g} "
