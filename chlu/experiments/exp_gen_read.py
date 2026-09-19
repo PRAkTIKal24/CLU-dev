@@ -50,6 +50,12 @@ from typing import Callable, Optional, Sequence
 import numpy as np
 
 from . import exp_gen_factor_wells as fw
+
+#: ⭐ Captured AT IMPORT, before :func:`read_dial` ever replaces anything.  Everything in
+#: this module that needs wave 3's own builder calls THIS, so the dial can never recurse
+#: into itself and the store an arm reads is always wave 3's object.
+_FW_BUILD_ARM = fw.build_arm
+_FW_ARM_FEATURES = fw.arm_features
 from ..core.gen_read import (
     TensorAddress, assert_read_request_only, render_span, span_basis,
     span_coefficients,
@@ -85,7 +91,9 @@ ARMS = (
     "pvm_table",            # the plain per-value-mean table, full D -- the specialist
     "oracle_span",          # ⛔ NOT AN ARM: the ceiling of this dial
     "landscape_removed",    # charter C.2 -- atoms zeroed, must collapse
-    "landscape_shuffled",   # charter C.2 -- atoms kept, addressing broken
+    "landscape_shuffled",   # charter C.2 -- atom VALUES permuted, must collapse
+    "random_span_refit",    # stronger than C.2 asks: random atoms, address book REFIT
+    "span_rotated",         # a PREDICTED no-op: what the read actually uses
     "lookup_argmax",        # charter C.1/C.4 -- one atom per well, my address
     "lookup_convex",        # charter C.1 -- the mixture, simplex imposed
     "corr_linear",          # w4-common section 1 -- correlation-split store + linear head
@@ -102,6 +110,8 @@ ARM_STORE = {
     "oracle_span": "balanced",
     "landscape_removed": "balanced",
     "landscape_shuffled": "balanced",
+    "random_span_refit": "balanced",
+    "span_rotated": "balanced",
     "lookup_argmax": "balanced",
     "lookup_convex": "balanced",
     "corr_linear": "ward",
@@ -118,6 +128,8 @@ ARM_READ = {
     "oracle_span": "oracle",
     "landscape_removed": "tensor",
     "landscape_shuffled": "tensor",
+    "random_span_refit": "tensor",
+    "span_rotated": "tensor",
     "lookup_argmax": "tensor_argmax",
     "lookup_convex": "tensor_convex",
     "corr_linear": "head",
@@ -248,6 +260,65 @@ def _pool_span_targets(store, pool: np.ndarray, basis, log: Callable = print) ->
     return grid.factor_indices_of(pool), parts
 
 
+#: Perturbations of the LANDSCAPE, and when each is applied.  PRE_FIT ones change what
+#: the store IS and the address book is refitted against them; POST_FIT ones keep the
+#: fitted address book and break the thing it was fitted to.
+PRE_FIT_PERTURB = {
+    "random_span_refit": "random_span",
+    "span_rotated": "rotate",
+}
+POST_FIT_PERTURB = {
+    "landscape_removed": "zero",
+    "landscape_shuffled": "value_permute",
+}
+
+
+def perturb_store(store, kind: str, seed: int):
+    """Return a store with the same SHAPE and the same byte ledger, atoms changed.
+
+    ``zero``
+        charter C.2 -- the atoms hold nothing.  The bytes are still deployed, so the row
+        stays byte-matched and a collapse is attributable to the atoms and not to a
+        smaller object.
+    ``value_permute``
+        charter C.2's informative half, **redefined for a span read**.  Wave 3 permuted
+        the MODE INDEX, which a span read is exactly invariant to (permuting the rows of
+        ``G`` does not move its left singular vectors), so that control would prove
+        nothing here.  This permutes the atom VALUES inside each well's mode matrix: the
+        same numbers, the same ledger, the geometry destroyed.
+    ``random_span``
+        stronger than the charter asks: the atoms are replaced by a random Gaussian
+        matrix of the same shape, scaled to the same Frobenius norm, and the address book
+        is REFIT.  If the arm survives this, the answer lives in the address book and not
+        in the store.
+    ``rotate``
+        a random orthogonal rotation of the atoms INSIDE each well.  The span is
+        mathematically unchanged, so this is a **predicted no-op** and it is reported as
+        one: it states that this read uses a well's subspace and not the identity of the
+        atoms that span it.
+    """
+    import jax
+    rng = np.random.default_rng(int(seed) * 7919 + 20_260_919)
+    out = []
+    for G in store.modes:
+        Gm = np.asarray(G, np.float32)
+        if kind == "zero":
+            out.append(np.zeros_like(Gm))
+        elif kind == "value_permute":
+            out.append(Gm.reshape(-1)[rng.permutation(Gm.size)].reshape(Gm.shape))
+        elif kind == "random_span":
+            Rn = rng.normal(size=Gm.shape).astype(np.float32)
+            Rn *= float(np.linalg.norm(Gm)) / (float(np.linalg.norm(Rn)) + 1e-12)
+            out.append(Rn)
+        elif kind == "rotate":
+            Q, _ = np.linalg.qr(rng.normal(size=(Gm.shape[0], Gm.shape[0])))
+            out.append((Q.astype(np.float32) @ Gm))
+        else:
+            raise ValueError(kind)
+    return type(store)(store.well_channels, int(fw.PINS["n_modes"]), store.feat_shape,
+                       jax.random.PRNGKey(0), init=out)
+
+
 def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
     """Fit one arm: its store (via ``fw.build_arm``, unchanged) and its ADDRESS.
 
@@ -272,7 +343,7 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
 
     # -- the arms that deploy no store -------------------------------------
     if arm == "knn_proto":
-        obj = fw.build_arm("knn_proto", out_dir, log=log)
+        obj = _FW_BUILD_ARM("knn_proto", out_dir, log=log)
         obj = dict(obj)
         obj["read"] = "proto"
         arm_dir.mkdir(parents=True, exist_ok=True)
@@ -303,12 +374,15 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
 
     # -- the store, from wave 3's own builder, unchanged --------------------
     src = {"balanced": "factor_aligned_balanced", "ward": "basis_head"}[store_name]
-    base = fw.build_arm(src, out_dir, log=log)
+    base = _FW_BUILD_ARM(src, out_dir, log=log)
     store, heads, spec = base["store"], base["heads"], base["spec"]
 
-    if arm == "landscape_removed":
-        from ..core.gen_store import delete_store
-        store = delete_store(store, mode="zero", seed=int(fw.PINS["seed"]))
+    # -- perturbations applied BEFORE the address book is fitted -----------
+    # These change what the store IS, so the address book is refitted against the
+    # perturbed atoms.  That is the strong form of the charter C.2 question: if the arm
+    # still works when the atoms are replaced, the answer was never in the store.
+    if arm in PRE_FIT_PERTURB:
+        store = perturb_store(store, PRE_FIT_PERTURB[arm], int(fw.PINS["seed"]))
 
     basis = span_basis(store)
     obj = {"arm": arm, "read": verb, "store": store, "heads": heads, "spec": spec,
@@ -322,9 +396,9 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         pool = pool[: int(READ_PINS["n_addr_train"])]
         # the address book is fitted ONCE per (store, condition, seed) and shared by every
         # arm that reads that store, so an arm's margin is never a second fit.
-        cache = out_dir / f"address_{store_name}_{verb}.pkl"
-        if arm == "landscape_removed":
-            cache = out_dir / f"address_{store_name}_{verb}_removed.pkl"
+        tag = PRE_FIT_PERTURB.get(arm)
+        cache = out_dir / (f"address_{store_name}_{verb}"
+                           + (f"_{tag}" if tag else "") + ".pkl")
         if cache.exists():
             with open(cache, "rb") as fh:
                 addr = pickle.load(fh)
@@ -360,19 +434,16 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
     else:
         obj["address_bytes"] = dict(base["head_bytes"])
 
-    if arm == "landscape_shuffled":
-        # charter C.2, the informative half: the SAME atoms, the SAME ledger, only the
-        # mode index permuted AFTER the address book was fitted.  The reachable span is
-        # unchanged, so this isolates the ADDRESSING and not the capacity.
-        import jax
-        rng = np.random.default_rng(int(fw.PINS["seed"]) * 7919 + 20_260_919)
-        store = type(store)(
-            store.well_channels, int(fw.PINS["n_modes"]), store.feat_shape,
-            jax.random.PRNGKey(0),
-            init=[np.asarray(G)[rng.permutation(np.asarray(G).shape[0])]
-                  for G in store.modes])
-        obj["store"] = store
-        obj["basis"] = span_basis(store)
+    # -- perturbations applied AFTER the address book is fitted ------------
+    if arm in POST_FIT_PERTURB:
+        kind = POST_FIT_PERTURB[arm]
+        obj["store"] = perturb_store(store, kind, int(fw.PINS["seed"]))
+        obj["perturbation"] = {"kind": kind, "when": "after the address book was fitted"}
+        if kind == "zero":
+            obj["zeroed"] = True
+            obj["basis"] = basis
+        else:
+            obj["basis"] = span_basis(obj["store"])
 
     obj["fit_seconds"] = _now() - t0
     arm_dir.mkdir(parents=True, exist_ok=True)
@@ -392,6 +463,28 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def grid_rows_of(values: np.ndarray, grid) -> tuple:
+    """(N, F) requested VALUES -> the dataset row realising them, nearest on the grid.
+
+    Used ONLY by the ``oracle`` non-arm.  shapes3d is a full factorial, so a tuple of
+    factor indices IS a row id; an unrequested or off-grid value takes the nearest grid
+    index and the row is flagged, which is the most generous reading available to the
+    ceiling and therefore the conservative direction for every arm measured against it.
+    """
+    V = np.asarray(values, np.float64)
+    cards = tuple(int(c) for c in grid.cardinalities)
+    idx = np.zeros((V.shape[0], len(cards)), np.int64)
+    oor = np.zeros(V.shape[0], bool)
+    for f in range(len(cards)):
+        gv = np.asarray(grid.values[f], np.float64)
+        v = V[:, f]
+        asked = ~np.isnan(v)
+        vv = np.where(asked, v, gv[0])
+        idx[:, f] = np.argmin(np.abs(vv[:, None] - gv[None, :]), axis=1)
+        oor |= asked & ((v < gv[0]) | (v > gv[-1]))
+    return np.ravel_multi_index(tuple(idx.T), cards), oor
+
+
 def arm_features(obj: dict, values: np.ndarray, grid) -> tuple:
     """(N, F) requested VALUES -> (N, D) features + the out-of-range mask.
 
@@ -400,10 +493,16 @@ def arm_features(obj: dict, values: np.ndarray, grid) -> tuple:
     """
     verb = obj.get("read", "head")
     if verb == "proto":
-        return fw.arm_features(obj, values, grid)
+        return _FW_ARM_FEATURES(obj, values, grid)
     if verb == "pvm_table":
         return obj["table"].read(values, grid.values)
     store, basis = obj["store"], obj.get("basis")
+    if obj.get("zeroed"):
+        # the atoms hold nothing, so the read is identically zero whatever the address
+        # says -- which is what charter C.2's "atoms zeroed" means, stated rather than
+        # left to an empty SVD basis.
+        return (np.zeros((np.asarray(values).shape[0], int(store.dim)), np.float32),
+                np.zeros(np.asarray(values).shape[0], bool))
     if verb == "head":
         from ..core.gen_request_head import head_read, request_design
         Phi, oor = request_design(values, grid.values, obj["spec"])
@@ -412,11 +511,12 @@ def arm_features(obj: dict, values: np.ndarray, grid) -> tuple:
         X, oor = obj["table"].read(values, grid.values)
         return render_span(store, span_coefficients(store, X, basis), basis), oor
     if verb == "oracle":
-        # ⛔ NOT AN ARM (charter B.3): it reads the requested row's own feature.
-        rows = obj["oracle_rows"]
+        # NOT AN ARM (charter B.3): it reads the requested row's own feature, so no
+        # request-only guarantee holds for it and it is never quoted as a mechanism.  It
+        # is the CEILING of this dial: the best point in span(G_k) for this request.
+        rows, oor = grid_rows_of(values, grid)
         F = fw.features_mmap(int(fw.PINS["seed"]))
-        X = fw.gather(F, np.asarray(rows, np.int64))
-        oor = np.zeros(np.asarray(values).shape[0], bool)
+        X = fw.gather(F, rows)
         return render_span(store, span_coefficients(store, X, basis), basis), oor
     addr = obj["address"]
     if verb in ("tensor", "tensor_sum"):
