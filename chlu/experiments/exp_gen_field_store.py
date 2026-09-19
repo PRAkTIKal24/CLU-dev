@@ -589,13 +589,41 @@ def run_arm(arm: str, out: Path, seed: int, max_seconds: float = 3600.0,
     return {"incomplete": False, "n_done": len(done)}
 
 
+#: Which factor every corner on this scoreboard holds CONSTANT.  Not an assumption: it is
+#: asserted per corner below, and ``corners.json``'s ``corner_geometry`` records it for the
+#: scored corner sets as well as for this hub's val ones.
+GATE_FACTOR = 4          # shape
+
+
 def per_corner(corners, cor: dict, grid, seen_mask) -> list:
+    """One row per corner, with the metric DECOMPOSED along the scoreboard's own geometry.
+
+    Every corner holds ``shape`` constant and varies the three hues over 2 values, ``scale``
+    over 3 and ``orientation`` over 3 (``corners.json:corner_geometry``).  So ``shape`` can
+    only act as a per-corner GATE -- it cannot generate distinct tuples -- while the count
+    of distinct tuples is driven by the factors that do vary.
+
+    ``..._novel_tuples`` is the scoreboard metric, unchanged.
+    ``..._novel_tuples_gate_held`` counts the same thing with the gate factor supplied by
+    the CORNER rather than by the judge: the judged non-gate factors must all be right, and
+    the tuple is completed with the corner's own constant ``shape``.  ⭐ It is computed for
+    EVERY corner and conditions on NOTHING the arm produced, which is what makes it a fair
+    decomposition rather than a comparison restricted to the corners an arm got right.
+    """
     cards = tuple(int(c) for c in grid.cardinalities)
+    keepf = [f for f in range(len(cards)) if f != GATE_FACTOR]
     out = []
     for c in corners:
         r = cor[c["corner_id"]]
         v = np.asarray(r["valid"], bool)
         t = np.asarray(r["tuples"])
+        acc = np.asarray(r["accept"], bool)
+        true = grid.factor_indices_of(np.asarray(c["rows"], np.int64))
+        gate_vals = np.unique(true[:, GATE_FACTOR])
+        if gate_vals.size != 1:
+            raise AssertionError(
+                f"{c['corner_id']}: factor {GATE_FACTOR} takes {gate_vals.size} values in "
+                "this corner, so it is not a gate here and the decomposition does not apply")
         keep = t[v]
         if keep.size:
             lin = np.unique(np.ravel_multi_index(tuple(keep.T), cards))
@@ -603,12 +631,24 @@ def per_corner(corners, cor: dict, grid, seen_mask) -> list:
         else:
             lin = np.zeros(0, np.int64)
             novel = np.zeros(0, np.int64)
+        ok5 = acc & np.all(t[:, keepf] == true[:, keepf], axis=1)
+        if ok5.any():
+            g = np.array(t[ok5])
+            g[:, GATE_FACTOR] = int(gate_vals[0])
+            lin5 = np.unique(np.ravel_multi_index(tuple(g.T), cards))
+            novel5 = lin5[~seen_mask[lin5]]
+        else:
+            lin5 = np.zeros(0, np.int64)
+            novel5 = np.zeros(0, np.int64)
         out.append({"corner_id": c["corner_id"], "n_requests": int(r["n"]),
-                    "n_accepted": int(np.asarray(r["accept"]).sum()),
+                    "n_accepted": int(acc.sum()),
                     "n_valid": int(v.sum()),
                     "judge_accuracy": float(v.mean()) if v.size else 0.0,
+                    "gate_accuracy": float((t[:, GATE_FACTOR]
+                                            == true[:, GATE_FACTOR]).mean()),
                     "distinct_valid_tuples": int(lin.size),
-                    "distinct_valid_novel_tuples": int(novel.size)})
+                    "distinct_valid_novel_tuples": int(novel.size),
+                    "distinct_valid_novel_tuples_gate_held": int(novel5.size)})
     return out
 
 
@@ -1074,6 +1114,7 @@ def build_report(out: Path, log: Callable = print) -> dict:
 
     # the paired per-corner estimand, field vs the incumbent, per seed
     estimand = {}
+    gate_held = {}
     for seed in PINS["seeds"]:
         a = tables.get("field", {}).get(int(seed))
         b = tables.get("aligned_w3", {}).get(int(seed))
@@ -1082,6 +1123,11 @@ def build_report(out: Path, log: Callable = print) -> dict:
         for row in ("r3", "r4"):
             estimand.setdefault(row, {})[int(seed)] = paired_estimand(
                 a[row], b[row], "distinct_valid_novel_tuples",
+                WITHIN_BAND_NOVELTY, "field", "aligned_w3")
+            # ⭐ THE DECOMPOSITION, unconditioned: the same paired estimand with the gate
+            # factor supplied by the corner instead of by the judge.  Every corner is in it.
+            gate_held.setdefault(row, {})[int(seed)] = paired_estimand(
+                a[row], b[row], "distinct_valid_novel_tuples_gate_held",
                 WITHIN_BAND_NOVELTY, "field", "aligned_w3")
 
     def _spread(row, key):
@@ -1122,8 +1168,22 @@ def build_report(out: Path, log: Callable = print) -> dict:
         "vs_incumbent_seed_spread": _spread("r1_seen", "r1_seen"),
     }
 
-    rep = {"summary": summary, "paired_estimand": estimand, "verdict": verdict,
-           "tables": tables,
+    gate_acc = {}
+    for arm in ARMS:
+        for row in ("r3", "r4"):
+            vals = [float(np.mean([r["gate_accuracy"] for r in t[row]]))
+                    for sd in PINS["seeds"]
+                    if (t := tables.get(arm, {}).get(int(sd))) is not None]
+            if vals:
+                gate_acc.setdefault(arm, {})[row] = {
+                    "per_seed": vals, "mean": float(np.mean(vals))}
+    rep = {"summary": summary, "paired_estimand": estimand,
+           "paired_estimand_gate_held": gate_held,
+           "gate_factor": {"index": GATE_FACTOR, "name": str(grid.names[GATE_FACTOR]),
+                           "why": ("every corner on this scoreboard holds it constant, so "
+                                   "it gates validity and cannot generate distinct tuples"),
+                           "accuracy": gate_acc},
+           "verdict": verdict, "tables": tables,
            "bands_declared_in_advance": {"novelty_rows_3_4": WITHIN_BAND_NOVELTY,
                                          "accuracy_row_1": WITHIN_BAND_ACCURACY},
            "pins": {k: (list(v) if isinstance(v, tuple) else v) for k, v in PINS.items()},
