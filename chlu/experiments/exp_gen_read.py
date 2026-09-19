@@ -103,11 +103,16 @@ ARMS = (
     # through their own callable and run through MY corners by MY judge, so every row on
     # the table is the same path.  A win over one of these is a RESULT; a win over an
     # ablation is an ABLATION and is labelled so.
-    "table", "mlp", "cont_mlp", "transformer", "lstm", "lace", "poe_ebm",
+    "table", "mlp", "mlp_180k", "cont_mlp", "transformer", "lstm", "lace", "poe_ebm",
 ))
 
-#: The rival names, in the order they are printed.
-RIVAL_NAMES = ("table", "mlp", "cont_mlp", "transformer", "lstm", "lace", "poe_ebm")
+#: The rival names, in the order they are printed.  ⭐ ``mlp_180k`` is spoke A's rival at
+#: THIS HUB's own total parameter count (178,952 against my 179,968, −0.57 %), added
+#: because no arm on this hub can be parameter-matched to the 118,784-parameter rival
+#: target — the pinned store alone is 131,072 parameters.  It answers the budget-gap
+#: objection with a measurement instead of an argument.
+RIVAL_NAMES = ("table", "mlp", "mlp_180k", "cont_mlp", "transformer", "lstm",
+               "lace", "poe_ebm")
 
 #: Which store each arm deploys.  ``None`` = the arm deploys no store.
 ARM_STORE = {
@@ -126,8 +131,7 @@ ARM_STORE = {
     "corr_linear": "ward",
     "knn_proto": None,
 }
-ARM_STORE.update({f"rival_{n}": None for n in
-                  ("table", "mlp", "cont_mlp", "transformer", "lstm", "lace", "poe_ebm")})
+ARM_STORE.update({f"rival_{n}": None for n in RIVAL_NAMES})
 
 #: Which read verb each arm uses.
 ARM_READ = {
@@ -146,8 +150,7 @@ ARM_READ = {
     "corr_linear": "head",
     "knn_proto": "proto",
 }
-ARM_READ.update({f"rival_{n}": "rival" for n in
-                 ("table", "mlp", "cont_mlp", "transformer", "lstm", "lace", "poe_ebm")})
+ARM_READ.update({f"rival_{n}": "rival" for n in RIVAL_NAMES})
 
 #: Arms that are declared NOT ARMS and are never quoted as a mechanism.
 NOT_ARMS = ("oracle_span",)
@@ -397,6 +400,19 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
                       arm_dir / "NOT_RUN.json")
             log(f"  arm {arm}: DECLARED NOT-RUN -- {obj['not_run']}")
             return obj
+        # ⭐ Spoke A ships TWO variants at the same matched parameter count: a full-only
+        # learner (the primary, and the one rows 3 and 4 use, because every corner
+        # request names all six factors) and a ``_dropout`` learner trained with partial
+        # requests.  A full-only learner REFUSES a request carrying ``nan`` rather than
+        # answering one out of distribution, which is the correct behaviour and would
+        # otherwise crash the query-set rows.  So the partial variant is loaded beside
+        # it and a request is routed by whether it is partial; which one answered is
+        # recorded per arm and printed in the caption.
+        r_partial = None
+        try:
+            r_partial = load_rival(int(fw.PINS["seed"]), f"{name}_dropout")
+        except Exception:
+            r_partial = None
         names = list(getattr(r, "names", grid.names))
         if names != [str(x) for x in grid.names]:
             raise AssertionError(
@@ -411,6 +427,12 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
             with open(mp, encoding="utf-8") as fh:
                 meta = json.load(fh)
         obj = {"arm": arm, "read": "rival", "kind": "rival", "rival": r,
+               "rival_partial": r_partial,
+               "partial_policy": ("the _dropout variant answers a request with an "
+                                  "unrequested factor" if r_partial is not None else
+                                  "NOT ANSWERABLE: no _dropout variant is fitted, so "
+                                  "rows 1/2/5/6 for this rival are a DECLARED NOT-RUN"),
+               "partial_answerable": bool(r_partial is not None),
                # fw.run_arm fingerprints "the object that must not have been refitted
                # between the two halves of row 7".  A rival exposes no parameters through
                # the callable, so the fingerprint is EMPTY and that is declared here
@@ -608,8 +630,28 @@ def arm_features(obj: dict, values: np.ndarray, grid) -> tuple:
     if verb == "rival":
         if obj.get("rival") is None:
             raise AssertionError(f"{obj['arm']} is a DECLARED NOT-RUN and has no read")
-        feats, oor = obj["rival"](np.asarray(values, np.float64))
-        return np.asarray(feats, np.float32), np.asarray(oor, bool)
+        V = np.asarray(values, np.float64)
+        part = np.isnan(V).any(axis=1)
+        out = np.zeros((V.shape[0], int(fw.PINS["D"])), np.float32)
+        oor = np.zeros(V.shape[0], bool)
+        if (~part).any():
+            f, o = obj["rival"](V[~part])
+            out[~part] = np.asarray(f, np.float32)
+            oor[~part] = np.asarray(o, bool)
+        if part.any():
+            rp = obj.get("rival_partial")
+            if rp is None:
+                # ⛔ No variant of this rival can answer a partial request.  The rows are
+                # flagged out-of-range so the shared acceptance rule declines them, and
+                # `partial_answerable=False` in arm.json makes build_table print rows
+                # 1/2/5/6 for this rival as a DECLARED NOT-RUN rather than as a refusal
+                # the rival never chose.
+                oor[part] = True
+            else:
+                f, o = rp(V[part])
+                out[part] = np.asarray(f, np.float32)
+                oor[part] = np.asarray(o, bool)
+        return out, oor
     if verb == "proto":
         return _FW_ARM_FEATURES(obj, values, grid)
     if verb == "pvm_table":
@@ -742,7 +784,15 @@ def build_table(out_dir: Path, primary: str = "tensor_addr", margin: float = 1.0
     out_dir = Path(out_dir)
     cond = fw.load_condition()
     grid = cond["grid"]
-    seen_mask = fw.seen_tuple_mask(grid, cond["train_rows"])
+    if fw.PINS["condition"] == "val":
+        # ⛔ In the SELECTION condition the val corners' rows LIVE IN the train index and
+        # are removed from the fit pool, so "novel" must be measured against the rows the
+        # store was actually fitted from.  Using cond["train_rows"] here would mark every
+        # val tuple as seen and report 0.000 novel tuples for every arm.
+        fitted = np.setdiff1d(cond["train_rows"], fw.val_corner_rows(cond))
+    else:
+        fitted = cond["train_rows"]
+    seen_mask = fw.seen_tuple_mask(grid, fitted)
     if fw.PINS["condition"] == "val":
         # the SELECTION condition scores only the val corners; they are the row-4
         # geometry and they are labelled r4 so the DEV table and the scored table read
@@ -778,12 +828,20 @@ def build_table(out_dir: Path, primary: str = "tensor_addr", margin: float = 1.0
             v = np.array([by_id[c["corner_id"]]["distinct_valid_novel_tuples"]
                           for c in cs], float)
             j = np.array([by_id[c["corner_id"]]["judge_accuracy"] for c in cs], float)
+            if not v.size:
+                blk[row_id] = {"n_corners": 0,
+                               "note": "not scored under this condition"}
+                continue
             blk[row_id] = {"n_corners": int(v.size),
                            "novel_tuples_per_corner": float(v.mean()),
                            "sd": float(v.std(ddof=1)) if v.size > 1 else 0.0,
                            "judge_accuracy": float(j.mean())}
+        if meta.get("partial_answerable") is False:
+            blk["query_set_rows"] = (
+                "DECLARED NOT-RUN: this rival has no variant fitted for a request with "
+                "an unrequested factor, and rows 1/2/5/6 carry them. A dash, not a null.")
         z = np.load(out_dir / "arms" / a / "rows.npz", allow_pickle=True)
-        if "qrows" in z.files:
+        if "qrows" in z.files and meta.get("partial_answerable") is not False:
             q = z["qrows"].item()
             for row_id in ("r1_seen", "r2_unseen_valid", "r5_comp_refusal",
                            "r6_invalid_refusal"):
