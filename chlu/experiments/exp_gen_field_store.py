@@ -926,7 +926,8 @@ def sweep(out: Path, seed: int = 0, log: Callable = print) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def content_ceiling(out: Path, seed: int = 0, log: Callable = print) -> dict:
+def content_ceiling(out: Path, seed: int = 0, condition: str = "val",
+                    log: Callable = print) -> dict:
     """⛔ **NOT AN ARM.**  It reads a FEATURE, so it can never be quoted as a mechanism.
 
     The question it answers, and it is the only way to answer it cheaply: how much of the
@@ -939,7 +940,25 @@ def content_ceiling(out: Path, seed: int = 0, log: Callable = print) -> dict:
 
     (The construction is the one `hub/read` calls ``oracle_span``; it is reported here in
     the same declared NON-ARM status.)
+
+    ⚠⚠ ``condition="test"`` runs this on the SCORED corners.  ``hub/read`` measured the same
+    ceiling on val and on the scored set and got **orientation 0.550 vs 0.8804** — it
+    concluded from val that the atoms could not carry orientation and that was WRONG.  The
+    val Montero slots are a different region of the grid; `hub/placement` independently saw
+    a val margin shrink 8.6x on the scored set.  ⛔ So the val ceiling in this hub's report
+    bounds the OBJECT, not the scored rows, and the scored-corner ceiling is the first thing
+    wave 5 should measure.  ⛔ It is a number on the held-out set and therefore a SCORED RUN
+    (charter section A.2): it needs a PREREG file and a row in
+    ``/c/chlu/SCORED-LEDGER.md`` BEFORE it runs.  ``hub/field-store`` has a budget of ZERO
+    and did not run it; the guard below is why.
     """
+    if str(condition) == "test" and not os.environ.get("CHLU_FIELD_SPEND_SCORED_RUN"):
+        raise SystemExit(
+            "REFUSED: --condition test puts a number on the held-out set, which is a "
+            "SCORED RUN under charter section A.2. hub/field-store's budget is ZERO and "
+            "it did not spend it. To run this deliberately from a hub that HAS budget: "
+            "pre-register it, append the row to /c/chlu/SCORED-LEDGER.md, then set "
+            "CHLU_FIELD_SPEND_SCORED_RUN=1.")
     cond = load_condition()
     grid = cond["grid"]
     names = list(grid.names)
@@ -948,11 +967,16 @@ def content_ceiling(out: Path, seed: int = 0, log: Callable = print) -> dict:
     J = _judge(int(PINS["bridge_seed"]), log)
     F = features_mmap(int(PINS["bridge_seed"]))
     pool = field_fit_pool(cond, seed)
-    c3, c4 = row3_corners(cond), row4_corners(cond)
+    if str(condition) == "test":
+        from .exp_gen_factor_wells import nway_corners, pair_subcorners
+        c3, c4 = pair_subcorners(cond), nway_corners(cond)
+    else:
+        c3, c4 = row3_corners(cond), row4_corners(cond)
     sets = {"r1_seen": row1_requests(cond, pool),
             "r3_2way": np.concatenate([c["rows"] for c in c3])[::3],
             "r4_nway": np.concatenate([c["rows"] for c in c4])[::2]}
-    rep = {"seed": int(seed), "declared": "NON-ARM: this reads a feature (charter B.3)"}
+    rep = {"seed": int(seed), "condition": str(condition),
+           "declared": "NON-ARM: this reads a feature (charter B.3)"}
     for name, rows in sets.items():
         Xt = gather(F, rows)
         proj = np.zeros_like(Xt)
@@ -982,7 +1006,7 @@ def content_ceiling(out: Path, seed: int = 0, log: Callable = print) -> dict:
         log(f"  ceiling {name}: " + "  ".join(
             f"{names[f]}={rep[name]['oracle_span_per_factor'][names[f]]:.3f}"
             f"/{rep[name]['true_feature_per_factor'][names[f]]:.3f}" for f in range(6)))
-    _jdump(rep, seed_dir(out, seed) / "content_ceiling.json")
+    _jdump(rep, seed_dir(out, seed) / f"content_ceiling_{condition}.json")
     return rep
 
 
@@ -1123,6 +1147,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", required=True)
     p.add_argument("--max-seconds", type=float, default=3600.0)
+    p.add_argument("--condition", default="val", choices=("val", "test"),
+                   help=("val is the selection condition and the only one this hub used; "
+                         "test is a SCORED RUN and is guarded"))
     return p
 
 
@@ -1137,11 +1164,34 @@ def main(argv=None) -> int:
 
     if args.stage == "corners":
         cond = load_condition()
-        pool = field_fit_pool(cond, seed)
+        pool = field_fit_pool(cond, args.seed)
         c3, c4 = row3_corners(cond), row4_corners(cond)
         r1 = row1_requests(cond, pool)
         info = assert_smoke_is_not_scored(cond, c3, c4, r1, pool)
         ex = excluded_rows(cond)
+        from .exp_gen_factor_wells import nway_corners, pair_subcorners
+
+        def _geometry(corners):
+            P = np.array([[len(np.unique(
+                cond["grid"].factor_indices_of(np.asarray(c["rows"], np.int64))[:, f]))
+                for f in range(6)] for c in corners])
+            return {str(cond["grid"].names[f]): {
+                "distinct_values_per_corner": sorted(set(int(x) for x in P[:, f])),
+                "constant_in_n_corners": int((P[:, f] == 1).sum()),
+                "n_corners": int(P.shape[0])} for f in range(6)}
+        # ⭐ The FIGURE OF MERIT's geometry, recorded so nobody has to re-derive it: every
+        # corner on this scoreboard holds SHAPE constant and varies the three hues over 2
+        # values, scale over 3 and orientation over 3.  Every arm measured here reads the
+        # hues at 1.0000, so distinct-tuple COUNT is driven by scale x orientation and
+        # shape acts as a per-corner GATE.  Structural: it reads the condition's own cell
+        # definitions and no held-out number, so it costs no scored run.
+        info["corner_geometry"] = {
+            "my_val_row3": _geometry(c3), "my_val_row4": _geometry(c4),
+            "SCORED_row3": _geometry(pair_subcorners(cond)),
+            "SCORED_row4": _geometry(nway_corners(cond)),
+            "note": ("structural only -- the condition's cell definitions, not a number on "
+                     "the held-out set"),
+        }
         info["pool"] = {"n": int(pool.size),
                         "n_excluded_from_pool": int(ex["all"].size),
                         "n_val_nway_rows": int(ex["val_nway_rows"].size),
@@ -1155,7 +1205,7 @@ def main(argv=None) -> int:
     elif args.stage == "run":
         run_arm(args.arm, out, args.seed, max_seconds=args.max_seconds, log=log)
     elif args.stage == "ceiling":
-        content_ceiling(out, args.seed, log=log)
+        content_ceiling(out, args.seed, condition=args.condition, log=log)
     elif args.stage == "delete":
         deletion_proof(out, args.seed, log=log)
     elif args.stage == "report":
