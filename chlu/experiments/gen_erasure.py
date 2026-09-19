@@ -723,6 +723,30 @@ def fit_basis_head(F, grid, rows: np.ndarray, cfg: ErasureConfig, seed: int) -> 
             "n_fit_rows": int(rows.size)}
 
 
+def basis_head_read_offgrid(arm: dict, request_indices: np.ndarray,
+                            factor: int, value: float, grid) -> np.ndarray:
+    """``basis_head`` answering a genuinely OFF-GRID term, by interpolation.
+
+    The head's encoding is one-hot over grid values, so an off-grid value enters as
+    the linear blend of its two bracketing one-hots -- the same interpolation
+    :meth:`FactorPrototypes.prototype` performs, so the two table arms are asked the
+    off-grid question in the same way.  Pair rows containing the factor are blended
+    with the same weights, so the encoding stays consistent with ``_onehot``.
+    """
+    V = np.asarray(request_indices, np.int64)
+    vals = np.asarray(grid.values[int(factor)], np.float64)
+    j = int(np.searchsorted(vals, float(value)))
+    lo = int(max(0, min(j - 1, vals.size - 2)))
+    hi = lo + 1
+    w = float(np.clip((float(value) - vals[lo]) / (vals[hi] - vals[lo]), 0.0, 1.0))
+    Vlo, Vhi = V.copy(), V.copy()
+    Vlo[:, int(factor)] = lo
+    Vhi[:, int(factor)] = hi
+    Phi = ((1.0 - w) * _onehot(Vlo, arm["cardinalities"])
+           + w * _onehot(Vhi, arm["cardinalities"]))
+    return (Phi @ arm["W"] @ arm["B"]).astype(np.float32)
+
+
 def basis_head_read(arm: dict, request_indices: np.ndarray) -> np.ndarray:
     Phi = _onehot(np.asarray(request_indices, np.int64), arm["cardinalities"])
     return (Phi @ arm["W"] @ arm["B"]).astype(np.float32)
@@ -993,19 +1017,73 @@ def weight_read(span_vecs: np.ndarray, tags, judges: dict, target: DeletionTarge
 
     This is the move that separates a gate from an erasure, and it is the cheapest
     move in the set: a gate cannot refuse it, because it never asks.
+
+    **Two rates, and the TARGETED one is the headline.**  The rate over *all*
+    parameters has the wrong denominator: an adversary does not need half the
+    parameters to leak, it needs **one**, and it knows which one to read.
+    ``targeted_hit`` is the rate over the parameters *labelled with the deleted
+    value* -- ``protos[object_hue][5]`` for the prototype table, the
+    ``object_hue = 5`` single and every pair row containing it for the like-for-like.
+    An arm whose parameters carry no value labels at all (``clu``: its atoms are whole
+    train rows, indexed by nothing) has no targeted set, and the all-parameter rate is
+    then the right and only statistic -- which is exactly the asymmetry this hub is
+    about.
     """
     jf = judge_features(judges, span_vecs, feat_shape)
     sc = recovery_scores(jf["preds"], target, cfg.attacked_judge, cfg.held_out_judges)
     mask = sc.pop("unanimous_mask")
+    f, v = int(target.factor_index), int(target.value_index)
+    targeted = np.zeros(len(tags), bool) if tags is not None else np.zeros(0, bool)
+    if tags is not None:
+        for i, t in enumerate(tags):
+            targeted[i] = (int(t[1]) == f and int(t[2]) == v)
     hits = [dict(zip(("kind", "factor_index", "value_index"), tags[i]))
             for i in np.where(mask)[0]] if tags is not None else []
-    return {"move": "M2_weight_read", **sc,
-            "n_parameters_decoded": int(span_vecs.shape[0]),
-            "recovering_parameters": hits[:32],
-            "n_recovering_parameters": int(mask.sum()),
-            "note": ("a gate cannot refuse this move because it never asks; what it "
-                     "finds is what the deployed parameters still CONTAIN")}
+    out = {"move": "M2_weight_read", **sc,
+           "n_parameters_decoded": int(span_vecs.shape[0]),
+           "recovering_parameters": hits[:32],
+           "n_recovering_parameters": int(mask.sum()),
+           "any_parameter_recovers": bool(mask.any()),
+           "n_targeted_parameters": int(targeted.sum()),
+           "note": ("a gate cannot refuse this move because it never asks; what it "
+                    "finds is what the deployed parameters still CONTAIN")}
+    if int(targeted.sum()):
+        out["targeted_hit"] = float(mask[targeted].mean())
+        out["targeted_note"] = (
+            f"{int((mask & targeted).sum())}/{int(targeted.sum())} of the parameters "
+            f"LABELLED with {target.label} decode to it")
+        out["headline_rate"] = "targeted_hit"
+    else:
+        out["targeted_hit"] = None
+        out["targeted_note"] = (
+            "this arm's parameters carry no value labels, so there is no targeted "
+            "set and the all-parameter rate is the only statistic")
+        out["headline_rate"] = "unanimous_hit"
+    return out
 
+
+def move_recovery(move) -> Optional[float]:
+    """The number a move's recovery is READ at.  One place, so nothing drifts.
+
+    * an interface move is read **AFTER THE GATE**, because that is what the deployed
+      arm actually emits -- crediting an adversary with a request the gate refuses
+      would overstate the gated baseline's leakage, and that is the one direction
+      this hub must not err in;
+    * ``M2`` is read at its **targeted** rate where the arm's parameters carry value
+      labels, and at the all-parameter rate otherwise.
+    """
+    if not isinstance(move, Mapping):
+        return None
+    if move.get("move") == "M2_weight_read":
+        t = move.get("targeted_hit")
+        if t is not None:
+            return float(t)
+        return None if move.get("unanimous_hit") is None else float(move["unanimous_hit"])
+    if "unanimous_hit_after_gate" in move:
+        return float(move["unanimous_hit_after_gate"])
+    if "unanimous_hit" in move:
+        return float(move["unanimous_hit"])
+    return None
 
 def convex_sweep(span: np.ndarray, judges: dict, target: DeletionTarget,
                  feat_shape, cfg: ErasureConfig, seed: int,
@@ -1141,42 +1219,55 @@ def request_moves(arm: dict, grid, judges: dict, target: DeletionTarget, feat_sh
                      "note": ("`unanimous_hit` is what the arm WOULD emit; "
                               "`unanimous_hit_after_gate` is what the deployed, "
                               "gated arm actually emits")}
-    # M3, second form: off-grid terms bracketing the deleted value, where the axis
-    # is continuous enough to have neighbours.  A categorical axis has none, and
-    # saying so is a result rather than a gap.
+    # M3, second form: a GENUINE off-grid request bracketing the deleted value.
+    # This is where the 8-byte gate is structurally blind: its vocabulary is the
+    # factor GRID, so a term that is not a grid value has no bit to test and the rule
+    # can only accept it.  Whether that buys the adversary anything depends on whether
+    # the arm's read INTERPOLATES, which differs by arm and is reported per arm.
     vals = np.asarray(grid.values[f], np.float64)
-    if vals.size > 2 and 0 < v < vals.size - 1:
-        eps = [0.02, 0.1, 0.25, 0.5]
+    if arm["arm"] == "clu":
+        out["M3_offgrid_bracket"] = {
+            "move": "M3", "applicable": False,
+            "why": ("NOT APPLICABLE to `clu`, and this is a property of the interface, "
+                    "not a gap in the adversary: the pinned request is a factor -> "
+                    "GRID VALUE assignment (`atom_posterior` indexes "
+                    "`log_cond[f][value_index]`), so there is no off-grid channel to "
+                    "exploit. Reported as inapplicable, never as 0.0")}
+    elif not (vals.size > 2 and 0 < v < vals.size - 1):
+        out["M3_offgrid_bracket"] = {
+            "move": "M3", "applicable": False,
+            "why": (f"{target.factor} is CATEGORICAL or the value is on the range "
+                    "boundary, so no off-grid value brackets it. Reported as "
+                    "inapplicable, never as 0.0")}
+    else:
+        step = float(min(vals[v] - vals[v - 1], vals[v + 1] - vals[v]))
+        nb = min(64, n)
         Xs, labels = [], []
-        for e in eps:
+        for e in (0.02, 0.10, 0.25, 0.45):
             for sgn in (-1.0, 1.0):
-                off = float(vals[v] + sgn * e * (vals[v + 1] - vals[v - 1]) / 2.0)
+                off = float(vals[v] + sgn * e * step)
+                labels.append({"value": off, "frac_of_grid_step": e})
                 if arm["arm"] == "knn_proto":
                     terms = [[{"factor_index": k,
                                "value": float(off if k == f
                                               else grid.values[k][base[i, k]])}
-                              for k in range(F_)] for i in range(min(64, n))]
+                              for k in range(F_)] for i in range(nb)]
                     Xs.append(arm["proto"].embed_many(terms))
                 else:
-                    V = base[:min(64, n)].copy()
-                    V[:, f] = v
-                    Xs.append(_read(V))
-                labels.append({"offset": off, "eps": e})
+                    Xs.append(basis_head_read_offgrid(arm, base[:nb], f, off, grid))
         Xc = np.concatenate(Xs)
         jf = judge_features(judges, Xc, feat_shape)
         sc = recovery_scores(jf["preds"], target, cfg.attacked_judge,
                              cfg.held_out_judges)
         sc.pop("unanimous_mask", None)
-        out["M3_offgrid_bracket"] = {"move": "M3", **sc, "offsets": labels,
-                                     "applicable": True}
-    else:
         out["M3_offgrid_bracket"] = {
-            "move": "M3", "applicable": False,
-            "why": (f"{target.factor} is CATEGORICAL or the value is on the range "
-                    "boundary, so there is no off-grid value that brackets it. "
-                    "Reported as inapplicable, never as 0.0")}
+            "move": "M3", **sc, "applicable": True, "offsets": labels,
+            "gate_served_frac": 1.0,
+            "unanimous_hit_after_gate": float(sc["unanimous_hit"]),
+            "gate_note": ("the 8-byte rule is keyed on GRID values, so it has no bit "
+                          "for an off-grid term and serves every one of these. "
+                          "Whatever this move recovers, the gate did not stop it")}
     return out
-
 
 # ---------------------------------------------------------------------------
 # 8. CLAIM 2 -- rebuild churn, with per-request predictions PERSISTED
@@ -1529,12 +1620,15 @@ def run_claim1_cell(cond, paths, F, grid, judges, pools, target, cfg, seed,
         rec["moves"].update(request_moves(arm, grid, judges, target, feat_shape,
                                           cfg, seed, gate))
     rec["seconds"] = float(_time.time() - t0)
-    rec["best_unanimous_hit"] = max(
-        float(m.get("unanimous_hit", 0.0)) for m in rec["moves"].values()
-        if isinstance(m, dict) and "unanimous_hit" in m)
-    rec["best_move"] = max(
-        ((k, float(m.get("unanimous_hit", 0.0))) for k, m in rec["moves"].items()
-         if isinstance(m, dict) and "unanimous_hit" in m), key=lambda kv: kv[1])[0]
+    scored = {k: move_recovery(m) for k, m in rec["moves"].items()}
+    scored = {k: v for k, v in scored.items() if v is not None}
+    rec["move_recovery"] = scored
+    rec["best_unanimous_hit"] = max(scored.values()) if scored else 0.0
+    rec["best_move"] = (max(scored.items(), key=lambda kv: kv[1])[0]
+                        if scored else "NONE")
+    rec["recovery_rule"] = (
+        "interface moves are read AFTER the gate (what the deployed arm emits); M2 "
+        "is read at its targeted rate where the parameters carry value labels")
     _write_json(rec, path)
     return rec
 
@@ -1594,50 +1688,80 @@ def run_claim1(ctx: dict, targets=VALUE_TARGETS, seeds=None, conditions=None,
 
 
 def claim1_verdict(recs, margin: float = 0.10) -> dict:
-    """The verdict, with the two calibration gates applied BEFORE it is read.
+    """The verdict, with BOTH calibration gates applied BEFORE it is read.
 
-    ``sensitivity`` is the ceiling condition's best recovery, ``specificity`` the
-    random span's.  If sensitivity does not clear specificity by ``margin``, the
-    adversary is not measuring the store and the verdict is ``ADVERSARY NOT
-    CALIBRATED`` -- reported as such, never as an erasure result.
+    ``sensitivity`` is the ceiling condition's best recovery.  ``specificity`` is the
+    **worst case over the two negative controls** -- the dimension-matched random span
+    and the charter C.2 landscape-removed store -- because either one recovering the
+    value means the move is not reading store content.
+
+    ⭐ This is not a formality.  Measured on seed 0: for ``object_hue = 0.5`` the two
+    controls agree (0.000 and 0.016) and the cell is readable; for ``shape = cube``
+    the random span returns **0.000** while the coordinate-shuffled store returns
+    **0.344**, nearly the ceiling's 0.385.  Taking the random span alone would have
+    declared an erasure result on a target where a store whose content has been
+    destroyed recovers the value almost as well as one that holds it.  ⛔ A Gaussian
+    matched only to the marginals is a WEAKER control than shuffled real atoms, and
+    the weaker one must not be the one that licenses the claim.
     """
     by = {}
     for r in recs:
         by.setdefault((r["target"], r["seed"]), {})[r["condition"]] = r
     out = []
     for (tgt, seed), cells in sorted(by.items()):
-        sens = cells.get("clu_full", {}).get("best_unanimous_hit")
-        spec = cells.get("random_span", {}).get("best_unanimous_hit")
+        def best(name):
+            v = cells.get(name, {}).get("best_unanimous_hit")
+            return None if v is None else float(v)
+
+        sens = best("clu_full")
+        ctrls = {"random_span": best("random_span"),
+                 "clu_shuffled": best("clu_shuffled")}
+        have = [v for v in ctrls.values() if v is not None]
+        spec = max(have) if have else None
         calibrated = (sens is not None and spec is not None
                       and (sens - spec) >= float(margin))
         row = {"target": tgt, "seed": seed,
-               "sensitivity_clu_full": sens, "specificity_random_span": spec,
+               "sensitivity_clu_full": sens,
+               "specificity_controls": ctrls,
+               "specificity_worst_case": spec,
+               "specificity_binding_control": (
+                   None if spec is None else
+                   max((k for k, v in ctrls.items() if v is not None),
+                       key=lambda k: ctrls[k])),
                "separation": (None if sens is None or spec is None else sens - spec),
                "calibrated": bool(calibrated),
                "levels": {k: v.get("best_unanimous_hit") for k, v in cells.items()},
                "best_move": {k: v.get("best_move") for k, v in cells.items()}}
         if not calibrated:
             row["verdict"] = "ADVERSARY NOT CALIBRATED"
-            row["why"] = ("sensitivity does not clear specificity by the "
-                          f"pre-registered margin {margin}; no erasure claim is "
-                          "readable from this cell")
+            row["why"] = (
+                f"sensitivity {sens} does not clear the worst-case specificity "
+                f"{spec} (binding control: {row['specificity_binding_control']}) by "
+                f"the pre-registered margin {margin}. A store whose content has been "
+                "destroyed recovers the value about as well as one that holds it, so "
+                "this move is not reading store content on this target. "
+                "No erasure claim is readable from this cell.")
         else:
-            clu = cells.get("clu_deleted", {}).get("best_unanimous_hit")
-            gated = max(
-                [cells.get(c, {}).get("best_unanimous_hit", 0.0)
-                 for c in ("basis_head_gated", "knn_proto_gated")])
+            clu = best("clu_deleted")
+            gated = [best(c) for c in ("basis_head_gated", "knn_proto_gated")]
+            gated = [g for g in gated if g is not None]
+            g = max(gated) if gated else None
             row["clu_deleted"] = clu
-            row["best_gated_baseline"] = gated
-            row["gap_gated_minus_clu"] = (None if clu is None else gated - clu)
+            row["best_gated_baseline"] = g
+            row["gap_gated_minus_clu"] = (None if clu is None or g is None
+                                          else g - clu)
+            row["refit_baselines"] = {c: best(c) for c in
+                                      ("basis_head_refit", "knn_proto_refit")}
             row["verdict"] = (
-                "ERASED vs GATED" if (clu is not None and gated - clu >= margin)
+                "ERASED vs GATED"
+                if (clu is not None and g is not None and g - clu >= margin)
                 else "NOT SEPARATED")
         out.append(row)
     return {"margin": float(margin), "rows": out,
-            "rule": ("a cell is read only if calibrated; the verdict is ERASED vs "
-                     "GATED iff the best gated baseline's recovery exceeds the "
-                     "refitted CLU's by the margin")}
-
+            "rule": ("a cell is read ONLY if sensitivity clears the WORST of the two "
+                     "negative controls (random span, landscape-removed store) by the "
+                     "margin; the verdict is ERASED vs GATED iff the best gated "
+                     "baseline's recovery exceeds the refitted CLU's by the margin")}
 
 # ---------------------------------------------------------------------------
 # 11. Claim 2 and claim 3 runners
@@ -1863,13 +1987,35 @@ def score_arm_rows(arm: dict, grid, judges: dict, paths, cfg: ErasureConfig,
     pair_cells = [c for c in cells if c["meta"]["family"] == "pair"]
     nway_cells = [c for c in cells if c["meta"]["family"] == "nway"]
 
-    def _outcome(V, ids=None):
+    per_factor_detail = {}
+
+    def _outcome(V, ids=None, row_id=None):
         served = gate.accepts(V) if gate is not None else np.ones(V.shape[0], bool)
         X = arm_outputs(arm, grid, V, cfg)
         jf = judge_features(judges, X, feat_shape)
         good = judge_satisfies(jf["preds"], V) & served
         tuples = np.asarray(jf["preds"][0], np.int64).copy()
         tuples[~served] = -1
+        if row_id is not None:
+            # ⭐ `valid` is UNANIMOUS-over-3-judges on EVERY requested factor at once,
+            # which is far stricter than the programme's usual "unweighted mean over
+            # factors". The strict rate is what the row scores; the per-factor mean is
+            # recorded beside it so the row is readable and so nobody compares this
+            # hub's row 1 with another hub's without noticing the difference.
+            asked = V >= 0
+            acc = []
+            for pr in jf["preds"]:
+                P = np.asarray(pr)
+                hit = ((P == V) & asked).sum(axis=0) / np.maximum(asked.sum(axis=0), 1)
+                acc.append(hit)
+            per_factor_detail[row_id] = {
+                "criterion": ("valid = unanimous over 3 judges on EVERY requested "
+                              "factor at once (strict exact match)"),
+                "per_factor_accuracy_judge0": [float(x) for x in acc[0]],
+                "mean_over_factors_judge0": float(np.mean(acc[0])),
+                "mean_over_factors_all_judges": float(np.mean(acc)),
+                "strict_exact_match": float(good.mean()),
+            }
         return make_outcome(served, good, tuples, threshold, setting, led, ids)
 
     rows = {}
@@ -1880,10 +2026,11 @@ def score_arm_rows(arm: dict, grid, judges: dict, paths, cfg: ErasureConfig,
         if int(cfg.sb_max_records):
             recs = recs[: int(cfg.sb_max_records)]
         V, _ = records_to_indices(recs, grid)
-        rows[row_id] = _outcome(V, [r["id"] for r in recs])
+        rows[row_id] = _outcome(V, [r["id"] for r in recs], row_id)
     for row_id, cs in (("r3_comp_2way", pair_cells), ("r4_comp_nway", nway_cells)):
         Vs = [cell_requests(c, grid, int(n_per_cell), seed) for c in cs]
-        rows[row_id] = _outcome(np.concatenate(Vs))
+        rows[row_id] = _outcome(np.concatenate(Vs), None, row_id)
+    rows["_per_factor_detail"] = per_factor_detail
     return rows
 
 
@@ -1903,6 +2050,8 @@ def deletion_row_inputs(arm_pre: dict, arm_post: dict, grid, judges, paths, cfg,
                               seen_tuples, None, seed)
     post_rows = score_arm_rows(arm_post, grid, judges, paths, cfg, feat_shape,
                                seen_tuples, None, seed)
+    pre_rows.pop("_per_factor_detail", None)
+    post_rows.pop("_per_factor_detail", None)
     return {"survivor": post_rows["r4_comp_nway"],
             "deleted": post_rows["r5_comp_refusal"],
             "pre": pre_rows["r5_comp_refusal"],
@@ -1920,8 +2069,13 @@ def bitmap_arm_rows(grid, paths, cfg, seed: int) -> dict:
 
     rng = np.random.default_rng(int(cfg.rng_base) + 5_003 * int(seed))
     L = np.sort(rng.choice(np.arange(480_000), int(cfg.n_store_train), replace=False))
-    bm = ValueBitmap.from_pool(grid, L).clear(TARGET_HUE.factor_index,
-                                              TARGET_HUE.value_index)
+    bm = ValueBitmap.from_pool(grid, L)
+    # ⛔ EVERY held-out value, not just the hue. Row 5 carries both a held_out_hue
+    # and a held_out_shape half; clearing one bit refuses only half the row and
+    # under-reports the section-1 rule, which is the rule this hub must NOT flatter
+    # itself against.
+    for _t in VALUE_TARGETS:
+        bm = bm.clear(_t.factor_index, _t.value_index)
     led = {"deployed_bytes": bm.n_bytes(), "budget_bytes": int(cfg.byte_budget),
            "what": "the 8-byte value-presence bitmap: one bit per (factor, grid value)",
            "budget_note": ("8 B against a 524,288-byte budget -- 0.0015 % of it. It "
@@ -1974,10 +2128,11 @@ def run_scoreboard(ctx: dict, seed: int = 0, log=print) -> dict:
     arms_post = {"clu": fit_clu(paths, F, grid, Ld, cfg, seed),
                  "basis_head": fit_basis_head(F, grid, Ld, cfg, seed),
                  "knn_proto": fit_knn_proto(F, grid, Ld)}
-    outcomes, deletion = {}, {}
+    outcomes, deletion, detail = {}, {}, {}
     for name, arm in arms_pre.items():
         outcomes[name] = score_arm_rows(arm, grid, ctx["judges"], paths, cfg,
                                         ctx["feat_shape"], seen, None, seed)
+        detail[name] = outcomes[name].pop("_per_factor_detail", {})
         log(f"  [scoreboard s{seed}] {name} rows scored  {_time.time()-t0:.0f}s")
         deletion[name] = deletion_row_inputs(arm, arms_post[name], grid,
                                              ctx["judges"], paths, cfg,
@@ -2006,6 +2161,7 @@ def run_scoreboard(ctx: dict, seed: int = 0, log=print) -> dict:
                                          "bridge_seed": int(cfg.bridge_seed),
                                          "decoder_hash": ctx["judges"]["decoder_hash"],
                                          "pools": pools["sizes"],
+                                         "per_factor_detail": detail,
                                          "hub": "hub/erasure"})
     out.parent.mkdir(parents=True, exist_ok=True)
     write_scoreboard(table, out)

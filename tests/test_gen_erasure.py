@@ -265,6 +265,30 @@ def test_the_shuffled_span_keeps_every_marginal_and_destroys_the_joint():
     assert not np.allclose(a, b)
 
 
+def test_the_landscape_removed_control_can_veto_a_cell_the_random_span_would_pass():
+    """Measured on seed 0, target shape=cube: random_span 0.000 but clu_shuffled 0.344
+    against a ceiling of 0.385. Gating on the random span alone would have licensed an
+    erasure claim on a target where a content-destroyed store does nearly as well."""
+    recs = [
+        {"target": "cube", "seed": 0, "condition": "clu_full",
+         "best_unanimous_hit": 0.385, "best_move": "M4a"},
+        {"target": "cube", "seed": 0, "condition": "random_span",
+         "best_unanimous_hit": 0.000, "best_move": "M2"},
+        {"target": "cube", "seed": 0, "condition": "clu_shuffled",
+         "best_unanimous_hit": 0.344, "best_move": "M4a"},
+        {"target": "cube", "seed": 0, "condition": "clu_deleted",
+         "best_unanimous_hit": 0.188, "best_move": "M4a"},
+        {"target": "cube", "seed": 0, "condition": "knn_proto_gated",
+         "best_unanimous_hit": 0.646, "best_move": "M4a"},
+    ]
+    row = E.claim1_verdict(recs, margin=0.10)["rows"][0]
+    assert row["specificity_binding_control"] == "clu_shuffled"
+    assert row["specificity_worst_case"] == pytest.approx(0.344)
+    assert row["calibrated"] is False
+    assert row["verdict"] == "ADVERSARY NOT CALIBRATED"
+    assert "clu_deleted" not in row
+
+
 def test_a_cell_that_fails_calibration_is_not_read_as_an_erasure_result():
     recs = [
         {"target": "t", "seed": 0, "condition": "clu_full", "best_unanimous_hit": 0.10,
@@ -273,6 +297,8 @@ def test_a_cell_that_fails_calibration_is_not_read_as_an_erasure_result():
          "best_move": "M4a"},
         {"target": "t", "seed": 0, "condition": "clu_deleted", "best_unanimous_hit": 0.0,
          "best_move": "M1"},
+        {"target": "t", "seed": 0, "condition": "clu_shuffled",
+         "best_unanimous_hit": 0.01, "best_move": "M5"},
         {"target": "t", "seed": 0, "condition": "basis_head_gated",
          "best_unanimous_hit": 1.0, "best_move": "M2"},
     ]
@@ -292,6 +318,8 @@ def test_a_calibrated_cell_reports_the_gap_between_gated_and_refitted():
          "best_move": "M4a"},
         {"target": "t", "seed": 0, "condition": "basis_head_gated",
          "best_unanimous_hit": 0.95, "best_move": "M2"},
+        {"target": "t", "seed": 0, "condition": "clu_shuffled",
+         "best_unanimous_hit": 0.03, "best_move": "M5"},
         {"target": "t", "seed": 0, "condition": "knn_proto_gated",
          "best_unanimous_hit": 0.90, "best_move": "M2"},
     ]
@@ -300,3 +328,60 @@ def test_a_calibrated_cell_reports_the_gap_between_gated_and_refitted():
     assert row["calibrated"] is True
     assert row["verdict"] == "ERASED vs GATED"
     assert row["gap_gated_minus_clu"] == pytest.approx(0.93)
+
+
+# ---------------------------------------------------------------------------
+# how a move's recovery is READ -- the two rules that decide every headline
+# ---------------------------------------------------------------------------
+
+
+def test_an_interface_move_is_read_AFTER_the_gate():
+    """⛔ Crediting the adversary with a request the gate refuses would overstate the
+    GATED baseline's leakage, which is the one direction this hub must not err in."""
+    assert E.move_recovery(
+        {"move": "M1", "unanimous_hit": 0.934, "unanimous_hit_after_gate": 0.0}) == 0.0
+
+
+def test_an_ungated_interface_move_is_read_at_its_plain_rate():
+    assert E.move_recovery({"move": "M1", "unanimous_hit": 0.54}) == pytest.approx(0.54)
+
+
+def test_the_weight_read_is_read_at_its_TARGETED_rate_when_one_exists():
+    """An adversary does not need half the parameters to leak; it needs one, and it
+    knows which one. The all-parameter rate has the wrong denominator."""
+    assert E.move_recovery({"move": "M2_weight_read", "targeted_hit": 0.75,
+                            "unanimous_hit": 0.005}) == pytest.approx(0.75)
+
+
+def test_the_weight_read_falls_back_when_the_parameters_carry_no_value_labels():
+    """`clu`'s atoms are whole train rows indexed by nothing, so it has no targeted
+    set and the all-parameter rate is the right and only statistic."""
+    assert E.move_recovery({"move": "M2_weight_read", "targeted_hit": None,
+                            "unanimous_hit": 0.109}) == pytest.approx(0.109)
+
+
+def test_an_inapplicable_move_contributes_no_number():
+    assert E.move_recovery({"move": "M3", "applicable": False, "why": "x"}) is None
+    assert E.move_recovery({"move": "M5", "status": "NOT APPLICABLE"}) is None
+
+
+def test_offgrid_interpolation_lands_between_the_bracketing_one_hots():
+    """The off-grid move must actually be off-grid: at the midpoint the encoding is
+    half on each bracketing value, which is what makes it a bracket."""
+    grid = _Grid()
+    # a DENSE random head: an identity-like W would discard most request features and
+    # the test would pass on a fixture that cannot tell the two values apart at all.
+    rng = np.random.default_rng(0)
+    P = len(E.request_feature_names(CARDS))
+    arm = {"cardinalities": CARDS,
+           "W": rng.normal(0, 1, (P, 5)).astype(np.float32),
+           "B": rng.normal(0, 1, (5, 8)).astype(np.float32)}
+    V = np.zeros((1, 6), np.int64)
+    mid = float((grid.values[E.F_OBJECT_HUE][4] + grid.values[E.F_OBJECT_HUE][5]) / 2)
+    x_mid = E.basis_head_read_offgrid(arm, V, E.F_OBJECT_HUE, mid, grid)
+    V4 = V.copy(); V4[:, E.F_OBJECT_HUE] = 4
+    V5 = V.copy(); V5[:, E.F_OBJECT_HUE] = 5
+    x4 = E.basis_head_read(arm, V4)
+    x5 = E.basis_head_read(arm, V5)
+    assert np.allclose(x_mid, 0.5 * (x4 + x5), atol=1e-5)
+    assert not np.allclose(x_mid, x4)
