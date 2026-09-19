@@ -486,8 +486,13 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         # the address book is fitted ONCE per (store, condition, seed) and shared by every
         # arm that reads that store, so an arm's margin is never a second fit.
         tag = PRE_FIT_PERTURB.get(arm)
-        cache = out_dir / (f"address_{store_name}_{verb}"
-                           + (f"_{tag}" if tag else "") + ".pkl")
+        # ⭐ The key carries every pin the fit depends on.  A cache keyed only by the
+        # store and the verb would silently hand a --rank 64 run the rank-128 book.
+        cache = out_dir / (
+            f"address_{store_name}_{verb}_R{int(READ_PINS['rank'])}"
+            f"_lam{READ_PINS['ridge']}_sw{int(READ_PINS['sweeps'])}"
+            f"_n{int(READ_PINS['n_addr_train'])}"
+            + (f"_{tag}" if tag else "") + ".pkl")
         if cache.exists():
             with open(cache, "rb") as fh:
                 addr = pickle.load(fh)
@@ -786,6 +791,66 @@ def build_table(out_dir: Path, primary: str = "tensor_addr", margin: float = 1.0
 
 
 
+def lookup_diagnostics(arm: str, out_dir: Path, n_sample: int = 1024,
+                       log: Callable = print) -> dict:
+    """Charter C.4: is this read a lookup table wearing a landscape?
+
+    For a sample of the scored corners' requests, per well:
+
+    ``d_near``   the distance from the addressed point to its NEAREST atom;
+    ``d_atom``   the mean nearest-neighbour distance BETWEEN atoms, the natural unit;
+    ``snapfrac`` the share of requests whose addressed point sits closer to its nearest
+                 atom than ``snap_tol`` times ``d_atom``.
+
+    ⛔ An arm whose settled state sits on its nearest atom (``d_near -> 0``) is a lookup
+    table and is reported as one.  This is computed on the arm that is actually deployed,
+    from the requests that are actually scored, and it is printed whether it flatters the
+    arm or not.
+    """
+    out_dir = Path(out_dir)
+    with read_dial():
+        obj = build_arm(arm, out_dir, log=log)
+    if obj.get("not_run") or obj.get("read") in ("proto", "pvm_table", "rival"):
+        return {"arm": arm, "not_applicable": "this arm deploys no atoms"}
+    cond = fw.load_condition()
+    grid = cond["grid"]
+    cs = (fw.val_corners(cond) if fw.PINS["condition"] == "val"
+          else fw.pair_subcorners(cond) + fw.nway_corners(cond))
+    rows = np.concatenate([c["rows"] for c in cs])
+    rng = np.random.default_rng(int(fw.PINS["seed"]))
+    rows = rows[rng.permutation(rows.size)[:int(n_sample)]]
+    vals = grid.values_of(rows)
+    X, _ = arm_features(obj, vals, grid)
+    store = obj["store"]
+    per = []
+    for w, G in zip(store.well_channels, store.modes):
+        idx = np.asarray(w, np.int64)
+        Gm = np.asarray(G, np.float64)
+        P = np.asarray(X, np.float64)[:, idx]
+        d2 = (np.sum(P * P, 1)[:, None] - 2.0 * (P @ Gm.T)
+              + np.sum(Gm * Gm, 1)[None, :])
+        d_near = np.sqrt(np.maximum(d2.min(1), 0.0))
+        gg = (np.sum(Gm * Gm, 1)[:, None] - 2.0 * (Gm @ Gm.T)
+              + np.sum(Gm * Gm, 1)[None, :])
+        np.fill_diagonal(gg, np.inf)
+        d_atom = float(np.sqrt(np.maximum(gg.min(1), 0.0)).mean())
+        per.append({"d_near_mean": float(d_near.mean()),
+                    "d_near_over_d_atom": float(d_near.mean() / max(d_atom, 1e-12)),
+                    "d_atom_mean_nn": d_atom,
+                    "snapfrac_0p10": float((d_near < 0.10 * d_atom).mean()),
+                    "snapfrac_0p25": float((d_near < 0.25 * d_atom).mean())})
+    out = {"arm": arm, "n_sample": int(rows.size), "per_well": per,
+           "d_near_over_d_atom_mean": float(np.mean([q["d_near_over_d_atom"]
+                                                     for q in per])),
+           "snapfrac_0p25_mean": float(np.mean([q["snapfrac_0p25"] for q in per])),
+           "rule": ("charter C.4 -- d_near/d_atom -> 0 means the read settled ON an atom "
+                    "and the arm is a lookup table; it is reported as one")}
+    fw._jdump(out, out_dir / "arms" / arm / "lookup_check.json")
+    log(f"  {arm}: d_near/d_atom = {out['d_near_over_d_atom_mean']:.4f}, "
+        f"snapfrac(0.25) = {out['snapfrac_0p25_mean']:.4f}")
+    return out
+
+
 # ---------------------------------------------------------------------------
 # 7. Stages
 # ---------------------------------------------------------------------------
@@ -835,7 +900,8 @@ def _cache_manifest(seed: int) -> dict:
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--stage", required=True,
-                   choices=("prepare", "fit", "run", "table", "pins"))
+                   choices=("prepare", "fit", "run", "table", "pins",
+                            "lookupcheck"))
     p.add_argument("--arm", default=None)
     p.add_argument("--out", required=True)
     p.add_argument("--seed", type=int, default=0)
@@ -883,6 +949,9 @@ def main(argv=None) -> int:
         return 0
     if a.stage == "run":
         log(json.dumps(stage_run(a.arm, out, a.max_seconds, log=log), default=str))
+        return 0
+    if a.stage == "lookupcheck":
+        log(json.dumps(lookup_diagnostics(a.arm, out, log=log), default=str))
         return 0
     if a.stage == "table":
         with read_dial():
