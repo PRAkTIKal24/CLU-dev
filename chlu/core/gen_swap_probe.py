@@ -132,7 +132,7 @@ def transfer_matrix(judge, Xi, Xj, Yi, Yj, labels: np.ndarray, k: int,
             "well_sizes": np.bincount(lab, minlength=K).tolist()}
 
 
-def derive_ownership(T: np.ndarray) -> np.ndarray:
+def derive_ownership(T: np.ndarray, vary: Optional[Sequence[int]] = None) -> np.ndarray:
     """``own[w]`` = the factor well ``w`` carries, by max-weight assignment on ``T``.
 
     ``K <= F`` here, so at least one factor is UNOWNED by construction -- with K=5 wells
@@ -143,15 +143,29 @@ def derive_ownership(T: np.ndarray) -> np.ndarray:
     """
     from scipy.optimize import linear_sum_assignment
     Tm = np.asarray(T, np.float64)
-    rows, cols = linear_sum_assignment(-Tm)
     own = np.full(Tm.shape[0], -1, np.int64)
-    own[rows] = cols
+    if vary is None:
+        rows, cols = linear_sum_assignment(-Tm)
+        own[rows] = cols
+        return own
+    # ⛔ MEASURED BUG, FIXED 2026-09-19 BEFORE ITS NUMBERS WERE REPORTED.  When a factor is
+    # HELD CONSTANT across the pair (``make_pairs(fix=...)``), ``follow-j`` and ``follow-i``
+    # are the SAME event for it, so ``T[w, f]`` is just the classifier's accuracy on that
+    # factor -- large for EVERY well.  A Hungarian assignment over all factors then happily
+    # hands some well "ownership" of the fixed factor for free, which corrupts the whole
+    # decomposition.  Ownership and leakage are therefore restricted to the factors that
+    # actually vary; the fixed ones can only ever be part of the "must stay" requirement,
+    # which ``exact`` already enforces.
+    v = np.asarray(list(vary), np.int64)
+    rows, cols = linear_sum_assignment(-Tm[:, v])
+    own[rows] = v[cols]
     return own
 
 
 def score_partition(judge, Xi, Xj, Yi, Yj, labels: np.ndarray, k: int,
                     batch: int = 256, log: Optional[Callable] = None,
-                    own: Optional[np.ndarray] = None) -> dict:
+                    own: Optional[np.ndarray] = None,
+                    vary: Optional[Sequence[int]] = None) -> dict:
     """The swap loss, in full, with every component a reader needs to check it.
 
     ``exact`` is the headline: the fraction of (well, pair) swaps whose decoded image the
@@ -169,7 +183,9 @@ def score_partition(judge, Xi, Xj, Yi, Yj, labels: np.ndarray, k: int,
     """
     tm = transfer_matrix(judge, Xi, Xj, Yi, Yj, labels, k, batch=batch, log=log)
     T, S = tm["T"], tm["S"]
-    derived = derive_ownership(T)
+    Fn = int(T.shape[1])
+    varyl = list(range(Fn)) if vary is None else [int(x) for x in vary]
+    derived = derive_ownership(T, vary=(None if vary is None else varyl))
     own_used = derived if own is None else np.asarray(own, np.int64)
     K, F = T.shape
     Yi_ = np.asarray(Yi, np.int64)
@@ -185,8 +201,9 @@ def score_partition(judge, Xi, Xj, Yi, Yj, labels: np.ndarray, k: int,
         exact_w[w] = float(hit.all(axis=1).mean())
         perfac_w[w] = float(hit.mean())
     control = float(np.mean([T[w, own_used[w]] for w in range(K) if own_used[w] >= 0]))
-    off = [(w, f) for w in range(K) for f in range(F) if f != own_used[w]]
-    leak = float(np.mean([T[w, f] for w, f in off]))
+    # leakage over the VARYING factors only, for the reason in derive_ownership
+    off = [(w, f) for w in range(K) for f in varyl if f != own_used[w]]
+    leak = float(np.mean([T[w, f] for w, f in off])) if off else 0.0
     return {
         "exact": float(exact_w.mean()),
         "per_factor": float(perfac_w.mean()),
@@ -203,6 +220,10 @@ def score_partition(judge, Xi, Xj, Yi, Yj, labels: np.ndarray, k: int,
         "well_sizes": tm["well_sizes"],
         "n_pairs": int(Yi_.shape[0]),
         "n_decodes": int(K * Yi_.shape[0]),
+        "varying_factors": varyl,
+        "ownership_and_leak_scope": (
+            "over the VARYING factors only; a factor held constant across the pair gets "
+            "free apparent transfer and may not compete for ownership"),
     }
 
 

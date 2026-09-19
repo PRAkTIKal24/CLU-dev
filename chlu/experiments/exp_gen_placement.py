@@ -516,9 +516,13 @@ def screen(out_dir: Path, n_pairs: int = SCREEN_PAIRS, max_seconds: float = 5400
         if _now() - t0 > float(max_seconds):
             log("  screen: wall-clock cap hit -- state saved, rerun to continue")
             break
+        vary = None
+        if match_estimand:
+            fixi = set(estimand_fix_indices(grid))
+            vary = [f for f in range(len(grid.names)) if f not in fixi]
         s = SP.score_partition(judge, Xi, Xj, Yi, Yj,
                                np.asarray(cands["labels"][nm], np.int64),
-                               int(W.PINS["K"]), int(W.PINS["eval_batch"]))
+                               int(W.PINS["K"]), int(W.PINS["eval_batch"]), vary=vary)
         s["candidate"] = nm
         s["note"] = cands["info"]["notes"].get(nm, "")
         res["candidates"][nm] = s
