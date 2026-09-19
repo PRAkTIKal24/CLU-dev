@@ -410,7 +410,8 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
             obj = {"arm": arm, "read": "rival", "not_run": f"{type(exc).__name__}: {exc}",
                    "rival": None, "byte_ledger": {"deployed_bytes": 0,
                                                   "what": "DECLARED NOT-RUN"},
-                   "address_bytes": {"address_bytes": 0}}
+                   "address_bytes": {"address_bytes": 0},
+                   "head_bytes": {"head_bytes": 0}}
             arm_dir.mkdir(parents=True, exist_ok=True)
             fw._jdump({k: v for k, v in obj.items() if k != "rival"},
                       arm_dir / "NOT_RUN.json")
@@ -473,6 +474,8 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
                                "param_count": meta.get("param_count")},
                "address_bytes": {"address_bytes": 0,
                                  "note": "a rival's parameters ARE its address book"},
+               "head_bytes": {"head_bytes": 0,
+                              "note": "a rival has no separable addressing head"},
                "rival_meta": {k: v for k, v in meta.items()
                               if k in ("param_count", "byte_ledger", "offgrid_capable",
                                        "val_mse_full_schedule",
@@ -513,6 +516,8 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
                "byte_ledger": tbl.byte_ledger(),
                "address_bytes": {"address_bytes": 0,
                                  "note": "the table IS its own address book"},
+               "head_bytes": {"head_bytes": 0,
+                              "note": "the table IS its own address book"},
                "fit_seconds": _now() - t0,
                "prov": {"n_rows_fit": tbl.n_fit_rows}}
         arm_dir.mkdir(parents=True, exist_ok=True)
