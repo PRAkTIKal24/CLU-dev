@@ -62,12 +62,17 @@ python -u -m chlu.experiments.exp_gen_read --stage prepare \
 
 for arm in "${ARMS[@]}"; do
   echo "[leg] ---- $arm ----"
-  python -u -m chlu.experiments.exp_gen_read --stage fit \
-    --out "$OUT" --seed "$SEED" --condition "$COND" --arm "$arm"
-    || echo "[leg] ARM FAILED (fit): $arm"
-  python -u -m chlu.experiments.exp_gen_read --stage run \
-    --out "$OUT" --seed "$SEED" --condition "$COND" --arm "$arm" \
-    --max-seconds "$MAX_SECONDS" || echo "[leg] ARM FAILED (run): $arm"
+  # One arm's failure must not cost the leg: every stage is resumable, the failure
+  # is loud in the log, and an arm with no rows.npz does not appear on the table.
+  if ! python -u -m chlu.experiments.exp_gen_read --stage fit \
+       --out "$OUT" --seed "$SEED" --condition "$COND" --arm "$arm"; then
+    echo "[leg] ARM FAILED (fit): $arm"
+  fi
+  if ! python -u -m chlu.experiments.exp_gen_read --stage run \
+       --out "$OUT" --seed "$SEED" --condition "$COND" --arm "$arm" \
+       --max-seconds "$MAX_SECONDS"; then
+    echo "[leg] ARM FAILED (run): $arm"
+  fi
 done
 # the table: every arm classed, the paired estimand under the PREREG's margin
 python -u -m chlu.experiments.exp_gen_read --stage table   --out "$OUT" --seed "$SEED" --condition "$COND"   --primary "${PRIMARY:-tensor_addr}" --margin "${MARGIN:-1.0}"
