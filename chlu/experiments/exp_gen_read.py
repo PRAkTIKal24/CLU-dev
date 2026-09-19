@@ -213,6 +213,22 @@ def bind_instrument(log: Callable = print) -> dict:
 # ---------------------------------------------------------------------------
 
 
+class _FitFingerprint:
+    """A stand-in for ``FactorPrototypes`` so wave 3's row-7 fingerprint can read an arm
+    that has neither store modes nor a prototype table.
+
+    ``fw.run_arm`` fingerprints "the object that must not have been refitted between the
+    two halves of row 7" as ``o["protos"].protos``.  An arm whose parameters are a plain
+    sequence (the per-value-mean table) or are not exposed at all (a rival, behind spoke
+    A's callable) needs that attribute to exist or the row raises.  ⛔ For a rival the
+    sequence is EMPTY and that is declared in ``arm.json``: the check cannot be performed
+    on a rival and must not look as though it passed.
+    """
+
+    def __init__(self, protos):
+        self.protos = tuple(protos)
+
+
 class PerValueMeanTable:
     """``mu + sum_f ( mu_{f,v_f} - mu )`` over the fit pool.  Additive, by construction.
 
@@ -437,7 +453,7 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
                # between the two halves of row 7".  A rival exposes no parameters through
                # the callable, so the fingerprint is EMPTY and that is declared here
                # rather than left to look like a passing check.
-               "protos": (),
+               "protos": _FitFingerprint(()),
                "fingerprint_note": ("a rival's parameters are not exposed by spoke A's "
                                     "callable, so its row-7 fit fingerprint is empty and "
                                     "proves nothing; the rival has no deletion operation "
@@ -480,7 +496,7 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         tbl = PerValueMeanTable(cards).fit(
             Y, (fw.gather(F, pool[s:s + chunk]) for s in range(0, pool.size, chunk)))
         obj = {"arm": arm, "read": "pvm_table", "kind": "pvm_table", "table": tbl,
-               "protos": tuple([tbl.mu] + list(tbl.dev)),
+               "protos": _FitFingerprint([tbl.mu] + list(tbl.dev)),
                "byte_ledger": tbl.byte_ledger(),
                "address_bytes": {"address_bytes": 0,
                                  "note": "the table IS its own address book"},
@@ -813,6 +829,19 @@ def build_table(out_dir: Path, primary: str = "tensor_addr", margin: float = 1.0
     log(f"  arms with rows: {have}")
     log(f"  declared NOT-RUN: {list(not_run)}")
 
+    # ⭐ The CEILING of each corner: the number of distinct tuples it can possibly yield,
+    # which is the product of the distinct values its own rows realise per factor.  Row 4
+    # corners hold 72 requests with a 72-tuple ceiling; row 3 corners hold 72 requests
+    # with a **36**-tuple ceiling, because `object_hue` and `shape` are both fixed so each
+    # tuple is requested twice.  ⛔ Reading the two rows on the same absolute scale
+    # understates row 3 by a factor of two.  (Raised by hub/placement; verified here.)
+    cards = tuple(int(c) for c in grid.cardinalities)
+    ceiling = {}
+    for c in n3 + n4:
+        Y = grid.factor_indices_of(c["rows"])
+        ceiling[c["corner_id"]] = int(np.prod(
+            [len(np.unique(Y[:, f])) for f in range(len(cards))]))
+
     per_corner, summary = {}, {}
     for a in have:
         rows = _corner_rows(out_dir / "arms" / a, n3 + n4, grid, seen_mask)
@@ -832,10 +861,13 @@ def build_table(out_dir: Path, primary: str = "tensor_addr", margin: float = 1.0
                 blk[row_id] = {"n_corners": 0,
                                "note": "not scored under this condition"}
                 continue
+            cap = np.array([ceiling[c["corner_id"]] for c in cs], float)
             blk[row_id] = {"n_corners": int(v.size),
                            "novel_tuples_per_corner": float(v.mean()),
                            "sd": float(v.std(ddof=1)) if v.size > 1 else 0.0,
-                           "judge_accuracy": float(j.mean())}
+                           "judge_accuracy": float(j.mean()),
+                           "ceiling_per_corner": float(cap.mean()),
+                           "frac_of_ceiling": float((v / cap).mean())}
         if meta.get("partial_answerable") is False:
             blk["query_set_rows"] = (
                 "DECLARED NOT-RUN: this rival has no variant fitted for a request with "
@@ -870,6 +902,13 @@ def build_table(out_dir: Path, primary: str = "tensor_addr", margin: float = 1.0
              "condition": fw.PINS["condition"], "seed": int(fw.PINS["seed"]),
              "arms": summary, "not_run": not_run, "estimands": estimands,
              "corner_counts": {"r3_comp_2way": len(n3), "r4_comp_nway": len(n4)},
+             "corner_ceilings": {"r3_comp_2way": float(np.mean(
+                 [ceiling[c["corner_id"]] for c in n3])) if n3 else None,
+                 "r4_comp_nway": float(np.mean(
+                     [ceiling[c["corner_id"]] for c in n4])) if n4 else None,
+                 "note": ("distinct tuples a corner CAN yield = the product of the "
+                          "distinct values its rows realise per factor; row 3 is 36 and "
+                          "row 4 is 72, so the two rows are not on the same scale")},
              "labels_note": ("labels are used ONCE at fit time to align wells and at the "
                              "address book, and nowhere else (charter B.6, w4-common 5)"),
              "pins": {"read": READ_PINS, "fw": {k: (list(v) if isinstance(v, tuple) else v)
@@ -993,6 +1032,12 @@ def stage_fit(arm: str, out_dir: Path, log: Callable = print) -> dict:
 
 
 def stage_run(arm: str, out_dir: Path, max_seconds: float, log: Callable = print) -> dict:
+    done = Path(out_dir) / "arms" / arm / "rows.npz"
+    if done.exists():
+        # ⭐ Resumability at the ARM level, not only the corner: a leg that is restarted
+        # after a failure must not re-score an arm whose rows are already on disk.
+        log(f"  arm {arm}: rows.npz already on disk, skipping")
+        return {"arm": arm, "incomplete": False, "skipped": True}
     with read_dial():
         obj = build_arm(arm, out_dir, log=log)
         if obj.get("not_run"):
