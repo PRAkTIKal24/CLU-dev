@@ -97,8 +97,17 @@ ARMS = (
     "lookup_argmax",        # charter C.1/C.4 -- one atom per well, my address
     "lookup_convex",        # charter C.1 -- the mixture, simplex imposed
     "corr_linear",          # w4-common section 1 -- correlation-split store + linear head
-    "knn_proto",            # the prototype table rival
-)
+    "knn_proto",            # the prototype table rival, rebuilt inside this harness
+) + tuple(f"rival_{n}" for n in (
+    # ⭐ THE FULL RIVAL SET (w4-common section 1), spoke A's fitted objects entered
+    # through their own callable and run through MY corners by MY judge, so every row on
+    # the table is the same path.  A win over one of these is a RESULT; a win over an
+    # ablation is an ABLATION and is labelled so.
+    "table", "mlp", "cont_mlp", "transformer", "lstm", "lace", "poe_ebm",
+))
+
+#: The rival names, in the order they are printed.
+RIVAL_NAMES = ("table", "mlp", "cont_mlp", "transformer", "lstm", "lace", "poe_ebm")
 
 #: Which store each arm deploys.  ``None`` = the arm deploys no store.
 ARM_STORE = {
@@ -117,6 +126,8 @@ ARM_STORE = {
     "corr_linear": "ward",
     "knn_proto": None,
 }
+ARM_STORE.update({f"rival_{n}": None for n in
+                  ("table", "mlp", "cont_mlp", "transformer", "lstm", "lace", "poe_ebm")})
 
 #: Which read verb each arm uses.
 ARM_READ = {
@@ -135,6 +146,8 @@ ARM_READ = {
     "corr_linear": "head",
     "knn_proto": "proto",
 }
+ARM_READ.update({f"rival_{n}": "rival" for n in
+                 ("table", "mlp", "cont_mlp", "transformer", "lstm", "lace", "poe_ebm")})
 
 #: Arms that are declared NOT ARMS and are never quoted as a mechanism.
 NOT_ARMS = ("oracle_span",)
@@ -341,6 +354,55 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
     verb = ARM_READ[arm]
     store_name = ARM_STORE[arm]
 
+    # -- the rivals: spoke A's fitted objects, loaded, never refitted here ---
+    if arm.startswith("rival_"):
+        name = arm[len("rival_"):]
+        from ...eval.rivals.w4_api import load_rival, available  # noqa: F401
+        try:
+            r = load_rival(int(fw.PINS["seed"]), name)
+        except Exception as exc:                       # RivalRefusal or not-yet-fitted
+            obj = {"arm": arm, "read": "rival", "not_run": f"{type(exc).__name__}: {exc}",
+                   "rival": None, "byte_ledger": {"deployed_bytes": 0,
+                                                  "what": "DECLARED NOT-RUN"},
+                   "address_bytes": {"address_bytes": 0}}
+            arm_dir.mkdir(parents=True, exist_ok=True)
+            fw._jdump({k: v for k, v in obj.items() if k != "rival"},
+                      arm_dir / "NOT_RUN.json")
+            log(f"  arm {arm}: DECLARED NOT-RUN -- {obj['not_run']}")
+            return obj
+        names = list(getattr(r, "names", grid.names))
+        if names != [str(x) for x in grid.names]:
+            raise AssertionError(
+                f"{arm}: rival factor order {names} != the grid's "
+                f"{[str(x) for x in grid.names]} -- a silent reorder would score the "
+                "rival on a request it never received")
+        meta = {}
+        mp = (Path(os.environ.get("CHLU_RIVALS_ROOT",
+                                  "C:/chlu/outputs/spoke-a-rivals/rivals"))
+              / f"seed_{int(fw.PINS['seed'])}" / f"{name}.rival.json")
+        if mp.exists():
+            with open(mp, encoding="utf-8") as fh:
+                meta = json.load(fh)
+        obj = {"arm": arm, "read": "rival", "rival": r,
+               "byte_ledger": {"deployed_bytes": int(meta.get("byte_ledger", {})
+                                                     .get("bytes", 0)),
+                               "what": f"spoke A's fitted {name}, generation 2",
+                               "param_count": meta.get("param_count")},
+               "address_bytes": {"address_bytes": 0,
+                                 "note": "a rival's parameters ARE its address book"},
+               "rival_meta": {k: v for k, v in meta.items()
+                              if k in ("param_count", "byte_ledger", "offgrid_capable",
+                                       "val_mse_full_schedule",
+                                       "val_mse_partial_requests", "n_rows_fit")},
+               "fit_seconds": 0.0}
+        arm_dir.mkdir(parents=True, exist_ok=True)
+        with open(done, "wb") as fh:
+            pickle.dump(obj, fh)
+        fw._jdump({k: v for k, v in obj.items() if k != "rival"}, arm_dir / "arm.json")
+        log(f"  arm {arm}: loaded spoke A rival '{name}' "
+            f"(params={obj['byte_ledger'].get('param_count')})")
+        return obj
+
     # -- the arms that deploy no store -------------------------------------
     if arm == "knn_proto":
         obj = _FW_BUILD_ARM("knn_proto", out_dir, log=log)
@@ -492,6 +554,11 @@ def arm_features(obj: dict, values: np.ndarray, grid) -> tuple:
     DECLARED NOT AN ARM for exactly that reason and is reported as the ceiling only.
     """
     verb = obj.get("read", "head")
+    if verb == "rival":
+        if obj.get("rival") is None:
+            raise AssertionError(f"{obj['arm']} is a DECLARED NOT-RUN and has no read")
+        feats, oor = obj["rival"](np.asarray(values, np.float64))
+        return np.asarray(feats, np.float32), np.asarray(oor, bool)
     if verb == "proto":
         return _FW_ARM_FEATURES(obj, values, grid)
     if verb == "pvm_table":
@@ -555,7 +622,7 @@ def read_dial():
     deletion row -- executes unchanged, so this hub's rows are produced by the same code
     as wave 3's and the diff between the hubs is the dial and nothing else.
     """
-    fw_build, fw_read = fw.build_arm, fw.arm_features
+    fw_build, fw_read, fw_arms = fw.build_arm, fw.arm_features, fw.ARMS
 
     def _build(arm, out_dir, log=print):
         if arm in ("factor_aligned_balanced", "basis_head", "knn_proto"):
@@ -564,14 +631,15 @@ def read_dial():
 
     fw.build_arm = _build
     fw.arm_features = arm_features
+    fw.ARMS = ARMS
     try:
-        yield {"replaced": ["build_arm", "arm_features"]}
+        yield {"replaced": ["build_arm", "arm_features", "ARMS"]}
     finally:
         if fw.arm_features is not arm_features:
             raise AssertionError(
                 "arm_features was replaced again inside the dial -- the read is not the "
                 "only thing that moved")
-        fw.build_arm, fw.arm_features = fw_build, fw_read
+        fw.build_arm, fw.arm_features, fw.ARMS = fw_build, fw_read, fw_arms
 
 
 # ---------------------------------------------------------------------------
@@ -593,6 +661,12 @@ def stage_fit(arm: str, out_dir: Path, log: Callable = print) -> dict:
 
 def stage_run(arm: str, out_dir: Path, max_seconds: float, log: Callable = print) -> dict:
     with read_dial():
+        obj = build_arm(arm, out_dir, log=log)
+        if obj.get("not_run"):
+            # ⛔ w4-common section 6: a declared NOT-RUN is never a null.  It gets a dash
+            # and this footnote on every row, and it is never counted as a win for us.
+            return {"arm": arm, "not_run": obj["not_run"], "incomplete": False,
+                    "n_done": 0}
         return fw.run_arm(arm, out_dir, max_seconds=max_seconds, log=log)
 
 
