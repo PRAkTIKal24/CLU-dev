@@ -159,15 +159,50 @@ def train_model(model, data, steps=4000, batch=96, lr=3e-4, seed=0, log_every=20
 # ---------------------------------------------------------------------------
 
 def assert_no_guardrails(policy):
-    """The rollout policies below emit argmax over the FULL action alphabet.
+    """Marker: this policy emits argmax over the FULL action alphabet.
 
-    They never consult V, the wall or the bounds to filter what they may emit -- the
-    model's logits are the only thing deciding. This function exists so the claim is
-    checked rather than asserted in prose: it feeds the policy a state from which two of
-    the three actions are illegal and verifies the policy will still emit them if the
-    model prefers them.
+    The policies below never consult V, the wall or the bounds to filter what they may
+    emit -- the model's logits alone decide. This is only a marker; the substantive check
+    that nothing downstream sanitises an illegal action is `verify_unmasked_rollout`.
     """
     return getattr(policy, "_unmasked", False)
+
+
+def verify_unmasked_rollout():
+    """Prove the environment applies illegal actions verbatim instead of repairing them.
+
+    A guardrail, if one existed, would have to live in the rollout. So drive a policy that
+    is deliberately illegal -- constant +1 acceleration, which must break the speed limit
+    and then run off the end of the line -- and check three things:
+
+      1. speed-limit violations and teleports are actually recorded;
+      2. the recorded states equal raw integer arithmetic (`v += 1; x += v`) up to the
+         first fault, i.e. nothing was clamped while the trajectory was still clean;
+      3. the velocity is allowed to exceed the speed limit rather than being capped.
+
+    Returns a dict of evidence; the experiment asserts on it before reporting anything.
+    """
+    from chlu.gym1.line1d import Episode, rollout
+
+    ep = Episode(V=2, w0=90, ww=2, s=10, v0=0, g=40)
+    r = rollout(ep, lambda t, x, v, e: +1, horizon=20, continue_after_fault=False)
+
+    x, v, traj = ep.s, ep.v0, [ep.s]
+    for _ in range(len(r.acts)):
+        v += 1
+        x += v
+        traj.append(x)
+    return {
+        "speed_violations_recorded": r.n_speed > 0,
+        "max_abs_velocity_reached": int(max(abs(u) for u in r.vs)),
+        "speed_limit": ep.V,
+        "velocity_exceeded_limit": max(abs(u) for u in r.vs) > ep.V,
+        "states_match_raw_arithmetic": r.xs == traj,
+        "first_fault_step": r.first_fault_step,
+        "first_fault_kind": r.first_fault_kind,
+        "ok": bool(r.n_speed > 0 and max(abs(u) for u in r.vs) > ep.V
+                   and r.xs == traj),
+    }
 
 
 def lstm_policy(model: LSTMPolicy, n: int):
@@ -198,27 +233,33 @@ def lstm_policy(model: LSTMPolicy, n: int):
 
 
 def transformer_policy(model: TransformerPolicy, n: int, horizon: int):
-    """Re-runs the causal prefix each step; keeps the history itself, nothing else."""
-    hist_x, hist_v = [], []
+    """Re-runs the causal prefix each step; keeps the history itself, nothing else.
+
+    The buffer is a FIXED `horizon`-long array rather than a growing prefix. Attention is
+    causal, so position t cannot see anything after t and the still-unwritten tail cannot
+    influence the logits that are read at t -- the answer is identical to running the
+    ragged prefix, and jax compiles the forward pass once instead of once per step.
+    """
+    buf_x = np.zeros((n, horizon), dtype=np.int32)
+    buf_v = np.zeros((n, horizon), dtype=np.int32)
 
     @eqx.filter_jit
-    def _fwd(model, xs, vs, gi, Vi, w0i, wwi):
+    def _fwd(model, xs, vs, gi, Vi, w0i, wwi, t):
         T = xs.shape[1]
         tile = lambda z: jnp.repeat(z[:, None], T, axis=1)
         toks = (xs, vs, tile(gi), tile(Vi), tile(w0i), tile(wwi))
         logits = jax.vmap(model)(toks)
-        return logits[:, -1, :]
+        return jnp.take(logits, t, axis=1)
 
     def pol(t, x, v, P):
-        hist_x.append(np.clip(x, 0, L - 1))
-        hist_v.append(np.clip(v, -V_EMB, V_EMB) + V_EMB)
-        xs = jnp.asarray(np.stack(hist_x, axis=1), dtype=jnp.int32)
-        vs = jnp.asarray(np.stack(hist_v, axis=1), dtype=jnp.int32)
-        logits = _fwd(model, xs, vs,
+        buf_x[:, t] = np.clip(x, 0, L - 1)
+        buf_v[:, t] = np.clip(v, -V_EMB, V_EMB) + V_EMB
+        logits = _fwd(model,
+                      jnp.asarray(buf_x), jnp.asarray(buf_v),
                       jnp.asarray(P["g"], dtype=jnp.int32),
                       jnp.asarray(P["V"], dtype=jnp.int32),
                       jnp.asarray(np.clip(P["w0"], 0, L - 1), dtype=jnp.int32),
-                      jnp.asarray(P["ww"], dtype=jnp.int32))
+                      jnp.asarray(P["ww"], dtype=jnp.int32), jnp.asarray(t))
         return np.asarray(jnp.argmax(logits, axis=-1)) - A_OFFSET
 
     pol._unmasked = True

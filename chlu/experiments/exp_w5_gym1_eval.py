@@ -72,7 +72,13 @@ def main():
     held, ctrl, refusal = blob["held"], blob["ctrl"], blob["refusal"]
     out = {}
 
-    # ---- 0. the batched environment must equal the scalar one -----------------
+    # ---- 0a. the environment must apply illegal actions verbatim --------------
+    gr = TR.verify_unmasked_rollout()
+    print("[check] no guardrails in the rollout:", gr["ok"], gr)
+    assert gr["ok"], "the rollout is sanitising illegal actions"
+    out["no_guardrail_check"] = gr
+
+    # ---- 0b. the batched environment must equal the scalar one ----------------
     sub = held[:300]
     chk = VR.check_against_scalar([r.ep for r in sub], [list(r.actions) for r in sub],
                                   E.HORIZON)
