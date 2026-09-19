@@ -1156,7 +1156,15 @@ def score_seed(out: Path, seed: int, max_seconds: float = 7200.0,
     keys = sorted({arms[a]["gen_key"] for a in arms},
                   key=lambda k: (0 if k in twins else 1, k))
     rank = {k: i for i, k in enumerate(keys)}
-    order = sorted(units, key=lambda u: (rank[arms[u[0]]["gen_key"]], u[1]))
+    # ⚠ CORNER-MAJOR, and the ordering is a MEMORY decision, not a cosmetic one.  Sorting by
+    # generator meant every twin generator's features for all 117 units had to be held until the
+    # arm that declares itself identical to it was reached, and the process grew past 4 GB on a
+    # box shared with three other agents.  Corner-major keeps at most ONE corner's features
+    # alive: the twin is consumed immediately after its target, and the cache is dropped the
+    # moment the corner changes.  The unit set, the judge-pass count and every number are
+    # unchanged -- only the order and the peak resident size move.
+    order = sorted(units, key=lambda u: (u[1], rank[arms[u[0]]["gen_key"]]))
+    cur_cid = None
 
     t0 = _now()
     n_new = 0
@@ -1169,6 +1177,9 @@ def score_seed(out: Path, seed: int, max_seconds: float = 7200.0,
             log(f"  score(seed {seed}): wall-clock cap after {n_new} new units -- state "
                 "saved, rerun to continue")
             return {"incomplete": True, "n_done": len(done)}
+        if cid != cur_cid:
+            gen_cache.clear()
+            cur_cid = cid
         if cid.startswith("probe/"):
             vals = probes[cid.split("/", 1)[1]]["values"]
             fam = "probe"
@@ -1512,6 +1523,10 @@ def build_report(out: Path, log: Callable = print) -> dict:
         sets = dict(z["corner_sets"].item())
         roles = dict(z["arm_roles"].item())
         probes = dict(z["probes"].item())
+        # the 256 background row ids are provenance, not a result; keep the count, drop the list
+        if "_backgrounds" in probes:
+            probes["_backgrounds"] = {k: v for k, v in probes["_backgrounds"].items()
+                                      if k != "rows"}
         arms = sorted({a for (a, _) in done})
         # one row per (arm, corner); the estimand's unit
         rows = {}
