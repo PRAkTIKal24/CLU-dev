@@ -325,18 +325,75 @@ def bitmap8_bytes(grid) -> int:
     return int(np.ceil(sum(int(c) for c in grid.cardinalities) / 8.0))
 
 
-def bitmap8_bits_changed_by_a_conjunction_deletion() -> int:
-    """⭐⭐ EXACT, not measured.  Returns 0, and that integer IS the claim.
+def bitmap8_bits_changed_by_a_conjunction_deletion(
+        grid, train_rows, f: int, v: int, g: int, u: int) -> dict:
+    """REBUILD AND COMPARE: how many bitmap bits move when a conjunction is deleted?
 
-    A per-factor value-presence bitmap has one bit per ``(factor, value)``.  Deleting the
-    conjunction ``(f, v) AND (g, u)`` from a store that still holds ``v`` and still holds
-    ``u`` leaves every one of those bits at its previous value: there is no bit in the
-    object whose meaning is "this pair".  So the rule's ``delta_reject`` on the deleted
-    conjunction is ``0.0000`` by construction.  ⛔ Clearing ``(f, v)``'s bit instead would
-    refuse every request naming ``v`` with ANY partner, which is a value deletion and a
-    different operation.
+    ⚠ THIS FUNCTION USED TO BE ``return 0`` WITH A DOCSTRING, and the PREREG claimed that
+    made the result "checkable, not rhetorical".  ⛔ That was wrong and the §A.5
+    replication spoke called it out: a hard-coded literal computes nothing and cannot be
+    its own evidence.  It now does the work -- build the bitmap from the pool, rebuild it
+    from the pool with every row holding ``(f, v) AND (g, u)`` removed, pack both, and
+    count differing bits.
+
+    ⭐ The answer is 0, but it is 0 **subject to a side condition that is empirical and is
+    therefore returned alongside it**: both marginals must survive the deletion.  Had the
+    conjunction been the sole carrier of value ``v``, a bit WOULD flip and the claim would
+    be false.  ``rows_still_v`` / ``rows_still_u`` are returned so a reader can check that
+    side condition rather than take it on trust.
     """
-    return 0
+    fi = grid.factor_indices_of(np.asarray(train_rows, np.int64))
+    keep = ~((fi[:, int(f)] == int(v)) & (fi[:, int(g)] == int(u)))
+    before = value_presence_bitmap(grid, np.asarray(train_rows, np.int64))
+    after = value_presence_bitmap(grid, np.asarray(train_rows, np.int64)[keep])
+    b = np.concatenate([np.asarray(x, bool) for x in before])
+    a = np.concatenate([np.asarray(x, bool) for x in after])
+    return {
+        "bits_changed": int((a != b).sum()),
+        "n_bits": int(b.size),
+        "packed_bytes": int(np.ceil(b.size / 8.0)),
+        "before_hex": np.packbits(b).tobytes().hex(),
+        "after_hex": np.packbits(a).tobytes().hex(),
+        "n_pool_rows": int(fi.shape[0]),
+        "n_rows_holding_the_conjunction": int((~keep).sum()),
+        # ⭐ THE SIDE CONDITION, returned so it is checkable rather than assumed
+        "rows_still_holding_v": int((fi[keep, int(f)] == int(v)).sum()),
+        "rows_still_holding_u": int((fi[keep, int(g)] == int(u)).sum()),
+        "note": ("0 bits change PROVIDED both marginals survive, which the two counts "
+                 "above establish. ⛔ It is a property of the object (a per-factor "
+                 "vector has no bit whose extension is a pair), not a measurement of "
+                 "this store -- and the scoreboard row says 'by construction'."),
+    }
+
+
+def bitmap8_overdelete_cost(grid, corner_values_all: np.ndarray, f: int, v: int,
+                            g: int, u: int) -> dict:
+    """⭐ The per-factor gate's ONLY available move, and what it costs.
+
+    A per-factor bitmap cannot express "delete the pair", so the nearest thing it can do
+    is clear value ``v``'s bit.  That does refuse the deleted conjunction -- and it also
+    refuses **every other request naming ``v``**.  ⭐ The §A.5 replication spoke pointed
+    out this is a better argument than ``delta_reject = 0``, because it is a MEASURED
+    cost rather than a definitional zero, and they are right.
+
+    ⛔ Computed from the REQUEST SET (the split index) alone -- no store, no read, no
+    judge -- so it is a structural count and not a scored number.  This hub has spent all
+    three of its scored runs and does not smuggle a fourth.
+    """
+    V = np.asarray(corner_values_all, np.float64)
+    fv, gu = float(grid.values[int(f)][int(v)]), float(grid.values[int(g)][int(u)])
+    names_v = np.isclose(V[:, int(f)], fv)
+    names_conj = names_v & np.isclose(V[:, int(g)], gu)
+    collateral = names_v & ~names_conj
+    return {
+        "n_requests": int(V.shape[0]),
+        "n_naming_the_deleted_conjunction": int(names_conj.sum()),
+        "n_naming_the_value_with_ANOTHER_partner": int(collateral.sum()),
+        "collateral_refusals_as_frac_of_all_requests": float(collateral.mean()),
+        "what": ("clearing value v's bit refuses the deleted conjunction AND every "
+                 "request naming v with a different partner -- the per-factor object "
+                 "can only OVER-delete"),
+    }
 
 
 # -- the joint tables -------------------------------------------------------
@@ -857,7 +914,10 @@ def run_deletion(out: Path, seed: int, max_seconds: float = 14400.0,
         "coupling_index": int(coupling_index(cards, hf, hv, hg, hu)),
         "byte_assertion": ba, "no_refit": nr,
         "rendered_features_bit_identical": feats_identical,
-        "bitmap8_bits_changed": bitmap8_bits_changed_by_a_conjunction_deletion(),
+        "bitmap8_bits_changed_rebuild": bitmap8_bits_changed_by_a_conjunction_deletion(
+            grid, cond["train_rows"], hf, hv, hg, hu),
+        "bitmap8_overdelete_cost": bitmap8_overdelete_cost(
+            grid, CV, hf, hv, hg, hu),
         "n_deleted_requests": int(names_hole.sum()),
         "n_unseen_conjunction_requests": int(unseen_conj.sum()),
         "names_hole": names_hole, "unseen_conj": unseen_conj,
@@ -1191,7 +1251,9 @@ def main(argv=None) -> int:
             "bitmap8_bytes": bitmap8_bytes(grid),
             "pair_table": pair_table_bytes(grid),
             "bitmap8_bits_changed_by_a_conjunction_deletion":
-                bitmap8_bits_changed_by_a_conjunction_deletion(),
+                bitmap8_bits_changed_by_a_conjunction_deletion(
+                    grid, cond["train_rows"], *PINS["hole_pair"][0],
+                    *PINS["hole_pair"][1]),
             "n_corners": {"row3": len(c3), "row4": len(c4)},
         }, out / "declaration.json")
         log("declaration written")

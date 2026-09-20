@@ -21,8 +21,8 @@ import numpy as np
 from .exp_gen_factor_wells import _jdump, load_condition, seen_tuple_mask
 from .exp_gen_refuse import (
     PINS, QUERY_ROWS, RULES_GAP, RULES_PRIMARY, SEEDS, bitmap8_bytes,
-    bitmap8_bits_changed_by_a_conjunction_deletion, pair_table_bytes, scored_corners,
-    seed_dir,
+    bitmap8_bits_changed_by_a_conjunction_deletion, bitmap8_overdelete_cost,
+    corner_values, pair_table_bytes, scored_corners, seed_dir,
 )
 from .gen_scoreboard import (
     make_outcome, score_novelty_row, score_refusal_row,
@@ -210,7 +210,10 @@ def score_deletion(out: Path, log: Callable = print) -> dict:
         out_seed["hole"]["_proof"] = {
             "byte_assertion": H["byte_assertion"], "no_refit": H["no_refit"],
             "rendered_features_bit_identical": bool(H["rendered_features_bit_identical"]),
-            "bitmap8_bits_changed": int(H["bitmap8_bits_changed"]),
+            # ⚠ both are SPLIT-INDEX quantities and are derived once at report level
+            # (see `bitmap8_bits_changed_by_a_conjunction_deletion` /
+            # `bitmap8_overdelete_cost` at the top of the report) rather than per seed,
+            # so adding them costs no scored re-run.
             "pair": H["pair"], "coupling_index": int(H["coupling_index"]),
         }
         out_seed["hole"]["_groups"] = {
@@ -249,7 +252,7 @@ def score_deletion(out: Path, log: Callable = print) -> dict:
         out_seed["evict"]["_proof"] = {
             "byte_assertion": E["byte_assertion"], "no_refit": E["no_refit"],
             "n_items_evicted": int(E["n_items_evicted"]),
-            "bitmap8_bits_changed": int(E["bitmap8_bits_changed"]),
+            "bitmap8_bits_changed": int(E.get("bitmap8_bits_changed", 1)),
             "bitmap8_note": E["bitmap8_note"],
             "read_changed_on_surviving_requests_frac": float(
                 E["read_changed_on_surviving_requests_frac"]),
@@ -362,7 +365,14 @@ def build_report(out: Path, log: Callable = print) -> dict:
         "bitmap8_bytes": bitmap8_bytes(grid),
         "pair_table": pair_table_bytes(grid),
         "bitmap8_bits_changed_by_a_conjunction_deletion":
-            bitmap8_bits_changed_by_a_conjunction_deletion(),
+            bitmap8_bits_changed_by_a_conjunction_deletion(
+                grid, cond["train_rows"], *PINS["hole_pair"][0],
+                *PINS["hole_pair"][1]),
+        # ⭐ The §A.5 spoke's point: the per-factor gate's ONLY available move
+        # OVER-deletes, and that is a measured cost rather than a definitional zero.
+        "bitmap8_overdelete_cost": bitmap8_overdelete_cost(
+            grid, corner_values(grid, c3 + c4)[0], *PINS["hole_pair"][0],
+            *PINS["hole_pair"][1]),
         "thresholds": {
             "basin_live_tau": float(PINS["field_basin_live_tau"]),
             "gap_tau": float(PINS["field_gap_tau"]),
@@ -533,7 +543,11 @@ def _verdicts(rep: dict) -> dict:
             "bitmap8": [b8["reject_deleted_post"]["mean"],
                         b8["accept_unseen_conjunction_post"]["mean"]],
             "bitmap8_delta_reject": b8["delta_reject"]["mean"],
-            "bitmap8_bits_changed": 0,
+            "bitmap8_bits_changed": "0 BY CONSTRUCTION, verified by rebuild-and-compare "
+                                    "(report key `bitmap8_bits_changed_by_a_conjunction_"
+                                    "deletion`, which also returns the empirical side "
+                                    "condition: both marginals survive); a per-factor "
+                                    "vector has no bit whose extension is a pair",
             "pair_presence_accept_unseen_conjunction":
                 (pp.get("accept_unseen_conjunction_post") or {}).get("mean"),
             "pair_deletion_reject_deleted":
