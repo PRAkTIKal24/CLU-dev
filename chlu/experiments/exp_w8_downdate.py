@@ -1167,6 +1167,7 @@ def stage_gate(out_dir: Path, condition: str, log=_log) -> dict:
     for s in (0, 1, 2):
         d = root / f"{condition}_seed{s}"
         sj, aj, cj = d / "store.json", d / "assertions.json", d / "selfcheck.json"
+        bj = d / "a1_subspace.json"
         if not sj.exists():
             continue
         with open(sj, encoding="utf-8") as fh:
@@ -1189,6 +1190,21 @@ def stage_gate(out_dir: Path, condition: str, log=_log) -> dict:
             "feature_cache_generation": store["feature_cache"].get("generation"),
             "assertions_run": False,
         }
+        if bj.exists():
+            with open(bj, encoding="utf-8") as fh:
+                b = json.load(fh)
+            block["a1_subspace"] = {
+                "passed": b["passed"],
+                "worst_max_principal_angle_rad": b["worst_max_principal_angle_rad"],
+                "worst_in_float32_ulp": b["worst_in_float32_ulp"],
+                "per_well_pinned": b["pinned_value_object_hue_0.0"]["subspace"][
+                    "max_principal_angle_rad_per_well"],
+                "floor_subspace_rad": b["reproducibility_floor_subspace"][
+                    "worst_max_principal_angle_rad"],
+                "floor_subspace_in_float32_ulp": b[
+                    "reproducibility_floor_subspace"]["worst_in_float32_ulp"],
+                "mean_max_abs_dev": b["pinned_value_object_hue_0.0"]["subspace"][
+                    "worst_mean_max_abs_dev"]}
         if cj.exists():
             with open(cj, encoding="utf-8") as fh:
                 c = json.load(fh)
@@ -1284,6 +1300,26 @@ def stage_gate(out_dir: Path, condition: str, log=_log) -> dict:
             any(b["any_well_saturated"] for b in per_seed.values())),
         "cut_is_marginal_any_seed": bool(
             any(b["cut_is_marginal"] for b in per_seed.values())),
+        "a1_subspace": {
+            "definition": ("hub design call, Head-cleared: the stored object is the "
+                           "SUBSPACE, not the eigenvector basis. eig_rel_tol NOT "
+                           "retuned -- the store is bit-for-bit the one that failed "
+                           "at byte level; only the question changes."),
+            "passed_every_seed": bool(
+                all(b["a1_subspace"]["passed"] for b in per_seed.values()
+                    if "a1_subspace" in b)) if any(
+                        "a1_subspace" in b for b in per_seed.values()) else None,
+            "seeds_failing": [s for s, b in per_seed.items()
+                              if "a1_subspace" in b and not b["a1_subspace"]["passed"]],
+            "worst_angle_rad_over_seeds": max(
+                (b["a1_subspace"]["worst_max_principal_angle_rad"]
+                 for b in per_seed.values() if "a1_subspace" in b), default=None),
+            "worst_in_float32_ulp": max(
+                (b["a1_subspace"]["worst_in_float32_ulp"]
+                 for b in per_seed.values() if "a1_subspace" in b), default=None),
+            "worst_floor_subspace_in_float32_ulp": max(
+                (b["a1_subspace"]["floor_subspace_in_float32_ulp"]
+                 for b in per_seed.values() if "a1_subspace" in b), default=None)},
         "reproducibility_floor": {
             "worst_floor_over_seeds": max(
                 (b["reproducibility_floor"]["floor_max_abs_dev"]
@@ -1398,10 +1434,120 @@ def stage_selfcheck(out_dir: Path, condition: str, log=_log) -> dict:
     return out
 
 
+def stage_a1_subspace(out_dir: Path, condition: str, log=_log) -> dict:
+    """⭐⭐ ASSERTION 1 RE-RUN UNDER THE HUB DESIGN CALL: the object is the SUBSPACE.
+
+    ⛔ Head-cleared design call, 2026-09-20: the stored object is the subspace the
+    atom block spans, not the particular eigenvector basis written into its rows.
+    ``eig_rel_tol`` is NOT retuned -- the store is bit-for-bit the one that failed; only
+    the question asked of it changes.
+
+    ⚠ THE THING THIS MUST NOT BE ALLOWED TO DO is make the failure vanish by being a
+    softer ruler. So it is run with two guards:
+
+    * the SAME two deletions as the byte-level A1, and both are reported;
+    * the two-order **floor** recomputed under the subspace metric. If the span is
+      genuinely determined, downdating the same rows in two orders must agree on it to
+      ~0; if the floor is large under the subspace metric too, the subspace is not
+      determined either and the design call does not rescue the seed.
+
+    ⛔ A rotation INSIDE the kept set preserves the span and reports ~0. Mixing
+    between a KEPT direction and a DROPPED one moves the span and reports at full size.
+    Which of those seed 2 suffers is the whole question, and it is measured here.
+    """
+    from ..core.downdate_store import compare_subspaces
+
+    fw = _setup(condition)
+    pool, wc, dead = _pool_and_wells(fw, out_dir)
+    grid, _ = fw.build_grid()
+    cards = [int(c) for c in grid.cardinalities]
+    vals_all = grid.values_of(pool)
+    F = fw.features_mmap(int(fw.PINS["seed"]))
+    f, v = int(W8_PINS["delete_factor"]), int(W8_PINS["delete_value_index"])
+    dval = float(grid.values[f][v])
+    big = np.isclose(vals_all[:, f], dval)
+    rng = np.random.default_rng(int(fw.PINS["seed"]))
+    small = np.zeros(pool.size, bool)
+    small[rng.permutation(pool.size)[: int(W8_PINS["small_delete_n"])]] = True
+    log(f"stage a1_subspace [{condition} seed {SEED[0]}]: "
+        f"{int(big.sum()):,} pinned rows and {int(small.sum())} random rows")
+
+    res = {"condition": condition, "seed": int(SEED[0]),
+           "eig_rel_tol_unchanged": float(EIG_REL_TOL)}
+
+    for tag, mask in (("pinned_value_object_hue_0.0", big), ("random_64_rows", small)):
+        st = build_store(fw, out_dir, pool, wc, cards, log=lambda *_: None)
+        X = fw.gather(F, pool[mask])
+        st.delete(X, vals_all[mask], grid.values)
+        del X
+        ref = build_store(fw, out_dir, pool[~mask], wc, cards, log=lambda *_: None)
+        sub = compare_subspaces(st, ref)
+        byte = compare_stores(st, ref)
+        res[tag] = {
+            "n_deleted": int(mask.sum()),
+            "subspace": sub,
+            "byte_level_for_contrast": {
+                "max_abs_dev_per_well": byte["max_abs_dev_per_well"],
+                "worst_max_abs_dev": byte["max_abs_dev"],
+                "worst_in_float32_ulp": byte["max_dev_in_float32_ulp"]},
+        }
+        log(f"  [{tag}] max principal angle per well "
+            f"{[f'{a:.3e}' for a in sub['max_principal_angle_rad_per_well']]}")
+        log(f"      worst {sub['worst_max_principal_angle_rad']:.3e} rad = "
+            f"{sub['worst_in_float32_ulp']:.3f} float32 ulp; span ranks agree="
+            f"{sub['span_ranks_agree_every_well']}; mean worst dev "
+            f"{sub['worst_mean_max_abs_dev']:.3e}   "
+            f"(byte-level was {byte['max_dev_in_float32_ulp']:.3f} ulp)")
+        del ref, st
+
+    # -- the guard: the two-order floor, under the SUBSPACE metric ------------
+    idx = np.flatnonzero(big)
+    perm = np.random.default_rng(12345).permutation(idx.size)
+    two = []
+    for order in (np.arange(idx.size), perm):
+        st = build_store(fw, out_dir, pool, wc, cards, log=lambda *_: None)
+        rows = idx[order]
+        X = fw.gather(F, pool[rows])
+        st.delete(X, vals_all[rows], grid.values)
+        del X
+        two.append(st)
+    floor = compare_subspaces(two[0], two[1])
+    res["reproducibility_floor_subspace"] = {
+        "max_principal_angle_rad_per_well":
+            floor["max_principal_angle_rad_per_well"],
+        "worst_max_principal_angle_rad": floor["worst_max_principal_angle_rad"],
+        "worst_in_float32_ulp": floor["worst_in_float32_ulp"],
+        "span_ranks_agree_every_well": floor["span_ranks_agree_every_well"],
+        "what": ("the SAME rows downdated in two orders, compared as SUBSPACES. "
+                 "⛔ If this is large the span is not determined either and the "
+                 "design call does not rescue the seed."),
+    }
+    log(f"  [floor, subspace metric] worst "
+        f"{floor['worst_max_principal_angle_rad']:.3e} rad = "
+        f"{floor['worst_in_float32_ulp']:.3f} float32 ulp")
+
+    f32 = float(np.spacing(np.float32(1.0)))
+    worst = max(res[t]["subspace"]["worst_max_principal_angle_rad"]
+                for t in ("pinned_value_object_hue_0.0", "random_64_rows"))
+    ranks_ok = all(res[t]["subspace"]["span_ranks_agree_every_well"]
+                   for t in ("pinned_value_object_hue_0.0", "random_64_rows"))
+    res["worst_max_principal_angle_rad"] = float(worst)
+    res["worst_in_float32_ulp"] = float(worst / f32)
+    res["passed"] = bool(worst <= f32 and ranks_ok)
+    res["criterion"] = ("the largest principal angle between the downdated and the "
+                        "without-rows deployed spans is at most ONE float32 ulp at "
+                        "unit scale (1.19e-07 rad), and the span ranks agree in every "
+                        "well")
+    _jdump(res, out_dir / "a1_subspace.json")
+    log(f"  A1 UNDER THE SUBSPACE DEFINITION: passed={res['passed']} "
+        f"(worst {worst:.3e} rad = {res['worst_in_float32_ulp']:.3f} ulp)")
+    return res
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--stage", required=True,
-                   choices=("fit", "assertions", "smoke", "sweep", "gauge", "postdelete", "postdelete_refit", "carry", "gate", "selfcheck", "all"))
+                   choices=("fit", "assertions", "smoke", "sweep", "gauge", "postdelete", "postdelete_refit", "carry", "gate", "selfcheck", "a1_subspace", "all"))
     p.add_argument("--out", default=str(OUT_ROOT / "build" / "val_seed0"))
     p.add_argument("--condition", default="val", choices=("val", "test"))
     p.add_argument("--seed", type=int, default=0,
@@ -1427,7 +1573,8 @@ def main(argv=None) -> int:
              "postdelete_refit": stage_postdelete_refit,
              "carry": stage_carry,
              "gate": stage_gate,
-             "selfcheck": stage_selfcheck}[s](out, a.condition)
+             "selfcheck": stage_selfcheck,
+             "a1_subspace": stage_a1_subspace}[s](out, a.condition)
     _log("done")
     return 0
 

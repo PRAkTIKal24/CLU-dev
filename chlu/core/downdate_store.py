@@ -1272,3 +1272,121 @@ def carry_address_book(addr, U_pre, U_post):
         "data_rows_touched": 0,
         "refit": False,
     }
+
+# ---------------------------------------------------------------------------
+# 7. THE OBJECT IS THE SUBSPACE (hub design call, Head-cleared, 2026-09-20)
+# ---------------------------------------------------------------------------
+
+
+def deployed_span(G, tol: float = 1e-8) -> np.ndarray:
+    """An orthonormal basis of what the atom block actually spans, in float64.
+
+    ⛔ This is the object the read sees: ``gen_read.render_span`` reads through a
+    basis of ``span(G)``, so ``span(G)`` -- not the particular rows written into ``G``
+    -- is what the store deploys. Zero rows are dropped because they span nothing.
+    """
+    M = np.asarray(G, np.float64)
+    live = M[np.linalg.norm(M, axis=1) > tol]
+    if live.size == 0:
+        return np.zeros((M.shape[1], 0), np.float64)
+    # ⚠ SVD, NOT QR. Un-pivoted Householder QR is not rank revealing: on a block
+    # whose mean lies nearly inside the directions' span (measured: relative
+    # perpendicular norm 2.3e-08 in the rank-deficient wells) the small entry of
+    # diag(R) is not in a known position, so truncating to the FIRST r columns of Q
+    # discards an arbitrary direction. MEASURED consequence of getting this wrong:
+    # two BIT-IDENTICAL stores reported a principal angle of 0.97 rad. The byte-level
+    # contrast printed beside it is what exposed that -- an absurd number next to a
+    # known-zero one.
+    U, sv, _ = np.linalg.svd(live.T, full_matrices=False)
+    r = int((sv > tol * float(sv[0])).sum()) if sv.size else 0
+    return np.ascontiguousarray(U[:, :r])
+
+
+def subspace_distance(A: np.ndarray, B: np.ndarray) -> float:
+    """``||P_A - P_B||_2`` -- the projector distance, which is ``sin(theta_max)``.
+
+    ⚠ NOT ``arccos`` of the singular values of ``A^T B``, which is the textbook
+    formula and is useless here: ``arccos`` is ill-conditioned at 1, with an error
+    floor of ``sqrt(eps) ~ 1.5e-08`` rad. MEASURED: comparing a store with ITSELF --
+    where the answer is exactly 0 -- that route returned 4.47e-08 rad, which is the
+    same order as the real signal on the passing legs and would have made them
+    indistinguishable from noise. The projector difference is exact at 0 and stable
+    everywhere.
+    """
+    if A.shape[1] == 0 and B.shape[1] == 0:
+        return 0.0
+    if A.shape[1] == 0 or B.shape[1] == 0:
+        return 1.0
+    return float(np.linalg.norm(A @ A.T - B @ B.T, 2))
+
+
+def compare_subspaces(a, b) -> dict:
+    """⭐⭐ A1 UNDER THE SUBSPACE DEFINITION: is the deployed SPAN the same span?
+
+    ⛔ The hub's design call, Head-cleared: the stored object is the **subspace**, not
+    the particular eigenvector basis written into the atom rows. Inside a degenerate or
+    near-degenerate eigenspace the individual eigenvectors are not a function of the
+    data -- two runs of the same computation disagree about them -- but the SPAN they
+    sweep may still be perfectly determined. This measures the span.
+
+    ⚠ It is NOT a softer metric chosen to make a failure go away, and it must not be
+    read as one: a rotation *inside* the kept set preserves the span and this reports
+    ~0, but mixing between a KEPT direction and a DROPPED one moves the span and this
+    reports it at full size. If the rank boundary itself is unstable, the subspace
+    definition does not rescue anything and this number says so.
+
+    Reported per well: the largest principal angle between the deployed spans, its sine
+    (= the 2-norm of the difference of the orthogonal projectors), the same for the
+    directions alone with the mean excluded, and the mean's own deviation -- the mean is
+    ``t/n``, a determined quantity, and is compared entrywise rather than as a span.
+    """
+    if a.K != b.K:
+        raise AssertionError(f"{a.K} wells vs {b.K}: not the same store shape")
+    f32 = float(np.spacing(np.float32(1.0)))
+    per_well, ok = [], True
+    for k in range(a.K):
+        GA = np.asarray(a.modes[k], np.float32)
+        GB = np.asarray(b.modes[k], np.float32)
+        QA, QB = deployed_span(GA), deployed_span(GB)
+        pd = subspace_distance(QA, QB)
+        max_ang = float(np.arcsin(min(pd, 1.0)))
+        # directions only, mean excluded
+        DA, DB = deployed_span(GA[1:]), deployed_span(GB[1:])
+        pdd = subspace_distance(DA, DB)
+        max_angd = float(np.arcsin(min(pdd, 1.0)))
+        mu_dev = float(np.max(np.abs(GA[0].astype(np.float64)
+                                     - GB[0].astype(np.float64))))
+        mu_norm = float(np.linalg.norm(GB[0].astype(np.float64)))
+        row = {
+            "well": k, "d_k": int(a.well_sizes[k]),
+            "span_rank_a": int(QA.shape[1]), "span_rank_b": int(QB.shape[1]),
+            "span_ranks_agree": bool(QA.shape[1] == QB.shape[1]),
+            "max_principal_angle_rad": max_ang,
+            "projector_2norm": pd,
+            "max_principal_angle_in_float32_ulp": max_ang / f32,
+            "max_principal_angle_directions_only_rad": max_angd,
+            "mean_max_abs_dev": mu_dev,
+            "mean_norm": mu_norm,
+            "mean_rel_dev": mu_dev / max(mu_norm, 1e-300),
+            "subspace_equal_below_one_float32_ulp": bool(max_ang <= f32),
+        }
+        ok = ok and row["span_ranks_agree"]
+        per_well.append(row)
+    angs = [r["max_principal_angle_rad"] for r in per_well]
+    mus = [r["mean_max_abs_dev"] for r in per_well]
+    return {
+        "definition": ("the stored object is the SUBSPACE the atom block spans, plus "
+                       "the mean; the particular eigenvector basis is not the object"),
+        "float32_ulp_at_unit_scale": f32,
+        "max_principal_angle_rad_per_well": angs,
+        "worst_max_principal_angle_rad": float(max(angs)) if angs else 0.0,
+        "worst_in_float32_ulp": (float(max(angs)) / f32) if angs else 0.0,
+        "mean_max_abs_dev_per_well": mus,
+        "worst_mean_max_abs_dev": float(max(mus)) if mus else 0.0,
+        "span_ranks_agree_every_well": bool(ok),
+        "n_wells_span_equal_below_one_ulp": int(
+            sum(r["subspace_equal_below_one_float32_ulp"] for r in per_well)),
+        "all_wells_span_equal_below_one_ulp": bool(
+            all(r["subspace_equal_below_one_float32_ulp"] for r in per_well)),
+        "per_well": per_well,
+    }
