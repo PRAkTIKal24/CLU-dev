@@ -36,6 +36,13 @@ export PYTHONIOENCODING=utf-8
 : "${CHLU_GEN_CLASSIFIER_ROOT:=$(python -c "import os,pathlib;print(pathlib.Path(os.environ['CHLU_GEN_BRIDGE_ROOT']).parent.parent / 'gen-external-classifier')")}"
 export CHLU_GEN_CLASSIFIER_ROOT
 
+# PHASE=prep  -> warm, train, probe, cache. Everything that does NOT touch a held-out
+#                corner, so it is safe to run before a scored run is authorised.
+# PHASE=score -> rivals + the rows-3/4 leg. On `test` that is a SCORED RUN under charter
+#                A.2, and the underlying leg refuses it without a PREREG and a ledger row.
+# PHASE=all   -> both, in order.
+: "${PHASE:=all}"
+
 M=chlu.experiments.exp_w8_encoder_loop
 TRAIN_ARMS=(alone loop_nosw loop_swap alone_wc)
 SCORE_ARMS=(alone loop_swap loop_nosw)
@@ -59,32 +66,45 @@ run() {  # a failure is RECORDED LOUDLY and the pipeline continues; never swallo
   fi
 }
 
-say "=== warm start ==="
-run python -u -m "$M" --stage warm --seed "$SEED" --out "$RUN" || exit 1
+if [ "$PHASE" = "prep" ] || [ "$PHASE" = "all" ]; then
 
-for arm in "${TRAIN_ARMS[@]}"; do
-  say "=== train $arm ==="
-  run python -u -m "$M" --stage train --seed "$SEED" --arm "$arm" --out "$RUN"
-done
+  say "=== warm start ==="
+  run python -u -m "$M" --stage warm --seed "$SEED" --out "$RUN" || exit 1
 
-for arm in "${TRAIN_ARMS[@]}"; do
-  say "=== probe $arm (a MARGIN over the random-init floor, never an absolute) ==="
-  run python -u -m "$M" --stage probe --seed "$SEED" --arm "$arm" --out "$RUN"
-done
+  for arm in "${TRAIN_ARMS[@]}"; do
+    say "=== train $arm ==="
+    run python -u -m "$M" --stage train --seed "$SEED" --arm "$arm" --out "$RUN"
+  done
 
-for arm in "${SCORE_ARMS[@]}"; do
-  say "=== cache $arm (480,000 rows, one CPU device, per-block sha256) ==="
-  run python -u -m "$M" --stage cache --seed "$SEED" --arm "$arm" --out "$RUN" || continue
-  rows="$SCORE_ROWS_BARE"
-  case " $RIVAL_ARMS " in *" $arm "*)
-    say "=== rivals $arm (refit on THIS arm's features, w4_learners verbatim) ==="
-    run python -u -m "$M" --stage rivals --seed "$SEED" --arm "$arm" --out "$RUN" \
-        --families mlp_180k && rows="$SCORE_ROWS_WITH_BASELINE" ;;
-  esac
-  say "=== score $arm on $COND (rows 3 and 4): $rows ==="
-  run bash "$(dirname "$0")/w8_encoder_loop_score.sh" \
-      "$COND" "$SEED" "$arm" "$RUN" "$SCORE" $rows
-done
+  for arm in "${TRAIN_ARMS[@]}"; do
+    say "=== probe $arm (a MARGIN over the random-init floor, never an absolute) ==="
+    run python -u -m "$M" --stage probe --seed "$SEED" --arm "$arm" --out "$RUN"
+  done
+
+  for arm in "${SCORE_ARMS[@]}"; do
+    say "=== cache $arm (480,000 rows, one CPU device, per-block sha256) ==="
+    run python -u -m "$M" --stage cache --seed "$SEED" --arm "$arm" --out "$RUN"
+  done
+
+fi
+
+if [ "$PHASE" = "score" ] || [ "$PHASE" = "all" ]; then
+
+  for arm in "${SCORE_ARMS[@]}"; do
+    rows="$SCORE_ROWS_BARE"
+    case " $RIVAL_ARMS " in *" $arm "*)
+      say "=== rivals $arm (refit on THIS arm's features, w4_learners verbatim) ==="
+      if run python -u -m "$M" --stage rivals --seed "$SEED" --arm "$arm" --out "$RUN" \
+             --families mlp_180k; then
+        rows="$SCORE_ROWS_WITH_BASELINE"
+      fi ;;
+    esac
+    say "=== score $arm on $COND (rows 3 and 4): $rows ==="
+    run bash "$(dirname "$0")/w8_encoder_loop_score.sh" \
+        "$COND" "$SEED" "$arm" "$RUN" "$SCORE" $rows
+  done
+
+fi
 
 python -u -m "$M" --stage report --out "$RUN" || true
 
