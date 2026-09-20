@@ -2887,8 +2887,12 @@ def main(argv=None) -> int:
         compare_runs(out, assert_out_root(Path(args.against)), log=log)
     if args.stage in ("markdown", "all"):
         md = render_markdown(out, log=log)
+        # ⚠ write BEFORE any printing: this console is cp1252 and the report is full of
+        # mathematical and box-drawing characters, so printing it raises UnicodeEncodeError
+        # and would otherwise make a successful render look like a failed stage.
         (out / "REPORT.md").write_text(md, encoding="utf-8")
-        log(md)
+        log(f"  REPORT.md written: {len(md):,} chars, {md.count(chr(10)) + 1} lines "
+            f"-> {out / 'REPORT.md'}")
     return 0
 
 
