@@ -891,6 +891,45 @@ def install() -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _make_artifacts_portable() -> dict:
+    """Make this module's pickled artifacts readable from an ORDINARY import.
+
+    ⚠ The defect this fixes, stated because it would have cost a replicator real time.
+    The launcher runs ``python -m chlu.experiments.exp_w5_compose_field``, so while a
+    stage is executing, this file's classes live in ``__main__`` and every artifact the
+    stage pickles records them as ``__main__.PCASpanStore``.  Resume works, because the
+    next stage is another ``-m`` run -- but anyone who loads the artifacts from a plain
+    ``import`` gets ``AttributeError: Can't get attribute 'PCASpanStore' on module
+    '__main__'``, which is exactly what a replicator does.
+
+    Two lines fix it in both directions, and both are additive:
+
+    * when this file is running AS ``__main__``, stamp each class's ``__module__`` with
+      the package path, so every artifact written FROM HERE ON pickles portably;
+    * when this file is IMPORTED beside somebody else's ``__main__``, alias the classes
+      into that ``__main__``, so artifacts written BEFORE the fix still load.
+    """
+    import sys
+    names = ("FieldSpanStore", "PCASpanStore", "_ItemSpanStore", "_ModeStore")
+    pkg = "chlu.experiments.exp_w5_compose_field"
+    g = globals()
+    if __name__ == "__main__":
+        for n in names:
+            g[n].__module__ = pkg
+        return {"mode": "stamped __module__ for portable pickles", "classes": names}
+    m = sys.modules.get("__main__")
+    if m is not None and m is not sys.modules.get(__name__):
+        for n in names:
+            if not hasattr(m, n):
+                setattr(m, n, g[n])
+        return {"mode": "aliased into __main__ so pre-fix artifacts load",
+                "classes": names}
+    return {"mode": "no action needed"}
+
+
+_PORTABILITY = _make_artifacts_portable()
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--stage", required=True,
