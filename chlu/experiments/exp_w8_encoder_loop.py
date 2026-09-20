@@ -1319,8 +1319,12 @@ def stage_probe(out: Path, seed: int, arm: str, quick: bool, log: Callable = pri
         log("    random-init floor: reused from this seed (identical by construction)")
     else:
         rk = jax.random.PRNGKey(int(seed) * 7717 + 20_260_920)
+        # The IDENTICAL architecture, built exactly as `train_encoder` builds it
+        # (gen_bridge.py:519) -- same channels, kernel, stride and groups. Only the
+        # training is absent. That is what makes it a floor rather than a different model.
         rand_enc = GenEncoder(
-            tuple(imgs_fit.shape[1:]), tuple(gb.enc_channels), int(gb.enc_groups), rk)
+            tuple(imgs_fit.shape[1:]), tuple(gb.enc_channels), int(gb.enc_kernel),
+            int(gb.enc_stride), int(gb.enc_groups), rk)
         floor = probe_for(rand_enc, "random_init")
         _write_json({"status": "ok", "seed": int(seed), "probe": floor,
                      "encoder_param_hash": param_hash(rand_enc),
