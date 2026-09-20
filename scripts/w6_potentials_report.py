@@ -14,6 +14,14 @@ from pathlib import Path
 
 import numpy as np
 
+# The Windows console default is cp1252 and a stray non-ASCII byte kills the whole
+# report after most of it has already printed.  Force UTF-8 and never lose a number
+# to an encoding.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 
 def load(dirs):
     legs = []
@@ -191,7 +199,7 @@ def report_leg(name, obj, fh=sys.stdout):
                             for v in br])
             pax = pax[np.isfinite(pax)]
             if pax.size:
-                p(f"       ⭐ the PREDICTED curve's OWN argmin on the same grid, over "
+                p(f"       the PREDICTED curve's OWN argmin on the same grid, over "
                   f"gamma*_exact: median {np.median(pax):.4f}")
                 p(f"         (1.00 means the gamma grid resolves the critical point, so "
                   f"any gap above is the ROLLOUT disagreeing with the law -- not spacing)")
