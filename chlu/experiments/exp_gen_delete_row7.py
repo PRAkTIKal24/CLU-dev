@@ -1576,6 +1576,91 @@ def dash_evidence(out: Path, seed: int, log: Callable = print) -> dict:
     return rep
 
 
+def hole_read_identity(out: Path, seed: int, log: Callable = print) -> dict:
+    """⭐⭐ BAR 4(d), asserted DIRECTLY: the hole changes no rendered feature, anywhere.
+
+    ⚠ Why this exists as its own stage rather than as a by-product of scoring. The scoring loop
+    opportunistically checks this when it happens to compute ``field/base`` and ``field/hole`` for
+    the same corner in the same process, and reuses the judge pass when they agree. But the run is
+    **resumable**, and a resumed process skips units already in ``done`` -- so on a run that spans
+    several wall-clock windows the opportunistic check records nothing, and a PASS that depended on
+    it would be reporting the absence of a diagnostic as a failure. That is exactly what happened
+    here on the first assembled seed.
+
+    So the identity is asserted here instead, directly and unconditionally: for **every** scored
+    corner, render through the base store and through the holed store and compare the arrays
+    elementwise. ``punch_hole`` writes one byte of ``coupling_hole``, a segment
+    :func:`gen_field.field_read` never consults, so the two must be **bit-identical** -- and if they
+    are ever not, the hole is touching the read and BAR 4(d) genuinely fails.
+
+    Costs seconds: no judge is involved.
+    """
+    from ..core.gen_field import punch_hole
+
+    d = seed_dir(out, seed)
+    art = d / "hole_read_identity.json"
+    if art.exists():
+        log(f"  hole-read(seed {seed}): already on disk")
+        return json.loads(art.read_text(encoding="utf-8"))
+
+    cond = load_condition()
+    grid = cond["grid"]
+    cs = scored_corners(cond)
+    base = build_field_base(out, seed, log=log)
+    f0 = base["field"]
+    (hf, hv), (hg, hu) = PINS["hole_pair"]
+    fh_ = f0.copy()
+    punch_hole(fh_, hf, hv, hg, hu)
+
+    n_corners = n_requests = 0
+    all_same = True
+    worst = 0.0
+    per_family = {}
+    for c in cs["all"]:
+        vals = grid.values_of(np.asarray(c["rows"], np.int64))
+        a, _ = _field_features(f0, vals, grid)
+        b, _ = _field_features(fh_, vals, grid)
+        same = bool(np.array_equal(np.asarray(a, np.float32), np.asarray(b, np.float32)))
+        diff = float(np.abs(np.asarray(a, np.float64) - np.asarray(b, np.float64)).max())
+        all_same = all_same and same
+        worst = max(worst, diff)
+        n_corners += 1
+        n_requests += int(vals.shape[0])
+        k = c["family"]
+        per_family.setdefault(k, {"n_corners": 0, "all_bit_identical": True})
+        per_family[k]["n_corners"] += 1
+        per_family[k]["all_bit_identical"] = bool(per_family[k]["all_bit_identical"] and same)
+    # and on the constructed probes, including the holed conjunction itself
+    probes = conjunction_probes(cond, seed)
+    probe_same = {}
+    for name, v in probes.items():
+        if name.startswith("_"):
+            continue
+        a, _ = _field_features(f0, v["values"], grid)
+        b, _ = _field_features(fh_, v["values"], grid)
+        probe_same[name] = bool(np.array_equal(np.asarray(a, np.float32),
+                                               np.asarray(b, np.float32)))
+        all_same = all_same and probe_same[name]
+
+    rep = {"seed": int(seed), "n_corners": n_corners, "n_requests": n_requests,
+           "ALL_BIT_IDENTICAL": bool(all_same),
+           "max_abs_elementwise_difference": worst,
+           "per_family": per_family, "per_probe_bit_identical": probe_same,
+           "what_this_asserts": (
+               "punch_hole writes ONE byte of `coupling_hole`, a segment field_read never "
+               "consults, so every rendered feature must be bit-identical before and after. "
+               "This is BAR 4(d) asserted directly on every scored corner and every constructed "
+               "probe -- including the holed conjunction itself, whose RENDER is unchanged even "
+               "though the request is now refused. The refusal is a separate verb from the read, "
+               "and that separation is what makes the hole a deletion rather than a distortion.")}
+    d.mkdir(parents=True, exist_ok=True)
+    _jdump(rep, art)
+    log(f"  hole-read(seed {seed}): {n_corners} corners / {n_requests:,} requests + "
+        f"{len(probe_same)} probes -- ALL BIT-IDENTICAL = {rep['ALL_BIT_IDENTICAL']} "
+        f"(max elementwise difference {worst:g})")
+    return rep
+
+
 def nearest_atom_check(out: Path, seed: int, log: Callable = print) -> dict:
     """Charter section C.4: if the settled state sits ON its nearest atom, we are a lookup."""
     d = seed_dir(out, seed)
@@ -1734,6 +1819,10 @@ def build_report(out: Path, log: Callable = print) -> dict:
         for (a, cid) in done:
             rows.setdefault(a, {})[cid] = _per_corner(done[(a, cid)], grid, seen_mask)
         eqs = dict(z["generator_equalities"].item()) if "generator_equalities" in z else {}
+
+        def _hri(sd):
+            q = seed_dir(out, sd) / "hole_read_identity.json"
+            return json.loads(q.read_text(encoding="utf-8")) if q.exists() else None
 
         surv, dele = list(sets["survivor"]), list(sets["deleted"])
         # ⭐ how hard each constructed probe is: what fraction of its request TUPLES the fit pool
@@ -1990,7 +2079,13 @@ def build_report(out: Path, log: Callable = print) -> dict:
                 "crc32_equal_on_every_survivor_corner": bool(all(
                     done[("field/hole", c)]["feat_crc32"]
                     == done[("field/base", c)]["feat_crc32"] for c in surv)),
-                "asserted_elementwise_during_scoring": eqs.get("field_hole == field_base"),
+                "asserted_directly_on_every_corner_and_probe": _hri(s),
+                "asserted_opportunistically_during_scoring": eqs.get("field_hole == field_base"),
+                "why_the_opportunistic_check_can_be_empty": (
+                    "the scoring loop only compares when it computes both generators for the same "
+                    "corner in one process; a RESUMED process skips units already done, so on a "
+                    "multi-window run it records nothing. That is the absence of a diagnostic, not "
+                    "a failure, which is why the direct assertion above exists."),
                 "why": ("punch_hole writes one byte of `coupling_hole`, a segment the read never "
                         "consults, so the rendered features must be BIT-identical; this is "
                         "asserted elementwise while scoring, not inferred afterwards")},
@@ -2004,8 +2099,7 @@ def build_report(out: Path, log: Callable = print) -> dict:
                         <= BAR_REFUSE_SURVIVOR_DRIFT for p in surv_names)
                 and S["composition_vs_base"]["field/hole"]["mean_delta"] == 0.0
                 and (ho["probes"]["red_cube"]["hole_flag"] or 0.0) == 0.0
-                and bool((eqs.get("field_hole == field_base") or {}).get(
-                    "all_bit_identical", False)))}
+                and bool((_hri(s) or {}).get("ALL_BIT_IDENTICAL", False)))}
         b["BAR6_the_8_byte_gate"] = {
             "value_deletion": {
                 "gate_refuse_on_deleted_set": S["arms"]["table+gate8/clear_red"][
@@ -2579,7 +2673,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--stage", required=True,
                    choices=("corners", "build", "bytes", "score", "learners", "c4",
-                            "dash", "unseen", "report", "markdown", "compare", "all"))
+                            "dash", "unseen", "holeread", "report", "markdown", "compare", "all"))
     p.add_argument("--out", required=True)
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--max-seconds", type=float, default=7200.0)
@@ -2620,6 +2714,9 @@ def main(argv=None) -> int:
     if args.stage in ("c4", "all"):
         for s_ in seeds:
             nearest_atom_check(out, s_, log=log)
+    if args.stage in ("holeread", "all"):
+        for s_ in seeds:
+            hole_read_identity(out, s_, log=log)
     if args.stage in ("unseen", "all"):
         for s_ in seeds:
             unseen_pairs_check(out, s_, log=log)
