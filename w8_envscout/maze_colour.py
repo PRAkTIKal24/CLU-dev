@@ -55,6 +55,12 @@ class Instance:
     opt_len: int              # exact optimum under RULES A+B
     opt_len_a_only: int       # exact optimum under RULE A alone (rule B dropped)
 
+    def _replace_tint(self, tint):
+        """A view of this instance with a different tint array (adversarial placement)."""
+        return Instance(self.seed, self.grid, tint, self.door, self.key_at, self.start,
+                        self.goal, self.n_colours, self.budget, self.opt_len,
+                        self.opt_len_a_only)
+
 
 # ---------------------------------------------------------------- key state
 def _keystates(k):
@@ -285,9 +291,62 @@ def judge(inst, route):
     return False, "no-goal", len(route)
 
 
+
+# ---------------------------------------------------------------- adversarial tints
+def _poison(inst, tint, target_kwargs, rng, max_poison):
+    """Tint cells so that ONE named blind planner's route becomes ILLEGAL.
+
+    Runs the blind planner named by `target_kwargs`, replays its route, and for every
+    cell it enters while carrying key c, sets that cell's tint to c -- which is exactly
+    the condition RULE B refuses.  Each addition is kept only if the instance stays
+    feasible under RULES A+B, so the oracle is never destroyed.
+
+    This is the alternative to the acceptance filter: instead of DISCARDING instances
+    where the two rules happen not to interact, it CONSTRUCTS the interaction in every
+    instance.  Nothing is thrown away, so the distribution itself carries the
+    composition rather than a rejection step.  Returns the number of cells poisoned.
+    """
+    L, route = solve(inst._replace_tint(tint), **target_kwargs)
+    if route is None:
+        return 0
+    key_cell = {inst.key_at[i]: i + 1 for i in range(inst.n_colours)}
+    protected = {inst.start, inst.goal} | set(inst.key_at)
+    cands, pos, ks = [], inst.start, [UNTAKEN] * inst.n_colours
+    for a in route:
+        if a == "P":
+            kc = key_cell.get(pos, 0)
+            if kc:
+                ks[kc - 1] = CARRIED
+            continue
+        dr, dc = MOVES[a]
+        npos = (pos[0] + dr, pos[1] + dc)
+        dcol = int(inst.door[npos])
+        if dcol and ks[dcol - 1] == CARRIED:
+            ks[dcol - 1] = USED
+        else:
+            pk = _pocket(tuple(ks))
+            if pk and npos not in protected and tint[npos] == 0 and dcol == 0:
+                cands.append((npos, pk))
+        pos = npos
+    rng.shuffle(cands)
+    used = 0
+    for (r, c), colour in cands:
+        if used >= max_poison:
+            break
+        if tint[r, c] != 0:
+            continue
+        tint[r, c] = colour
+        if solve(inst._replace_tint(tint))[0] is None:
+            tint[r, c] = 0                      # would destroy the oracle -- revert
+        else:
+            used += 1
+    return used
+
+
 # ---------------------------------------------------------------- generator
 def generate(seed, h=7, w=7, n_colours=4, braid=0.12, p_tint=0.22,
-             slack=0.10, max_tries=400, require_bend=True):
+             slack=0.10, max_tries=400, require_bend=True, adversarial=0,
+             max_poison=8):
     """Return an accepted Instance, or None if max_tries is exhausted.
 
     Acceptance is a statement about the INSTANCE, not about any baseline policy:
@@ -296,6 +355,11 @@ def generate(seed, h=7, w=7, n_colours=4, braid=0.12, p_tint=0.22,
       * opt_len(A+B) > opt_len(A alone)  -- rule B genuinely BENDS the route.
     The third condition is the research question made into a filter: an instance is
     kept only when composing B with A yields a DIFFERENT route.
+
+    `adversarial=R` replaces uniform tinting with R rounds of ADVERSARIAL placement
+    (see `_poison`): round 0 targets the rule-A-only planner, later rounds target the
+    factored planner.  It is normally used with `require_bend=False`, because its whole
+    point is to get the interaction out of the DISTRIBUTION instead of out of a filter.
     """
     rng = np.random.default_rng(seed)
     for _ in range(max_tries):
@@ -324,6 +388,11 @@ def generate(seed, h=7, w=7, n_colours=4, braid=0.12, p_tint=0.22,
                         n_colours, 10 ** 9, 0, 0)
         if _reachable_without_keys(inst):
             continue                      # doors are not load-bearing
+        if solve(inst)[0] is None:
+            continue                      # infeasible before poisoning
+        for r_i in range(adversarial):
+            target = dict(rule_b=False) if r_i == 0 else dict(tint_local_only=True)
+            _poison(inst, tint, target, rng, max_poison)
         lj, _ = solve(inst, rule_a=True, rule_b=True)
         if lj is None:
             continue                      # infeasible
