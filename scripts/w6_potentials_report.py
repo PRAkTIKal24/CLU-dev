@@ -102,6 +102,32 @@ def report_leg(name, obj, fh=sys.stdout):
               f"(quantisation < 0.04): median over {len(m)} corners = {np.median(m):.4f}"
               f"   (context, never the bar)")
 
+    # ---- where the law holds, resolved by distance from the exceptional point --
+    if main:
+        p("")
+        p("  CRR error resolved by h/h* (the exceptional point is h/h* = 1; V2 App. C")
+        p("  says the map is DEFECTIVE there, so the envelope is not a pure exponential):")
+        p(f"    {'h/h* bucket':>16}{'n':>7}{'median|log10|':>15}{'p90':>9}"
+          f"{'median n_pred':>15}")
+        buckets = [(0.0, 0.1, "< 0.1"), (0.1, 0.5, "0.1 - 0.5"), (0.5, 2.0, "0.5 - 2"),
+                   (2.0, 10.0, "2 - 10"), (10.0, 1e9, "> 10")]
+        for lo, hi, lab in buckets:
+            rs = [r for r in main
+                  if r["h_star"] > 0 and lo <= (r["h"] / r["h_star"]) < hi]
+            if not rs:
+                continue
+            e = np.array([r["err_crr_log10"] for r in rs])
+            np_ = np.array([r["n_pred_crr"] for r in rs])
+            p(f"    {lab:>16}{len(rs):7d}{np.median(e):15.4f}"
+              f"{np.percentile(e, 90):9.4f}{np.median(np_):15.1f}")
+        fl = meta.get("instrument_floor", {})
+        if fl:
+            p(f"    instrument floor on an EXACT quadratic: median "
+              f"{fl['median_abs_log10']:.4f}, p90 {fl['p90_abs_log10']:.4f}, "
+              f"max {fl['max_abs_log10']:.4f}")
+            p(f"      (worst cell at the exceptional point, median near it "
+              f"{fl.get('median_near_exceptional_point')})")
+
     # ---- B3: the floor -----------------------------------------------------
     bt = band_table(main)
     p(f"\n  bands (live, main grid, field): " +
@@ -134,10 +160,17 @@ def report_leg(name, obj, fh=sys.stdout):
         p(f"\n  V-curves: {len(vcs)} ({len(br)} with gamma_crit bracketed by the grid)")
         if br:
             a = np.array([v["argmin_over_gamma_crit"] for v in br])
-            p(f"  [B4] measured argmin / gamma_crit (D16: gamma_crit = 2 eps mu): "
+            p(f"  [B4] measured argmin / gamma_crit (D16 small-h form, 2 eps mu): "
               f"median {np.median(a):.4f}  IQR {np.percentile(a,25):.3f}-"
               f"{np.percentile(a,75):.3f}   BAR within factor 2   "
               f"{'PASS' if 0.5 <= np.median(a) <= 2.0 else 'MISS'}")
+            ax = np.array([v["argmin_over_gamma_crit_exact"] for v in br
+                           if np.isfinite(v.get("argmin_over_gamma_crit_exact",
+                                                np.nan))])
+            if ax.size:
+                p(f"       same against the EXACT inversion of h*(gamma) = h "
+                  f"(of which 2 eps mu is the small-h limit): median {np.median(ax):.4f}"
+                  f"  IQR {np.percentile(ax,25):.3f}-{np.percentile(ax,75):.3f}")
         for side, lab in (("over", "D17 overdamped  "), ("under", "D18 underdamped")):
             ep = np.array([v[f"{side}_err_pred"] for v in vcs if f"{side}_err_pred" in v])
             en = np.array([v[f"{side}_err_naive"] for v in vcs if f"{side}_err_naive" in v])

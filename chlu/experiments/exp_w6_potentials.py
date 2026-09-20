@@ -654,13 +654,18 @@ def v_curve_analysis(rows: list, arm: str = "field") -> list:
         rs = sorted(rs, key=lambda r: r["gamma"])
         g = np.array([r["gamma"] for r in rs])
         n = np.array([r["n_meas"] for r in rs])
-        gc = float(rs[0]["gamma_crit"])
+        gc = float(rs[0]["gamma_crit"])                      # D16's small-h form
+        gce = float(rs[0].get("gamma_crit_exact", np.nan))    # the exact inversion
         if gc <= 0 or g.size < 4:
             continue
+        am = float(g[int(np.argmin(n))])
         rec = {k: v for k, v in zip(key, kk)}
-        rec.update({"gamma_crit": gc, "n_gammas": int(g.size),
-                    "argmin_gamma": float(g[int(np.argmin(n))]),
-                    "argmin_over_gamma_crit": float(g[int(np.argmin(n))] / gc),
+        rec.update({"gamma_crit": gc, "gamma_crit_exact": gce, "n_gammas": int(g.size),
+                    "argmin_gamma": am,
+                    "argmin_over_gamma_crit": am / gc,
+                    "argmin_over_gamma_crit_exact": (am / gce if gce and
+                                                     np.isfinite(gce) and gce > 0
+                                                     else float("nan")),
                     "bracketed": bool(g.min() < gc < g.max())})
         # V5's own fit windows: gamma < gamma_crit/2.5 and gamma > 2.5 gamma_crit
         for name, mask, pred_fn, naive in (

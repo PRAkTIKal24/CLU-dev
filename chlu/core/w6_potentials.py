@@ -12,7 +12,7 @@ LAW A -- **the CRR**, from the shorts (V2 Sec. 3 + App. C Eqs. 3-6; V5 Sec. 2.1)
     One dissipative velocity-Verlet step on a mass-whitened normal mode of curvature
     ``mu^2``, step ``eta``, damping ``gamma``, ``h = mu*eta``, is the linear map
 
-        A = [[1 - h^2/2                  ,  eta (1 - h^2/4)  ],
+        A = [[1 - h^2/2                  ,  eta              ],
              [-(1-g) mu^2 eta (1 - h^2/4),  (1-g)(1 - h^2/2) ]]
 
     with ``det A = 1 - gamma`` and ``tr A = (2-gamma)(1 - h^2/2)``.  The retention
@@ -29,11 +29,18 @@ LAW A -- **the CRR**, from the shorts (V2 Sec. 3 + App. C Eqs. 3-6; V5 Sec. 2.1)
       with ``h*^2 = 2(1-sqrt(1-g))^2/(2-g)`` (``= g/2 + O(g^2)``) and
            ``h_f^2 = 2(1+sqrt(1-g))^2/(2-g)`` (``= 2 - O(g^2)``).
 
-    WARNING -- **the gamma in the overdamped numerator is a CORRECTION to the shorts.**
-    V2 prints ``2 ln2 / [(2-g)(mu eta)^2]``.  Expanding ``lambda_+ = 1 - eps`` in the
-    characteristic polynomial gives ``-g eps + (2-g) h^2/2 + eps^2 = 0``, i.e.
-    ``eps = (2-g) h^2 / (2 g)``; V2's own printed error term ``O(h^4/g^3)`` is only
-    consistent with that.  Nothing here pre-registers against the printed line:
+    Inverted the other way (:func:`gamma_crit_exact`), the V-curve's critical damping is
+    ``gamma* = 1 - r^2`` with ``r = (2 - sqrt(4 - (2-h^2)^2))/(2-h^2)``.  The familiar
+    ``gamma_crit = 2 eps mu`` is its SMALL-h limit, which the shorts state as such
+    ("inverting at small h"): at ``h = 0.4`` the exact value is 0.563, not 0.8.
+
+    NOTE on the gamma in the overdamped numerator.  My PDF text extraction dropped every
+    greek glyph, so V2 Eq. (6) arrived without it and I briefly recorded it as a
+    correction to the shorts.  It is not: the inventory spoke quotes the paper verbatim
+    with the gamma present, and my independent expansion of ``lambda_+ = 1 - eps`` in the
+    characteristic polynomial (``-g eps + (2-g) h^2/2 + eps^2 = 0``, so
+    ``eps = (2-g) h^2/(2 g)``) agrees with it exactly.  Nothing here pre-registers
+    against the printed asymptote in any case:
     :func:`n_half_crr` uses the EXACT eigenvalue, which reproduces V2's floor (27.03)
     and V5's ``lambda_ret = 0.998999499`` / ``n_1/2 = 692.5`` from the papers' own tables.
 
@@ -71,6 +78,7 @@ import numpy as np
 
 __all__ = [
     "crr_matrix", "lambda_slow", "n_half_crr", "band_edges", "band_of",
+    "gamma_crit_exact",
     "n_half_overdamped_asym", "n_half_floor",
     "kernel_weights", "kernel_energy", "kernel_grad", "curvature_spectrum",
     "mean_shift_settle", "sigma_provenance", "well_view",
@@ -86,6 +94,17 @@ LN2 = float(np.log(2.0))
 def crr_matrix(mu: float, eta: float, gamma: float) -> np.ndarray:
     """V2 Eq. (3): the one-step map on a mass-whitened mode.
 
+    Reading it off the kick-drift-kick directly, with ``h = mu eta``:
+    ``p_half = p - (eta/2) mu^2 q``; ``q' = (1 - h^2/2) q + eta p``;
+    ``p' = (1 - h^2/2) p - eta mu^2 (1 - h^2/4) q``; then ``p <- (1-gamma) p``.
+
+    The ``(0,1)`` entry is ``eta`` exactly -- NOT ``eta (1 - h^2/4)``.  With ``eta`` the
+    identities the shorts state hold exactly: ``det A = 1 - gamma`` to 1e-16 and
+    ``tr A = (2-gamma)(1 - h^2/2)``.  (An earlier version of this function carried
+    ``eta (1 - h^2/4)`` there, which broke ``det A = 1 - gamma`` at order ``h^4``;
+    :func:`lambda_slow` was never affected because it builds the characteristic
+    polynomial from ``tr`` and ``det`` directly, and both are unchanged.)
+
     ``mu^2`` may be negative (a saddle direction), in which case ``h^2 < 0`` and the
     mode expands; the matrix is still the right one and :func:`lambda_slow` will
     report ``|lambda| > 1``.
@@ -93,7 +112,7 @@ def crr_matrix(mu: float, eta: float, gamma: float) -> np.ndarray:
     h2 = float(mu) * float(mu) * float(eta) * float(eta)
     g = float(gamma)
     return np.array([
-        [1.0 - h2 / 2.0, eta * (1.0 - h2 / 4.0)],
+        [1.0 - h2 / 2.0, eta],
         [-(1.0 - g) * mu * mu * eta * (1.0 - h2 / 4.0), (1.0 - g) * (1.0 - h2 / 2.0)],
     ], dtype=np.float64)
 
@@ -121,8 +140,12 @@ def n_half_crr(mu2: float, eta: float, gamma: float) -> float:
     Parameter-free: every input is measured or configured, nothing is fitted.
     ``inf`` at ``mu2 = 0`` (the latch) and at any ``|lambda| >= 1`` (no decay).
     """
+    if float(mu2) == 0.0:
+        return float("inf")            # D12: the latch, lambda = 1 exactly
     lam = abs(lambda_slow(mu2, eta, gamma))
-    if not np.isfinite(lam) or lam >= 1.0:
+    # A modulus at 1 to within float64 round-off is a latch, not a 1e15-step half-life:
+    # -ln(1 - 2e-16) is meaningless as a rate.
+    if not np.isfinite(lam) or lam >= 1.0 - 1e-14:
         return float("inf")
     if lam <= 0.0:
         return 0.0
@@ -135,6 +158,35 @@ def band_edges(gamma: float) -> tuple:
     r = np.sqrt(1.0 - g)
     return (float(np.sqrt(2.0 * (1.0 - r) ** 2 / (2.0 - g))),
             float(np.sqrt(2.0 * (1.0 + r) ** 2 / (2.0 - g))))
+
+
+def gamma_crit_exact(h: float) -> float:
+    """D16, inverted EXACTLY: the damping at which the V-curve turns, for a given ``h``.
+
+    The shorts give the critical point as ``h*(gamma) = (1 - sqrt(1-gamma)) sqrt(2/(2-gamma))``
+    and then say *"Inverting at small h, gamma* = 2 eps mu (1 + O(eps mu))"*.  The
+    familiar ``gamma_crit = 2 eps mu`` is therefore the **small-h limit**, not the law.
+    Inverting ``h*(gamma) = h`` in closed form with ``r = sqrt(1-gamma)`` and ``c = 2 - h^2``
+    gives ``c r^2 - 4 r + c = 0``, i.e. ``r = (2 - sqrt(4 - c^2)) / c`` and
+    ``gamma* = 1 - r^2``.
+
+    As ``h -> 0`` this reduces to ``gamma* = 2h - h^2 -> 2 eps mu``, recovering D16's
+    quoted form.  At ``h = 0.4`` the exact answer is ``0.563`` against the small-h form's
+    ``0.8`` -- a 30 % gap, so the approximation must not be used as the bar at large ``h``.
+    """
+    h = float(h)
+    if h <= 0.0:
+        return 0.0
+    c = 2.0 - h * h
+    if c <= 0.0:
+        return float("nan")            # h >= sqrt(2): past the useful range
+    disc = 4.0 - c * c
+    if disc < 0.0:
+        return float("nan")
+    r = (2.0 - np.sqrt(disc)) / c
+    if not (0.0 <= r <= 1.0):
+        return float("nan")
+    return float(1.0 - r * r)
 
 
 def band_of(mu2: float, eta: float, gamma: float) -> str:
