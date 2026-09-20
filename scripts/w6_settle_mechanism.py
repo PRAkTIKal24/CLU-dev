@@ -14,7 +14,9 @@ regresses to seen combinations").  If the cross-well coupling reproduces it, the
 Gaussian coupling and the kernel density are the same failure wearing different clothes,
 and that is the finding rather than "my coupling was badly tuned".
 
-This reads only artifacts already on disk and scores nothing.  ``val`` only.
+This reads only artifacts already on disk and scores nothing.
+
+    python scripts/w6_settle_mechanism.py LEG [SEED] [val|test]
 """
 from __future__ import annotations
 
@@ -50,21 +52,30 @@ ORDER = [
 def main(argv=None) -> int:
     leg = Path(argv[0] if argv else
                "C:/chlu/outputs/w6-compose-physics/dev/val_seed0")
-    seed = 0
+    seed = int(argv[1]) if len(argv) > 1 else 0
+    condition = argv[2] if len(argv) > 2 else "val"
     P.install()
-    R.set_condition(seed, "val")
+    R.set_condition(seed, condition)
     cond = fw.load_condition()
     grid = cond["grid"]
     cards = tuple(int(c) for c in grid.cardinalities)
-    # the val condition removes the val corners' rows from the fit pool, so "seen" must
-    # be measured against the rows the store was ACTUALLY fitted from (exp_gen_read
-    # build_table makes the same correction, and for the same reason)
-    fitted = np.setdiff1d(cond["train_rows"], fw.val_corner_rows(cond))
+    if condition == "val":
+        # the val condition removes the val corners' rows from the fit pool, so "seen"
+        # must be measured against the rows the store was ACTUALLY fitted from
+        # (exp_gen_read.build_table makes the same correction, for the same reason)
+        fitted = np.setdiff1d(cond["train_rows"], fw.val_corner_rows(cond))
+        corners = fw.val_corners(cond)
+    else:
+        fitted = cond["train_rows"]
+        # row 4 ONLY -- the 49 n-way corners, which is the row this hub is decided on
+        corners = fw.nway_corners(cond)
     seen_mask = fw.seen_tuple_mask(grid, fitted)
-    corners = fw.val_corners(cond)
 
-    print(f"leg: {leg}")
-    print(f"val corners: {len(corners)}  (selection set; nothing here is scored)\n")
+    print(f"leg: {leg}   condition = {condition}")
+    if condition == "val":
+        print(f"{len(corners)} val corners  (SELECTION set; nothing here is scored)\n")
+    else:
+        print(f"{len(corners)} row-4 n-way corners  (the SCORED held-out set)\n")
     hdr = (f"{'leg':24s} {'displ':>7s} {'valid':>7s} {'distinct':>8s} "
            f"{'novel':>7s} {'SEEN':>7s} {'seen%':>6s}")
     print(hdr)
@@ -109,12 +120,19 @@ def main(argv=None) -> int:
     print("SEEN = of those, already in the fit pool.  novel is the metric rows 3 "
           "and 4 are decided in.")
     print("")
-    print("NOTE on the SEEN column under condition=val: the val corners' rows are "
-          "REMOVED from the")
-    print("fit pool, so every tuple realised in a val corner is novel BY "
-          "CONSTRUCTION and SEEN is")
-    print("identically 0 for every leg.  The seen/novel split is only informative "
-          "under condition=test.")
+    print("MEASURED, on BOTH conditions: SEEN is identically 0 for every leg, "
+          "including the incumbent.")
+    print("Under val the corners' rows are removed from the fit pool; under test the "
+          "row-4 corners are")
+    print("Montero-shaped combinations the condition never emitted.  Either way the "
+          "scored corners hold")
+    print("NO seen combinations, so distinct == novel by construction and the whole "
+          "metric is carried by")
+    print("VALIDITY.  Consequence: the settled read is NOT regressing to seen "
+          "combinations (charter E.4's")
+    print("banked mechanism) -- it cannot, there are none to regress to.  It is "
+          "walking the state OFF the")
+    print("request, and the external classifier charges it one tuple for one.")
     return 0
 
 

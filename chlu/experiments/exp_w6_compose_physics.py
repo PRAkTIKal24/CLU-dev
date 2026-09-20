@@ -638,6 +638,20 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         log("  arm pca_settle_zerostep: BIT-IDENTICAL to the incumbent read on 256 "
             "requests -- the harness change is a proven no-op")
 
+    # ⚠⚠ Exercise ROW 7's delete path HERE, at fit time, on 8 requests.
+    # ⛔ The defect this prevents is measured, not hypothetical: row 7 runs LAST inside
+    # ``fw.run_arm``, after rows 1-6 and all 109 corners, so a deleter that raises there
+    # destroys the whole arm's leg after ~5 minutes of work.  It did exactly that to all
+    # seven arms on the first scored leg (``KeyError: 'spec'``).  Failing in seconds, at
+    # fit, is the difference between a typo and a lost leg.
+    _del = delete_value_from_settle(obj, int(fw.DELETED_FACTOR),
+                                    int(fw.DELETED_VALUE_INDEX))
+    _f8, _ = arm_features(_del, grid.values_of(pool0[:8]), grid)
+    if int(np.asarray(_f8).shape[0]) != 8:
+        raise AssertionError(
+            "the row-7 delete path does not return one row per request")
+    obj["row7_delete_path_checked_at_fit"] = True
+
     obj["fit_seconds"] = time.time() - t0
     arm_dir.mkdir(parents=True, exist_ok=True)
     with open(done, "wb") as fh:
@@ -719,6 +733,48 @@ def arm_features(obj: dict, values: np.ndarray, grid) -> tuple:
     return _ORIG_ARM_FEATURES(obj, values, grid)
 
 
+def delete_value_from_settle(obj: dict, f: int, v: int):
+    """Row 7 for a SETTLED read -- the incumbent's own deletion, then settle on it.
+
+    ⚠ **The defect this fixes, recorded because it cost a scored leg.**  ``fw.run_arm``
+    calls ``delete_value_from_head`` for row 7 on **every** arm.  ``read_dial`` routes to
+    ``delete_value_from_address`` only when the verb ``startswith("tensor")``; this hub's
+    verb is ``"settle"``, so row 7 fell through to the incumbent-head deleter and died on
+    ``KeyError: 'spec'`` -- ⛔ **after** rows 1-6 and all 109 corners had been scored.
+    Renaming the verb would not have helped: ``delete_value_from_address`` carries the
+    same guard internally.
+
+    So this is the same six lines, for this hub's objects: zero the value's row of
+    ``E_f`` so the product address for any request naming that value is the zero vector
+    and reaches no atom.  ⭐ The settle then runs on the **deleted** address book, which
+    is the like-for-like with ``pca_tensor``'s own row 7 -- the same deletion, read by
+    the dynamics instead of statically.
+
+    ⛔ DECLARED, in the incumbent's own words: **this is an operation on the INTERFACE,
+    not on atoms.**  Charter B.4 wants deletion to be an operation on atoms and under a
+    shared-basis read it cannot be -- every well's atoms are fitted over the whole pool
+    and no atom belongs to one value.  ⛔ Row 7 here is REPORTED, never claimed.
+    """
+    import copy
+
+    if obj.get("read") != "settle":
+        return _ORIG_DELETE(obj, f, v)
+    addr = copy.deepcopy(obj["address"])
+    addr.E[int(f)] = np.array(addr.E[int(f)], np.float64, copy=True)
+    addr.E[int(f)][int(v), :] = 0.0
+    out = dict(obj)                     # shallow: the store and the coupling are shared
+    out["address"] = addr
+    out["deleted"] = {"factor_index": int(f), "value_index": int(v),
+                      "n_address_rows_zeroed": 1,
+                      "store_modes_touched": False,
+                      "coupling_touched": False,
+                      "mechanism": ("the value's row of E_f is zeroed, so the product "
+                                    "address for any request naming it is the zero "
+                                    "vector and reaches no atom; the settle then runs "
+                                    "on that deleted address book")}
+    return out
+
+
 # ---------------------------------------------------------------------------
 # 6. The runtime extension.  Additive, and asserted so.
 # ---------------------------------------------------------------------------
@@ -726,15 +782,24 @@ def arm_features(obj: dict, values: np.ndarray, grid) -> tuple:
 _ORIG_BUILD_ARM = None
 _ORIG_ARM_FEATURES = None
 _ORIG_ARMS = None
+_ORIG_DELETE = None
 
 
 def install() -> dict:
     """Append this hub's legs on top of w5's, without editing either module."""
-    global _ORIG_BUILD_ARM, _ORIG_ARM_FEATURES, _ORIG_ARMS
+    global _ORIG_BUILD_ARM, _ORIG_ARM_FEATURES, _ORIG_ARMS, _ORIG_DELETE
     w5 = W5.install()                       # w5's legs first: this hub sits ON them
     _ORIG_BUILD_ARM = R.build_arm
     _ORIG_ARM_FEATURES = R.arm_features
     _ORIG_ARMS = tuple(R.ARMS)
+    # ⭐ Row 7's deleter, patched HERE and not inside ``read_dial``.  ``read_dial``
+    # captures whatever ``fw.delete_value_from_head`` is when it is ENTERED and falls
+    # back to it for any verb that does not start with "tensor" -- so patching it at
+    # install time puts this hub's objects on the right path without editing either
+    # ``exp_gen_read`` or ``exp_gen_factor_wells``, and leaves every other arm's route
+    # exactly where it was.
+    _ORIG_DELETE = fw.delete_value_from_head
+    fw.delete_value_from_head = delete_value_from_settle
     before = {"arms": tuple(R.ARMS), "store": dict(R.ARM_STORE),
               "read": dict(R.ARM_READ), "cls": dict(R.ARM_CLASS)}
     R.ARMS = tuple(_ORIG_ARMS) + PHYS_ARMS
