@@ -187,6 +187,16 @@ PINS = {
     #: ``mlp_180k`` FIRST: it is THE BAR (179,968 = the CLU's store + address book).
     "rival_families": ["mlp_180k", "cont_mlp", "transformer", "lstm"],
     "rival_val_rows": 512,
+    #: ⭐ Arms that get NO render-decoder refit, and why that costs nothing.
+    #: `alone_wc` is the WALL-CLOCK control. The question it answers -- "did the
+    #: treatment only win because it got more seconds?" -- is decided by its
+    #: `train_seconds` and its probe margin, and NEITHER needs a renderer: the probe
+    #: reads features directly and `train_seconds` is measured around the training loop
+    #: only, so it excludes the refit either way. Skipping it therefore changes no
+    #: number this hub reports and buys back ~18 min per seed of measured CPU.
+    #: ⛔ An arm listed here is consequently NOT SCOREABLE on rows 3/4 and the manifest
+    #: says so in a field of its own, so it can never be quietly scored later.
+    "arms_without_render_decoder": ["alone_wc"],
     "seeds": [0, 1, 2],
 }
 
@@ -964,9 +974,8 @@ def stage_train(out: Path, seed: int, arm: str, quick: bool,
         arm, encoder, store, decoder, classifier, imgs, labels, own, key,
         steps, log=log, quick=quick, ckpt=ckpt)
 
-    # ---- the decoder EVERY arm gets: refit downstream of its OWN features ---
-    log(f"  refitting the decoder from {arm}'s own features "
-        f"({PINS['dec_recipe']}, the winner recipe verbatim) ...")
+    # ---- the render decoder: refit downstream of THIS ARM's OWN features ----
+    skip_dec = arm in list(PINS.get("arms_without_render_decoder", []))
     feats = encode_images(encoder, imgs, int(PINS["eval_batch"]))
     key, dk = jax.random.split(key)
     t0 = _now()
@@ -974,9 +983,19 @@ def stage_train(out: Path, seed: int, arm: str, quick: bool,
     if quick:
         from ..core.gen_bridge import DECODER_RECIPES
         DECODER_RECIPES[str(PINS["dec_recipe"])]["dec_steps"] = 20
-    render_decoder, dhist, recipe = train_decoder_from_features(
-        encoder.feat_shape, feats, imgs, rd_cfg, dk,
-        log=log, recipe=str(PINS["dec_recipe"]))
+    if skip_dec:
+        log(f"  {arm}: NO render-decoder refit (declared in PINS). It is the WALL-CLOCK "
+            "control; its train_seconds and its probe margin need no renderer, so this "
+            "changes no reported number. It is therefore NOT SCOREABLE on rows 3/4.")
+        render_decoder, dhist = None, []
+        recipe = resolve_decoder_cfg(rd_cfg, str(PINS["dec_recipe"]))
+    else:
+        log(f"  refitting the decoder from {arm}'s own features "
+            f"({PINS['dec_recipe']}, the gated architecture at a declared shorter "
+            "budget) ...")
+        render_decoder, dhist, recipe = train_decoder_from_features(
+            encoder.feat_shape, feats, imgs, rd_cfg, dk,
+            log=log, recipe=str(PINS["dec_recipe"]))
     dec_seconds = _now() - t0
 
     # ---- the bypass check, BEFORE any number is kept -----------------------
@@ -990,11 +1009,12 @@ def stage_train(out: Path, seed: int, arm: str, quick: bool,
     save_model(encoder, ad / "encoder.pkl", {"arm": arm, "seed": int(seed)})
     save_model(store, ad / "store.pkl", {"arm": arm, "seed": int(seed)})
     save_model(decoder, ad / "joint_decoder.pkl", {"arm": arm, "seed": int(seed)})
-    save_model(render_decoder, ad / "decoder.pkl", {"arm": arm, "seed": int(seed)})
     _write_json({"history": rep["history"], "decoder_refit": dhist}, ad / "history.json")
-
-    # ---- a decoder-lift-shaped directory the frozen Judge can load ---------
-    _publish_declift(out, seed, arm, render_decoder, recipe, param_hash(encoder), log=log)
+    if render_decoder is not None:
+        save_model(render_decoder, ad / "decoder.pkl", {"arm": arm, "seed": int(seed)})
+        # ---- a decoder-lift-shaped directory the frozen Judge can load -----
+        _publish_declift(out, seed, arm, render_decoder, recipe, param_hash(encoder),
+                         log=log)
 
     man = {
         "schema": ARM_SCHEMA, "status": "ok",
@@ -1005,10 +1025,17 @@ def stage_train(out: Path, seed: int, arm: str, quick: bool,
                        ("encoder_param_hash", "store_param_hash", "decoder_param_hash",
                         "D", "feat_shape", "well_sizes")},
         "compute": rep["info"],
+        "scoreable_on_rows_3_4": not skip_dec,
         "decoder_refit": {
+            "skipped": bool(skip_dec),
+            "why_skipped": (
+                "the WALL-CLOCK control: its train_seconds and probe margin need no "
+                "renderer, and train_seconds excludes the refit either way, so skipping "
+                "it changes no reported number -- but it is NOT SCOREABLE on rows 3/4"
+                if skip_dec else None),
             "recipe": recipe.as_dict(), "seconds": float(dec_seconds),
-            "param_hash": param_hash(render_decoder),
-            "param_count": param_count(render_decoder),
+            "param_hash": param_hash(render_decoder) if render_decoder is not None else None,
+            "param_count": param_count(render_decoder) if render_decoder is not None else None,
             "loss_first": float(dhist[0]) if dhist else None,
             "loss_final": float(dhist[-1]) if dhist else None,
             "note": ("identical recipe and identical steps for EVERY arm, fit downstream "
@@ -1035,7 +1062,8 @@ def stage_train(out: Path, seed: int, arm: str, quick: bool,
         "param_hashes": {
             "encoder": param_hash(encoder), "store": param_hash(store),
             "joint_decoder": param_hash(decoder),
-            "render_decoder": param_hash(render_decoder),
+            "render_decoder": (param_hash(render_decoder)
+                               if render_decoder is not None else None),
             "classifier": cls_info["param_hash"],
         },
         "classifier": cls_info,
@@ -1485,6 +1513,7 @@ def stage_report(out: Path, log: Callable = print) -> dict:
                     "swap_exact_final": (c.get("history_last") or {}).get("swap_exact"),
                     "recon_final": (c.get("history_last") or {}).get("recon"),
                     "decoder_refit_loss_final": m["decoder_refit"]["loss_final"],
+                    "scoreable_on_rows_3_4": m.get("scoreable_on_rows_3_4", True),
                     "store_bytes": m["store_bytes"],
                 })
             if (adir / "probe.json").exists():

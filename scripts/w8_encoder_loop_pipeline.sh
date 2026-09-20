@@ -38,8 +38,15 @@ export CHLU_GEN_CLASSIFIER_ROOT
 
 M=chlu.experiments.exp_w8_encoder_loop
 TRAIN_ARMS=(alone loop_nosw loop_swap alone_wc)
-SCORE_ARMS=(alone loop_nosw loop_swap)
-: "${SCORE_ROWS:=pca_tensor rival_mlp_180k}"
+SCORE_ARMS=(alone loop_swap loop_nosw)
+# BAR D -- "do the baselines close the gap?" -- is defined as the GROWTH of the CLU's
+# margin over rival_mlp_180k from `alone` to `loop_swap`, so those two arms need the
+# refit baseline and `loop_nosw` does not. `loop_nosw` is the isolation column for the
+# CLU itself (what unfreezing WITHOUT the swap loss did), and pca_tensor answers that.
+# Declared here, and the report prints which arms carry a baseline.
+RIVAL_ARMS="alone loop_swap"
+: "${SCORE_ROWS_WITH_BASELINE:=pca_tensor rival_mlp_180k}"
+: "${SCORE_ROWS_BARE:=pca_tensor}"
 
 say() { echo "[pipe s$SEED $(date -u +%H:%M:%SZ)] $*"; }
 FAILED=()
@@ -68,11 +75,15 @@ done
 for arm in "${SCORE_ARMS[@]}"; do
   say "=== cache $arm (480,000 rows, one CPU device, per-block sha256) ==="
   run python -u -m "$M" --stage cache --seed "$SEED" --arm "$arm" --out "$RUN" || continue
-  say "=== rivals $arm (refit on THIS arm's features, w4_learners verbatim) ==="
-  run python -u -m "$M" --stage rivals --seed "$SEED" --arm "$arm" --out "$RUN"
-  say "=== score $arm on $COND (rows 3 and 4) ==="
+  rows="$SCORE_ROWS_BARE"
+  case " $RIVAL_ARMS " in *" $arm "*)
+    say "=== rivals $arm (refit on THIS arm's features, w4_learners verbatim) ==="
+    run python -u -m "$M" --stage rivals --seed "$SEED" --arm "$arm" --out "$RUN" \
+        --families mlp_180k && rows="$SCORE_ROWS_WITH_BASELINE" ;;
+  esac
+  say "=== score $arm on $COND (rows 3 and 4): $rows ==="
   run bash "$(dirname "$0")/w8_encoder_loop_score.sh" \
-      "$COND" "$SEED" "$arm" "$RUN" "$SCORE" $SCORE_ROWS
+      "$COND" "$SEED" "$arm" "$RUN" "$SCORE" $rows
 done
 
 python -u -m "$M" --stage report --out "$RUN" || true
