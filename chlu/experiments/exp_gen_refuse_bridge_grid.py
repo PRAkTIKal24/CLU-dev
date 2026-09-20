@@ -191,6 +191,61 @@ def build(runs: Path, dest: Path, log: Callable = print) -> dict:
             W("")
         summary[label]["verdict"] = verdict if p0 is not None and mi is not None else None
 
+    # -- ⭐⭐ THE ACCEPT-LEG AUDIT ----------------------------------------------
+    # ⚠ The parent's claim has an ACCEPT half -- "still answering 1.0000 of the requests
+    # naming a never-held conjunction" -- and the grid is the first thing able to test it
+    # against more than one instrument. It is audited across all nine cells, because a
+    # claim that holds in three cells and fails in a fourth is not a claim that holds.
+    accept = {}
+    for b in have_b:
+        rec = cols[b]
+        for s in rec["seeds_present"]:
+            i = rec["seeds_present"].index(s)
+            accept[(s, b)] = {
+                "accept_unseen_conjunction": _dig(
+                    rec, ("fixed_points",
+                          "HOLE accept never-held conjunction, `field_geom`"))["per_seed"][i],
+                "reject_deleted": _dig(
+                    rec, ("fixed_points",
+                          "HOLE reject deleted conjunction, `field_geom`"))["per_seed"][i],
+                "evict_accept_survivors": _dig(
+                    rec, ("fixed_points",
+                          "EVICT accept survivors, `field_geom`"))["per_seed"][i],
+            }
+    bad = {f"store{s}_bridge{b}": v for (s, b), v in accept.items()
+           if min(v["accept_unseen_conjunction"], v["evict_accept_survivors"]) < 1.0}
+    W("### ⭐⭐ THE ACCEPT-LEG AUDIT -- the half of the parent's claim a grid can falsify")
+    W("")
+    W("The parent's claim has two halves: it refuses the deleted conjunction at 1.0000 "
+      "**and still answers 1.0000** of the requests naming a never-held one. ⛔ A refusal "
+      "rule that refuses everything gets the first half free, so the second half is where "
+      "a claim can die. It held on all three of the parent's cells; here it is tested on "
+      "nine.")
+    W("")
+    W("| store seed \\ bridge seed | " + " | ".join(f"b={b}" for b in have_b) + " |")
+    W("|---|" + "---|" * len(have_b))
+    for s in SEEDS:
+        row = []
+        for b in have_b:
+            v = accept.get((s, b))
+            if v is None:
+                row.append("-")
+                continue
+            a = v["accept_unseen_conjunction"]
+            row.append(f"**{a:.4f}**" if a >= 1.0 else f"⛔ **{a:.4f}**")
+        W(f"| store {s} (accept never-held conjunction) | " + " | ".join(row) + " |")
+    W("")
+    if bad:
+        W(f"⛔⛔ **The accept leg FAILS in {len(bad)} of {len(accept)} cells:** "
+          + ", ".join(f"`{k}` (accept {v['accept_unseen_conjunction']:.4f})"
+                      for k, v in sorted(bad.items()))
+          + ". ⚠ The parent's 1.0000 accept leg is **not instrument-invariant**. It is a "
+            "property of the (pool, encoder) pair, not of the field store as such, and "
+            "with only one instrument the parent could not have seen this.")
+    else:
+        W("⭐ **The accept leg holds at 1.0000 in every cell of the grid.**")
+    W("")
+
     # -- the diagonal / column identity check ----------------------------------
     W("### ⭐ Internal consistency -- the diagonal, computed twice")
     W("")
@@ -205,6 +260,8 @@ def build(runs: Path, dest: Path, log: Callable = print) -> dict:
     dest.mkdir(parents=True, exist_ok=True)
     (dest / "BRIDGE-GRID.md").write_text(md, encoding="utf-8")
     _jdump({"columns_present": have_b, "quantities": summary,
+            "accept_leg_audit": {f"store{s}_bridge{b}": v for (s, b), v in accept.items()},
+            "accept_leg_failures": bad,
             "provenance": {str(b): cols[b]["provenance"] for b in have_b}},
            dest / "bridge_grid.json")
     log(md)
