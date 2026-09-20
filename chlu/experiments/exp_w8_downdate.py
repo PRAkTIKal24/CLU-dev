@@ -779,13 +779,128 @@ def stage_gauge(out_dir: Path, condition: str, log=_log) -> dict:
         "do not. ⭐ The deletion is exact either way; what the pinned basis buys is "
         "that the READ survives it.")
     _jdump(out, out_dir / "gauge.json")
+    # ⛔⭐ Publish it, because DOWNDATE-READY already carries
+    # `smoke.valid_mean_after_delete = 0.0` and a reader who sees that number without
+    # this one beside it will read a GAUGE ARTEFACT as a composition cost. The two
+    # belong in the same file.
+    publish_ready(gauge={
+        "stores_agree_to": out["stores_agree_to"],
+        "svd_basis_max_render_dev": out["svd_basis"].get("max_abs_render_dev"),
+        "pinned_basis_max_render_dev": out["pinned_basis"].get("max_abs_render_dev"),
+        "improvement_factor": out["improvement_factor"],
+        "pinned_basis_fixes_it": out["pinned_basis_fixes_it"],
+        "READ_THIS_BEFORE_QUOTING_valid_mean_after_delete": (
+            "⛔ `smoke.valid_mean_after_delete` is measured with the PRE-delete address "
+            "book on the default (SVD) basis and is therefore dominated by a GAUGE "
+            "artefact, not by the deletion: gen_read.span_basis re-derives the basis "
+            "from an atom block whose singular spectrum is maximally degenerate, so a "
+            "1e-10 atom change rotates it by O(1). ⛔ DO NOT quote it as a composition "
+            "cost. `smoke_pinned.valid_mean_after_delete` is the same measurement with "
+            "the gauge pinned and is the number to read."),
+    })
+    return out
+
+
+def stage_postdelete(out_dir: Path, condition: str, log=_log) -> dict:
+    """⭐⭐ THE QUESTION THE OBJECT EXISTS TO ANSWER: delete, refit NOTHING, still read?
+
+    Reads the ``val`` corners three ways through the shared frozen decoder and judge:
+    before the deletion, after it, and after it with the address book's slots put back
+    into correspondence with the directions they were fitted against.
+
+    ⛔ The third is not a refit and not a rewrite of the book: it is a **re-indexing**,
+    because the store orders directions by eigenvalue and a deletion moves eigenvalues,
+    so nearly-degenerate pairs swap slots (``hub/single-design`` measured 11-35% of
+    slots per well). Its cost is ``sum_k r_k`` indices and it is declared, not free.
+    ⛔ Requires the pinned-basis address book: run ``--stage smoke --basis pinned``.
+    """
+    from ..core.downdate_store import (direction_correspondence,
+                                       pinned_span_basis, pinned_span_basis_matched)
+    from . import exp_gen_read as R
+
+    fw = _setup(condition)
+    pool, wc, dead = _pool_and_wells(fw, out_dir)
+    cond = fw.load_condition()
+    grid = cond["grid"]
+    with open(out_dir / "store.pkl", "rb") as fh:
+        st = pickle.load(fh)
+    basis_pre = pinned_span_basis(st)
+    addr = _fit_address(fw, out_dir, st, basis_pre, log=log, tag="_pinned")
+    modes_pre = [np.asarray(M, np.float32).copy() for M in st.modes]
+
+    judge = fw.Judge(int(fw.PINS["seed"]), log=log)
+    bitmap = fw.value_presence_bitmap(
+        grid, np.setdiff1d(cond["train_rows"], fw.val_corner_rows(cond)))
+    corners = fw.val_corners(cond)
+
+    def _run(store, basis, tag):
+        o = {"arm": "downdate_store", "read": "tensor", "kind": "span",
+             "store": store, "basis": basis, "address": addr, "protos": None}
+        vals_v = []
+        for c in corners:
+            vals = fw._request_values_from_rows(grid, c["rows"])
+            feats, oor = R.arm_features(o, vals, grid)
+            acc = fw.accept_rule(vals, oor, np.zeros(vals.shape[0], bool), bitmap, grid)
+            tup = judge.read_back(feats, int(fw.PINS["eval_batch"]))
+            vals_v.append(float((fw.judge_valid(vals, tup, grid) & acc).mean()))
+        v = np.asarray(vals_v)
+        log(f"  {tag:<34} valid mean {v.mean():.4f}  sd {v.std(ddof=1):.4f}")
+        return {"valid_mean": float(v.mean()), "valid_sd": float(v.std(ddof=1)),
+                "per_corner": [float(x) for x in v]}
+
+    before = _run(st, basis_pre, "before delete")
+
+    f, v = int(W8_PINS["delete_factor"]), int(W8_PINS["delete_value_index"])
+    vals_all = grid.values_of(pool)
+    mask = np.isclose(vals_all[:, f], float(grid.values[f][v]))
+    X_del = fw.gather(fw.features_mmap(int(fw.PINS["seed"])), pool[mask])
+    rec = st.delete(X_del, vals_all[mask], grid.values)
+    del X_del
+    log(f"  deleted {rec['n_rows_deleted']:,} rows; refit NOTHING")
+
+    corr = direction_correspondence(modes_pre, st.modes)
+    log(f"  direction reordering: {corr['total_slots_reordered']}/{corr['total_slots']} "
+        f"slots moved; per well "
+        f"{[w['n_rank_order_changed'] for w in corr['per_well']]} of "
+        f"{[w['r'] for w in corr['per_well']]}, max shift "
+        f"{[w['max_shift'] for w in corr['per_well']]}, min matched cos "
+        f"{min(w['min_matched_cosine'] for w in corr['per_well']):.4f}")
+
+    after_plain = _run(st, pinned_span_basis(st), "after delete, pinned basis")
+    basis_matched, _ = pinned_span_basis_matched(st, modes_pre)
+    after_matched = _run(st, basis_matched, "after delete, pinned + re-indexed")
+
+    out = {
+        "before_delete": before, "after_delete_pinned": after_plain,
+        "after_delete_pinned_reindexed": after_matched,
+        "delete_receipt": rec, "reordering": corr,
+        "drop_pinned": float(before["valid_mean"] - after_plain["valid_mean"]),
+        "drop_pinned_reindexed": float(
+            before["valid_mean"] - after_matched["valid_mean"]),
+        "reindexing_recovered": float(
+            after_matched["valid_mean"] - after_plain["valid_mean"]),
+        "address_book_bytes_changed": 0,
+        "what": ("⛔ val only, no claim. The store forgot 11,024 rows exactly and NO "
+                 "address book was refitted -- the re-indexed leg changes zero bytes "
+                 "of the book, it only puts its slots back opposite the directions "
+                 "they were fitted against. Any remaining drop is the deletion."),
+    }
+    _jdump(out, out_dir / "post_delete.json")
+    publish_ready(post_delete={
+        "before": before["valid_mean"],
+        "after_pinned_basis": after_plain["valid_mean"],
+        "after_pinned_basis_reindexed": after_matched["valid_mean"],
+        "slots_reordered": corr["total_slots_reordered"],
+        "of_slots": corr["total_slots"],
+        "address_book_refitted": False, "address_book_bytes_changed": 0,
+    })
     return out
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--stage", required=True,
-                   choices=("fit", "assertions", "smoke", "sweep", "gauge", "all"))
+                   choices=("fit", "assertions", "smoke", "sweep", "gauge", "postdelete", "all"))
     p.add_argument("--out", default=str(OUT_ROOT / "build" / "val_seed0"))
     p.add_argument("--condition", default="val", choices=("val", "test"))
     p.add_argument("--basis", default="svd", choices=("svd", "pinned"),
@@ -803,7 +918,8 @@ def main(argv=None) -> int:
             stage_smoke(out, a.condition, basis_kind=a.basis)
         else:
             {"fit": stage_fit, "assertions": stage_assertions,
-             "sweep": stage_sweep, "gauge": stage_gauge}[s](out, a.condition)
+             "sweep": stage_sweep, "gauge": stage_gauge,
+             "postdelete": stage_postdelete}[s](out, a.condition)
     _log("done")
     return 0
 

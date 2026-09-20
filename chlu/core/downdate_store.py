@@ -1010,3 +1010,90 @@ def gauge_report(store_a, store_b, coeffs, basis_fn) -> dict:
         "what": ("the same coefficients through two stores that agree to 1e-10; any "
                  "deviation here is the BASIS, not the deletion"),
     }
+
+
+def direction_correspondence(modes_pre, modes_post, tol: float = 1e-8) -> dict:
+    """⭐ Which post-deletion direction is which pre-deletion direction?
+
+    ⛔ THE DEFECT THIS MEASURES, raised by ``hub/single-design``: the store orders its
+    directions by **eigenvalue**, and a deletion changes the eigenvalues, so two
+    directions whose eigenvalues cross **swap slots**.  An address book fitted before
+    the deletion then has slot ``j`` multiplying a direction that is no longer direction
+    ``j`` -- and the two are *orthogonal*, so the error in that slot is O(1), not small,
+    even though the pair is nearly degenerate and the SPAN barely moves.
+
+    ⭐ The matching is greedy on descending ``|overlap|`` rather than a per-row argmax,
+    because an argmax can assign two pre-directions to the same post-direction and then
+    the "permutation" is not one.
+
+    ⚠ This is a MEASUREMENT, and the permutation it returns is a real (small) cost if
+    it is used: ``sum_k r_k`` indices, ~2 B each.  Declared, not free.
+    """
+    out = []
+    for k, (Gp, Gq) in enumerate(zip(modes_pre, modes_post)):
+        P = np.asarray(Gp, np.float64)[1:]
+        Q = np.asarray(Gq, np.float64)[1:]
+        live_p = np.flatnonzero(np.linalg.norm(P, axis=1) > tol)
+        live_q = np.flatnonzero(np.linalg.norm(Q, axis=1) > tol)
+        M = np.abs(P[live_p] @ Q[live_q].T)
+        perm = np.full(live_p.size, -1, np.int64)
+        cos = np.zeros(live_p.size, np.float64)
+        taken = np.zeros(live_q.size, bool)
+        order = np.dstack(np.unravel_index(np.argsort(M, axis=None)[::-1], M.shape))[0]
+        for i, j in order:
+            if perm[i] < 0 and not taken[j]:
+                perm[i], cos[i], taken[j] = int(j), float(M[i, j]), True
+                if (perm >= 0).all():
+                    break
+        shift = np.abs(perm - np.arange(perm.size))
+        out.append({
+            "well": k, "r": int(live_p.size),
+            "permutation": [int(x) for x in perm],
+            "n_rank_order_changed": int((shift > 0).sum()),
+            "frac_rank_order_changed": float((shift > 0).mean()) if shift.size else 0.0,
+            "max_shift": int(shift.max()) if shift.size else 0,
+            "min_matched_cosine": float(cos.min()) if cos.size else 1.0,
+            "median_matched_cosine": float(np.median(cos)) if cos.size else 1.0,
+            "is_identity": bool((shift == 0).all()),
+        })
+    return {
+        "per_well": out,
+        "any_reordering": bool(any(not w["is_identity"] for w in out)),
+        "total_slots_reordered": int(sum(w["n_rank_order_changed"] for w in out)),
+        "total_slots": int(sum(w["r"] for w in out)),
+        "permutation_bytes_if_carried": int(sum(w["r"] for w in out) * 2),
+        "what": ("the store orders directions by eigenvalue; a deletion moves the "
+                 "eigenvalues, so slots swap. The swapped pairs are nearly degenerate "
+                 "so the SPAN barely moves, but the two directions are orthogonal, so "
+                 "a book slot pointed at the wrong one is O(1) wrong in that slot."),
+    }
+
+
+def pinned_span_basis_matched(store, modes_pre, tol: float = 1e-8,
+                              mu_rel_tol: float = None) -> tuple:
+    """:func:`pinned_span_basis`, with the directions put back in ``modes_pre``'s order.
+
+    ⭐ This is what makes "delete, then read with the SAME address book" a fair test:
+    slot ``j`` of the book keeps pointing at the direction it was fitted against.
+    ⛔ It is not free -- see ``permutation_bytes_if_carried`` -- and it needs the
+    pre-deletion directions at delete time.  It needs **no data pass** and it does not
+    change one byte of the address book, which is the property that matters for a
+    charter B.4 claim: the interface is not refitted, only re-indexed.
+    """
+    corr = direction_correspondence(modes_pre, store.modes, tol=tol)
+    reordered = []
+    for G, w in zip(store.modes, corr["per_well"]):
+        M = np.asarray(G, np.float32).copy()
+        dirs = M[1:]
+        live = np.flatnonzero(np.linalg.norm(np.asarray(dirs, np.float64), axis=1) > tol)
+        perm = np.asarray(w["permutation"], np.int64)
+        block = dirs[live].copy()
+        M[1:1 + live.size] = block[perm]        # pre-order j <- post-direction perm[j]
+        reordered.append(M)
+
+    class _Reordered:
+        modes = reordered
+        well_channels = store.well_channels
+        dim = store.dim
+
+    return pinned_span_basis(_Reordered, tol=tol, mu_rel_tol=mu_rel_tol), corr
