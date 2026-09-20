@@ -20,6 +20,11 @@ shift 2 || true
 export OMP_NUM_THREADS="$THREADS" MKL_NUM_THREADS="$THREADS"
 export OPENBLAS_NUM_THREADS="$THREADS" NUMEXPR_NUM_THREADS="$THREADS"
 export JAX_PLATFORMS="${JAX_PLATFORMS:-cpu}"
+# MEASURED: Windows' default stdout codec is cp1252 and the frozen harness prints a
+# star in gen_bridge._announce_encode_precision. Redirected to a file that raises
+# UnicodeEncodeError and kills the stage AFTER its training has finished -- which is the
+# worst possible place. Forced to UTF-8 rather than by editing a frozen file.
+export PYTHONIOENCODING=utf-8
 export XLA_FLAGS="--xla_force_host_platform_device_count=1 ${XLA_FLAGS:-}"
 
 # The external classifier's location is DERIVED from the bridge path.  This hub moves the

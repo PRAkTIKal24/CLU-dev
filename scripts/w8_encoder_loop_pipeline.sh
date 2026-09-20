@@ -28,6 +28,11 @@ SCORE="${4:?score base}"
 export OMP_NUM_THREADS="$THREADS" MKL_NUM_THREADS="$THREADS"
 export OPENBLAS_NUM_THREADS="$THREADS" NUMEXPR_NUM_THREADS="$THREADS"
 export JAX_PLATFORMS="${JAX_PLATFORMS:-cpu}"
+# MEASURED: Windows' default stdout codec is cp1252 and the frozen harness prints a
+# star in gen_bridge._announce_encode_precision. Redirected to a file that raises
+# UnicodeEncodeError and kills the stage AFTER its training has finished -- which is the
+# worst possible place. Forced to UTF-8 rather than by editing a frozen file.
+export PYTHONIOENCODING=utf-8
 : "${CHLU_GEN_CLASSIFIER_ROOT:=$(python -c "import os,pathlib;print(pathlib.Path(os.environ['CHLU_GEN_BRIDGE_ROOT']).parent.parent / 'gen-external-classifier')")}"
 export CHLU_GEN_CLASSIFIER_ROOT
 

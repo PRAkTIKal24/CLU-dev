@@ -44,6 +44,7 @@ export CHLU_GEN_DECLIFT_DIR="$ARMDIR/declift"
 export CHLU_RIVALS_ROOT="$ARMDIR/rivals"
 : "${CHLU_GEN_CLASSIFIER_ROOT:=$(python -c "import os,pathlib;print(pathlib.Path(os.environ['CHLU_GEN_BRIDGE_ROOT']).parent.parent / 'gen-external-classifier')")}"
 export CHLU_GEN_CLASSIFIER_ROOT
+export PYTHONIOENCODING=utf-8   # Windows cp1252 stdout cannot encode the harness's star glyphs
 export MAX_SECONDS THREADS
 
 echo "[score] cond=$COND seed=$SEED encoder-arm=$ARM"
