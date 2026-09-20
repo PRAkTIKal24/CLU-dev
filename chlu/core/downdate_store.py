@@ -102,6 +102,15 @@ import numpy as np
 #: rank_report` prints the margin on both sides of it so that claim is checkable.
 EIG_REL_TOL = 1e-12
 
+#: ⭐ The mean's tolerance in :func:`pinned_span_basis`, declared for the same
+#: well-posedness reason as :data:`EIG_REL_TOL` and with its margin reported beside it.
+#: MEASURED on the pinned partition: the mean's component orthogonal to the directions
+#: has relative norm 0.69-0.80 in wells 0-2 and 2.3e-8 / 4.9e-8 in wells 3-4 -- in the
+#: rank-deficient wells the mean lies INSIDE the directions' span and what is left over
+#: is numerical noise, whose direction is exactly the kind of arbitrary null direction
+#: the rank cut exists to keep out of the basis. 1e-4 sits four orders clear of both.
+MU_PERP_REL_TOL = 1e-4
+
 #: ⭐ The count table's smoothing, declared.  The coupling value is a function of the
 #: counts alone, which is what makes the coupling table downdate exactly with them.
 COUPLING_ALPHA = 1.0
@@ -887,4 +896,117 @@ def compare_stores(a: DowndatableStore, b: DowndatableStore) -> dict:
         "coupling_max_abs_dev": float(np.max(np.abs(
             a.coupling.astype(np.float64) - b.coupling.astype(np.float64)))),
         "per_well": per_well,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 6. The gauge: why an exactly-forgetting store can still read differently
+# ---------------------------------------------------------------------------
+
+
+def pinned_span_basis(store, tol: float = 1e-8,
+                      mu_rel_tol: float = None) -> list:
+    """⭐⭐ An orthonormal basis of each well's span that is a CONTINUOUS function of
+    the atoms -- the fix for a defect that exact deletion exposes and nothing else does.
+
+    ⛔ THE DEFECT, and it is downstream of the store rather than in it.
+    ``gen_read.span_basis`` re-derives ``U_k`` by taking the SVD of the atom block on
+    load.  On *this* content the atom block is ``[mu ; v_1 .. v_r]`` with the ``v_j``
+    **orthonormal**, so the block's singular values are ``1`` repeated ``r`` times plus
+    one larger value from the mean -- a **maximally degenerate spectrum**.  Inside a
+    degenerate singular subspace the SVD's rotation is arbitrary, so a perturbation of
+    the atoms of order 1e-10 can rotate ``U_k`` by order 1.  An address book fitted
+    against the pre-deletion ``U_k`` is then stale against the post-deletion one **even
+    though the two stores are the same store to 1e-10**.
+
+    ⚠ ``pca_tensor`` has exactly the same gauge freedom -- it deploys unit eigenvectors
+    too -- and never pays for it, because its deletion verb
+    (``exp_gen_read.delete_value_from_address``) is declared in its own docstring as "an
+    operation on the INTERFACE, not on atoms" and so never moves an atom.  ⛔ The
+    incumbent evades this by not having the property.  An object whose deletion really
+    is a charter B.4 operation on atoms cannot evade it and has to pin the gauge.
+
+    ⭐ THE FIX, and it costs zero bytes exactly as ``span_basis`` does: do not ask an
+    SVD where the basis should point -- the store already knows.  The direction rows are
+    already orthonormal and already ordered by eigenvalue, so take them as they are, and
+    append the component of the mean orthogonal to them.  The result spans exactly what
+    ``span_basis`` spans, is orthonormal, involves no degenerate decomposition, and
+    moves continuously with the atoms: a 1e-10 change in the store is a 1e-10 change in
+    the basis.
+    """
+    mrt = MU_PERP_REL_TOL if mu_rel_tol is None else float(mu_rel_tol)
+    out = []
+    for G in store.modes:
+        M = np.asarray(G, np.float64)
+        mu, dirs = M[0], M[1:]
+        keep = dirs[np.linalg.norm(dirs, axis=1) > tol]          # drop the zero rows
+        U = keep.T if keep.size else np.zeros((M.shape[1], 0), np.float64)
+        r = mu - (U @ (U.T @ mu)) if U.shape[1] else mu
+        nr = float(np.linalg.norm(r))
+        nmu = max(float(np.linalg.norm(mu)), 1e-300)
+        # ⛔ The mean joins the basis only if it is really outside the directions'
+        # span. In a rank-deficient well it is not (measured: 2.3e-8 relative), and
+        # admitting the leftover would put an arbitrary null direction back into the
+        # basis -- undoing, at the interface, exactly what the rank cut does at the
+        # store. See MU_PERP_REL_TOL.
+        if nr / nmu > mrt:
+            U = np.hstack([U, (r / nr)[:, None]])
+        out.append(np.ascontiguousarray(U.astype(np.float32)))
+    return out
+
+
+def pinned_basis_report(store, mu_rel_tol: float = None) -> dict:
+    """The mean-admission decision per well, with the margin on both sides of it."""
+    mrt = MU_PERP_REL_TOL if mu_rel_tol is None else float(mu_rel_tol)
+    rows = []
+    for k, G in enumerate(store.modes):
+        M = np.asarray(G, np.float64)
+        mu, dirs = M[0], M[1:]
+        keep = dirs[np.linalg.norm(dirs, axis=1) > 1e-8]
+        U = keep.T if keep.size else np.zeros((M.shape[1], 0), np.float64)
+        r = mu - (U @ (U.T @ mu)) if U.shape[1] else mu
+        nmu = max(float(np.linalg.norm(mu)), 1e-300)
+        rel = float(np.linalg.norm(r)) / nmu
+        rows.append({"well": k, "n_directions": int(keep.shape[0]),
+                     "mu_norm": nmu, "mu_perp_relative_norm": rel,
+                     "mean_admitted": bool(rel > mrt),
+                     "margin_over_threshold": float(rel / mrt)})
+    return {"mu_perp_rel_tol": mrt, "per_well": rows,
+            "span_ranks": [r["n_directions"] + int(r["mean_admitted"]) for r in rows],
+            "closest_margin_above": min([r["margin_over_threshold"] for r in rows
+                                         if r["mean_admitted"]] or [float("inf")]),
+            "closest_margin_below": max([r["margin_over_threshold"] for r in rows
+                                         if not r["mean_admitted"]] or [0.0])}
+
+
+def gauge_report(store_a, store_b, coeffs, basis_fn) -> dict:
+    """⛔ Push the SAME coefficients through two stores that are the SAME store.
+
+    Any difference in the rendered vector is therefore **pure gauge** -- it cannot be an
+    effect of the deletion, because the two stores agree to 1e-10.  This is the
+    measurement that stops a gauge artefact being reported as a composition cost.
+    """
+    from .gen_read import render_span
+
+    Ua, Ub = basis_fn(store_a), basis_fn(store_b)
+    ra = [int(np.asarray(U).shape[1]) for U in Ua]
+    rb = [int(np.asarray(U).shape[1]) for U in Ub]
+    if ra != rb:
+        return {"basis": basis_fn.__name__, "ranks_a": ra, "ranks_b": rb,
+                "comparable": False,
+                "note": "the two bases do not even have the same rank"}
+    Xa = render_span(store_a, [np.asarray(c, np.float32)[:, :r] for c, r in
+                               zip(coeffs, ra)], Ua)
+    Xb = render_span(store_b, [np.asarray(c, np.float32)[:, :r] for c, r in
+                               zip(coeffs, rb)], Ub)
+    d = np.abs(Xa.astype(np.float64) - Xb.astype(np.float64))
+    scale = float(np.max(np.abs(Xb))) if Xb.size else 1.0
+    return {
+        "basis": basis_fn.__name__, "comparable": True, "span_ranks": ra,
+        "max_abs_render_dev": float(d.max()),
+        "median_row_l2_dev": float(np.median(np.linalg.norm(Xa - Xb, axis=1))),
+        "render_scale": scale,
+        "relative_to_render_scale": float(d.max() / max(scale, 1e-12)),
+        "what": ("the same coefficients through two stores that agree to 1e-10; any "
+                 "deviation here is the BASIS, not the deletion"),
     }

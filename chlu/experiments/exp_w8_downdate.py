@@ -452,12 +452,12 @@ def stage_assertions(out_dir: Path, condition: str, log=_log) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _fit_address(fw, out_dir: Path, st, basis, log=_log):
+def _fit_address(fw, out_dir: Path, st, basis, log=_log, tag: str = ""):
     """This store's OWN address book.  ⛔ Not the incumbent's: different atoms."""
     from ..core.gen_read import TensorAddress
     from . import exp_gen_read as R
 
-    cache = out_dir / (f"address_downdate_prod_R{int(R.READ_PINS['rank'])}"
+    cache = out_dir / (f"address_downdate{tag}_prod_R{int(R.READ_PINS['rank'])}"
                        f"_lam{R.READ_PINS['ridge']}_sw{int(R.READ_PINS['sweeps'])}"
                        f"_n{int(R.READ_PINS['n_addr_train'])}.pkl")
     if cache.exists():
@@ -481,20 +481,39 @@ def _fit_address(fw, out_dir: Path, st, basis, log=_log):
     return addr
 
 
-def stage_smoke(out_dir: Path, condition: str, log=_log) -> dict:
-    """⛔ ``val`` only, and it claims NOTHING.  It shows the object reads."""
+def stage_smoke(out_dir: Path, condition: str, log=_log, basis_kind: str = "svd") -> dict:
+    """⛔ ``val`` only, and it claims NOTHING.  It shows the object reads.
+
+    ``basis_kind`` selects the read's basis and it is not a cosmetic choice -- see
+    ``--stage gauge``. ``svd`` is ``gen_read.span_basis``, the programme's incumbent
+    basis, whose SVD of a maximally-degenerate atom block makes the post-deletion read
+    move by O(1e-3) for gauge reasons alone. ``pinned`` is
+    ``downdate_store.pinned_span_basis``, which costs the same zero bytes and moves
+    with the atoms. Both are run and both are reported.
+    """
+    from ..core.downdate_store import pinned_basis_report, pinned_span_basis
     from ..core.gen_read import assert_read_request_only, span_basis
+    from . import exp_gen_read as R
     from . import exp_w5_compose_field as W5
 
+    # ⛔ MEASURED THE HARD WAY: ``fw.arm_features`` is wave 3's own dispatcher and
+    # knows nothing of the ``tensor`` verb -- it fell straight through to the ridge
+    # head and died on ``obj["spec"]`` after the address book had already been fitted.
+    # The span read lives in ``exp_gen_read``; that is the one to call.
+    arm_features = R.arm_features
+
+    basis_fn = pinned_span_basis if basis_kind == "pinned" else span_basis
+    tag = "_pinned" if basis_kind == "pinned" else ""
     fw = _setup(condition)
     pool, wc, dead = _pool_and_wells(fw, out_dir)
     cond = fw.load_condition()
     grid = cond["grid"]
     with open(out_dir / "store.pkl", "rb") as fh:
         st = pickle.load(fh)
-    basis = span_basis(st)
-    log(f"stage smoke: span ranks {[int(np.asarray(U).shape[1]) for U in basis]}")
-    addr = _fit_address(fw, out_dir, st, basis, log=log)
+    basis = basis_fn(st)
+    log(f"stage smoke [{basis_kind} basis]: span ranks "
+        f"{[int(np.asarray(U).shape[1]) for U in basis]}")
+    addr = _fit_address(fw, out_dir, st, basis, log=log, tag=tag)
 
     ro = assert_read_request_only(addr, st, grid.values_of(pool[:64]), grid.values,
                                   basis, rng_seed=int(fw.PINS["seed"]))
@@ -520,7 +539,7 @@ def stage_smoke(out_dir: Path, condition: str, log=_log) -> dict:
         rows = []
         for c in corners:
             vals = fw._request_values_from_rows(grid, c["rows"])
-            feats, oor = fw.arm_features(o, vals, grid)
+            feats, oor = arm_features(o, vals, grid)
             acc = fw.accept_rule(vals, oor, np.zeros(vals.shape[0], bool), bitmap, grid)
             tup = judge.read_back(feats, int(fw.PINS["eval_batch"]))
             valid = fw.judge_valid(vals, tup, grid) & acc
@@ -563,7 +582,7 @@ def stage_smoke(out_dir: Path, condition: str, log=_log) -> dict:
                  "on the SAME corners. ⛔ NOTHING here is a claim; hub/single-design "
                  "scores this object."),
     }
-    _jdump(smoke, out_dir / "smoke.json")
+    _jdump(smoke, out_dir / f"smoke{tag}.json")
     log(f"  paired delta (downdate_store - pca_tensor) mean {d.mean():+.4f}; "
         f"within pca_tensor's own corner spread ({theirs['valid_sd']:.4f}) = {within}")
 
@@ -578,7 +597,7 @@ def stage_smoke(out_dir: Path, condition: str, log=_log) -> dict:
     del X_del
     obj2 = dict(obj)
     obj2["store"] = st
-    obj2["basis"] = span_basis(st)          # ⚠ the basis moves; see the note below
+    obj2["basis"] = basis_fn(st)            # ⚠ the basis moves; see the note below
     after = _run(obj2, "after delete")
     post = {
         "delete_receipt": rec, "content_sha_before": sha_before,
@@ -592,20 +611,24 @@ def stage_smoke(out_dir: Path, condition: str, log=_log) -> dict:
                        "this design, reported here rather than hidden, and it is a "
                        "cost the item store does not pay."),
     }
-    _jdump(post, out_dir / "smoke_after_delete.json")
+    post["basis_kind"] = basis_kind
+    post["pinned_basis_report"] = (pinned_basis_report(st)
+                                   if basis_kind == "pinned" else None)
+    _jdump(post, out_dir / f"smoke_after_delete{tag}.json")
     log(f"  after delete({rec['n_rows_deleted']:,} rows): valid mean "
         f"{after['valid_mean']:.4f} (was {mine['valid_mean']:.4f}), store sha moved="
         f"{sha_before != st.content_sha()}")
 
     publish_ready(
         status="ready",
-        smoke={"downdate_store_val_valid_mean": mine["valid_mean"],
+        **{f"smoke{tag}": {"downdate_store_val_valid_mean": mine["valid_mean"],
                "pca_tensor_val_valid_mean": theirs["valid_mean"],
                "paired_delta_mean": float(d.mean()),
                "within_pca_tensor_spread": within,
                "n_val_corners": mine["n_corners"],
                "valid_mean_after_delete": after["valid_mean"],
-               "renders_through_shared_frozen_decoder_and_judge": True},
+               "basis_kind": basis_kind,
+               "renders_through_shared_frozen_decoder_and_judge": True}},
         note=("READY: the store fits at the pin, reads through the shared frozen "
               "decoder and judge, and the three assertions are discharged. ⛔ No "
               "scored run and no claim -- hub/single-design scores this object."),
@@ -685,12 +708,88 @@ def stage_sweep(out_dir: Path, condition: str, log=_log) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def stage_gauge(out_dir: Path, condition: str, log=_log) -> dict:
+    """⛔⭐ Is the READ stable under an exact deletion?  Measured, on both bases.
+
+    ``hub/single-design`` measured a max render deviation of 2.1-5.4 at three matched
+    byte partitions between a downdated store and a refit-without store whose atoms
+    agree to 1e-15, and its Procrustes fix made things worse.  This stage reproduces
+    the measurement at the pinned partition and tests the fix that does work:
+    :func:`downdate_store.pinned_span_basis`, which never asks a degenerate SVD where
+    the basis should point.
+
+    ⛔ No address book is fitted here and nothing is scored: two stores that are the
+    same store are handed the SAME coefficients, so every difference is gauge.
+    """
+    from ..core.downdate_store import gauge_report, pinned_span_basis
+    from ..core.gen_read import span_basis
+
+    fw = _setup(condition)
+    pool, wc, dead = _pool_and_wells(fw, out_dir)
+    cond = fw.load_condition()
+    grid = cond["grid"]
+    cards = [int(c) for c in grid.cardinalities]
+    vals_all = grid.values_of(pool)
+    f, v = int(W8_PINS["delete_factor"]), int(W8_PINS["delete_value_index"])
+    mask = np.isclose(vals_all[:, f], float(grid.values[f][v]))
+    log(f"stage gauge: deleting {int(mask.sum()):,} rows two ways and comparing the READ")
+
+    st_down = build_store(fw, out_dir, pool, wc, cards, log=lambda *_: None)
+    X_del = fw.gather(fw.features_mmap(int(fw.PINS["seed"])), pool[mask])
+    st_down.delete(X_del, vals_all[mask], grid.values)
+    del X_del
+    st_ref = build_store(fw, out_dir, pool[~mask], wc, cards, log=lambda *_: None)
+    cmp = compare_stores(st_down, st_ref)
+    log(f"  the two stores agree to {cmp['max_abs_dev']:.3e} -- they ARE the same store")
+
+    # arbitrary but fixed coefficients: the val corners' own requests through the
+    # incumbent-shaped address book would need a book, so unit coefficients are used
+    # instead. ⛔ The point is that IDENTICAL coefficients go through both stores.
+    rng = np.random.default_rng(int(fw.PINS["seed"]))
+    n = 256
+    coeffs = [rng.normal(size=(n, int(np.asarray(U).shape[1]))).astype(np.float32)
+              for U in span_basis(st_ref)]
+    out = {"stores_agree_to": cmp["max_abs_dev"],
+           "n_rows_deleted": int(mask.sum()),
+           "svd_basis": gauge_report(st_down, st_ref, coeffs, span_basis),
+           "pinned_basis": gauge_report(
+               st_down, st_ref,
+               [rng.normal(size=(n, int(np.asarray(U).shape[1]))).astype(np.float32)
+                for U in pinned_span_basis(st_ref)],
+               pinned_span_basis)}
+    for k in ("svd_basis", "pinned_basis"):
+        r = out[k]
+        if r.get("comparable"):
+            log(f"  {k:<13} max |render dev| {r['max_abs_render_dev']:.4e}  "
+                f"({r['relative_to_render_scale']:.3e} of the render scale)  "
+                f"ranks {r['span_ranks']}")
+        else:
+            log(f"  {k:<13} NOT COMPARABLE: {r}")
+    sv = out["svd_basis"].get("max_abs_render_dev", float("nan"))
+    pn = out["pinned_basis"].get("max_abs_render_dev", float("nan"))
+    out["gauge_is_a_real_problem_on_the_svd_basis"] = bool(sv > 1e-3)
+    out["pinned_basis_fixes_it"] = bool(pn < 1e-5)
+    out["improvement_factor"] = float(sv / pn) if pn > 0 else float("inf")
+    out["what"] = (
+        "⛔ Two stores that agree to 1e-10 are handed IDENTICAL coefficients. Under "
+        "gen_read.span_basis the rendered vectors differ by O(1), because that basis "
+        "is the SVD of an atom block whose spectrum is maximally degenerate (r unit "
+        "rows), so a 1e-10 atom perturbation rotates it by O(1). Under "
+        "pinned_span_basis -- the store's own already-orthonormal rows, no SVD -- they "
+        "do not. ⭐ The deletion is exact either way; what the pinned basis buys is "
+        "that the READ survives it.")
+    _jdump(out, out_dir / "gauge.json")
+    return out
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--stage", required=True,
-                   choices=("fit", "assertions", "smoke", "sweep", "all"))
+                   choices=("fit", "assertions", "smoke", "sweep", "gauge", "all"))
     p.add_argument("--out", default=str(OUT_ROOT / "build" / "val_seed0"))
     p.add_argument("--condition", default="val", choices=("val", "test"))
+    p.add_argument("--basis", default="svd", choices=("svd", "pinned"),
+                   help="the read's basis; see --stage gauge for why it matters")
     return p
 
 
@@ -700,8 +799,11 @@ def main(argv=None) -> int:
     stages = (("fit", "assertions", "smoke") if a.stage == "all" else (a.stage,))
     for s in stages:
         _log(f"===== stage {s} =====")
-        {"fit": stage_fit, "assertions": stage_assertions,
-         "smoke": stage_smoke, "sweep": stage_sweep}[s](out, a.condition)
+        if s == "smoke":
+            stage_smoke(out, a.condition, basis_kind=a.basis)
+        else:
+            {"fit": stage_fit, "assertions": stage_assertions,
+             "sweep": stage_sweep, "gauge": stage_gauge}[s](out, a.condition)
     _log("done")
     return 0
 
