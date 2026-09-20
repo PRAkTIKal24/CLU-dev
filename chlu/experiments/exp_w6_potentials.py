@@ -400,11 +400,17 @@ def landscape_variants(field, k: int, rng: np.random.Generator,
     """``{arm_name: (atoms, life, sigma)}`` for well ``k``.
 
     ``pca_store`` is ``exp_w5_compose_field.build_pca_content()["store"]`` -- a
-    ``PCASpanStore`` whose ``modes[k]`` is well ``k``'s ``A x d_k`` principal block.
-    The w5 incumbent is carried so the law is tested on the content that actually won
-    w5 and not only on the item store.  It keeps the field store's own width, because
-    the width is the field store's interface number and swapping the content is the
-    only change being made.
+    ``PCASpanStore`` whose ``modes[k]`` is well ``k``'s ``A x d_k`` principal block, at
+    the same 524,288 B.
+
+    ⚠ **Say exactly what this arm is and is not.**  It puts the w5 WINNING CONTENT into
+    THIS hub's kernel landscape, keeping the field store's own width.  ⛔ It is **not**
+    w5's read: `pca_tensor` won rows 3 and 4 through a *span projection*, and row 0 of
+    the block is the pool mean while the other 63 rows are unit principal DIRECTIONS, so
+    as points in a kernel landscape they are one feature vector plus 63 short vectors
+    near the origin.  The geometry is therefore genuinely different from the item store's
+    and the arm must be read as **a third landscape on which to check whether the law
+    still predicts**, not as a test of the incumbent's read.  Reported in those words.
     """
     v = W6.well_view(field, k)
     A, life, sig = v["atoms"], v["life"], v["sigma"]
