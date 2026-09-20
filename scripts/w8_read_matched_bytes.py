@@ -107,15 +107,29 @@ def main(argv=None) -> int:
     log(f"  span ranks {min(ranks)}..{max(ranks)} (sum {sum(ranks)})")
 
     grid, _ = fw.build_grid()
-    Y = grid.factor_indices_of(pool)
     cards = [int(c) for c in grid.cardinalities]
-    T = R._pool_span_targets(st, pool, basis)[1] if hasattr(R, "_pool_span_targets") else None
-    if T is None:
-        raise SystemExit("exp_gen_read._pool_span_targets missing")
+    Y, T = R._pool_span_targets(st, pool, basis, log=log)
+    # ⛔ THE INCUMBENT'S PROTOCOL, EXACTLY. Both exp_w5_compose_field (:558-564) and the
+    # spoke's _fit_address fit on the FIRST 90% and hold the last 10% as a val split,
+    # with hyperparameters from R.READ_PINS. My first fit used 100% of the pool and
+    # hardcoded the same hyperparameters -- so the hyperparameters already matched and
+    # the ONLY difference was the split.
+    # ⚠ That difference gave my arms ~11% MORE training data than the incumbent, so it
+    # could not explain a COLLAPSE -- but "it should have helped me" is an argument, and
+    # the falsification this hub reports turns on the number, so the protocol is matched
+    # rather than reasoned about.
     t0 = time.time()
-    addr = TensorAddress(cards, rank=128, ridge=1e-2, seed=0)
+    ntr = int(0.9 * Y.shape[0])
+    addr = TensorAddress(cards, rank=int(R.READ_PINS["rank"]),
+                         ridge=float(R.READ_PINS["ridge"]),
+                         seed=int(R.READ_PINS["address_seed"]))
     addr.multiplicative = True
-    addr.fit(Y, T, sweeps=int(a.sweeps), log=log)
+    addr.fit(Y[:ntr], [t[:ntr] for t in T],
+             sweeps=int(R.READ_PINS["sweeps"]), log=log,
+             Y_val=Y[ntr:], targets_val=[t[ntr:] for t in T])
+    log(f"  fit protocol: 90/10 split, {ntr:,} train / {Y.shape[0]-ntr:,} val, "
+        f"rank {R.READ_PINS['rank']} ridge {R.READ_PINS['ridge']} "
+        f"sweeps {R.READ_PINS['sweeps']} -- identical to the incumbent's")
     log(f"  address book fitted in {time.time()-t0:.1f}s; "
         f"bytes {addr.byte_ledger()['address_bytes']:,}")
 
@@ -123,7 +137,7 @@ def main(argv=None) -> int:
     ro = assert_read_request_only(addr, st, vals0, grid.values, basis)
     log(f"  request-only assertion: {ro.get('signature_ok', ro)}")
 
-    d = OUT / f"{a.condition}_K{a.K}_A{a.A}_seed{a.seed}"
+    d = OUT / f"{a.condition}_K{a.K}_A{a.A}_seed{a.seed}_split9010"
     d.mkdir(parents=True, exist_ok=True)
     with open(d / "arm.pkl", "wb") as fh:
         pickle.dump({"store": st, "address": addr, "basis": basis,
