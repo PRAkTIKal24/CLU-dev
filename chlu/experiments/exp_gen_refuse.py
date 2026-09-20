@@ -208,12 +208,26 @@ SEEDS = (0, 1, 2)
 
 BRIDGE_MODE = "pinned"
 
+#: ⭐⭐ THE THIRD MODE, and the reason it exists.  ``pinned`` and ``joint`` give two
+#: three-seed spreads, but they CONFOUND: the joint spread mixes the store draw with the
+#: instrument and cannot say which of the two is doing the work.  Setting the bridge seed
+#: EXPLICITLY, independently of the store seed, opens the full 3x3 grid
+#: (store seed) x (bridge seed).  Reading it:
+#:   * down column ``bridge = 0``  -> the STORE effect at a fixed instrument = the parent's
+#:     own spread, which is exactly what it said it measured;
+#:   * across a row at fixed store -> the INSTRUMENT effect alone, which NEITHER hub has
+#:     ever measured;
+#:   * the diagonal                -> what ``joint`` and ``w5 hub/delete`` report.
+#: ⛔ Still not a scored run: every cell re-reads rows the parent already paid for.
+BRIDGE_SEED_OVERRIDE = None
 
-def set_bridge_mode(mode: str) -> str:
-    global BRIDGE_MODE
+
+def set_bridge_mode(mode: str, override=None) -> str:
+    global BRIDGE_MODE, BRIDGE_SEED_OVERRIDE
     if mode not in ("pinned", "joint"):
         raise ValueError(f"unknown bridge mode {mode!r}; expected pinned|joint")
     BRIDGE_MODE = mode
+    BRIDGE_SEED_OVERRIDE = None if override is None else int(override)
     return BRIDGE_MODE
 
 
@@ -222,7 +236,10 @@ def bridge_seed_for(seed: int) -> int:
 
     ⛔ Under ``pinned`` this is the parent's constant 0 for every store seed.
     ⭐ Under ``joint`` it is the store seed itself, which is ``w5 hub/delete``'s convention.
+    ⭐ An explicit ``--bridge-seed`` overrides both and is what opens the 3x3 grid.
     """
+    if BRIDGE_SEED_OVERRIDE is not None:
+        return int(BRIDGE_SEED_OVERRIDE)
     return 0 if BRIDGE_MODE == "pinned" else int(seed)
 
 
@@ -1328,6 +1345,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     # ⭐ w5.1/refuse (R-A). `pinned` is the parent's behaviour, bit-for-bit, and is the
     # default so that nothing already on disk can be reinterpreted by accident.
     p.add_argument("--bridge-mode", choices=("pinned", "joint"), default="pinned")
+    # ⭐ Overrides --bridge-mode and fixes the instrument at ONE bridge seed regardless of
+    # the store seed.  This is what opens the 3x3 (store seed) x (bridge seed) grid.
+    p.add_argument("--bridge-seed", type=int, default=None)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", required=True)
     p.add_argument("--max-seconds", type=float, default=14400.0)
@@ -1336,7 +1356,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def main(argv=None) -> int:
     args = build_arg_parser().parse_args(argv)
-    set_bridge_mode(args.bridge_mode)
+    set_bridge_mode(args.bridge_mode, override=args.bridge_seed)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     t0 = _now()
