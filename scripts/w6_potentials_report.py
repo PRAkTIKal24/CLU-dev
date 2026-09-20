@@ -78,6 +78,20 @@ def report_leg(name, obj, fh=sys.stdout):
           f"{'PASS' if (d.mean()<0 and (d<0).sum()>=40) else 'MISS'}")
         p(f"       median |log10 err|: CRR {np.median(ec):.4f}  vs  "
           f"FIT1 {np.median(ef):.4f}")
+        # A SECOND one-parameter rival, because FIT1 (a pure power law) cannot express
+        # the floor and would be a straw man on its own: FIT2 is a fitted CONSTANT,
+        # which is the best one-parameter description of the underdamped branch.
+        lg2 = np.array([np.log10(r["n_meas"]) for r in main])
+        C2 = float(10.0 ** lg2.mean())
+        byc2 = {}
+        for r in main:
+            byc2.setdefault(r["corner_id"], []).append(
+                abs(np.log10(r["n_meas"] / C2)))
+        e2 = np.array([np.median(v) for v in byc2.values()])
+        d2 = ec - e2
+        p(f"  [B2b] paired vs FIT2 (n = C constant, C = {C2:.4g}):  "
+          f"mean delta = {d2.mean():+.4f}   corners better: {int((d2<0).sum())}/{len(d2)}")
+
         res = [r for r in main if r["n_pred_crr"] >= 10.0]
         if res:
             byc = {}

@@ -82,8 +82,14 @@ PINS = {
 PINS_AUX = dict(PINS)
 PINS_AUX.update({
     "amplitudes": (0.05, 0.5),        # V5's two extremes
-    "n_modes_probed": 6,
+    "n_modes_probed": 4,
     "confinement_alphas": (0.0, 1.0),
+    # A COARSER (mass, gamma) grid than the main one on purpose: this arm's questions
+    # are "where does the amplitude break the linearisation?" and "does D14's lift still
+    # predict once it is rolled?", and neither needs the full V-curve resolution.  Both
+    # bands are still spanned.
+    "masses": (1e-2, 1.0, 1e2),
+    "gammas": (0.005, 0.02, 0.05, 0.2, 0.5),
 })
 
 
@@ -390,8 +396,20 @@ def corner_rows(field, corner_id: str, address: np.ndarray, arms: dict,
                                       tol=float(pins["settle_tol"]))
             base = W6.curvature_spectrum(st["x"], A, sig, life, mass=1.0)
             hess0 = base["mu2"]               # mass = 1: the raw Hessian eigenvalues
-            if hess0.size == 0:
-                continue
+            degenerate = bool(hess0.size == 0)
+            if degenerate:
+                # ⭐ This is what `landscape_removed` looks like, and it is the charter
+                # section C.2 collapse made explicit rather than silently dropped.  With
+                # the atoms zeroed, Cov_w = 0, so E = ||q - x*||^2/2 EXACTLY: the whole
+                # spectrum is the trivial eigenvalue 1 in every direction and the store
+                # contributes no curvature structure at all.  The CRR then holds
+                # trivially -- which is the point of the control, and a row that says so
+                # is worth more than no row.
+                d = np.asarray(A, np.float64).shape[1]
+                m0 = int(pins["n_modes_probed"])
+                hess0 = np.ones(m0)
+                Q = np.linalg.qr(rng.normal(size=(d, m0)))[0]
+                base = {"mu2": hess0, "vectors": Q}
             sel = probe_modes(hess0, int(pins["n_modes_probed"]))
             Vv = np.asarray(base["vectors"][:, sel], np.float64)      # (d, m)
             xs = st["x"]
@@ -470,6 +488,7 @@ def corner_rows(field, corner_id: str, address: np.ndarray, arms: dict,
                     "rollout_steps": sp["steps"],
                     "sigma": float(sig),
                     "settle_converged": bool(st["converged"]),
+                    "degenerate_spectrum": degenerate,
                 })
     return rows
 
