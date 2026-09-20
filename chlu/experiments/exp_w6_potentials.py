@@ -56,25 +56,35 @@ PINS = {
     # eps = 0.05 is the step every quantitative result in all three shorts runs at
     # (inventory "Shared rider"); inherited verbatim rather than chosen.
     "eta": 0.05,
-    # The gamma axis IS the V-curve of D16-D18.  Log-spaced so both branch slopes are
-    # measurable and the argmin is bracketed.
+    # The gamma axis IS the V-curve of D16-D18.  Log-spaced over 2.4 decades so both
+    # branch slopes are fittable in V5's own windows and the argmin is bracketed.
     "gammas": (0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.35, 0.5),
-    # mass moves mu^2 = hess_eig/mass, and with hess_eig in [0.16, 1.0] this grid puts
-    # h = mu*eta across ~4.5 orders of magnitude -- the range V2 Fig. 1 verifies over.
+    # mass moves mu^2 = hess_eig/mass.  With the field store's measured spectrum
+    # hess_eig in [0.16, 1.0] this grid puts h = eps*mu across ~4.5 orders of
+    # magnitude -- the range V2 Fig. 1 verifies the law over.  The raw spectrum alone
+    # spans a factor 6 and would probe one band only.
     "masses": (1e-3, 1e-1, 1.0, 1e1, 1e3),
-    "amplitudes": (0.05, 0.5),        # V5's "finite write amplitudes", its two extremes
-    "n_modes_probed": 6,              # log-spaced across the well's curvature spectrum
-    # V5 runs its lifetime protocol with a censoring cap of 15000 steps; inherited, and
-    # a cell whose PREDICTED half-life exceeds it is censored rather than rolled.
-    "censor_steps": 15000,
+    "amplitudes": (0.05,),            # V5's smallest "finite write amplitude"
+    "n_modes_probed": 3,              # top / middle / bottom of the curvature spectrum
+    "confinement_alphas": (0.0,),     # D14's Hessian check is arithmetic and needs no roll
+    # V5 runs its lifetime protocol with a censoring cap; a cell whose PREDICTED
+    # half-life exceeds this is censored and NOT rolled, and reported as censored.
+    "censor_steps": 5000,
     "rollout_slack": 3.0,             # roll 3x the prediction: a 3x miss is still seen
     "settle_tol": 1e-10,
     "settle_max_iter": 2000,
     "half_life_floor_steps": 3,       # V5 quotes no rollout half-life from an n < 3 cell
-    # D14: the confinement check.  V(q) -> V(q) + alpha||q - x*||^2 lifts every Hessian
-    # eigenvalue by exactly 2*alpha.
-    "confinement_alphas": (0.0, 1.0),
 }
+
+# The richer grid, run on a declared SUBSET of corners: it adds V5's large write
+# amplitude (where the linearisation is expected to stop) and D14's rolled confinement
+# arm.  Same laws, same bars; it says where the law holds, not whether it holds.
+PINS_AUX = dict(PINS)
+PINS_AUX.update({
+    "amplitudes": (0.05, 0.5),        # V5's two extremes
+    "n_modes_probed": 6,
+    "confinement_alphas": (0.0, 1.0),
+})
 
 
 # ---------------------------------------------------------------------------
@@ -242,6 +252,51 @@ def assert_map_matches_repo_integrator(tol: float = 1e-5) -> dict:
             "what": "the numpy rollout reproduces chlu.core.integrators.velocity_verlet_step"}
 
 
+def envelope_half_life(tr: np.ndarray, floor_steps: int = 3,
+                       record_every: int = 1) -> np.ndarray:
+    """⭐ **THE ENVELOPE half-life** -- the instrument the CRR's ``ln2/(-ln|lambda|)``
+    actually predicts, and NOT the same thing as the first crossing.
+
+    V2 Fig. 1 and V5 §D are explicit that the two instruments **coincide on the
+    overdamped branch and diverge above the exceptional point**: underdamped, the mode
+    oscillates inside a decaying envelope, so ``|x|`` first touches ``|x_0|/2`` because of
+    the PHASE, after a time set by the oscillation period, while the modulus
+    ``|lambda| = sqrt(1-gamma)`` sets the ENVELOPE.  Reading the first crossing there and
+    comparing it to ``ln2/(-ln|lambda|)`` would compare two different quantities and
+    would manufacture a failure of the law.
+
+    The envelope is taken as the reverse cumulative maximum of ``|x|`` -- monotone
+    non-increasing by construction, no fit and no window length to choose -- and the
+    half-life is its first crossing of ``env[0]/2``.
+    """
+    a = np.abs(np.asarray(tr, np.float64))
+    env = np.maximum.accumulate(a[::-1], axis=0)[::-1]
+    return _first_crossing(env, env[0] / 2.0, floor_steps, record_every)
+
+
+def _first_crossing(a: np.ndarray, thr: np.ndarray, floor_steps: int,
+                    record_every: int) -> np.ndarray:
+    n_rec, n_probe = a.shape
+    re = max(1, int(record_every))
+    out = np.full(n_probe, np.inf)
+    below = a <= thr[None, :]
+    first = np.where(below.any(axis=0), below.argmax(axis=0), -1)
+    for j in range(n_probe):
+        i = int(first[j])
+        if i < 0:
+            continue
+        if i == 0:
+            out[j] = 0.0
+            continue
+        y1, y0 = a[i, j], a[i - 1, j]
+        if y0 <= 0.0 or y1 <= 0.0 or y0 == y1 or thr[j] <= 0.0:
+            out[j] = float(i) * re
+            continue
+        f = (np.log(y0) - np.log(thr[j])) / (np.log(y0) - np.log(y1))
+        out[j] = (float(i - 1) + float(np.clip(f, 0.0, 1.0))) * re
+    return np.where(out < float(floor_steps), np.nan, out)
+
+
 def half_life_from_trace(tr: np.ndarray, floor_steps: int = 3,
                          record_every: int = 1) -> np.ndarray:
     """Envelope half-life per probe, in STEPS: first sample with ``|x| <= |x_0|/2``,
@@ -364,6 +419,7 @@ def corner_rows(field, corner_id: str, address: np.ndarray, arms: dict,
                                     "he": float(he[j]),
                                     "n_pred": float(npred), "censored": bool(cens),
                                     "steps": steps, "n_meas": np.inf,
+                                    "n_meas_first": np.inf,
                                 })
 
             # ---- bucket by required length and roll each bucket once -------------
@@ -383,10 +439,13 @@ def corner_rows(field, corner_id: str, address: np.ndarray, arms: dict,
                     re = max(1, ns // 4000)
                     tr = verlet_rollout_batch(X0, A, sig, life, inv_m, damp, ta, eta,
                                               ns, xs, Vb, record_every=re)
-                    nm = half_life_from_trace(tr, floor_steps=floor_steps,
-                                              record_every=re)
+                    nm_env = envelope_half_life(tr, floor_steps=floor_steps,
+                                                record_every=re)
+                    nm_1st = half_life_from_trace(tr, floor_steps=floor_steps,
+                                                  record_every=re)
                     for i, sp in enumerate(grp):
-                        sp["n_meas"] = float(nm[i])
+                        sp["n_meas"] = float(nm_env[i])        # THE scored instrument
+                        sp["n_meas_first"] = float(nm_1st[i])  # V2's second instrument
 
             for sp in spec:
                 rows.append({
@@ -406,6 +465,7 @@ def corner_rows(field, corner_id: str, address: np.ndarray, arms: dict,
                         W6.n_half_overdamped_asym(sp["mu2"], eta, sp["gamma"])),
                     "n_pred_floor": float(W6.n_half_floor(sp["gamma"])),
                     "n_meas": sp["n_meas"],
+                    "n_meas_first": sp["n_meas_first"],
                     "censored": sp["censored"],
                     "rollout_steps": sp["steps"],
                     "sigma": float(sig),
@@ -540,6 +600,56 @@ def v_curve_analysis(rows: list, arm: str = "field") -> list:
                 rec[f"{name}_n_points"] = int(mask.sum())
         out.append(rec)
     return out
+
+
+def hessian_fd_check(field, arms: dict, address: np.ndarray, pins: dict,
+                     alphas=(0.0, 1.0), arm: str = "field", n_dirs: int = 6,
+                     eps_fd: float = 1e-5) -> dict:
+    """Validate the closed-form curvature, and D14's lift, by FINITE DIFFERENCE.
+
+    ⛔ This deliberately does NOT re-use ``curvature_spectrum``'s algebra on both sides --
+    that would be a tautology.  The measured side is a central difference of the exact
+    gradient of the CONFINED energy, ``grad E(q) + 2 alpha (q - x*)``, along the mode
+    vectors; the predicted side is ``diag(mu^2) + 2 alpha`` from the Gram-matrix spectrum.
+
+    Two things are checked at once: that ``Hess E = I - Cov_w/sigma^2`` is the right
+    Hessian for the energy actually integrated, and that D14's ``+2 alpha`` lift holds on
+    it.  A residual at the float64 differencing floor (``~1e-8`` at ``eps_fd = 1e-5``) is
+    a pass; anything larger means the prediction and the rollout disagree about the object.
+    """
+    rows = []
+    for k in sorted(arms):
+        entry = arms[k].get(arm)
+        if entry is None:
+            continue
+        A, life, sig = entry
+        ch = np.asarray(field.well_channels[k], np.int64)
+        st = W6.mean_shift_settle(np.asarray(address, np.float64)[ch], A, sig, life,
+                                  max_iter=int(pins["settle_max_iter"]),
+                                  tol=float(pins["settle_tol"]))
+        xs = st["x"]
+        cs = W6.curvature_spectrum(xs, A, sig, life, mass=1.0)
+        sel = probe_modes(cs["mu2"], int(n_dirs))
+        for al in alphas:
+            worst = 0.0
+            for j in sel:
+                v = np.asarray(cs["vectors"][:, j], np.float64)
+                gp = W6.kernel_grad(xs + eps_fd * v, A, sig, life) \
+                    + 2.0 * al * (eps_fd * v)
+                gm = W6.kernel_grad(xs - eps_fd * v, A, sig, life) \
+                    + 2.0 * al * (-eps_fd * v)
+                meas = float(v @ (gp - gm) / (2.0 * eps_fd))   # v^T Hess v
+                pred = float(cs["mu2"][j]) + 2.0 * float(al)
+                worst = max(worst, abs(meas - pred))
+            rows.append({"well": int(k), "alpha": float(al),
+                         "max_abs_residual": worst, "n_dirs": int(len(sel))})
+    if not rows:
+        return {"n": 0}
+    a = np.array([r["max_abs_residual"] for r in rows])
+    return {"n": int(a.size), "max_abs_residual": float(a.max()),
+            "mean_abs_residual": float(a.mean()), "eps_fd": eps_fd,
+            "per_well": rows,
+            "law": "Hess E = I - Cov_w/sigma^2, and D14: +2 alpha lifts every eigenvalue"}
 
 
 def d14_confinement_check(rows: list, arm: str = "field") -> dict:

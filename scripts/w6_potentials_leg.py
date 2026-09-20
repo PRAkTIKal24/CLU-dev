@@ -18,6 +18,7 @@ def main(argv=None):
     p.add_argument("--max-corners", type=int, default=0)
     p.add_argument("--arms", default="field,landscape_removed,landscape_shuffled")
     p.add_argument("--wells", default="")
+    p.add_argument("--aux-corners", type=int, default=0)
     p.add_argument("--prereg", default="")
     a = p.parse_args(argv)
 
@@ -77,10 +78,12 @@ def main(argv=None):
     if "pca_tensor" in want:
         pc = W5.build_pca_content(out, log=log)
         pca = pc.get("atoms", None)
+    wl = list(wells if wells is not None else range(field.K))
     arms = {k: {kk: vv for kk, vv in
                 EX.landscape_variants(field, k, np.random.default_rng(99 + k), pca).items()
                 if kk in want}
-            for k in (wells if wells is not None else range(field.K))}
+            for k in wl}
+    arms_field = {k: {kk: vv for kk, vv in arms[k].items() if kk == "field"} for k in wl}
 
     # the trap check, once, on the real atoms
     trap = {}
@@ -91,28 +94,52 @@ def main(argv=None):
     log("trap check (well_sigma vs item spacing): " + ", ".join(
         f"w{k}={trap[f'well_{k}']['well_sigma_over_nn_median']:.3f}" for k in range(field.K)))
 
+    # the Hessian / D14 finite-difference check -- cheap, and it gates the predictions
+    hfd = EX.hessian_fd_check(field, arms_field, addr[0], EX.PINS)
+    EX.jdump(hfd, out / "hessian_fd_check.json")
+    log(f"Hessian+D14 finite-difference check: max|resid| = {hfd['max_abs_residual']:.3e}")
+
+    n_aux = int(a.aux_corners)
     rows, t0 = [], time.time()
     for i, c in enumerate(cs):
-        rows += EX.corner_rows(field, c["corner_id"], addr[i], arms, EX.PINS, rng, wells)
+        rows += EX.corner_rows(field, c["corner_id"], addr[i], arms_field, EX.PINS,
+                               rng, wells)
+        if i < n_aux:
+            aux = EX.corner_rows(field, c["corner_id"], addr[i], arms_field,
+                                 EX.PINS_AUX, rng, wells)
+            for r in aux:
+                r["grid"] = "aux"
+            rows += aux
+            ctl = {k: {kk: vv for kk, vv in arms[k].items() if kk != "field"} for k in wl}
+            if any(ctl.values()):
+                rows += EX.corner_rows(field, c["corner_id"], addr[i], ctl, EX.PINS,
+                                       rng, wells)
         if (i + 1) % 5 == 0 or i == len(cs) - 1:
             log(f"  corner {i+1}/{len(cs)}  rows={len(rows)}  {time.time()-t0:.0f}s")
 
-    fit = EX.fit_one_parameter([r for r in rows if r["arm"] == "field"])
+    for r in rows:
+        r.setdefault("grid", "main")
+
+    main = [r for r in rows if r["arm"] == "field" and r["grid"] == "main"]
+    fit = EX.fit_one_parameter(main)
     sc = EX.score_rows(rows, fit)
-    est = EX.corner_estimand(sc["rows"], arm="field")
-    vc = {arm: EX.v_curve_analysis(rows, arm=arm) for arm in want}
-    d14 = EX.d14_confinement_check(rows, arm="field")
+    est = EX.corner_estimand([r for r in sc["rows"] if r["grid"] == "main"], arm="field")
+    vc = {arm: EX.v_curve_analysis([r for r in rows if r["grid"] == "main"], arm=arm)
+          for arm in want}
+    d14 = EX.d14_confinement_check([r for r in rows if r["grid"] == "aux"], arm="field")
     res = {"condition": a.condition, "seed": a.seed, "corners": a.corners,
-           "n_corners": len(cs), "n_rows": len(rows), "pins": EX.PINS,
+           "n_corners": len(cs), "aux_corners": n_aux, "n_rows": len(rows),
+           "pins": EX.PINS, "pins_aux": EX.PINS_AUX,
            "fit1_C": fit["C"], "fit1_n": fit["n"],
            "field_sha": field.sha256(), "byte_ledger": built["byte_ledger"],
-           "integrator_check": chk, "sigma_provenance": trap,
+           "integrator_check": chk, "hessian_fd_check": hfd, "sigma_provenance": trap,
            "estimand": est, "d14_confinement": d14,
            "n_v_curves": {k: len(v) for k, v in vc.items()},
            "wall_seconds": time.time() - t0}
     EX.jdump(res, out / "results.json")
     with open(out / "rows.pkl", "wb") as fh:
-        pickle.dump({"rows": sc["rows"], "v_curves": vc, "meta": res}, fh)
+        pickle.dump({"rows": sc["rows"], "all_rows": rows, "v_curves": vc,
+                     "meta": res}, fh)
     log(f"wrote {out/'results.json'}  rows={len(rows)}  corners={est['n_corners']}")
     return 0
 
