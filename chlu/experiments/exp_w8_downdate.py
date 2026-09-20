@@ -114,12 +114,44 @@ def _jsonable(o):
 # ---------------------------------------------------------------------------
 
 
-def publish_ready(**fields) -> dict:
-    """⭐⭐ Write/merge ``DOWNDATE-READY.json``.  PARTIAL the moment the store fits."""
+def publish_ready(out_dir=None, **fields) -> dict:
+    """⭐⭐ Write/merge ``DOWNDATE-READY.json``.  PARTIAL the moment the store fits.
+
+    ⛔ TWO GUARDS, both added after a real incident on 2026-09-20T19:29Z rather than
+    from foresight. ``hub/single-design`` ran this module with ``--out`` pointing into
+    its own tree to fit a **test**-condition store; ``READY`` is module-level and
+    ignored ``--out``, so the publish landed in this spoke's gate and replaced the val
+    build's descriptors with the test build's. For about 90 seconds the gate read
+    ``condition: "test"`` beside ``all_three_assertions_passed: true`` — assertions
+    that had only ever been run on val. A hub reading it would have believed a
+    test-condition object had passed them.
+
+    1. ``out_dir`` outside :data:`OUT_ROOT` -> refuse. The readiness file describes the
+       object built in *this spoke's* output tree; a build somewhere else does not get
+       to describe it.
+    2. a ``condition`` different from the one already recorded -> refuse. Descriptors
+       and assertions in one file must be about one object.
+
+    ⚠ A refusal is LOUD and returns the file unchanged; it never half-writes.
+    """
+    if out_dir is not None:
+        try:
+            Path(out_dir).resolve().relative_to(OUT_ROOT.resolve())
+        except ValueError:
+            _log(f"  ⛔ REFUSING to publish DOWNDATE-READY: out_dir {out_dir} is "
+                 f"outside {OUT_ROOT}. This gate describes THIS spoke's object; "
+                 f"a build elsewhere must publish its own readiness file.")
+            return {}
     cur = {}
     if READY.exists():
         with open(READY, encoding="utf-8") as fh:
             cur = json.load(fh)
+    want = fields.get("condition")
+    if want is not None and cur.get("condition") not in (None, want):
+        _log(f"  ⛔ REFUSING to publish DOWNDATE-READY: it records condition "
+             f"{cur['condition']!r} and this publish is {want!r}. Descriptors and "
+             f"assertions in one file must be about one object.")
+        return cur
     cur.update(_jsonable(fields))
     cur["utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     _jdump(cur, READY)
@@ -241,6 +273,7 @@ def stage_fit(out_dir: Path, condition: str, log=_log) -> dict:
              "all_three_assertions_passed", "smoke", "smoke_pinned", "gauge",
              "post_delete") if k in prior}
     publish_ready(
+        out_dir=out_dir,
         status=keep.get("status", "partial"),
         store_bytes=int(store_led["deployed_bytes"]),
         cov_bytes=int(cov_led["covariance_bytes"]),
@@ -432,6 +465,7 @@ def stage_assertions(out_dir: Path, condition: str, log=_log) -> dict:
     _jdump(res, out_dir / "assertions.json")
 
     publish_ready(
+        out_dir=out_dir,
         status="partial",
         downdate_equals_refit={
             "max_abs_dev_per_well": a1["pinned_value_object_hue_0.0"][
@@ -636,6 +670,7 @@ def stage_smoke(out_dir: Path, condition: str, log=_log, basis_kind: str = "svd"
         f"{sha_before != st.content_sha()}")
 
     publish_ready(
+        out_dir=out_dir,
         status="ready",
         **{f"smoke{tag}": {"downdate_store_val_valid_mean": mine["valid_mean"],
                "pca_tensor_val_valid_mean": theirs["valid_mean"],
@@ -799,7 +834,7 @@ def stage_gauge(out_dir: Path, condition: str, log=_log) -> dict:
     # `smoke.valid_mean_after_delete = 0.0` and a reader who sees that number without
     # this one beside it will read a GAUGE ARTEFACT as a composition cost. The two
     # belong in the same file.
-    publish_ready(gauge={
+    publish_ready(out_dir=out_dir, gauge={
         "stores_agree_to": out["stores_agree_to"],
         "svd_basis_max_render_dev": out["svd_basis"].get("max_abs_render_dev"),
         "pinned_basis_max_render_dev": out["pinned_basis"].get("max_abs_render_dev"),
@@ -902,7 +937,7 @@ def stage_postdelete(out_dir: Path, condition: str, log=_log) -> dict:
                  "they were fitted against. Any remaining drop is the deletion."),
     }
     _jdump(out, out_dir / "post_delete.json")
-    publish_ready(post_delete={
+    publish_ready(out_dir=out_dir, post_delete={
         "before": before["valid_mean"],
         "after_pinned_basis": after_plain["valid_mean"],
         "after_pinned_basis_reindexed": after_matched["valid_mean"],
@@ -913,10 +948,183 @@ def stage_postdelete(out_dir: Path, condition: str, log=_log) -> dict:
     return out
 
 
+def stage_postdelete_refit(out_dir: Path, condition: str, log=_log) -> dict:
+    """⛔⭐ THE CONTROL THAT SAYS WHAT THE POST-DELETE COLLAPSE ACTUALLY IS.
+
+    ``--stage postdelete`` measured 0.8941 -> 0.058 reading the downdated store with
+    the address book fitted before the deletion, and showed that neither the SVD gauge
+    nor the direction reordering explains it.  Two hypotheses remain and they have very
+    different consequences:
+
+    * **the deletion destroyed the content** -- the design fails at its purpose;
+    * **the deletion is fine and the stale BOOK is the whole problem** -- the content
+      forgets exactly and only the interface has to be brought along.
+
+    They are separated by one measurement: refit the address book **on the downdated
+    store** and read again.  ⛔ The refit is a pass over the fit pool, so this leg does
+    NOT satisfy "no pass over the data" and is not offered as the deletion verb -- it
+    is the diagnostic that says where the cost lives.  ⭐ Because the downdated store
+    EQUALS the without-those-rows refit to 1.164e-10, this is also exactly the score a
+    store fitted from scratch without those rows would get.
+    """
+    from ..core.downdate_store import pinned_span_basis
+    from . import exp_gen_read as R
+
+    fw = _setup(condition)
+    pool, wc, dead = _pool_and_wells(fw, out_dir)
+    cond = fw.load_condition()
+    grid = cond["grid"]
+    with open(out_dir / "store.pkl", "rb") as fh:
+        st = pickle.load(fh)
+
+    f, v = int(W8_PINS["delete_factor"]), int(W8_PINS["delete_value_index"])
+    vals_all = grid.values_of(pool)
+    mask = np.isclose(vals_all[:, f], float(grid.values[f][v]))
+    X_del = fw.gather(fw.features_mmap(int(fw.PINS["seed"])), pool[mask])
+    rec = st.delete(X_del, vals_all[mask], grid.values)
+    del X_del
+    log(f"stage postdelete_refit: deleted {rec['n_rows_deleted']:,} rows, now refitting "
+        "the address book ON the downdated store")
+
+    basis = pinned_span_basis(st)
+    addr = _fit_address(fw, out_dir, st, basis, log=log, tag="_pinned_postdel")
+
+    judge = fw.Judge(int(fw.PINS["seed"]), log=log)
+    # ⭐ the acceptance bitmap is rebuilt WITHOUT the deleted value, exactly as
+    # fw.run_arm's row 7 does: a request for a value the store no longer holds should
+    # be declined, not answered wrongly.
+    fitted = np.setdiff1d(cond["train_rows"], fw.val_corner_rows(cond))
+    bitmap = fw.value_presence_bitmap(grid, fitted)
+    bitmap_post = [b.copy() for b in bitmap]
+    bitmap_post[f][v] = False
+
+    o = {"arm": "downdate_store_postdelete", "read": "tensor", "kind": "span",
+         "store": st, "basis": basis, "address": addr, "protos": None}
+    out_rows = []
+    for c in fw.val_corners(cond):
+        vals = fw._request_values_from_rows(grid, c["rows"])
+        feats, oor = R.arm_features(o, vals, grid)
+        acc = fw.accept_rule(vals, oor, np.zeros(vals.shape[0], bool), bitmap_post, grid)
+        tup = judge.read_back(feats, int(fw.PINS["eval_batch"]))
+        out_rows.append(float((fw.judge_valid(vals, tup, grid) & acc).mean()))
+    vv = np.asarray(out_rows)
+    log(f"  after delete, book REFIT on the downdated store   valid mean {vv.mean():.4f}"
+        f"  sd {vv.std(ddof=1):.4f}  min {vv.min():.4f}  max {vv.max():.4f}")
+
+    res = {"valid_mean": float(vv.mean()), "valid_sd": float(vv.std(ddof=1)),
+           "valid_min": float(vv.min()), "valid_max": float(vv.max()),
+           "per_corner": [float(x) for x in out_rows],
+           "n_corners": int(vv.size), "delete_receipt": rec,
+           "address_book_refitted": True,
+           "⛔_declared": ("this leg REFITS the address book, which is a pass over the "
+                          "fit pool. It is a DIAGNOSTIC, not the deletion verb: it "
+                          "says whether the collapse seen with a stale book is the "
+                          "content or the interface."),
+           "why_this_is_also_the_refit_from_scratch_score": (
+               "the downdated store equals the store fitted without those rows to "
+               "1.164e-10, so a book fitted on it is a book fitted on that store")}
+    _jdump(res, out_dir / "post_delete_refit.json")
+    publish_ready(out_dir=out_dir, post_delete_refit={
+        "valid_mean": res["valid_mean"], "address_book_refitted": True,
+        "n_corners": res["n_corners"]})
+    return res
+
+
+def stage_carry(out_dir: Path, condition: str, log=_log) -> dict:
+    """⭐⭐ DELETE 11,024 ROWS, REFIT NOTHING, READ AGAIN -- the literal claim, tested.
+
+    ``hub/single-design`` separated the post-deletion collapse in feature space: of the
+    naive read's error, 90.03% of the signal norm is coordinate correspondence and only
+    5.76% is the deletion itself (15.63x), and a permutation removes only 63% of it
+    because the residual is rotation *within* near-degenerate subspaces. The full
+    linear correspondence ``M_k = U0_k^T U1_k`` expresses it. This stage applies it to
+    the pre-deletion book and reads the same 24 val corners through the judge.
+
+    ⛔ No pass over the data and no refit: ``M_k`` comes from two bases already in hand
+    at delete time. The book's ``W`` values are rewritten, which is declared -- see
+    :func:`downdate_store.carry_address_book`.
+    """
+    from ..core.downdate_store import carry_address_book, pinned_span_basis
+    from . import exp_gen_read as R
+
+    fw = _setup(condition)
+    pool, wc, dead = _pool_and_wells(fw, out_dir)
+    cond = fw.load_condition()
+    grid = cond["grid"]
+    with open(out_dir / "store.pkl", "rb") as fh:
+        st = pickle.load(fh)
+    U0 = pinned_span_basis(st)
+    addr = _fit_address(fw, out_dir, st, U0, log=log, tag="_pinned")
+
+    judge = fw.Judge(int(fw.PINS["seed"]), log=log)
+    fitted = np.setdiff1d(cond["train_rows"], fw.val_corner_rows(cond))
+    bitmap = fw.value_presence_bitmap(grid, fitted)
+    f, v = int(W8_PINS["delete_factor"]), int(W8_PINS["delete_value_index"])
+    bitmap_post = [b.copy() for b in bitmap]
+    bitmap_post[f][v] = False
+    corners = fw.val_corners(cond)
+
+    def _run(store, basis, book, bm, tag):
+        o = {"arm": "downdate_store", "read": "tensor", "kind": "span",
+             "store": store, "basis": basis, "address": book, "protos": None}
+        vs = []
+        for c in corners:
+            vals = fw._request_values_from_rows(grid, c["rows"])
+            feats, oor = R.arm_features(o, vals, grid)
+            acc = fw.accept_rule(vals, oor, np.zeros(vals.shape[0], bool), bm, grid)
+            tup = judge.read_back(feats, int(fw.PINS["eval_batch"]))
+            vs.append(float((fw.judge_valid(vals, tup, grid) & acc).mean()))
+        a = np.asarray(vs)
+        log(f"  {tag:<46} valid mean {a.mean():.4f}  sd {a.std(ddof=1):.4f}")
+        return {"valid_mean": float(a.mean()), "valid_sd": float(a.std(ddof=1)),
+                "per_corner": [float(x) for x in a]}
+
+    before = _run(st, U0, addr, bitmap, "before delete")
+
+    vals_all = grid.values_of(pool)
+    mask = np.isclose(vals_all[:, f], float(grid.values[f][v]))
+    X_del = fw.gather(fw.features_mmap(int(fw.PINS["seed"])), pool[mask])
+    rec = st.delete(X_del, vals_all[mask], grid.values)
+    del X_del
+    U1 = pinned_span_basis(st)
+    carried, cinfo = carry_address_book(addr, U0, U1)
+    log(f"  deleted {rec['n_rows_deleted']:,} rows; carried the book, "
+        f"{cinfo['data_rows_touched']} data rows touched, refit={cinfo['refit']}; "
+        f"min singular value of M per well "
+        f"{[round(x, 4) for x in cinfo['correspondence_min_singular_value']]}")
+
+    naive = _run(st, U1, addr, bitmap_post, "after delete, book UNCHANGED (naive)")
+    carry = _run(st, U1, carried, bitmap_post, "after delete, book CARRIED (no refit)")
+
+    out = {"before_delete": before, "after_naive": naive, "after_carry": carry,
+           "carry_info": cinfo, "delete_receipt": rec,
+           "recovered_by_carry": float(
+               carry["valid_mean"] - naive["valid_mean"]),
+           "remaining_gap_to_before": float(
+               before["valid_mean"] - carry["valid_mean"]),
+           "fraction_of_collapse_recovered": float(
+               (carry["valid_mean"] - naive["valid_mean"])
+               / max(before["valid_mean"] - naive["valid_mean"], 1e-12)),
+           "what": ("⛔ val only, no claim. before = the object reading normally; "
+                    "naive = the same book against the downdated store, which is "
+                    "dominated by coordinate correspondence and is NOT a composition "
+                    "cost; carry = the correspondence applied, no data row touched and "
+                    "no refit. The gap that remains between carry and before is the "
+                    "deletion.")}
+    _jdump(out, out_dir / "carry.json")
+    publish_ready(out_dir=out_dir, post_delete_carry={
+        "before": before["valid_mean"],
+        "after_naive_same_book": naive["valid_mean"],
+        "after_carried_book": carry["valid_mean"],
+        "fraction_of_collapse_recovered": out["fraction_of_collapse_recovered"],
+        "data_rows_touched": 0, "address_book_refitted": False})
+    return out
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--stage", required=True,
-                   choices=("fit", "assertions", "smoke", "sweep", "gauge", "postdelete", "all"))
+                   choices=("fit", "assertions", "smoke", "sweep", "gauge", "postdelete", "postdelete_refit", "carry", "all"))
     p.add_argument("--out", default=str(OUT_ROOT / "build" / "val_seed0"))
     p.add_argument("--condition", default="val", choices=("val", "test"))
     p.add_argument("--basis", default="svd", choices=("svd", "pinned"),
@@ -935,7 +1143,9 @@ def main(argv=None) -> int:
         else:
             {"fit": stage_fit, "assertions": stage_assertions,
              "sweep": stage_sweep, "gauge": stage_gauge,
-             "postdelete": stage_postdelete}[s](out, a.condition)
+             "postdelete": stage_postdelete,
+             "postdelete_refit": stage_postdelete_refit,
+             "carry": stage_carry}[s](out, a.condition)
     _log("done")
     return 0
 

@@ -1112,3 +1112,71 @@ def pinned_span_basis_matched(store, modes_pre, tol: float = 1e-8,
         dim = store.dim
 
     return pinned_span_basis(_Reordered, tol=tol, mu_rel_tol=mu_rel_tol), corr
+
+
+def carry_address_book(addr, U_pre, U_post):
+    """⭐⭐ Bring the address book into correspondence with the downdated store.
+
+    ``hub/single-design``'s mechanism, adopted after it measured that my permutation
+    match removes only 63% of the error: the residual is rotation **within**
+    near-degenerate subspaces, which a slot swap cannot express.  The full linear
+    correspondence can::
+
+        M_k = U0_k^T U1_k        W'_k = W_k M_k
+
+    ⭐ Why this is the right answer and not a fudge: the read becomes
+    ``a W M U1^T = (a W U0^T) U0 U1^T``... more precisely ``c M U1^T`` is the
+    pre-deletion ambient answer **projected onto the post-deletion span**.  The
+    component of the old answer lying outside the new span -- which is exactly the
+    deleted content -- is projected out, and nothing else moves.  So the carry does not
+    mask the deletion; it is what the deletion *means* at the interface.
+
+    ⛔ THE COST, declared. No pass over the data: ``M_k`` is formed from two bases
+    already in hand at delete time, ``O(r_k^2 d_k)``.  But the book's ``W`` **is
+    rewritten**, so unlike :func:`pinned_span_basis` this is not byte-identical at the
+    interface -- ``sum_k R r_k`` floats change value (not count). For a charter B.4
+    argument that is weaker than "nothing changed" and stronger than "refitted".
+    """
+    import copy
+
+    new = copy.deepcopy(addr)
+    Ms = []
+    for k, (U0, U1) in enumerate(zip(U_pre, U_post)):
+        A0 = np.asarray(U0, np.float64)
+        A1 = np.asarray(U1, np.float64)
+        if A0.shape[1] != np.asarray(addr.W[k]).shape[1]:
+            raise AssertionError(
+                f"well {k}: the book emits {np.asarray(addr.W[k]).shape[1]} "
+                f"coefficients but the pre-deletion basis has {A0.shape[1]} columns")
+        Ms.append(A0.T @ A1)
+    # c = (a W) * s + m  ->  c M = (a W) diag(s) M + m M, exactly
+    o = 0
+    for k, M in enumerate(Ms):
+        Wk = np.asarray(new.W[k], np.float64)
+        r_in = Wk.shape[1]
+        if getattr(new, "scale", None) is not None:
+            s = np.asarray(new.scale[o:o + r_in], np.float64)
+            Wk = Wk * s[None, :]
+        new.W[k] = np.ascontiguousarray((Wk @ M).astype(np.asarray(addr.W[k]).dtype))
+        o += r_in
+    if getattr(new, "scale", None) is not None:
+        cen, o = [], 0
+        for k, M in enumerate(Ms):
+            r_in = np.asarray(addr.W[k]).shape[1]
+            cen.append(np.asarray(new.center[o:o + r_in], np.float64) @ M)
+            o += r_in
+        new.center = np.concatenate(cen).astype(np.asarray(addr.center).dtype)
+        new.scale = np.ones_like(new.center)
+    return new, {
+        "op": "carry_address_book",
+        "n_wells": len(Ms),
+        "correspondence_min_singular_value": [
+            float(np.linalg.svd(M, compute_uv=False).min()) for M in Ms],
+        "correspondence_max_abs_off_identity": [
+            float(np.abs(M - np.eye(M.shape[0])).max()) for M in Ms],
+        "address_book_bytes_changed": int(
+            sum(np.asarray(w).size for w in addr.W) * 4),
+        "address_book_bytes_total": int(addr.byte_ledger().get("address_bytes", 0)),
+        "data_rows_touched": 0,
+        "refit": False,
+    }
