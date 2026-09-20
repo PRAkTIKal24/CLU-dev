@@ -128,19 +128,42 @@ class WellStats:
     which rows were written, which is the "items never kept" property.
     """
 
-    __slots__ = ("S", "t", "n", "d")
+    __slots__ = ("_Sp", "t", "n", "d", "_iu")
 
     def __init__(self, d: int):
         self.d = int(d)
-        self.S = np.zeros((self.d, self.d), _ACC)
+        # ⭐⭐ PACKED. The canonical retained state is the UPPER TRIANGLE of S, not the
+        # full square.  S is symmetric, so the triangle is sufficient -- but a ledger may
+        # only count a packing that is actually deployed, and an earlier version of this
+        # class held a full (d, d) array while counting d(d+1)/2.  ⛔ That would have been
+        # netting by convention, which this hub's target file forbids.  The full matrix is
+        # materialised only transiently, inside `covariance()`, for `eigh`.
+        self._iu = np.triu_indices(self.d)
+        self._Sp = np.zeros(self._iu[0].size, _ACC)
         self.t = np.zeros(self.d, _ACC)
         self.n = 0
+
+    # -- packing helpers ----------------------------------------------------
+    def _pack(self, M: np.ndarray) -> np.ndarray:
+        return M[self._iu]
+
+    def _unpack(self) -> np.ndarray:
+        M = np.zeros((self.d, self.d), _ACC)
+        M[self._iu] = self._Sp
+        M = M + M.T
+        M[np.diag_indices(self.d)] *= 0.5
+        return M
+
+    @property
+    def S(self) -> np.ndarray:
+        """The full second moment, reconstructed.  ⛔ Not what is stored."""
+        return self._unpack()
 
     # -- write / delete: the same operation with opposite sign ---------------
     def add(self, X: np.ndarray) -> None:
         """Accumulate rows.  ``X`` is ``(m, d)``."""
         Xa = np.asarray(X, _ACC)
-        self.S += Xa.T @ Xa
+        self._Sp += self._pack(Xa.T @ Xa)
         self.t += Xa.sum(axis=0)
         self.n += int(Xa.shape[0])
 
@@ -155,7 +178,7 @@ class WellStats:
         if Xa.shape[0] > self.n:
             raise AssertionError(
                 f"asked to remove {Xa.shape[0]} rows from a well holding {self.n}")
-        self.S -= Xa.T @ Xa
+        self._Sp -= self._pack(Xa.T @ Xa)
         self.t -= Xa.sum(axis=0)
         self.n -= int(Xa.shape[0])
 
@@ -175,7 +198,7 @@ class WellStats:
         """
         if self.n < 2:
             raise AssertionError(f"covariance needs n >= 2, well holds {self.n}")
-        C = (self.S - np.outer(self.t, self.t) / self.n) / (self.n - 1)
+        C = (self._unpack() - np.outer(self.t, self.t) / self.n) / (self.n - 1)
         return 0.5 * (C + C.T)
 
     def atoms(self, n_atoms: int, return_rank: bool = False):
@@ -223,8 +246,17 @@ class WellStats:
 
     # -- ledger -------------------------------------------------------------
     def stat_floats(self) -> int:
-        """Retained floats: the symmetric triangle of ``S``, plus ``t``, plus ``n``."""
-        return self.d * (self.d + 1) // 2 + self.d + 1
+        """Retained floats: the PACKED triangle of ``S``, plus ``t``, plus ``n``.
+
+        ⭐ This counts what is actually held: ``self._Sp.size`` is the triangle, and the
+        assertion below makes the ledger answerable to the array rather than to a formula.
+        """
+        packed = int(self._Sp.size)
+        if packed != self.d * (self.d + 1) // 2:
+            raise AssertionError(
+                f"packed triangle is {packed} floats, not {self.d * (self.d + 1) // 2} "
+                "-- the ledger and the array disagree")
+        return packed + self.d + 1
 
     def stat_bytes(self) -> int:
         """⭐ Counted at the precision actually RETAINED, which is float64.
@@ -359,7 +391,7 @@ class CovContentStore:
         change is concentrated on the deleted content.  ⛔ It is a property of the store,
         not a composition number, and it may not be quoted as one.
         """
-        rot = getattr(self, "last_gauge_rotation", None)
+        rot = getattr(self, "last_basis_change", None)
         if rot is None:
             raise AssertionError("no deletion has been performed; nothing to audit")
         devs, cos = [], []
