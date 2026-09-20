@@ -112,10 +112,31 @@ def main() -> int:
         c = Xw @ A0                                   # oracle pre-deletion coefficients
 
         M = A0.T @ A1                                 # correspondence
-        best = np.abs(M).argmax(axis=0)               # pre index matched to each post dir
+        # ⚠ CORRECTED. My first version used a per-row argmax, which can send two
+        # pre-directions to ONE post-direction -- so what I called a "permutation" was
+        # not guaranteed to be one, and the residual I attributed to degenerate rotation
+        # was partly my own double-assignment.  The spoke's direction_correspondence()
+        # is greedy on descending |overlap| and returns a true permutation; this uses
+        # the same rule.
+        Mabs = np.abs(M)
+        perm = np.full(r, -1, np.int64)
+        taken = np.zeros(r, bool)
+        order = np.dstack(np.unravel_index(np.argsort(Mabs, axis=None)[::-1],
+                                           Mabs.shape))[0]
+        for i, j in order:
+            if perm[i] < 0 and not taken[j]:
+                perm[i], taken[j] = int(j), True
+                if (perm >= 0).all():
+                    break
+        # perm[i] = which POST direction pre-direction i became.  The book slot i must
+        # therefore drive post-direction perm[i].
+        inv = np.empty(r, np.int64)
+        inv[perm] = np.arange(r)                      # post j <- pre inv[j]
+        best = inv
         sgn = np.sign(M[best, np.arange(r)])
         sgn[sgn == 0] = 1.0
-        n_moved = int((best != np.arange(r)).sum())
+        n_moved = int((perm != np.arange(r)).sum())
+        n_dup_argmax = int(r - len(set(Mabs.argmax(axis=0).tolist())))
 
         before = c @ A0.T
         naive = c @ A1.T
@@ -132,10 +153,11 @@ def main() -> int:
         tot["perm_carry"] += d_perm ** 2
         tot["scale"] += scale ** 2
         rows.append({"well": k, "r": r, "reordered": n_moved,
+                     "argmax_double_assignments": n_dup_argmax,
                      "real_deletion_l2": d_real, "naive_gauge_l2": d_naive,
                      "perm_l2": d_perm, "scale": scale})
         log(f"  {k:4d} {r:4d}   {n_moved:3d}/{r:<4d}   {d_real:11.4f}   {d_naive:15.4f}   "
-            f"{d_perm:16.4f}   (scale {scale:.3f})")
+            f"{d_perm:16.4f}   (scale {scale:.3f}, argmax dup {n_dup_argmax})")
 
     real = float(np.sqrt(tot["before_carry"]))
     naive = float(np.sqrt(tot["naive_carry"]))
