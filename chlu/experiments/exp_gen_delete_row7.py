@@ -1576,6 +1576,150 @@ def dash_evidence(out: Path, seed: int, log: Callable = print) -> dict:
     return rep
 
 
+#: How many random non-red items the size-matched eviction control removes.  Set from the
+#: MEASURED item count of the real eviction on the same seed, so the control is matched rather
+#: than nominal.
+DIAG_N_DRAWS = 8
+
+
+def evict_size_control(out: Path, seed: int, max_seconds: float = 3600.0,
+                       log: Callable = print) -> dict:
+    """⚠ POST-HOC DIAGNOSTIC. Declared as one. ⛔ It cannot and does not rescue BAR 2.
+
+    BAR 2 failed: evicting ``object_hue = 0`` costs ~2.1 distinct-valid-novel tuples per corner on
+    the 89 surviving corners, against a pre-registered bar of 1.0. This asks the one follow-up
+    question that changes what the failure MEANS, and it asks it with a control rather than an
+    argument:
+
+        is that cost a property of deleting RED, or simply of an item store losing
+        6 of its 64 shared atoms?
+
+    So: evict the same NUMBER of items, drawn at random from the items that do **not** hold red,
+    and measure the same paired per-corner delta on the same 89 corners against the same base.
+    ``DIAG_N_DRAWS`` independent draws, so the answer carries its own spread.
+
+    * If the random control costs about the same, the loss is **"an item store lost k of 64 shared
+      atoms"** -- a property of the mechanism that applies to ANY deletion, and the eviction is not
+      damaging anything it singles out.
+    * If it costs much less, the loss IS specific to red's atoms, and the eviction is doing
+      collateral damage that a size-matched removal does not.
+
+    ⛔ **FENCING, and both reasons matter.**
+    1. This was conceived AFTER seeing BAR 2 fail. It is labelled post-hoc everywhere it appears.
+       BAR 2 fails on its own pre-registered terms whatever this says (charter section A.3: a bar
+       seen against a result is not moved). This explains the failure; it does not undo it.
+    2. It lives in its own stage with its own artifact and is NEVER added to ``build_arms``. The
+       scoring driver relaunches a fresh process every window, so adding an arm mid-run would
+       silently change the unit set of a scored run in flight -- altering the battery after seeing
+       partial results, which is exactly what pre-registration exists to prevent.
+    """
+    from ..core.gen_field import LIFETIME_EPS, _items_holding, evict_term
+
+    d = seed_dir(out, seed)
+    art = d / "evict_size_control.json"
+    if art.exists():
+        log(f"  size-control(seed {seed}): already on disk")
+        return json.loads(art.read_text(encoding="utf-8"))
+
+    cond = load_condition()
+    grid = cond["grid"]
+    cs = scored_corners(cond)
+    surv = cs["survivor"]
+    base = build_field_base(out, seed, log=log)
+    f0 = base["field"]
+    fac, valx = int(PINS["delete_factor"]), int(PINS["delete_value"])
+    J = _judge(int(seed), log)
+    seen = seen_tuple_mask(grid, cond["train_rows"])
+    pool = base["pool"]
+    shared_bitmap = value_presence_bitmap(grid, pool)
+
+    red_ids, _, _ = _items_holding(f0, fac, valx)
+    k = int(red_ids.size)
+    life = np.asarray(f0.view("atom_life"), np.float32)
+    alive = (np.asarray(f0.view("atom_alive"), np.uint8) > 0) & (life > LIFETIME_EPS)
+    candidates = np.setdiff1d(np.flatnonzero(alive), red_ids)
+
+    def _score(field) -> dict:
+        rows_out = {}
+        for c in surv:
+            vals = grid.values_of(np.asarray(c["rows"], np.int64))
+            feats, oor = _field_features(field, vals, grid)
+            from ..core.gen_field import gap_read
+            refuse = np.asarray(gap_read(field, vals, grid.values)["refuse"], bool)
+            shared = accept_rule(vals, oor, np.zeros(vals.shape[0], bool), shared_bitmap, grid)
+            acc = shared & ~refuse
+            tup = J.read_back(feats, int(PINS["eval_batch"]))
+            valid = judge_valid(vals, tup, grid) & acc
+            rows_out[c["corner_id"]] = _per_corner(
+                {"n": int(vals.shape[0]), "accept": acc, "own_refuse": refuse,
+                 "valid": valid, "tuples": np.where(acc[:, None], tup, -1)}, grid, seen)
+        return rows_out
+
+    t0 = _now()
+    base_rows = _score(f0)
+    fe = f0.copy()
+    evict_term(fe, fac, valx)
+    red_rows = _score(fe)
+    red_delta = _paired(red_rows, base_rows, list(base_rows), "distinct_valid_novel_tuples")
+
+    draws = []
+    rng = np.random.default_rng(20_260_922 + 31 * int(seed))
+    for i in range(int(DIAG_N_DRAWS)):
+        if _now() - t0 > float(max_seconds):
+            log(f"  size-control(seed {seed}): wall-clock cap after {len(draws)} draws")
+            break
+        ids = np.sort(rng.choice(candidates, size=k, replace=False))
+        fr = f0.copy()
+        at = fr.view("atoms")
+        for j in ids:
+            for w in range(fr.K):
+                dd = int(fr.meta["well_sizes"][w])
+                o = int(fr.meta["well_atom_offset"][w]) + int(j) * dd
+                at[o:o + dd] = 0.0
+            fr.view("atom_life")[int(j)] = 0.0
+            fr.view("atom_alive")[int(j)] = 0
+        rr = _score(fr)
+        p = _paired(rr, base_rows, list(base_rows), "distinct_valid_novel_tuples")
+        draws.append({"draw": i, "item_ids": ids.tolist(), "mean_delta": p["mean_delta"],
+                      "ci95": p["ci95"], "n_corners": p["n_corners"]})
+        log(f"  size-control(seed {seed}) draw {i}: {k} random non-red items evicted -> "
+            f"paired delta {p['mean_delta']:+.4f}")
+
+    dl = [x["mean_delta"] for x in draws]
+    rep = {
+        "seed": int(seed), "POST_HOC": True,
+        "declared": ("conceived AFTER BAR 2 failed; labelled post-hoc; it explains the failure and "
+                     "does NOT rescue it. BAR 2 fails on its pre-registered terms regardless."),
+        "n_items_the_real_eviction_removed": k,
+        "n_live_items": int(alive.sum()),
+        "n_candidates_not_holding_red": int(candidates.size),
+        "real_eviction_delta": red_delta,
+        "random_same_size_draws": draws,
+        "random_mean_of_means": float(np.mean(dl)) if dl else None,
+        "random_sd_of_means": float(np.std(dl, ddof=1)) if len(dl) > 1 else None,
+        "random_min": float(np.min(dl)) if dl else None,
+        "random_max": float(np.max(dl)) if dl else None,
+        "verdict": None,
+    }
+    if dl:
+        rm = float(np.mean(dl))
+        rd = float(red_delta["mean_delta"])
+        inside = (min(dl) <= rd <= max(dl))
+        rep["verdict"] = (
+            ("THE COST IS THE MECHANISM, NOT THE TARGET: evicting %d RANDOM non-red items costs "
+             "%.4f tuples/corner on average (range %.4f..%.4f), and the real eviction's %.4f sits "
+             "inside that range. An item store loses composition when it loses atoms, whichever "
+             "atoms they are." % (k, rm, min(dl), max(dl), rd)) if inside else
+            ("THE COST IS SPECIFIC TO THE DELETED VALUE: evicting %d random non-red items costs "
+             "%.4f on average (range %.4f..%.4f) while the real eviction costs %.4f, which is "
+             "OUTSIDE that range. The eviction is doing damage a size-matched removal does not."
+             % (k, rm, min(dl), max(dl), rd)))
+        log(f"  size-control(seed {seed}): {rep['verdict']}")
+    d.mkdir(parents=True, exist_ok=True)
+    _jdump(rep, art)
+    return rep
+
+
 def hole_read_identity(out: Path, seed: int, log: Callable = print) -> dict:
     """⭐⭐ BAR 4(d), asserted DIRECTLY: the hole changes no rendered feature, anywhere.
 
@@ -2673,7 +2817,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--stage", required=True,
                    choices=("corners", "build", "bytes", "score", "learners", "c4",
-                            "dash", "unseen", "holeread", "report", "markdown", "compare", "all"))
+                            "dash", "unseen", "holeread", "sizecontrol", "report", "markdown", "compare", "all"))
     p.add_argument("--out", required=True)
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--max-seconds", type=float, default=7200.0)
@@ -2714,6 +2858,9 @@ def main(argv=None) -> int:
     if args.stage in ("c4", "all"):
         for s_ in seeds:
             nearest_atom_check(out, s_, log=log)
+    if args.stage == "sizecontrol":
+        for s_ in seeds:
+            evict_size_control(out, s_, max_seconds=args.max_seconds, log=log)
     if args.stage in ("holeread", "all"):
         for s_ in seeds:
             hole_read_identity(out, s_, log=log)
