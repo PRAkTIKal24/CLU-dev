@@ -144,13 +144,17 @@ def report_leg(name, obj, fh=sys.stdout):
         x = np.log10([r["mu2"] for r in und])
         y = np.log10([r["n_meas"] for r in und])
         # curvature-independence must be judged at FIXED gamma (the floor depends on gamma)
+        # ⛔ GLOBAL gammas only.  The per-mode refinement adds gamma values that exist
+        # for ONE (well, mass, mode), so a "slope against mu^2" at such a gamma is
+        # fitted on a single curvature and is meaningless.
+        undg = [r for r in und if r.get("gamma_grid", "global") == "global"]
         slopes = []
-        for g in sorted({r["gamma"] for r in und}):
-            s = [(np.log10(r["mu2"]), np.log10(r["n_meas"])) for r in und if r["gamma"] == g]
+        for g in sorted({r["gamma"] for r in undg}):
+            s = [(np.log10(r["mu2"]), np.log10(r["n_meas"])) for r in undg if r["gamma"] == g]
             if len(s) >= 4 and len({a for a, _ in s}) >= 3:
                 a = np.array(s)
                 slopes.append(float(np.polyfit(a[:, 0], a[:, 1], 1)[0]))
-        fl = np.array([abs(np.log10(r["n_meas"] / r["n_pred_floor"])) for r in und])
+        fl = np.array([abs(np.log10(r["n_meas"] / r["n_pred_floor"])) for r in undg])
         if slopes:
             med = float(np.median(np.abs(slopes)))
             mx = float(np.max(np.abs(slopes)))
@@ -183,6 +187,14 @@ def report_leg(name, obj, fh=sys.stdout):
                 p(f"       same against the EXACT inversion of h*(gamma) = h "
                   f"(of which 2 eps mu is the small-h limit): median {np.median(ax):.4f}"
                   f"  IQR {np.percentile(ax,25):.3f}-{np.percentile(ax,75):.3f}")
+            pax = np.array([v.get("pred_argmin_over_gamma_crit_exact", np.nan)
+                            for v in br])
+            pax = pax[np.isfinite(pax)]
+            if pax.size:
+                p(f"       ⭐ the PREDICTED curve's OWN argmin on the same grid, over "
+                  f"gamma*_exact: median {np.median(pax):.4f}")
+                p(f"         (1.00 means the gamma grid resolves the critical point, so "
+                  f"any gap above is the ROLLOUT disagreeing with the law -- not spacing)")
         for side, lab in (("over", "D17 overdamped  "), ("under", "D18 underdamped")):
             ep = np.array([v[f"{side}_err_pred"] for v in vcs if f"{side}_err_pred" in v])
             en = np.array([v[f"{side}_err_naive"] for v in vcs if f"{side}_err_naive" in v])
@@ -200,8 +212,9 @@ def report_leg(name, obj, fh=sys.stdout):
             and np.isfinite(r["n_meas"]) and r["n_meas_first"] > 0]
     if both:
         p("")
-        for b in ("overdamped", "underdamped"):
-            rs = [r for r in both if r["band"] == b]
+        for b in ("overdamped", "underdamped", "deep underdamped (h/h* > 5)"):
+            rs = ([r for r in both if r["band"] == b] if "deep" not in b else
+                  [r for r in both if r["h_star"] > 0 and r["h"] / r["h_star"] > 5.0])
             if len(rs) < 5:
                 continue
             ratio = np.array([r["n_meas"] / r["n_meas_first"] for r in rs])

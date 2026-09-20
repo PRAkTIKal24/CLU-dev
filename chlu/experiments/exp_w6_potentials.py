@@ -512,11 +512,14 @@ def corner_rows(field, corner_id: str, address: np.ndarray, arms: dict,
                                     gl += list(np.geomspace(lo, hi, n_ref))
                         gsets.append(sorted(set(round(float(x), 6) for x in gl)))
                     all_g = sorted(set(g for gs in gsets for g in gs))
+                    glob = set(round(float(x), 6) for x in pins["gammas"])
                     for gamma in all_g:
                         for amp in amps:
                             for j in range(len(sel)):
                                 if gamma not in gsets[j]:
                                     continue
+                                gce_j = (W6.gamma_crit_exact(np.sqrt(mu2[j]) * eta)
+                                         if mu2[j] > 0 else float("nan"))
                                 npred = W6.n_half_crr(mu2[j], eta, gamma)
                                 cens = (not np.isfinite(npred)) or npred > cap
                                 steps = 0 if cens else int(
@@ -526,6 +529,9 @@ def corner_rows(field, corner_id: str, address: np.ndarray, arms: dict,
                                     "gamma": float(gamma), "amp": float(amp),
                                     "j": j, "mu2": float(mu2[j]),
                                     "he": float(he[j]),
+                                    "gamma_crit_exact": float(gce_j),
+                                    "gamma_grid": ("global" if gamma in glob
+                                                   else "refined"),
                                     "n_pred": float(npred), "censored": bool(cens),
                                     "steps": steps, "n_meas": np.inf,
                                     "n_meas_first": np.inf,
@@ -561,6 +567,8 @@ def corner_rows(field, corner_id: str, address: np.ndarray, arms: dict,
                     "corner_id": corner_id, "arm": arm, "well": int(k),
                     "mode": int(sel[sp["j"]]),
                     "hess_eig_raw": float(hess0[sel[sp["j"]]]),
+                    "gamma_crit_exact": sp["gamma_crit_exact"],
+                    "gamma_grid": sp["gamma_grid"],
                     "alpha": sp["alpha"], "hess_eig": sp["he"],
                     "mass": sp["mass"], "gamma": sp["gamma"],
                     "eta": eta, "amp": sp["amp"],
@@ -692,6 +700,9 @@ def v_curve_analysis(rows: list, arm: str = "field") -> list:
         if gc <= 0 or g.size < 4:
             continue
         am = float(g[int(np.argmin(n))])
+        npd = np.array([r["n_pred_crr"] for r in rs])
+        fin = np.isfinite(npd)
+        am_pred = float(g[fin][int(np.argmin(npd[fin]))]) if fin.any() else float("nan")
         rec = {k: v for k, v in zip(key, kk)}
         rec.update({"gamma_crit": gc, "gamma_crit_exact": gce, "n_gammas": int(g.size),
                     "argmin_gamma": am,
@@ -699,6 +710,10 @@ def v_curve_analysis(rows: list, arm: str = "field") -> list:
                     "argmin_over_gamma_crit_exact": (am / gce if gce and
                                                      np.isfinite(gce) and gce > 0
                                                      else float("nan")),
+                    "argmin_gamma_pred": am_pred,
+                    "pred_argmin_over_gamma_crit_exact": (
+                        am_pred / gce if gce and np.isfinite(gce) and gce > 0
+                        else float("nan")),
                     "bracketed": bool(g.min() < gc < g.max())})
         # V5's own fit windows (gamma < gamma*/2.5 and gamma > 2.5 gamma*), taken
         # around the EXACT critical damping rather than its small-h limit.

@@ -19,6 +19,7 @@ def main(argv=None):
     p.add_argument("--arms", default="field,landscape_removed,landscape_shuffled")
     p.add_argument("--wells", default="")
     p.add_argument("--aux-corners", type=int, default=0)
+    p.add_argument("--control-corners", type=int, default=0)
     p.add_argument("--prereg", default="")
     a = p.parse_args(argv)
 
@@ -107,6 +108,7 @@ def main(argv=None):
     log(f"Hessian+D14 finite-difference check: max|resid| = {hfd['max_abs_residual']:.3e}")
 
     n_aux = int(a.aux_corners)
+    n_ctl = int(a.control_corners)
     rows, t0 = [], time.time()
     for i, c in enumerate(cs):
         rows += EX.corner_rows(field, c["corner_id"], addr[i], arms_field, EX.PINS,
@@ -117,6 +119,7 @@ def main(argv=None):
             for r in aux:
                 r["grid"] = "aux"
             rows += aux
+        if i < n_ctl:
             ctl = {k: {kk: vv for kk, vv in arms[k].items() if kk != "field"} for k in wl}
             if any(ctl.values()):
                 rows += EX.corner_rows(field, c["corner_id"], addr[i], ctl, EX.PINS,
@@ -135,7 +138,8 @@ def main(argv=None):
           for arm in want}
     d14 = EX.d14_confinement_check([r for r in rows if r["grid"] == "aux"], arm="field")
     res = {"condition": a.condition, "seed": a.seed, "corners": a.corners,
-           "n_corners": len(cs), "aux_corners": n_aux, "n_rows": len(rows),
+           "n_corners": len(cs), "aux_corners": n_aux,
+           "control_corners": n_ctl, "n_rows": len(rows),
            "pins": EX.PINS, "pins_aux": EX.PINS_AUX,
            "fit1_C": fit["C"], "fit1_n": fit["n"],
            "field_sha": field.sha256(), "byte_ledger": built["byte_ledger"],
