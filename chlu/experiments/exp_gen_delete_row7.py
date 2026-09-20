@@ -1798,6 +1798,46 @@ def build_report(out: Path, log: Callable = print) -> dict:
                            for p in probes if not p.startswith("_")},
             }
 
+        # ---- WHICH refusal mechanism is doing the work -------------------
+        # `chlu-w5-refuse-f2` measured, on their own scored legs, that `in_gap` costs 0.005 of
+        # the accept leg and adds nothing -- their four-mechanism rule LOSES to the 8-byte rule
+        # because of it. `in_gap` is one of this store's three mechanisms too, so the question is
+        # answered here from the per-request masks rather than assumed either way.
+        def _mech(a, ids):
+            out = {}
+            for m in ("hole", "empty_basin", "in_gap"):
+                num = den = 0
+                for c in ids:
+                    v = done[(a, c)].get(m)
+                    if v is None:
+                        break
+                    num += int(np.asarray(v).sum())
+                    den += int(done[(a, c)]["n"])
+                out[m] = (float(num) / den) if den else None
+            # what the store would refuse if `in_gap` were dropped from the rule
+            num = den = 0
+            for c in ids:
+                h, e = done[(a, c)].get("hole"), done[(a, c)].get("empty_basin")
+                o = done[(a, c)].get("in_gap")
+                if h is None or e is None or o is None:
+                    break
+                num += int((np.asarray(h) | np.asarray(e)).sum())
+                den += int(done[(a, c)]["n"])
+            out["refuse_WITHOUT_in_gap"] = (float(num) / den) if den else None
+            return out
+
+        S["refusal_mechanism_decomposition"] = {
+            a: {"deleted_set": _mech(a, dele), "survivor_set": _mech(a, surv),
+                "refuse_WITH_in_gap": {"deleted_set": S["arms"][a]["refuse_on_deleted_set"],
+                                       "survivor_set": S["arms"][a]["refuse_on_survivor_set"]}}
+            for a in ("field/base", "field/evict_red", "field/decay_red", "field/hole")
+        }
+        S["refusal_mechanism_decomposition"]["what_this_answers"] = (
+            "`in_gap` is a distance cut, not a discriminator. If the deletion refusals are carried "
+            "entirely by `empty_basin` (what an eviction leaves) and `hole` (what a punch leaves), "
+            "then `in_gap` is pure cost on the survivor set and this hub says so. Compare "
+            "`refuse_WITHOUT_in_gap` with `refuse_WITH_in_gap` on both sets.")
+
         # ---- the paired composition half -------------------------------
         def _pair(a, b):
             return _paired(rows[a], rows[b], surv, "distinct_valid_novel_tuples")
@@ -2399,6 +2439,34 @@ def render_markdown(out: Path, log: Callable = print) -> str:
              "pre-deletion and the post-deletion read.* Measured: " + churn)
 
     # ---- charter C floor --------------------------------------------------
+    L.append("")
+    md = s0.get("refusal_mechanism_decomposition")
+    if md:
+        L.append("")
+        L.append("### Which refusal mechanism does the work \u2014 and what `in_gap` costs")
+        L.append("")
+        L.append("| arm | set | `hole` | `empty_basin` | `in_gap` | refuse WITH `in_gap` | "
+                 "refuse WITHOUT it |")
+        L.append("|---|---|---|---|---|---|---|")
+        for a in ("field/base", "field/evict_red", "field/hole"):
+            if a not in md:
+                continue
+            for setname in ("deleted_set", "survivor_set"):
+                m = md[a][setname]
+                L.append("| `%s` | %s | %s | %s | %s | **%s** | %s |"
+                         % (a, setname.replace("_", " "), _f(m.get("hole")),
+                            _f(m.get("empty_basin")), _f(m.get("in_gap")),
+                            _f(md[a]["refuse_WITH_in_gap"][setname]),
+                            _f(m.get("refuse_WITHOUT_in_gap"))))
+        L.append("")
+        L.append("\u26a0 `in_gap` is a distance cut, not a discriminator. `chlu-w5-refuse-f2` "
+                 "measured on their own scored legs that it costs 0.005 of the accept leg and "
+                 "adds nothing \u2014 their four-mechanism rule LOSES to the 8-byte rule because "
+                 "of it. The table above answers the same question for this store from the "
+                 "per-request masks: if the deletion refusals are carried entirely by "
+                 "`empty_basin` (what an eviction leaves) and `hole` (what a punch leaves), then "
+                 "`in_gap` is pure cost on the survivor set and this hub says so.")
+
     L.append("")
     L.append("### Charter \u00a7C floor \u2014 one line each")
     L.append("")
