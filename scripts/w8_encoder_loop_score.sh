@@ -65,5 +65,21 @@ fi
 
 export PRIMARY=pca_tensor
 export MARGIN=1.0
+
+# ⛔⛔ THIS HUB'S OWN AUTHORISATION, and it is not redundant.
+# The underlying w5 leg guards a `test` run by grepping the ledger for
+# "w5 hub/compose-field" -- ITS OWN row, which already exists. Inheriting that guard
+# would let THIS hub spend a scored run on ANOTHER hub's authorisation, which is exactly
+# the accounting failure charter A.2 exists to prevent. So the check is repeated here
+# against w8/encoder-loop's OWN PREREG and its OWN ledger row.
+export PREREG="${PREREG:-/c/chlu/outputs/w8-encoder-loop/PREREG-w8-encoder-loop-1.md}"
+if [ "$COND" = "test" ]; then
+  [ -f "$PREREG" ] || { echo "[score] REFUSING: no PREREG at $PREREG" >&2; exit 2; }
+  grep -Eq "w8[ /]hub/encoder-loop|w8/encoder-loop" /c/chlu/SCORED-LEDGER.md || {
+    echo "[score] REFUSING: no /c/chlu/SCORED-LEDGER.md row for w8 hub/encoder-loop." >&2
+    echo "[score] A scored run is not authorised by another hub's ledger row." >&2
+    exit 2; }
+  echo "[score] scored run authorised by $PREREG + this hub's OWN ledger row"
+fi
 exec bash "$(dirname "$0")/w5_compose_field_leg.sh" \
      "$COND" "$SEED" "$OUT/${ARM}" "${SCORE_ARMS[@]}"
