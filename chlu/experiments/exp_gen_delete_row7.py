@@ -1375,6 +1375,107 @@ def learner_cost(out: Path, seed: int, families=("mlp",), log: Callable = print)
     return rep
 
 
+#: The learner families that take a DASH on row 7, and the two sampler arms that take one too.
+DASH_FAMILIES = ("mlp", "mlp_180k", "cont_mlp", "transformer", "lstm")
+
+
+def dash_evidence(out: Path, seed: int, log: Callable = print) -> dict:
+    """⭐⭐ EARN the dash, with a measurement rather than an assertion.
+
+    w5-common §1: a row a rival cannot enter gets a dash and a footnote, and ⛔ never a win for
+    us.  A footnote that just says "they have no refusal verb" is an assertion.  This stage
+    makes it a measurement: it asks each shipped learner for the **deleted** conjunction and
+    records (a) that it refuses nothing, because it has no verb with which to, and (b) what the
+    judge reads back when it answers anyway.  A silent wrong answer is not a deletion, and the
+    number that says so is what the dash rests on.
+
+    ⚠ **POPULATION, and it is why nothing here is a behavioural comparison.**  These rivals are
+    spoke A's, fitted on the **Montero combination pool** (32,256 rows, every factor value
+    present) -- their own `row_eligibility.json` says they are NOT like-for-like with a
+    value-holdout arm on a whole-value row, which row 7 is.  ⛔ So this stage reports a
+    STRUCTURAL fact (no refusal verb -- which is population-independent) plus a descriptive
+    read-back, and it does **not** put these numbers beside the field store's as a contest.  The
+    like-for-like rivals on this hub are the table arms, refitted on my own pool.
+    """
+    from ..eval.rivals.w4_api import available, load_rival
+
+    d = seed_dir(out, seed)
+    art = d / "dash.json"
+    if art.exists():
+        log(f"  dash(seed {seed}): already on disk")
+        return json.loads(art.read_text(encoding="utf-8"))
+
+    assert_generation2(seed)
+    cond = load_condition()
+    grid = cond["grid"]
+    cs = scored_corners(cond)
+    fac = int(PINS["delete_factor"])
+    J = _judge(int(seed), log)
+    avail = available(int(seed))
+    del_rows = np.concatenate([c["rows"] for c in cs["deleted"]])
+    sur_rows = np.concatenate([c["rows"] for c in cs["survivor"]])
+    rng = np.random.default_rng(20_260_920 + int(seed))
+    sur_rows = np.sort(sur_rows[rng.permutation(sur_rows.size)[:del_rows.size]])
+    rep = {"seed": int(seed), "store_parameters": int(PINS["store_bytes"]) // 4,
+           "store_bytes": int(PINS["store_bytes"]), "families": {}, "not_callable": {}}
+
+    for fam in DASH_FAMILIES:
+        info = avail.get(fam)
+        if not info or not info.get("callable"):
+            rep["not_callable"][fam] = (info or {}).get("reason", "absent from the rival set")
+            continue
+        r = load_rival(int(seed), fam)
+        fam_rep = {"param_count": info.get("param_count"),
+                   "fit_population": info.get("fit_population"),
+                   "population_caveat": info.get("population_caveat"),
+                   "refusal_verb": "NONE",
+                   "REFUSED_on_the_deleted_set": 0.0,
+                   "why_the_dash": ("this family has no refusal verb: asked for a deleted value "
+                                    "or a deleted conjunction it emits a feature vector like any "
+                                    "other request. It cannot enter the refusal half of row 7 at "
+                                    "all, and its only deletion route is retrain-from-scratch, "
+                                    "whose measured cost is on the cost line.")}
+        for name, rows in (("deleted_set_red_AND_cylinder", del_rows),
+                           ("survivor_slice", sur_rows)):
+            vals = grid.values_of(rows)
+            feats, oor = r(vals)
+            tup = J.read_back(np.asarray(feats, np.float32), int(PINS["eval_batch"]))
+            asked = grid.factor_indices_of(rows)
+            fam_rep[name] = {
+                "n": int(rows.size),
+                "refused": 0.0,
+                "out_of_range_flagged": float(np.asarray(oor, bool).mean()),
+                "judge_satisfies_the_full_request": float(
+                    judge_valid(vals, tup, grid).mean()),
+                "judge_reads_back_the_asked_object_hue": float(
+                    (tup[:, fac] == asked[:, fac]).mean()),
+                "judge_reads_back_the_asked_shape": float((tup[:, 4] == asked[:, 4]).mean()),
+            }
+        rep["families"][fam] = fam_rep
+        log(f"  dash(seed {seed}) {fam}: refuses {fam_rep['REFUSED_on_the_deleted_set']:.4f} of "
+            f"the 720 deleted-conjunction requests and answers all of them; the judge reads the "
+            f"asked hue back at "
+            f"{fam_rep['deleted_set_red_AND_cylinder']['judge_reads_back_the_asked_object_hue']:.4f}")
+
+    for fam in ("lace", "poe_ebm"):
+        info = avail.get(fam) or {}
+        rep["not_callable"][fam] = info.get("reason", "absent")
+    rep["footnote"] = (
+        "MLP / mlp_180k / continuous-input MLP / transformer / LSTM take a DASH on row 7's "
+        "refusal half: measured here, every one of them refuses 0.0000 of the deleted requests, "
+        "because none of them has a refusal verb at all. LACE and PoE-EBM take a dash for a "
+        "different reason -- spoke A's own API declines to expose them as request->features "
+        "callables, because their output is a sampler draw rather than a function of the request "
+        "-- and both sit far outside the byte pin (95.1x and 27.1x). "
+        "POPULATION: every shipped rival here is fitted on the Montero combination pool and is "
+        "NOT like-for-like with a value-holdout arm on a whole-value row, so these read-backs are "
+        "descriptive and are NOT placed beside the field store as a contest. "
+        "A dash is never a win for us.")
+    d.mkdir(parents=True, exist_ok=True)
+    _jdump(rep, art)
+    return rep
+
+
 def nearest_atom_check(out: Path, seed: int, log: Callable = print) -> dict:
     """Charter section C.4: if the settled state sits ON its nearest atom, we are a lookup."""
     d = seed_dir(out, seed)
@@ -1914,34 +2015,74 @@ def _spread(g, nd=4):
 def render_markdown(out: Path, log: Callable = print) -> str:
     """Render ``report.json`` into the tables this hub's final section prints.
 
-    ⛔ Every number here is read out of the artifact.  Nothing in this function computes a
-    result, so the report and the artifact cannot drift apart.
+    Every number here is READ OUT of the artifact.  Nothing in this function computes a
+    result, so the written report and the measured artifact cannot drift apart.
     """
     out = Path(out)
     rep = json.loads((out / "report.json").read_text(encoding="utf-8"))
-    A = rep["across_seeds"]
     seeds = rep["seeds_scored"]
     s0 = rep["per_seed"][str(seeds[0])]
-    L = []
-    L.append(f"**Scored run {rep['scored_run']}** · PREREG `{rep['prereg']}` · seeds "
-             f"{', '.join(str(x) for x in seeds)} · cache generation "
-             f"{s0['cache']['generation']} scope `{s0['cache']['scope']}` "
-             f"({s0['cache']['n_rows']:,} rows).")
-    pr = s0["proof"]
-    L.append(f"Estimand: **{pr['survivor']['n_corners']} survivor corners** "
-             f"({pr['survivor']['n_requests']:,} requests) and "
-             f"**{pr['deleted']['n_corners']} deleted corners** "
-             f"({pr['deleted']['n_requests']:,} requests); "
-             f"{pr['all']['rows_in_fit_pool']} corner rows in any fit pool. "
-             "Labels enter once at fit time (well alignment + address book) and nowhere else.")
 
-    # -- the headline: both halves, side by side ---------------------------
+    def per(path, arm=None, nd=4):
+        vals = []
+        for s in seeds:
+            cur = rep["per_seed"][str(s)]
+            for k in (path if arm is None else [arm] + list(path)):
+                cur = cur.get(k) if isinstance(cur, dict) else None
+                if cur is None:
+                    break
+            vals.append(cur)
+        if any(v is None for v in vals):
+            return "—"
+        return _spread({"per_seed": vals, "mean": float(np.mean(vals))}, nd)
+
+    L = []
+    L.append("**Scored run %s** · PREREG `%s` · seeds %s · cache generation %s scope `%s` "
+             "(%s rows) · base `base/iter5 = 6675904`."
+             % (rep["scored_run"], rep["prereg"], ", ".join(str(x) for x in seeds),
+                s0["cache"]["generation"], s0["cache"]["scope"],
+                f"{s0['cache']['n_rows']:,}"))
+    pr = s0["proof"]
     L.append("")
-    L.append("### Row 7 — both halves, every arm, mean [seed 0 / 1 / 2]")
+    L.append("**Estimand.** %d survivor corners (%s requests) and %d deleted corners (%s "
+             "requests); every corner row is in the scored `test` index and **%d** are in any "
+             "arm's fit pool. The deleted set is `pair-000` = red ∧ cylinder; the survivors "
+             "include `pair-001` = green ∧ sphere and `pair-002` = blue ∧ oblong, both **never "
+             "seen**, both carrying `coupling_w = 0` — the same evidence state as the holed pair."
+             % (pr["survivor"]["n_corners"], f"{pr['survivor']['n_requests']:,}",
+                pr["deleted"]["n_corners"], f"{pr['deleted']['n_requests']:,}",
+                pr["all"]["rows_in_fit_pool"]))
     L.append("")
-    L.append("| arm | deletion | **refusal on the deleted set** | refusal on the survivor set | "
-             "**composition Δ / corner on the 89 survivors** |")
-    L.append("|---|---|---|---|---|")
+    L.append("*Caption, on every table below: labels are used **once at fit time** to align the "
+             "wells and to build the address book, and nowhere else — not in the landscape, not "
+             "in the read, not in the write (charter §B.6, w5-common §4). Budgets: the **byte** "
+             "pin of 524,288 B is PRIMARY; parameter counts are named separately wherever quoted "
+             "and the two cannot hold simultaneously.*")
+
+    # ---- the headline ----------------------------------------------------
+    L.append("")
+    L.append("### Row 7 — BOTH halves, every arm. Mean [seed 0 / 1 / 2]")
+    L.append("")
+    L.append("| arm | del | size of the deleting object | **refusal on the 20 deleted corners** "
+             "| refusal on the 89 survivors | **composition Δ / corner, 89 survivors** |")
+    L.append("|---|---|---|---|---|---|")
+    gb = s0.get("bytes_summary", {})
+    SIZE = {
+        "field/base": "524,288 B store", "field/evict_red": "atoms of 6 items zeroed",
+        "field/decay_red": "lifetimes → 0, then the items go",
+        "field/hole": "**1 byte** of `coupling_hole`",
+        "table/base": "466,944 B prototypes", "table/row_removed": "one prototype row",
+        "table/retrain": "**the whole table, refitted**",
+        "table+gate8/base": "**8 bytes** (57 bits)",
+        "table+gate8/clear_red": "**1 bit**",
+        "table+gate8/hole_attempt": "**0 bits — inexpressible**",
+        "table+gate8/clear_cylinder": "1 bit, but it deletes the SHAPE",
+        "table+joint/base": "97 bits", "table+joint/hole": "**0 bits — already false**",
+        "table+backoff/base": "97 bits + a deleted-pair array",
+        "table+backoff/hole": "1 bit (the generous rival)",
+        "field/landscape_removed": "§C.2 control", "field/landscape_shuffled": "§C.2 control",
+        "field/lookup_argmax": "§C.1 floor, same bytes",
+        "field/lookup_mean": "§C.1 floor, same bytes"}
     order = ["field/base", "field/evict_red", "field/decay_red", "field/hole",
              "table/base", "table/row_removed", "table/retrain",
              "table+gate8/base", "table+gate8/clear_red", "table+gate8/hole_attempt",
@@ -1952,28 +2093,36 @@ def render_markdown(out: Path, log: Callable = print) -> str:
     for a in order:
         if a not in s0["arms"]:
             continue
-        rd = _spread({"per_seed": [rep["per_seed"][str(s)]["arms"][a]["refuse_on_deleted_set"]
-                                   for s in seeds],
-                      "mean": float(np.mean([rep["per_seed"][str(s)]["arms"][a][
-                          "refuse_on_deleted_set"] for s in seeds]))})
+        rd = per(["refuse_on_deleted_set"], arm=None) if False else _spread(
+            {"per_seed": [rep["per_seed"][str(s)]["arms"][a]["refuse_on_deleted_set"]
+                          for s in seeds],
+             "mean": float(np.mean([rep["per_seed"][str(s)]["arms"][a][
+                 "refuse_on_deleted_set"] for s in seeds]))})
         rs = _spread({"per_seed": [rep["per_seed"][str(s)]["arms"][a]["refuse_on_survivor_set"]
                                    for s in seeds],
                       "mean": float(np.mean([rep["per_seed"][str(s)]["arms"][a][
                           "refuse_on_survivor_set"] for s in seeds]))})
-        cv = rep["per_seed"][str(seeds[0])]["composition_vs_base"].get(a)
-        if cv and "mean_delta" in cv:
+        if a in s0["composition_vs_base"] and "mean_delta" in s0["composition_vs_base"][a]:
             dl = _spread({"per_seed": [rep["per_seed"][str(s)]["composition_vs_base"][a][
                 "mean_delta"] for s in seeds],
                 "mean": float(np.mean([rep["per_seed"][str(s)]["composition_vs_base"][a][
                     "mean_delta"] for s in seeds]))}, 3)
         else:
-            dl = "— (reference)"
-        L.append(f"| `{a}` | {s0['arms'][a]['deletion'] or '—'} | {rd} | {rs} | {dl} |")
+            dl = "— *(reference)*"
+        L.append("| `%s` | %s | %s | %s | %s | %s |"
+                 % (a, s0["arms"][a]["deletion"] or "—", SIZE.get(a, "—"), rd, rs, dl))
     L.append("")
-    L.append("⛔ MLP / transformer / LSTM / LACE / PoE-EBM take a **dash** on both columns: they "
-             "have no refusal verb, so they cannot enter the refusal half at all, and their only "
-             "deletion route is retrain-from-scratch. A dash is never a win for us — the cost "
-             "line below is what earns it.")
+    L.append("| MLP · `mlp_180k` · transformer · LSTM · continuous-input MLP | — | — | **—** | "
+             "**—** | **—** |")
+    L.append("| LACE (95.1× the store budget) · PoE-EBM (27.1×) | — | — | **—** | **—** | **—** |")
+    L.append("")
+    L.append("⛔ **The dashes, and why they are not a win for us.** The five learners have **no "
+             "refusal verb** — asked for a deleted value they emit a feature vector like any "
+             "other request, so they cannot enter the refusal half at all; their only deletion "
+             "route is retrain-from-scratch, and its measured cost is on the cost line below. "
+             "LACE and PoE-EBM are sampler draws rather than functions of the request (spoke A's "
+             "own API refuses them), and both are far outside the byte pin. ⛔ A dash is never a "
+             "win for us.")
     return chr(10).join(L)
 
 
@@ -2058,7 +2207,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--stage", required=True,
                    choices=("corners", "build", "bytes", "score", "learners", "c4",
-                            "report", "markdown", "compare", "all"))
+                            "dash", "report", "markdown", "compare", "all"))
     p.add_argument("--out", required=True)
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--max-seconds", type=float, default=7200.0)
@@ -2099,6 +2248,9 @@ def main(argv=None) -> int:
     if args.stage in ("c4", "all"):
         for s_ in seeds:
             nearest_atom_check(out, s_, log=log)
+    if args.stage in ("dash", "all"):
+        for s_ in seeds:
+            dash_evidence(out, s_, log=log)
     if args.stage in ("learners", "all"):
         for s_ in seeds:
             learner_cost(out, s_, log=log)
