@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """w6 hub/potentials -- THE ONE LAUNCHER.  One leg = one (condition, seed)."""
-import argparse, json, os, pickle, sys, time
+import argparse, json, os, pickle, re, sys, time
 from pathlib import Path
 import numpy as np
 
@@ -27,9 +27,13 @@ def main(argv=None):
         if not a.prereg or not Path(a.prereg).exists():
             log(f"REFUSING: condition=test is a SCORED RUN; PREREG {a.prereg!r} missing")
             return 2
+        # The ledger row names this hub as "w6 hub/potentials"; accept either spelling so
+        # the guard fails on a MISSING row and never on a stylistic one.  (It fired on the
+        # real launch for exactly that reason, which is the guard working, and is logged.)
         led = Path("/c/chlu/SCORED-LEDGER.md")
-        if not led.exists() or "w6/potentials" not in led.read_text(encoding="utf-8", errors="replace"):
-            log("REFUSING: no /c/chlu/SCORED-LEDGER.md row for w6/potentials")
+        txt = led.read_text(encoding="utf-8", errors="replace") if led.exists() else ""
+        if not re.search(r"w6[ /]hub/potentials|w6/potentials", txt):
+            log("REFUSING: no /c/chlu/SCORED-LEDGER.md row for w6 hub/potentials")
             return 2
         log(f"scored run authorised by {a.prereg} + the ledger row")
 
