@@ -132,10 +132,20 @@ PINS = {
     "code_grad": "straight_through",
     "beta_codebook": 1.0,
     "beta_commitment": 0.25,
-    #: The swap term's weight.  Set so the swap and reconstruction terms are the
-    #: same ORDER at the warm start (measured in the dev leg and recorded there);
-    #: it is a declared constant, not selected against any scored number.
-    "beta_swap": 1.0,
+    #: ⭐ The swap term's weight, and it is **"auto" for a measured reason, not for
+    #: convenience**.  Reconstruction is a pixel MSE and sits around 0.01-0.15; the swap
+    #: term is a mean per-factor cross-entropy and sits near ln(10) = 2.3 at chance.  A
+    #: literal ``beta_swap = 1.0`` would therefore let the swap term outweigh
+    #: reconstruction by ~20-100x, and an encoder free to abandon reconstruction in
+    #: order to satisfy a classifier is exactly the failure mode this hub must not build.
+    #:
+    #: ``"auto"`` sets ``beta_swap = recon_0 / swap_0``, both measured ONCE on the SHARED
+    #: warm start before the first update, so the two terms enter the loss at equal
+    #: magnitude.  It is deterministic given the warm start, it is written into the
+    #: manifest, and ⛔ it is not selected against any scored number -- the warm start
+    #: exists before any arm runs and is identical for every arm.
+    #: A float here overrides it and is used verbatim.
+    "beta_swap": "auto",
     #: Wells swapped per step.  ONE, drawn uniformly: swapping all K would make the
     #: treatment arm K times more expensive per step and destroy the compute match.
     "swap_wells_per_step": 1,
@@ -621,7 +631,7 @@ def train_fingerprint(arm: str, seed: int, steps: int, warm: dict) -> dict:
         "code_grad": PINS["code_grad"],
         "beta_codebook": PINS["beta_codebook"],
         "beta_commitment": PINS["beta_commitment"],
-        "beta_swap": PINS["beta_swap"],
+        "beta_swap_mode": PINS["beta_swap"],
         "swap_wells_per_step": PINS["swap_wells_per_step"],
         "n_train": PINS["n_train"],
         "warm_encoder_param_hash": warm["encoder_param_hash"],
@@ -700,7 +710,7 @@ def train_arm(arm: str, encoder, store, decoder, classifier, images, labels, own
     with_store, unfreeze, with_swap = spec["store"], spec["unfreeze"], spec["swap"]
     code_grad = str(PINS["code_grad"])
     b_code, b_commit = float(PINS["beta_codebook"]), float(PINS["beta_commitment"])
-    b_swap = float(PINS["beta_swap"])
+    b_swap = PINS["beta_swap"]
     batch = 16 if quick else int(PINS["joint_batch"])
     lr = float(PINS["joint_lr"])
     K = int(store.n_wells)
@@ -716,11 +726,32 @@ def train_arm(arm: str, encoder, store, decoder, classifier, images, labels, own
     wells_padded, well_sizes = SL.pad_well_channels(
         [np.asarray(w) for w in store.well_channels])
     own_j = np.asarray(own, np.int64)
+    beta_swap_basis = None
 
     X = jnp.asarray(np.asarray(images, np.float32))
     Y = jnp.asarray(np.asarray(labels, np.int32))
     n = int(X.shape[0])
     batch = min(batch, n)
+
+    if with_swap and not isinstance(b_swap, (int, float)):
+        # MEASURED ONCE, on the SHARED warm start, before the first update: put the two
+        # terms on the same scale so neither can swamp the other by construction.
+        from ..core.gen_bridge import joint_loss_terms as _jlt
+
+        _k0 = jax.random.fold_in(key, 777)
+        _idx = jax.random.choice(_k0, n, (min(batch, n),), replace=False)
+        _ii, _jj = SL.draw_partners(int(_idx.shape[0]), jax.random.fold_in(_k0, 1))
+        _rec0, _, _ = _jlt((encoder, store, decoder), X[_idx], code_grad, 0.0)
+        _sw0, _ = SL.swap_loss_terms(
+            (encoder, store, decoder), classifier, X[_idx], Y[_idx], _ii, _jj, 0,
+            wells_padded, own_j, code_grad)
+        beta_swap_basis = {"recon_at_warm_start": float(_rec0),
+                           "swap_at_warm_start": float(_sw0)}
+        b_swap = float(_rec0) / max(float(_sw0), 1e-8)
+        log(f"    [{arm}] beta_swap=auto -> {b_swap:.6g} "
+            f"(recon_0={float(_rec0):.5f} / swap_0={float(_sw0):.5f}; the two terms enter "
+            "the loss at EQUAL magnitude, measured on the shared warm start)")
+    b_swap = float(b_swap) if isinstance(b_swap, (int, float)) else 0.0
 
     def plain_recon(m, xb):
         """The `alone` objective: an autoencoder, NO store on the path."""
@@ -818,6 +849,8 @@ def train_arm(arm: str, encoder, store, decoder, classifier, images, labels, own
         "arm": arm, "arm_class": ARM_CLASS[arm], **spec,
         "code_grad": code_grad, "beta_codebook": b_code, "beta_commitment": b_commit,
         "beta_swap": b_swap if with_swap else 0.0,
+        "beta_swap_mode": PINS["beta_swap"],
+        "beta_swap_basis": beta_swap_basis,
         "lr": lr, "steps": int(steps), "batch": int(batch), "n_train_rows": n,
         "gradient_steps": int(steps), "images_seen": int(steps) * int(batch),
         "train_seconds": float(train_seconds),
@@ -1085,9 +1118,10 @@ def stage_cache(out: Path, seed: int, arm: str, quick: bool,
 
     mod = dataset_module(PINS["dataset"])
     split, _values = mod.build_split(str(data_root()))
-    rows = np.arange(int(split.grid.n_rows), dtype=np.int64) if hasattr(split.grid, "n_rows") \
-        else np.arange(int(np.load(data_root() / "value_holdout" / "factor_index.npz",
-                                   allow_pickle=True)["train_rows"].max()) + 1, dtype=np.int64)
+    # EVERY row the factor grid indexes -- scope "full", exactly as spoke A's
+    # exp_w4_rivals.full_rows does it. A "used"-scope cache holds no matched-seen row
+    # and is the mixed-device cache the wave forbids; full scope removes the side buffer.
+    rows = np.arange(int(split.n_total), dtype=np.int64)
     if quick:
         rows = rows[: 8 * int(PINS["cache_block"])]
     log(f"  generation-2 cache for {arm} seed {seed}: {rows.size} rows -> {csd}")
