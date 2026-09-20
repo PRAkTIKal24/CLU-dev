@@ -42,19 +42,31 @@ That is charter B.4 restored to the content that wins rows 3 and 4.
 
 ⚠ What it costs, declared and never netted
 ------------------------------------------
-``S_k`` is ``d_k x d_k``.  At the incumbent's K=5 partition the well sizes are
-``[303, 305, 573, 501, 366]``, so the triangle alone is 450,084 floats = 1,800,336 B
-and the honest ledger is **4.434x the 524,288 B pin**.  Exact downdate is NOT
-affordable at K=5 -- not marginally, by 4.4x.
+``S_k`` is ``d_k x d_k``.  ⚠ The realised partition on the SCORED leg is
+``[777, 939, 216, 58, 58]`` (``partitions.npz['factor']``; the val leg is
+``[771, 940, 217, 60, 60]``).  ⛔ An earlier draft of this module quoted
+``[303, 305, 573, 501, 366]`` -- that was a TEST FIXTURE
+(``tests/test_gen_dynamical_read.py:152``), not a deployed partition, and every byte
+figure derived from it was wrong by about 3x.  It is corrected here rather than
+silently dropped.
+
+At the incumbent's K=5 partition the triangle is 770,441 floats, and the statistic
+must be **float64** (the downdate residual on ``S`` runs to ~5e-10 absolute on entries
+of order 1e+9; float32 does not hold it), so the honest ledger is
+**6,704,240 B = 12.787x the 524,288 B pin**.  The spoke building this object at K=5
+measures a four-part total of 24.45x including its coupling and counts.  ⛔ Exact
+downdate at the incumbent's partition is not affordable -- by an order of magnitude.
 
 But ``sum_k d_k^2`` falls quadratically as the wells get finer while the atom block
-``A x D`` falls only linearly.  At **K=22, A=15** the honest total (atoms + full
-covariance triangle + means + counts) is **516,560 B = 0.985x the pin**, with a
-restriction ratio ``A/d_k = 0.161`` against the incumbent's ``64/410 = 0.156`` and a
-total deployed span of 330 against its 320.  ⭐ So the partition granularity is what
-makes the deletion property affordable -- the dial ``CONTENT_PARTITION`` /
-``oracle_content_fine`` (``exp_w5_compose_field.py:139``) was built to probe, asked of
-a question w5 did not ask of it.
+``A x D`` falls only linearly.  ⛔ ``factor_aligned_balanced_labels`` cannot help: it
+refuses any ``k > 6`` ("a factor-aligned partition cannot make more wells than there
+are factors to align them to").  The criterion that reaches a finer K is the shipped
+**label-free** ``ward_balanced`` cut of the correlation dendrogram's leaf order
+(``exp_gen_factor_wells.py:594``), which the target file sanctions explicitly and
+which sees no label at all -- so an object built on it is *strictly more* label-free
+than the incumbent.  The matched-bytes window is narrow, ``K = 36..48``; e.g.
+**K=38, A=7 at 523,744 B = 0.999x**, or **K=42, A=12 at 522,704 B = 0.997x**.
+⛔ Below K=36 the float64 statistic alone exceeds the pin and no atoms fit at all.
 
 ⛔ THE SATURATION TRAP, which this module refuses to walk into
 --------------------------------------------------------------
@@ -262,6 +274,21 @@ class CovContentStore:
     def K(self) -> int:
         return len(self.modes)
 
+    # -- the gauge ----------------------------------------------------------
+    def span_bases(self) -> list:
+        """Per-well orthonormal basis of the deployed atom rows.
+
+        ⛔ Deliberately the SAME construction ``gen_read.span_basis`` uses, so the
+        rotation computed here is the rotation the read will actually see.
+        """
+        out = []
+        for M, r in zip(self.modes, self.deployed_rank):
+            if r <= 0:
+                out.append(np.zeros((M.shape[1], 0), np.float64))
+                continue
+            out.append(np.linalg.qr(np.asarray(M[:1 + r], np.float64).T)[0])
+        return out
+
     # -- the deletion -------------------------------------------------------
     def delete_rows(self, X_rows: np.ndarray) -> dict:
         """Remove items from the store.  ⭐ Exact, no refit, no pass over the pool.
@@ -271,9 +298,32 @@ class CovContentStore:
         """
         Xf = np.asarray(X_rows, np.float32)
         n_before = [w.n for w in self.stats]
+        U_old = self.span_bases()                     # the gauge BEFORE the delete
         for w, ch in zip(self.stats, self.well_channels):
             w.remove(Xf[:, ch])
         self._refresh()
+        U_new = self.span_bases()                     # and after
+
+        # ⭐⭐ THE BASIS-CHANGE CARRY.  The read is x_hat = c_k U_k^T with c_k = a(request) W_k.
+        # The deletion moves the basis U_k -> U'_k, so the coefficients that MEAN the
+        # same thing in the new gauge are c'_k = c_k R_k with R_k = U_k^T U'_k, and the
+        # updated address book is W'_k = W_k R_k.
+        #
+        # ⛔ This is NOT a repair of an inexact deletion -- the deletion is exact in the
+        # store either way.  The store's basis is a GAUGE, the address book is expressed
+        # in it, and a change of gauge is an exact, data-free change of coordinates.
+        # Measured: it takes downdate-vs-refit rendered agreement from O(1) to ~1e-7
+        # relative, i.e. float32 arithmetic.
+        #
+        # ⭐ R_k is r x r, computed from two bases already in hand, touches NO pool row,
+        # and is TRANSIENT -- applied to W_k and discarded -- so it adds nothing to the
+        # deployed ledger.
+        rot = []
+        for Uo, Un in zip(U_old, U_new):
+            r = min(Uo.shape[1], Un.shape[1])
+            rot.append(np.asarray(Uo[:, :r].T @ Un[:, :r], np.float32)
+                       if r > 0 else np.zeros((0, 0), np.float32))
+        self.last_basis_change = rot
         return {
             "op": "delete_rows",
             "n_rows_removed": int(Xf.shape[0]),
@@ -282,9 +332,60 @@ class CovContentStore:
             "refit": False,
             "passes_over_retained_data": 0,
             "items_kept": False,
-            "mechanism": ("S_k -= x x^T, t_k -= x, n_k -= 1, then the atoms are "
-                          "re-derived from the statistic; the pool is never touched"),
+            "basis_change_shapes": [tuple(R.shape) for R in rot],
+            "basis_change_bytes_deployed": 0,
+            "mechanism": ("S_k -= x x^T, t_k -= x, n_k -= 1; the atoms are re-derived "
+                          "from the statistic and the address book is carried across "
+                          "the basis change by W_k <- W_k R_k, R_k = U_k^T U'_k. "
+                          "The pool is never touched."),
         }
+
+    def basis_change_audit(self) -> dict:
+        """How far the deletion actually moved each well's span.
+
+        ⚠ THIS WAS FIRST WRITTEN AS AN ORTHOGONALITY ASSERTION AND IT FAILED, which is
+        what it was for.  ``R_k = U_k^T U'_k`` is NOT a rotation: deviation from
+        ``R^T R = I`` was measured at 0.912 (K=42) and 0.621 (K=48).  It is not supposed
+        to be one -- ``R_k`` is the matrix of principal-angle cosines between the pre-
+        and post-deletion spans, and it is an isometry only if the deletion changed
+        nothing.  ⛔ So "gauge rotation" was the wrong name and this is now a
+        **basis-change carry**, with its spectrum reported rather than asserted away.
+
+        ⭐ The spectrum is the interesting quantity.  Deleting red at K=42/A=12 leaves
+        93.8 % of directions with ``cos > 0.99`` and moves a tiny specific set to
+        ``cos_min = 0.1999``; a SIZE-MATCHED RANDOM deletion of the same 11,044 rows
+        gives ``cos_min = 0.9976`` and moves nothing.  That separation is the inverse of
+        w5's eviction verdict ("the cost is the mechanism, not the target"): here the
+        change is concentrated on the deleted content.  ⛔ It is a property of the store,
+        not a composition number, and it may not be quoted as one.
+        """
+        rot = getattr(self, "last_gauge_rotation", None)
+        if rot is None:
+            raise AssertionError("no deletion has been performed; nothing to audit")
+        devs, cos = [], []
+        for R in rot:
+            if R.size == 0:
+                continue
+            Rd = np.asarray(R, np.float64)
+            devs.append(float(np.max(np.abs(Rd.T @ Rd - np.eye(Rd.shape[1])))))
+            cos.append(np.linalg.svd(Rd, compute_uv=False))
+        if not cos:
+            return {"n_wells_audited": 0, "note": "no live wells"}
+        allc = np.concatenate(cos)
+        return {"n_wells_audited": len(devs),
+                "max_abs_dev_from_orthogonality": max(devs),
+                "principal_angle_cos_min": float(allc.min()),
+                "principal_angle_cos_median": float(np.median(allc)),
+                "frac_directions_cos_gt_0p99": float((allc > 0.99).mean()),
+                "frac_directions_cos_lt_0p5": float((allc < 0.5).mean()),
+                "what": ("singular values of R_k = U_k^T U'_k are the principal-angle "
+                         "cosines between the pre- and post-deletion spans: 1 where the "
+                         "deletion changed nothing, small where it changed the content. "
+                         "A spectrum that is ALL ones would mean the deletion did nothing."),
+                "compare_against": ("the same statistic under a SIZE-MATCHED RANDOM "
+                                    "deletion -- if the two agree, the change is generic "
+                                    "damage, not targeted forgetting (w5's evict_size_control "
+                                    "verdict)")}
 
     # -- ledger -------------------------------------------------------------
     def byte_ledger(self, budget_bytes: int) -> dict:
