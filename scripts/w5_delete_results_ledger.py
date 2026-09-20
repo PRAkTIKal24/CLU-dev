@@ -99,7 +99,7 @@ if rep:
         ("BAR1_evict_refusal", "**BAR 1** — eviction refuses",
          "refusal ≥ 0.99 on the deleted set and on red's other shapes"),
         ("BAR2_evict_composition", "**BAR 2** — composition survives",
-         "|Δ| ≤ 1.0 novel tuple/corner on the 89 survivor corners"),
+         "abs(delta) <= 1.0 novel tuple/corner on the 89 survivor corners"),
         ("BAR3_hole_refusal", "**BAR 3** — the hole refuses",
          "hole flag = 1.0000 and refusal ≥ 0.99 on the deleted conjunction"),
         ("BAR4_hole_surgical", "**BAR 4** — the hole is surgical",
@@ -111,8 +111,13 @@ if rep:
                      f"**{'PASS' if all(per) else 'MIXED/FAIL'}** per seed: " +
                      " / ".join(str(x) for x in per)))
 
+def _cell(x):
+    # a literal | inside a cell splits the markdown row; escape rather than hope
+    return str(x).replace("|", "\|")
+
+
 for a, bb, cc in rows:
-    L.append(f"| {a} | {bb} | {cc} |")
+    L.append(f"| {_cell(a)} | {_cell(bb)} | {_cell(cc)} |")
 
 L.append("")
 L.append("## Replication (charter §A.5)")
