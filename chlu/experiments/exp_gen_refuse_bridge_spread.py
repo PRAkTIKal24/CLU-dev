@@ -360,6 +360,58 @@ def build(fixed_out: Path, joint_out: Path, dest: Path, log: Callable = print,
         W(f"| {name} | {_fmt(p, dp)} | {_fmt(a, dp)} | {_fmt(b, dp)} | "
           f"{_obs(p, dp)} / {_obs(b, dp)} | {_widen(p, b)} | {_moved(p, b)} |")
 
+    # -- ⭐⭐ THE PAIRED TEST ----------------------------------------------------
+    # ⚠ The range statistic above HIDES the instrument effect and reporting only it would
+    # be a mistake: a range over THREE cells can stay the same width while EVERY cell
+    # moves. `mine-fixed` and `mine-joint` differ in nothing but the bridge seed, so the
+    # same store seed can be differenced against itself -- which is the sharp test.
+    W("")
+    W("### ⭐⭐ THE PAIRED TEST -- same store seed, two instruments")
+    W("")
+    W("⚠ The spread ratios above can look calm while every cell moves, because a range "
+      "over three cells is a blunt statistic. `mine-fixed` and `mine-joint` differ in "
+      "**nothing but the bridge seed**, so each store seed can be differenced against "
+      "itself. ⭐ Store seed 0 must be exactly 0 in every row -- the two instruments "
+      "coincide there by construction -- and that is the internal control.")
+    W("")
+    W("| quantity | fixed (s0/s1/s2) | ⭐ joint (s0/s1/s2) | delta per seed | **max abs "
+      "delta** | the parent's WHOLE published +/- | ⛔ ratio |")
+    W("|---|---|---|---|---|---|---|")
+    paired = {}
+    for path, name, dp in paths:
+        pp, a, b = _pick(path)
+        if not a.get("per_seed") or not b.get("per_seed"):
+            continue
+        if len(a["per_seed"]) != len(b["per_seed"]):
+            continue
+        d = [y - x for x, y in zip(a["per_seed"], b["per_seed"])]
+        mx = max(abs(x) for x in d)
+        ref = pp.get("spread")
+        ratio = (mx / ref) if ref else None
+        paired[name] = {"fixed_per_seed": a["per_seed"], "joint_per_seed": b["per_seed"],
+                        "delta_per_seed": d, "max_abs_delta": mx,
+                        "parent_published_spread": ref, "ratio": ratio,
+                        "exceeds_parent_spread": bool(ratio is not None and ratio > 1.0)}
+        fmt = (lambda v: f"{v:,.4f}") if dp >= 4 else (lambda v: f"{v:,.0f}")
+        rs = ("-" if ratio is None
+              else (f"⛔ **{ratio:.2f}x**" if ratio > 1.0 else f"{ratio:.2f}x"))
+        W(f"| {name} | {' / '.join(fmt(v) for v in a['per_seed'])} | "
+          f"{' / '.join(fmt(v) for v in b['per_seed'])} | "
+          f"{' / '.join(fmt(v) for v in d)} | **{fmt(mx)}** | "
+          f"{'-' if ref is None else fmt(ref)} | {rs} |")
+    n_exc = sum(1 for v in paired.values() if v["exceeds_parent_spread"])
+    W("")
+    if n_exc:
+        W(f"⛔⛔ **On {n_exc} of {len(paired)} quantities, swapping the instrument at a "
+          "FIXED store seed moves the number by MORE than the parent's entire published "
+          "`+/-`.** Its `+/-` never contained the instrument, and on these quantities the "
+          "instrument is the larger term. ⭐ Stated plainly, as the target file's section 5 "
+          "requires: **the parent's `+/-` figures are understated.** That is the result, "
+          "not a failure.")
+    else:
+        W("⭐ **No quantity moves by more than the parent's published `+/-`.** Its error "
+          "bars, though they never contained the instrument, happen to cover it.")
+
     W("")
     W('### The fixed points -- printed so that "did not move" is MEASURED, not assumed')
     W("")
@@ -492,12 +544,13 @@ def build(fixed_out: Path, joint_out: Path, dest: Path, log: Callable = print,
     (dest / "BRIDGE-SPREAD.md").write_text(md, encoding="utf-8")
     _jdump({"parent_fixed": P, "mine_fixed": A, "mine_joint": B,
             "instrument_cross_check": ok, "delete_hub": DH,
-            "comparability_verdict": verdict, "pinned_arm_reproducibility": repro},
+            "comparability_verdict": verdict, "pinned_arm_reproducibility": repro,
+            "paired_instrument_test": paired},
            dest / "bridge_spread.json")
     log(md)
     return {"parent_fixed": P, "mine_fixed": A, "mine_joint": B, "cross_check": ok,
             "delete_hub": DH, "comparability_verdict": verdict,
-            "pinned_arm_reproducibility": repro}
+            "pinned_arm_reproducibility": repro, "paired_instrument_test": paired}
 
 
 def main(argv=None) -> int:
