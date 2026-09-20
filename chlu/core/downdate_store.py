@@ -618,15 +618,30 @@ class DowndatableStore:
     def rank_report(self) -> dict:
         """The rank cut, per well, with the margin on both sides of the threshold."""
         rr = [dict(r) for r in self.rank_reports]
-        lo = [r["smallest_kept_over_threshold"] for r in rr if np.isfinite(
-            r["smallest_kept_over_threshold"])]
-        hi = [r["largest_dropped_over_threshold"] for r in rr]
+        # ⚠ MEASURED BUG, fixed here: marginality is only a question in the wells where
+        # the TOLERANCE is what binds. In a well limited by the atom budget (A-1 < the
+        # number of directions with real variance) the first dropped eigenvalue is
+        # supposed to be large -- direction 64 is dropped because there are only 64
+        # atoms, not because it is numerically null. Scoring those wells against the
+        # threshold reported "cut_is_marginal = True" on a cut whose true margins are
+        # 2e3 and 5e-5. Only tolerance-limited wells are counted.
+        tol_lim = [r for r in rr if r["rank_limited_by"] == "eigenvalue tolerance"]
+        lo = [r["smallest_kept_over_threshold"] for r in tol_lim
+              if np.isfinite(r["smallest_kept_over_threshold"])]
+        hi = [r["largest_dropped_over_threshold"] for r in tol_lim]
         return {
             "eig_rel_tol": self.eig_rel_tol, "per_well": rr,
+            "n_wells_limited_by_tolerance": len(tol_lim),
+            "n_wells_limited_by_atom_budget": sum(
+                1 for r in rr if r["rank_limited_by"] == "atom budget A-1"),
             "min_smallest_kept_over_threshold": float(min(lo)) if lo else float("inf"),
             "max_largest_dropped_over_threshold": float(max(hi)) if hi else 0.0,
             "cut_is_marginal": bool((min(lo) if lo else np.inf) < 10.0
                                     or (max(hi) if hi else 0.0) > 0.1),
+            "marginality_scored_over": ("only the wells where the eigenvalue tolerance "
+                                        "is what binds the rank; a well limited by the "
+                                        "atom budget drops a large eigenvalue by "
+                                        "design and says nothing about the cut"),
             "what": ("a direction below the threshold is written as a ZERO row: it "
                      "costs the same bytes and buys no span, which is PCASpanStore's "
                      "own stated convention for an atom a well cannot use"),

@@ -228,8 +228,21 @@ def stage_fit(out_dir: Path, condition: str, log=_log) -> dict:
         "feature_cache": fw.feature_cache_manifest(int(fw.PINS["seed"])),
     }
     _jdump(obj, out_dir / "store.json")
+    # ⛔ A hub is gated on this file, so a re-run of `fit` must not blank the
+    # assertions a later stage already published. Only the placeholder fields that are
+    # genuinely absent are written, and `status` is never downgraded.
+    prior = {}
+    if READY.exists():
+        with open(READY, encoding="utf-8") as fh:
+            prior = json.load(fh)
+    keep = {k: prior[k] for k in
+            ("status", "downdate_equals_refit", "no_pass_over_data",
+             "no_pass_over_data_detail", "items_kept_asserted", "items_kept_detail",
+             "all_three_assertions_passed", "smoke", "smoke_pinned", "gauge",
+             "post_delete") if k in prior}
     publish_ready(
-        status="partial", store_bytes=int(store_led["deployed_bytes"]),
+        status=keep.get("status", "partial"),
+        store_bytes=int(store_led["deployed_bytes"]),
         cov_bytes=int(cov_led["covariance_bytes"]),
         honest_total_bytes=int(honest["honest_total_bytes"]),
         times_over_budget=honest["times_over_budget"],
@@ -239,10 +252,13 @@ def stage_fit(out_dir: Path, condition: str, log=_log) -> dict:
         rank_over_d_per_well=store_led["rank_over_d_per_well"],
         any_well_saturated=store_led["any_well_saturated"],
         eig_rel_tol=float(EIG_REL_TOL),
-        downdate_equals_refit={"max_abs_dev_per_well": [], "passed": False,
-                               "note": "not yet run at this publish"},
-        no_pass_over_data=False, items_kept=False,
-        items_kept_asserted=False,
+        downdate_equals_refit=keep.get(
+            "downdate_equals_refit",
+            {"max_abs_dev_per_well": [], "passed": False,
+             "note": "not yet run at this publish"}),
+        no_pass_over_data=keep.get("no_pass_over_data", False), items_kept=False,
+        items_kept_asserted=keep.get("items_kept_asserted", False),
+        rank_report={k: v for k, v in ranks.items() if k != "per_well"},
         seeds=[0], condition=condition,
         content_sha256=st.content_sha(),
         note=("PARTIAL: the store fits at the pin and the ledgers are final. The three "
