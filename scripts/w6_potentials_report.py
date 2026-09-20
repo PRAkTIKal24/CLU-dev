@@ -169,13 +169,29 @@ def report_leg(name, obj, fh=sys.stdout):
           "exceptional point)")
 
     # ---- controls ----------------------------------------------------------
+    # ⚠ READ THIS BEFORE READING THE TABLE.  The CRR is a law about the DYNAMICS, not
+    # about the content: it holds of any landscape with a well-defined Hessian at a
+    # critical point.  So a control is NOT expected to make the law fail, and a control
+    # that matches the law is not a defect.  What the controls collapse is the CURVATURE
+    # SPECTRUM -- which is the store's contribution -- and that is what this table shows
+    # beside the law's accuracy.  Charter C.2 is satisfied by the spectrum column, not
+    # by the error column.
     p("")
+    p("  arm                     n   median|log10 CRR err|   hess_eig range     "
+      "   modes  degenerate")
     for arm in sorted({r["arm"] for r in rows}):
         rs = [r for r in rows if r["arm"] == arm and r.get("grid", "main") == "main"]
         if not rs:
             continue
         e = np.array([r["err_crr_log10"] for r in rs])
-        p(f"  arm {arm:22s} n={len(rs):5d}  median|log10 CRR err| = {np.median(e):.4f}")
+        he = np.array([r["hess_eig_raw"] for r in rs])
+        deg = bool(rs[0].get("degenerate_spectrum", False))
+        nm = len({(r["well"], r["mode"]) for r in rs})
+        p(f"  {arm:22s} {len(rs):5d} {np.median(e):21.4f}   "
+          f"[{he.min():.4f}, {he.max():.4f}]{'':4s} {nm:5d}  {str(deg)}")
+    p("       (landscape_removed: Cov_w = 0, so E = ||q-x*||^2/2 exactly and every")
+    p("        direction carries the SAME trivial curvature -- the store contributes")
+    p("        no structure at all.  That is the charter C.2 collapse, as a measurement.)")
 
     # ---- amplitude: where the law stops ------------------------------------
     aux = [r for r in rows if r.get("grid") == "aux" and r["arm"] == "field"]

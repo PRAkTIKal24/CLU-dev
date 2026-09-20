@@ -303,6 +303,56 @@ def _first_crossing(a: np.ndarray, thr: np.ndarray, floor_steps: int,
     return np.where(out < float(floor_steps), np.nan, out)
 
 
+def instrument_floor_on_exact_quadratic(eta: float = 0.05, d: int = 4) -> dict:
+    """⭐ **THE INSTRUMENT FLOOR.**  How well can this measurement chain recover the CRR
+    on a landscape where the CRR is TRUE BY CONSTRUCTION?
+
+    One atom at the origin makes ``E = ||q||^2/2`` exactly, so ``hess_eig = 1``,
+    ``mu^2 = 1/mass``, and the one-step map IS the shorts' Eq. (3) matrix.  Any
+    disagreement between ``n_half_crr`` and the rolled envelope is therefore **the
+    instrument**, not the physics: discrete sampling of the envelope, the ``n < 3``
+    censoring rule, and the defective (Jordan-block) behaviour at the exceptional point
+    where V2 App. C's secular transients ``~ n lambda^n`` make the envelope non-exponential.
+
+    ⛔ This number must be quoted beside any claim about how well the law predicts the
+    field store: a bar tighter than this floor would be measuring the rollout, not the law.
+    """
+    A = np.zeros((1, d))
+    V = np.eye(d)[:, :1]
+    rows = []
+    for mass in (1e-3, 1e-1, 1.0, 1e1, 1e3):
+        for g in (0.005, 0.05, 0.2, 0.5):
+            mu2 = 1.0 / mass
+            npred = W6.n_half_crr(mu2, eta, g)
+            if not np.isfinite(npred) or npred > 5000:
+                continue
+            ns = int(min(max(20, 3 * npred), 5000))
+            tr = verlet_rollout_batch(0.05 * V.T, A, 1.0, None,
+                                      np.array([[1.0 / mass]]), np.array([[1.0 - g]]),
+                                      np.zeros((1, 1)), eta, ns, np.zeros(d), V)
+            env = float(envelope_half_life(tr, 3, 1)[0])
+            fst = float(half_life_from_trace(tr, 3, 1)[0])
+            hs = W6.band_edges(g)[0]
+            rows.append({"mass": mass, "gamma": g, "mu2": mu2,
+                         "h_over_hstar": float(np.sqrt(mu2) * eta / hs),
+                         "band": W6.band_of(mu2, eta, g),
+                         "n_pred": npred, "n_env": env, "n_first": fst,
+                         "abs_log10_ratio": (abs(np.log10(env / npred))
+                                             if np.isfinite(env) and env > 0 else None)})
+    e = np.array([r["abs_log10_ratio"] for r in rows
+                  if r["abs_log10_ratio"] is not None])
+    near = np.array([r["abs_log10_ratio"] for r in rows
+                     if r["abs_log10_ratio"] is not None
+                     and 0.3 <= r["h_over_hstar"] <= 3.0])
+    return {"n_cells": len(rows), "median_abs_log10": float(np.median(e)),
+            "max_abs_log10": float(e.max()), "p90_abs_log10": float(np.percentile(e, 90)),
+            "median_near_exceptional_point": (float(np.median(near)) if near.size else None),
+            "n_near_exceptional_point": int(near.size),
+            "rows": rows,
+            "what": "the CRR is exact on this landscape, so this is the MEASUREMENT's "
+                    "own error floor and nothing else"}
+
+
 def half_life_from_trace(tr: np.ndarray, floor_steps: int = 3,
                          record_every: int = 1) -> np.ndarray:
     """Envelope half-life per probe, in STEPS: first sample with ``|x| <= |x_0|/2``,
@@ -340,8 +390,16 @@ def half_life_from_trace(tr: np.ndarray, floor_steps: int = 3,
 # Landscapes: the arm and its two charter controls, plus the incumbent
 # ---------------------------------------------------------------------------
 def landscape_variants(field, k: int, rng: np.random.Generator,
-                       pca_atoms=None) -> dict:
-    """``{arm_name: (atoms, life, sigma)}`` for well ``k``."""
+                       pca_store=None) -> dict:
+    """``{arm_name: (atoms, life, sigma)}`` for well ``k``.
+
+    ``pca_store`` is ``exp_w5_compose_field.build_pca_content()["store"]`` -- a
+    ``PCASpanStore`` whose ``modes[k]`` is well ``k``'s ``A x d_k`` principal block.
+    The w5 incumbent is carried so the law is tested on the content that actually won
+    w5 and not only on the item store.  It keeps the field store's own width, because
+    the width is the field store's interface number and swapping the content is the
+    only change being made.
+    """
     v = W6.well_view(field, k)
     A, life, sig = v["atoms"], v["life"], v["sigma"]
     out = {"field": (A, life, sig)}
@@ -350,8 +408,8 @@ def landscape_variants(field, k: int, rng: np.random.Generator,
     for j in range(Ash.shape[0]):
         Ash[j] = Ash[j][rng.permutation(Ash.shape[1])]
     out["landscape_shuffled"] = (Ash, life, sig)
-    if pca_atoms is not None:
-        P = np.asarray(pca_atoms, np.float64)
+    if pca_store is not None:
+        P = np.asarray(pca_store.modes[k], np.float64)
         out["pca_tensor"] = (P, np.ones(P.shape[0]), sig)
     return out
 

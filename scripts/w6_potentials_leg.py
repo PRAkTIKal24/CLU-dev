@@ -77,7 +77,7 @@ def main(argv=None):
     pca = None
     if "pca_tensor" in want:
         pc = W5.build_pca_content(out, log=log)
-        pca = pc.get("atoms", None)
+        pca = pc["store"]
     wl = list(wells if wells is not None else range(field.K))
     arms = {k: {kk: vv for kk, vv in
                 EX.landscape_variants(field, k, np.random.default_rng(99 + k), pca).items()
@@ -95,6 +95,13 @@ def main(argv=None):
         f"w{k}={trap[f'well_{k}']['well_sigma_over_nn_median']:.3f}" for k in range(field.K)))
 
     # the Hessian / D14 finite-difference check -- cheap, and it gates the predictions
+    flo = EX.instrument_floor_on_exact_quadratic(eta=float(EX.PINS["eta"]))
+    EX.jdump(flo, out / "instrument_floor.json")
+    log(f"instrument floor on an EXACT quadratic (the CRR is true there by "
+        f"construction): median |log10| = {flo['median_abs_log10']:.4f}, "
+        f"p90 = {flo['p90_abs_log10']:.4f}, max = {flo['max_abs_log10']:.4f} "
+        f"over {flo['n_cells']} cells")
+
     hfd = EX.hessian_fd_check(field, arms_field, addr[0], EX.PINS)
     EX.jdump(hfd, out / "hessian_fd_check.json")
     log(f"Hessian+D14 finite-difference check: max|resid| = {hfd['max_abs_residual']:.3e}")
@@ -132,7 +139,9 @@ def main(argv=None):
            "pins": EX.PINS, "pins_aux": EX.PINS_AUX,
            "fit1_C": fit["C"], "fit1_n": fit["n"],
            "field_sha": field.sha256(), "byte_ledger": built["byte_ledger"],
-           "integrator_check": chk, "hessian_fd_check": hfd, "sigma_provenance": trap,
+           "integrator_check": chk, "hessian_fd_check": hfd,
+           "instrument_floor": {k: v for k, v in flo.items() if k != "rows"},
+           "sigma_provenance": trap,
            "estimand": est, "d14_confinement": d14,
            "n_v_curves": {k: len(v) for k, v in vc.items()},
            "wall_seconds": time.time() - t0}
