@@ -16,6 +16,7 @@ from typing import NamedTuple
 import numpy as np
 
 from chlu.gym1.line1d import L, Episode, replay_policy, rollout
+from chlu.gym1.models import V_EMB as V_EMB_CLIP
 
 
 class VecMetrics(NamedTuple):
@@ -39,6 +40,8 @@ class VecMetrics(NamedTuple):
     first_fault_hist: dict
     first_fault_kind: dict
     at_goal_frac: np.ndarray    # at_goal_frac[t] = frac parked on the goal at step t+1
+    max_abs_velocity: int       # largest |v| any episode reached (vs the V_EMB input clip)
+    frac_v_past_embed_clip: float  # episodes whose |v| ever exceeded the embedding range
 
 
 def pack(eps):
@@ -66,6 +69,7 @@ def vec_rollout(eps, policy_fn, horizon: int):
     reached = np.zeros(n, dtype=bool)
     survival = np.zeros(horizon, dtype=np.float64)
     at_goal = np.zeros(horizon, dtype=np.float64)
+    max_abs_v = np.abs(v).copy()
     wall_hi = w0 + ww - 1
 
     for t in range(horizon):
@@ -95,6 +99,7 @@ def vec_rollout(eps, policy_fn, horizon: int):
         x2 = np.where(f_tel, np.clip(x2, 0, L - 1), x2)
         v2 = np.where(f_tel, 0, v2)
         x, v = x2, v2
+        max_abs_v = np.maximum(max_abs_v, np.abs(v))
 
         parked = (x == g) & (v == 0)
         reached |= clean & parked
@@ -122,6 +127,8 @@ def vec_rollout(eps, policy_fn, horizon: int):
         valid_and_reached=float((clean & reached).mean()),
         survival=survival, first_fault_hist=fh, first_fault_kind=fk,
         at_goal_frac=at_goal,
+        max_abs_velocity=int(max_abs_v.max()),
+        frac_v_past_embed_clip=float((max_abs_v > V_EMB_CLIP).mean()),
     )
 
 

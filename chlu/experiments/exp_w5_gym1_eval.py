@@ -29,13 +29,24 @@ N_LONG = 500         # episodes for the horizon-96 persistence probe
 
 
 def load_models():
-    k = jax.random.PRNGKey(0)
-    lstm = LSTMPolicy(d=64, h=205, key=k)
-    tfm = TransformerPolicy(d=64, n_layers=3, heads=4, d_ff=422, max_len=128,
-                            key=jax.random.PRNGKey(1))
-    lstm = eqx.tree_deserialise_leaves(os.path.join(OUT, "ckpt_lstm.eqx"), lstm)
-    tfm = eqx.tree_deserialise_leaves(os.path.join(OUT, "ckpt_transformer.eqx"), tfm)
-    return {"lstm": lstm, "transformer": tfm}
+    """Load whichever checkpoints exist. A missing one is skipped and named in the
+    output, so a partial evaluation is never silently reported as a complete one."""
+    specs = {
+        "lstm": (LSTMPolicy(d=64, h=205, key=jax.random.PRNGKey(0)), "ckpt_lstm.eqx"),
+        "transformer": (TransformerPolicy(d=64, n_layers=3, heads=4, d_ff=422,
+                                          max_len=128, key=jax.random.PRNGKey(1)),
+                        "ckpt_transformer.eqx"),
+    }
+    out, missing = {}, []
+    for name, (skeleton, fn) in specs.items():
+        path = os.path.join(OUT, fn)
+        if not os.path.exists(path):
+            missing.append(name)
+            continue
+        out[name] = eqx.tree_deserialise_leaves(path, skeleton)
+    if missing:
+        print("[warn] NO CHECKPOINT, skipping:", missing)
+    return out, missing
 
 
 def m2d(m: VR.VecMetrics, keep_curves=True):
@@ -103,8 +114,9 @@ def main():
         out["oracle_optimal_held"]["valid_and_reached"],
         out["oracle_wall_blind_held"]["valid_and_reached"], time.time() - t0))
 
-    models = load_models()
+    models, missing = load_models()
     out["params"] = {k: count_params(m) for k, m in models.items()}
+    out["models_missing"] = missing
 
     for name, model in models.items():
         print(f"\n=== {name} ===", flush=True)
@@ -133,19 +145,39 @@ def main():
               % (E.HORIZON_LONG, ml.all_steps_valid, ml.held_at_goal,
                  ml.n_speed, ml.n_wall, ml.n_teleport), flush=True)
 
-        # ---- wall ablation: show the model a DIFFERENT wall than the real one --
+        # ---- wall ablation ------------------------------------------------------
+        # Two probes, because they answer different questions and conflating them
+        # would misreport the result:
+        #   (a) w0 SHUFFLED across episodes -- every rule token stays in-distribution
+        #       (a real wall width, a real wall position), but the position no longer
+        #       corresponds to the wall the environment actually has. This is the
+        #       honest test of whether the model USES the wall information.
+        #   (b) ww := 0 -- "no wall", a value that NEVER occurs in training. Its
+        #       embedding is untrained, so a collapse here measures out-of-distribution
+        #       input, NOT dependence on the obstacle. Reported, and labelled as such.
         eps_a = eps_h[:N_LONG]
         Pa = VR.pack(eps_a)
-        p = policy_for(name, model, eps_a, E.HORIZON,
-                       override={"ww": np.zeros_like(Pa["ww"])})
-        ma = VR.vec_rollout(eps_a, p, E.HORIZON)
-        out[f"{name}_held_wall_hidden"] = m2d(ma, keep_curves=False)
         p = policy_for(name, model, eps_a, E.HORIZON)
         mb = VR.vec_rollout(eps_a, p, E.HORIZON)
         out[f"{name}_held_wall_shown"] = m2d(mb, keep_curves=False)
-        print("  ablate wall shown=%.4f  wall hidden(ww:=0)=%.4f  delta=%+.4f"
-              % (mb.valid_and_reached, ma.valid_and_reached,
-                 ma.valid_and_reached - mb.valid_and_reached), flush=True)
+
+        rng = np.random.default_rng(0)
+        perm = rng.permutation(len(eps_a))
+        p = policy_for(name, model, eps_a, E.HORIZON,
+                       override={"w0": Pa["w0"][perm]})
+        ms = VR.vec_rollout(eps_a, p, E.HORIZON)
+        out[f"{name}_held_wall_shuffled"] = m2d(ms, keep_curves=False)
+
+        p = policy_for(name, model, eps_a, E.HORIZON,
+                       override={"ww": np.zeros_like(Pa["ww"])})
+        ma = VR.vec_rollout(eps_a, p, E.HORIZON)
+        out[f"{name}_held_wall_ww_zero_OOD"] = m2d(ma, keep_curves=False)
+
+        print("  ablate  true wall=%.4f | w0 SHUFFLED (in-distribution)=%.4f delta=%+.4f"
+              " | ww:=0 (OOD input, not a wall probe)=%.4f"
+              % (mb.valid_and_reached, ms.valid_and_reached,
+                 ms.valid_and_reached - mb.valid_and_reached, ma.valid_and_reached),
+              flush=True)
 
         # ---- refusal split: goal unreachable, a fault-free behaviour exists ----
         eps_r = refusal[:N_LONG]
