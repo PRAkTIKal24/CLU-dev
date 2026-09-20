@@ -286,7 +286,7 @@ def judge(inst, route):
 
 
 # ---------------------------------------------------------------- generator
-def generate(seed, h=7, w=7, n_colours=3, braid=0.12, p_tint=0.22,
+def generate(seed, h=7, w=7, n_colours=4, braid=0.12, p_tint=0.22,
              slack=0.10, max_tries=400, require_bend=True):
     """Return an accepted Instance, or None if max_tries is exhausted.
 
