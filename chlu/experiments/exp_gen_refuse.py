@@ -1161,7 +1161,8 @@ def run_rivals(out: Path, seed: int, log: Callable = print) -> dict:
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--stage", required=True,
-                   choices=("fit", "queries", "deletion", "report", "declare"))
+                   choices=("fit", "queries", "deletion", "rivals", "report",
+                            "declare"))
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", required=True)
     p.add_argument("--max-seconds", type=float, default=14400.0)
@@ -1200,6 +1201,8 @@ def main(argv=None) -> int:
         run_queries(out, args.seed, max_seconds=args.max_seconds, log=log)
     elif args.stage == "deletion":
         run_deletion(out, args.seed, max_seconds=args.max_seconds, log=log)
+    elif args.stage == "rivals":
+        run_rivals(out, args.seed, log=log)
     elif args.stage == "report":
         from .exp_gen_refuse_report import build_report
         build_report(out, log=log)

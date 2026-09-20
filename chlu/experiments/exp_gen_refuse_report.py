@@ -166,6 +166,15 @@ def score_deletion(out: Path, log: Callable = print) -> dict:
         uc = np.asarray(H["unseen_conj"], bool)
         TC, CV = np.asarray(H["corner_tuples"]), np.asarray(H["corner_values"])
         jv = _judge_valid(CV, TC, grid)
+        # ⚠ Per-FAMILY, because the target file's framing needs checking against this
+        # split: it says the joint table "refuses every row-3 and row-4 request". On the
+        # scored corners that is true of row 3 and FALSE of row 4 -- the 49 n-way corners
+        # name (object_hue, shape) conjunctions the pool HOLDS, so a pair-presence table
+        # answers them. The precise claim is measured here rather than inherited.
+        fam = np.concatenate([
+            np.full(e - s, f, dtype=object) for f, (s, e)
+            in zip(H["corner_family"], H["corner_offsets"])])
+        is3, is4 = (fam == "pair"), (fam == "nway")
         for name in REFUSERS:
             if name not in H["post"]["corners"]:
                 continue
@@ -194,6 +203,9 @@ def score_deletion(out: Path, log: Callable = print) -> dict:
                 "survivors": score_novelty_row(sv, seen),
                 "n_deleted": int(nh.sum()), "n_unseen_conj": int(uc.sum()),
                 "n_survivors": int(surv.sum()),
+                "accept_row3_post": float(post_c[is3].mean()) if is3.any() else None,
+                "accept_row4_post": float(post_c[is4].mean()) if is4.any() else None,
+                "n_row3": int(is3.sum()), "n_row4": int(is4.sum()),
             }
         out_seed["hole"]["_proof"] = {
             "byte_assertion": H["byte_assertion"], "no_refit": H["no_refit"],
@@ -468,6 +480,10 @@ def build_report(out: Path, log: Callable = print) -> dict:
                     [g["accept_unseen_conjunction_post"] for g in got])
                 dtab[which][name]["pair_conjunction_gmean"] = _agg(
                     [g["pair_conjunction"]["gmean"] for g in got])
+                dtab[which][name]["accept_row3_post"] = _agg(
+                    [g["accept_row3_post"] for g in got])
+                dtab[which][name]["accept_row4_post"] = _agg(
+                    [g["accept_row4_post"] for g in got])
     rep["TABLE_deletion"] = dtab
 
     # -- the verdicts, in the target file's own words ----------------------
@@ -585,6 +601,21 @@ def _write_markdown(rep: dict, path: Path) -> None:
               f"{_fmt(third)} | {_fmt(r['accept_unseen_valid_post'])} | "
               f"{_fmt(r['survivor_distinct_valid_novel_tuples'])} |")
         A("")
+    A("### The joint table's cost, per family — ⚠ the target file's framing, checked")
+    A("")
+    A("The target file says the joint table that can express a conjunction deletion "
+      "\"refuses every row-3 and row-4 request\". On **this** scored split that is true "
+      "of row 3 and ⛔ **false of row 4**: the 49 n-way corners name `(object_hue, "
+      "shape)` conjunctions the pool HOLDS, so a pair-presence table answers them. "
+      "Measured, after the hole:")
+    A("")
+    A("| refuser | bytes | accept row-3 (60 corners) | accept row-4 (49 corners) | distinct valid novel tuples |")
+    A("|---|---|---|---|---|")
+    for name, r in rep["TABLE_deletion"].get("hole", {}).items():
+        A(f"| `{name}` | {r['deployed_bytes']:,} | {_fmt(r.get('accept_row3_post'))} | "
+          f"{_fmt(r.get('accept_row4_post'))} | "
+          f"{_fmt(r['survivor_distinct_valid_novel_tuples'])} |")
+    A("")
     A("## Verdicts")
     A("")
     for k, v in rep["VERDICTS"].items():
