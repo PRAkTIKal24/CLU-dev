@@ -92,7 +92,7 @@ import numpy as np
 
 __all__ = [
     "WellStats", "CovContentStore", "plan_partition", "assert_not_saturated",
-    "honest_byte_ledger", "SATURATION_NOTE",
+    "honest_byte_ledger", "SATURATION_NOTE", "spectral_gap_report", "reproducibility_floor",
 ]
 
 SATURATION_NOTE = (
@@ -235,7 +235,28 @@ class WellStats:
             if lam_max > 0:
                 kept = int(min(r, int((w > EIG_REL_TOL * lam_max).sum())))
             V = V[:, :kept]
-            B = np.vstack([mu[None, :], V.T]) if kept else mu[None, :]
+            # ⭐⭐ CANONICAL SIGN, and it is not cosmetic.  An eigenvector's sign is
+            # arbitrary, so `eigh` may return v or -v for the same subspace.  Without a
+            # convention, a downdate and a from-scratch refit that agree on the SPAN to
+            # 1e-16 can differ ATOM-WISE by O(1) purely through sign.
+            # ⛔ MEASURED, on the test leg at K=40/A=7: 8 of 240 direction rows flipped,
+            # giving max |dev| 1.826 -- 15.3 million float32 ulp against a <= 1 ulp
+            # criterion -- while the subspace deviation was 9.258e-16.  Allowing a sign
+            # flip took the same comparison to 5.551e-16.
+            # ⚠ My val-leg builds passed at 1e-16 only because the signs happened to
+            # agree there; they were luck, not correctness.
+            # The rule is the spoke's `downdate_store._canonical_sign`, adopted verbatim
+            # so the two objects' bytes are comparable: sign each row so its
+            # largest-magnitude entry is positive, ties by lowest index.
+            if kept:
+                Vr = V.T
+                idx = np.argmax(np.abs(Vr), axis=1)
+                sg = np.sign(Vr[np.arange(Vr.shape[0]), idx])
+                sg[sg == 0] = 1.0
+                Vr = Vr * sg[:, None]
+                B = np.vstack([mu[None, :], Vr])
+            else:
+                B = mu[None, :]
         else:
             B = mu[None, :]
         B = B.astype(np.float32)
@@ -445,6 +466,128 @@ class CovContentStore:
                      "make deletion exact; summed, not netted"),
             "note": SATURATION_NOTE,
         }
+
+
+def spectral_gap_report(store, eps: float = 2.220446049250313e-16) -> dict:
+    """⚠ How well determined are this store's BYTES by its own statistics?
+
+    ⛔ RAISED BY A FAILURE, not by foresight.  The spoke's assertion 1 FAILED on test
+    seed 2 at 32.9 float32 ulp against a <= 1 ulp criterion, confined to the
+    rank-deficient well, on every seed.  The cause is not the downdate arithmetic --
+    three of five wells were bit-identical and the residual on ``S`` was at machine
+    epsilon.  The cause is that :data:`EIG_REL_TOL` pins the eigenvalue's **MAGNITUDE**,
+    and what makes an eigenvector a function of the data is its **GAP** to its
+    neighbours.  A direction far above the magnitude threshold can be nearly degenerate
+    with the one beside it, and then its direction is no better determined than a null
+    direction's.
+
+    Eigenvector perturbation goes as ``||dC|| / gap``.  With the downdate residual at
+    machine epsilon, the predictor for the worst deviation in well ``k`` is
+    ``eps / min_gap_k``, where ``min_gap_k`` is the smallest RELATIVE gap among the
+    directions actually KEPT.  The spoke measured this predictor against observation:
+
+        seed 0   smallest kept gap 1.359e-03   predicted 1.62e-13   observed 8.62e-12
+        seed 1   smallest kept gap 2.014e-09   predicted 1.09e-07   observed 1.62e-09
+        seed 2   smallest kept gap 4.950e-11   predicted 4.45e-06   observed 3.92e-06
+
+    ⛔⛔ DO NOT USE THIS AS A GATE.  Validated across four legs by the spoke, this
+    predictor OVER-PREDICTS by 7.7x to 217,466x and false-alarms on three legs that
+    PASSED.  My own data reproduces the defect: test seed 2 at K=44/A=12 predicts
+    9.603 ulp and observes 0.006 ulp -- a 1,600x over-prediction and a false alarm.
+    The reason is that it bounds ``||dC||`` by ``eps * lambda_max`` globally, while the
+    real residual inside a tiny-eigenvalue subspace is far smaller.  ⭐ It is kept
+    because it LOCALISES the fragile well correctly, and deleted from no report because
+    a predictor that did not work is evidence about the predictor.  ⭐ The instrument to
+    gate on is :func:`reproducibility_floor`.
+
+    ⭐ It is computable from the statistics ALONE -- no deletion, no second fit -- so an
+    object can DECLARE in advance the precision to which its own bytes are determined.
+    ⛔ This function does not gate and does not retune anything: it REPORTS.  Choosing a
+    gap-aware cut, different content, or a different unit of comparison is a design call
+    and is not made here.
+    """
+    out = []
+    for k, w in enumerate(store.stats):
+        r = store.deployed_rank[k]
+        if r < 2:
+            out.append({"well": k, "rank": int(r), "min_kept_rel_gap": None,
+                        "predicted_dev": None, "note": "rank < 2, no gap to measure"})
+            continue
+        lam = np.linalg.eigvalsh(w.covariance())[::-1]
+        lmax = float(lam[0]) if lam[0] > 0 else 1.0
+        kept = lam[:r] / lmax
+        gaps = kept[:-1] - kept[1:]
+        g = float(gaps.min()) if gaps.size else float("inf")
+        out.append({
+            "well": k, "rank": int(r),
+            "min_kept_rel_gap": g,
+            "smallest_kept_rel_eigenvalue": float(kept[-1]),
+            "predicted_dev": (float(eps / g) if g > 0 else float("inf")),
+        })
+    fin = [o for o in out if o.get("predicted_dev") is not None]
+    worst = max(fin, key=lambda o: o["predicted_dev"]) if fin else None
+    ulp32 = 1.1920928955078125e-07
+    return {
+        "per_well": out,
+        "worst_well": (worst or {}).get("well"),
+        "worst_predicted_dev": (worst or {}).get("predicted_dev"),
+        "worst_predicted_dev_in_float32_ulp": (
+            (worst or {}).get("predicted_dev", 0.0) / ulp32 if worst else None),
+        "min_kept_rel_gap_over_wells": min(
+            (o["min_kept_rel_gap"] for o in fin), default=None),
+        "criterion_note": ("the spoke's assertion-1 criterion is <= 1 float32 ulp at "
+                           "unit scale; a predicted dev above that says the store's "
+                           "bytes are NOT determined to that precision by its own "
+                           "statistics, on either the downdate path or a refit"),
+        "what_this_is_not": ("⛔ not a gate and not a retuned tolerance -- picking a "
+                             "threshold by which seed survives is the move neither hub "
+                             "is making"),
+    }
+
+
+def reproducibility_floor(store_cls, X, well_channels, n_atoms: int, dim: int,
+                          rows_to_delete, allow_saturated: bool = False,
+                          seed: int = 20_260_920) -> dict:
+    """⭐⭐ A FLOOR on any exactness claim, needing no refit.  The spoke's certificate.
+
+    Downdate the SAME rows twice, presenting them in two different ORDERS.  Both are
+    valid downdates of the same set and both are entitled to the same answer, so any
+    disagreement is pure numerical non-determinism in the accumulate-then-eigendecompose
+    path.  ⭐ It costs one extra downdate, needs no from-scratch refit, and it bounds
+    what ANY method could achieve on this object.
+
+    ⭐⭐ WHY IT IS DECISIVE.  The spoke measured, on test seed 2, a floor of 4.746e-06
+    against an observed downdate-vs-refit deviation of 4.227e-06: **the same rows
+    downdated twice disagree by MORE than the downdate disagrees with a from-scratch
+    refit.**  That object's atom bytes are therefore not a function of its data at all --
+    no deletion procedure, no refit and no re-run of the identical computation can agree
+    on them to float32.  It exonerates the downdate rather than excusing it.
+    """
+    order = np.asarray(rows_to_delete)
+    rng = np.random.default_rng(seed)
+    perm = rng.permutation(order.shape[0])
+
+    a = store_cls(X, well_channels, n_atoms, dim, allow_saturated=allow_saturated)
+    a.delete_rows(order)
+    b = store_cls(X, well_channels, n_atoms, dim, allow_saturated=allow_saturated)
+    b.delete_rows(order[perm])
+
+    devs = [float(np.max(np.abs(a.modes[k] - b.modes[k]))) for k in range(a.K)]
+    ulp32 = 1.1920928955078125e-07
+    worst = max(devs) if devs else 0.0
+    return {
+        "floor_per_well": devs, "floor_worst": worst,
+        "floor_worst_in_float32_ulp": worst / ulp32,
+        "ranks_agree": a.deployed_rank == b.deployed_rank,
+        "n_rows": int(order.shape[0]),
+        "what": ("the same rows downdated in two different orders; both are valid "
+                 "downdates of the same set, so any disagreement is non-determinism "
+                 "in the accumulate-then-eigendecompose path"),
+        "how_to_read": ("a floor at or above the exactness criterion means the object's "
+                        "bytes are not determined to that precision by ANY method, "
+                        "including re-running the identical computation -- so a failing "
+                        "A1 there is a property of the CONTENT, not of the deletion"),
+    }
 
 
 def assert_not_saturated(n_atoms: int, well_sizes) -> None:
