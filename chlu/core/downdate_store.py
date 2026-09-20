@@ -111,6 +111,35 @@ EIG_REL_TOL = 1e-12
 #: the rank cut exists to keep out of the basis. 1e-4 sits four orders clear of both.
 MU_PERP_REL_TOL = 1e-4
 
+#: ⛔⭐ THE VARIANCE-SHARE CUT, declared 2026-09-20T18:45Z BEFORE the re-run that
+#: tests it, at the hub's direction after the subspace call was withdrawn.
+#:
+#:     tau = delta_rel_worst / ulp_float32 = 4.941056e-16 / 1.1920929e-07
+#:         = 4.144858e-09
+#:
+#: ``delta_rel_worst`` is MEASURED, not assumed: the largest relative perturbation of
+#: the centred scatter ``C`` under a change that must not matter -- accumulating the
+#: same rows in a different order -- over all wells of all four legs (val seed 0, test
+#: seeds 0/1/2), with no deletion and no refit. It is the numerical noise floor of the
+#: accumulate step and it is what the reproducibility floor is made of.
+#: ``ulp_float32`` is the finest angular distinction a float32 store can represent and
+#: is therefore the target precision.
+#:
+#: ⭐ Their quotient is the variance share below which a direction's eigenvalue sits
+#: at or under the level the accumulation can resolve to that target, so its
+#: orientation is not a function of the data and it is not content. There is NO FREE
+#: PARAMETER: one measured quantity, one target fixed by the storage format.
+#:
+#: ⛔ NOT ROUNDED, and the reason runs opposite to intuition: rounding 4.1449e-09 up
+#: to a clean 1e-8 makes the cut STRICTER, which drops more marginal directions and is
+#: therefore MORE likely to make the failing seed pass. Rounding up is conservative
+#: about content and anti-conservative about the verdict. The exact measured quotient
+#: leaves no room to have chosen.
+#:
+#: ⛔ ``EIG_REL_TOL`` is NOT retuned -- it stays at 1e-12 and both cuts apply;
+#: whichever binds, binds.
+VARIANCE_SHARE_TOL = 4.144858e-09
+
 #: ⭐ The count table's smoothing, declared.  The coupling value is a function of the
 #: counts alone, which is what makes the coupling table downdate exactly with them.
 COUPLING_ALPHA = 1.0
@@ -170,7 +199,8 @@ def _canonical_sign(V: np.ndarray) -> np.ndarray:
 
 
 def modes_from_moments(S: np.ndarray, t: np.ndarray, n: int, n_atoms: int,
-                       eig_rel_tol: float = EIG_REL_TOL) -> tuple:
+                       eig_rel_tol: float = EIG_REL_TOL,
+                       var_share_tol: float = None) -> tuple:
     """``(S, t, n) -> (A x d_k float32 atom block, report)``.  ⭐ A PURE FUNCTION.
 
     ⛔ It takes no row, no row index and no corpus.  Its whole input is the three
@@ -199,7 +229,16 @@ def modes_from_moments(S: np.ndarray, t: np.ndarray, n: int, n_atoms: int,
     V = V[:, order].T                          # rows are directions
     lmax = float(max(float(w[0]), 0.0))
     n_above = int((w > float(eig_rel_tol) * lmax).sum())
-    keep = int(min(A - 1, d, n_above))
+    # ⛔⭐ THE DECLARED VARIANCE-SHARE CUT. See VARIANCE_SHARE_TOL: a direction whose
+    # share of its well's variance is below tau has an eigenvalue at or under what the
+    # accumulate step resolves to one float32 ulp, so it is not content. Applied
+    # ALONGSIDE eig_rel_tol, which is unchanged; whichever binds, binds.
+    vst = VARIANCE_SHARE_TOL if var_share_tol is None else float(var_share_tol)
+    tot_pos = float(np.maximum(w, 0.0).sum())
+    share = (np.maximum(w, 0.0) / tot_pos) if tot_pos > 0 else np.zeros_like(w)
+    n_share = int((share >= vst).sum())
+    keep_no_share = int(min(A - 1, d, n_above))
+    keep = int(min(A - 1, d, n_above, n_share))
     B = np.vstack([mu[None, :], _canonical_sign(V[:keep])]).astype(np.float32)
     if B.shape[0] < A:
         B = np.vstack([B, np.zeros((A - B.shape[0], d), np.float32)])
@@ -263,6 +302,16 @@ def modes_from_moments(S: np.ndarray, t: np.ndarray, n: int, n_atoms: int,
         # saturated build is visible instead of inferred.
         "rank_over_d": float(keep) / float(d),
         "saturated": bool(A - 1 >= d),
+        # -- the declared variance-share cut and what it costs -----------------
+        "var_share_tol": vst,
+        "rank_kept_without_share_cut": keep_no_share,
+        "n_directions_dropped_by_share_cut": int(max(keep_no_share - keep, 0)),
+        "share_cut_binds": bool(keep < keep_no_share),
+        "variance_share_lost_to_share_cut": float(
+            share[keep:keep_no_share].sum()) if keep < keep_no_share else 0.0,
+        "smallest_kept_variance_share": float(share[keep - 1]) if keep > 0 else None,
+        "largest_dropped_variance_share": (float(share[keep])
+                                           if keep < share.size else 0.0),
         # -- the fit-time well-posedness declaration -------------------------
         "min_rel_gap_among_kept": rel_gap_kept,
         "min_rel_gap_to_any_neighbour": rel_gap_any,
@@ -372,13 +421,16 @@ class DowndatableStore:
 
     def __init__(self, well_channels, dim: int, n_atoms: int,
                  cardinalities: Sequence[int], eig_rel_tol: float = EIG_REL_TOL,
-                 coupling_alpha: float = COUPLING_ALPHA):
+                 coupling_alpha: float = COUPLING_ALPHA,
+                 var_share_tol: float = VARIANCE_SHARE_TOL):
         self.well_channels = [np.ascontiguousarray(np.asarray(c, np.int64))
                               for c in well_channels]
         self.dim = int(dim)
         self.n_atoms = int(n_atoms)
         self.cardinalities = [int(c) for c in cardinalities]
         self.eig_rel_tol = float(eig_rel_tol)
+        #: the declared variance-share cut; see :data:`VARIANCE_SHARE_TOL`
+        self.var_share_tol = float(var_share_tol)
         self.coupling_alpha = float(coupling_alpha)
 
         d = [int(c.size) for c in self.well_channels]
@@ -457,7 +509,8 @@ class DowndatableStore:
         """Re-derive EVERY derived array from the statistics.  ⭐ No row is involved."""
         for k in range(self.K):
             self.modes[k], self.rank_reports[k] = modes_from_moments(
-                self.S[k], self.t[k], int(self.n[k]), self.n_atoms, self.eig_rel_tol)
+                self.S[k], self.t[k], int(self.n[k]), self.n_atoms, self.eig_rel_tol,
+                var_share_tol=getattr(self, "var_share_tol", VARIANCE_SHARE_TOL))
         self._refresh_coupling()
         return {"op": "refresh", "ranks": [r["rank_kept"] for r in self.rank_reports]}
 
@@ -693,6 +746,41 @@ class DowndatableStore:
             "what": ("a direction below the threshold is written as a ZERO row: it "
                      "costs the same bytes and buys no span, which is PCASpanStore's "
                      "own stated convention for an atom a well cannot use"),
+        }
+
+    def content_cost_report(self) -> dict:
+        """⛔ What the declared variance-share cut REMOVED from the store.
+
+        ⭐ A remedy that stabilises the object by deleting its content is not free, and
+        this is the invoice: directions dropped per well, and the share of each well's
+        variance that went with them.
+        """
+        rr = [dict(r) for r in self.rank_reports]
+        return {
+            "var_share_tol": getattr(self, "var_share_tol", VARIANCE_SHARE_TOL),
+            "per_well": [{
+                "well": i, "d_k": r["d_k"],
+                "rank_kept": r["rank_kept"],
+                "rank_kept_without_share_cut": r.get("rank_kept_without_share_cut"),
+                "n_directions_dropped_by_share_cut": r.get(
+                    "n_directions_dropped_by_share_cut"),
+                "variance_share_lost_to_share_cut": r.get(
+                    "variance_share_lost_to_share_cut"),
+                "smallest_kept_variance_share": r.get(
+                    "smallest_kept_variance_share"),
+                "largest_dropped_variance_share": r.get(
+                    "largest_dropped_variance_share"),
+                "variance_explained": r.get("variance_explained"),
+            } for i, r in enumerate(rr)],
+            "total_directions_dropped": int(sum(
+                r.get("n_directions_dropped_by_share_cut", 0) for r in rr)),
+            "worst_variance_share_lost_in_a_well": float(max(
+                [r.get("variance_share_lost_to_share_cut", 0.0) for r in rr] or [0.0])),
+            "wells_where_share_cut_binds": [
+                i for i, r in enumerate(rr) if r.get("share_cut_binds")],
+            "store_bytes_unchanged": ("the dropped directions are written as ZERO "
+                                      "rows, so the byte pin is untouched -- the cost "
+                                      "is content, not bytes"),
         }
 
     def well_posedness_report(self) -> dict:

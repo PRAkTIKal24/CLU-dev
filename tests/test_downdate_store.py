@@ -109,14 +109,18 @@ def test_rank_cut_is_what_makes_the_store_well_posed():
     mask = np.zeros(X.shape[0], bool)
     mask[:300] = True
 
-    # ⚠ a NEGATIVE tolerance puts the threshold below every eigenvalue, so the store
-    # asks for min(A-1, d_k) directions exactly as PCASpanStore does -- including the
-    # ones spanning the null eigenspace. That is the pre-fix object, reproduced.
-    loose = ds.DowndatableStore(wells, D, 6, cards, eig_rel_tol=-1.0)
+    # ⚠ BOTH cuts disabled -- a negative eigenvalue tolerance and a zero variance
+    # share -- so the store asks for min(A-1, d_k) directions exactly as PCASpanStore
+    # does, including the ones spanning the null eigenspace. That is the pre-fix
+    # object, reproduced. ⭐ Disabling only one of the two no longer reproduces it,
+    # which is itself evidence that the declared variance-share cut bites.
+    loose = ds.DowndatableStore(wells, D, 6, cards, eig_rel_tol=-1.0,
+                                var_share_tol=0.0)
     loose.absorb(X, values, gv)
     loose.refresh()
     loose.delete(X[mask], values[mask], gv)
-    loose_ref = ds.DowndatableStore(wells, D, 6, cards, eig_rel_tol=-1.0)
+    loose_ref = ds.DowndatableStore(wells, D, 6, cards, eig_rel_tol=-1.0,
+                                    var_share_tol=0.0)
     loose_ref.absorb(X[~mask], values[~mask], gv)
     loose_ref.refresh()
 

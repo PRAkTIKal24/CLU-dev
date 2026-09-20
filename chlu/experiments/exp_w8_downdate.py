@@ -49,8 +49,8 @@ from typing import Callable
 import numpy as np
 
 from ..core.downdate_store import (
-    EIG_REL_TOL, ROWS_CONSUMED, DowndatableStore, assert_layout_matches_field_store,
-    compare_stores, no_data_pass, retention_audit,
+    EIG_REL_TOL, ROWS_CONSUMED, VARIANCE_SHARE_TOL, DowndatableStore,
+    assert_layout_matches_field_store, compare_stores, no_data_pass, retention_audit,
 )
 
 #: ⭐ The pins this spoke owns.  ⛔ Every one of them is fixed by the task file; none is
@@ -60,7 +60,8 @@ W8_PINS = {
     "n_directions": 64,              # A -- "a fixed 64 directions" (task section 2)
     "partition": "factor (K=5, the incumbent's own inherited label-MI wells)",
     "content_from": "exp_w5_compose_field.build_pca_content's partition and fit pool",
-    "eig_rel_tol": EIG_REL_TOL,      # the well-posedness cut; see downdate_store's docstring
+    "eig_rel_tol": EIG_REL_TOL,      # UNCHANGED, never retuned
+    "variance_share_tol": VARIANCE_SHARE_TOL,   # declared 18:45Z before the re-run
     # the deletion is NOT a choice: it is pinned in the programme's own code at
     # exp_gen_factor_wells.py:1348 -- object_hue = 0.0, pair-000's hue.
     "delete_factor": 2,
@@ -279,6 +280,7 @@ def stage_fit(out_dir: Path, condition: str, log=_log) -> dict:
         "count_ledger": st.count_ledger(), "coupling_ledger": st.coupling_ledger(),
         "honest_ledger": honest, "rank_report": ranks,
         "well_posedness": st.well_posedness_report(),
+        "content_cost": st.content_cost_report(),
         "hole": hole, "coupling_layout_check": lay,
         "content_sha256": st.content_sha(), "fit_seconds": fit_s,
         "feature_cache": fw.feature_cache_manifest(int(fw.PINS["seed"])),
@@ -1186,6 +1188,7 @@ def stage_gate(out_dir: Path, condition: str, log=_log) -> dict:
             "times_over_budget": store["honest_ledger"]["times_over_budget"],
             "cut_is_marginal": store["rank_report"]["cut_is_marginal"],
             "well_posedness": store.get("well_posedness", {}),
+            "content_cost": store.get("content_cost", {}),
             "content_sha256": store["content_sha256"],
             "feature_cache_generation": store["feature_cache"].get("generation"),
             "assertions_run": False,
