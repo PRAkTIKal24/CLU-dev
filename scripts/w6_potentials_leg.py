@@ -30,11 +30,17 @@ def main(argv=None):
         # The ledger row names this hub as "w6 hub/potentials"; accept either spelling so
         # the guard fails on a MISSING row and never on a stylistic one.  (It fired on the
         # real launch for exactly that reason, which is the guard working, and is logged.)
-        led = Path("/c/chlu/SCORED-LEDGER.md")
+        # ⛔ The ledger path must be derived, not written MSYS-style: Python on Windows
+        # reads "/c/chlu/SCORED-LEDGER.md" as C:\c\chlu\... , which does not exist, so a
+        # literal path here makes the guard refuse EVERY run for the wrong reason and
+        # look like a missing row.  CHLU_HUB_OUTPUTS is C:/chlu/outputs.
+        led = Path(os.environ.get("CHLU_HUB_OUTPUTS", "C:/chlu/outputs")).parent             / "SCORED-LEDGER.md"
         txt = led.read_text(encoding="utf-8", errors="replace") if led.exists() else ""
         if not re.search(r"w6[ /]hub/potentials|w6/potentials", txt):
-            log("REFUSING: no /c/chlu/SCORED-LEDGER.md row for w6 hub/potentials")
+            log(f"REFUSING: no row for w6 hub/potentials in {led} "
+                f"(exists={led.exists()}, {len(txt)} bytes read)")
             return 2
+        log(f"ledger row found in {led}")
         log(f"scored run authorised by {a.prereg} + the ledger row")
 
     import chlu.experiments.exp_gen_read as R
