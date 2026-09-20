@@ -687,7 +687,7 @@ def build_report(out: Path, log: Callable = print) -> dict:
     surv = [c["corner_id"] for c in cs["survivor"]]
     dele = [c["corner_id"] for c in cs["deleted"]]
     sched = horizon_schedule()
-    seen = R7.seen_tuple_mask(cond)
+    seen = R7.seen_tuple_mask(grid, cond["train_rows"])
 
     rep = {"pins": PINS, "schedule": sched, "per_seed": {},
            "horizons_declared_from_the_law": list(HORIZONS)}
