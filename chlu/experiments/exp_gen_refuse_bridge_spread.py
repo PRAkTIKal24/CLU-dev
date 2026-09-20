@@ -39,7 +39,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 
@@ -234,11 +234,61 @@ def _moved(fixed: dict, joint: dict) -> str:
     return "⛔ OUTSIDE the published +/-"
 
 
-def build(fixed_out: Path, joint_out: Path, dest: Path, log: Callable = print) -> dict:
-    log("=== fixed instrument (the parent's tree) ===")
-    A = collect(Path(fixed_out), "fixed (bridge seed 0 at every store seed)", log=log)
-    log("=== joint instrument (this retry's tree) ===")
-    B = collect(Path(joint_out), "joint (bridge seed = store seed)", log=log)
+def collect_delete_hub(out: Path) -> dict:
+    """``w5 hub/delete``'s own per-seed byte artifacts, read from ITS tree, not its LOG.
+
+    ⭐ This is the cross-hub check the target file asks for. That hub varies pool, atom
+    seed, encoder, decoder and classifier jointly; after ``--bridge-mode joint`` so do we,
+    off the same store-seed index and the same two lines of pool arithmetic. So its
+    ``evict`` byte counts and its negative control are a **prediction** for our joint arm,
+    ⛔ not merely a similar quantity.
+
+    It reads ``run1/seed_*/bytes.json``: ``evict.byte_assertion.bytes_changed``,
+    ``bytes_changed_outside_permitted``, ``evict.n_items`` and
+    ``negative_control_refit.bytes_changed``.
+    """
+    per = {}
+    for s in (0, 1, 2):
+        p = Path(out) / f"seed_{s}" / "bytes.json"
+        if not p.exists():
+            continue
+        d = json.loads(p.read_text("utf-8"))
+        ev = d.get("evict") or {}
+        ba = ev.get("byte_assertion") or {}
+        per[str(s)] = {
+            "evict_bytes_changed": ba.get("bytes_changed"),
+            "evict_bytes_outside": ba.get("bytes_changed_outside_permitted"),
+            "n_items_evicted": ev.get("n_items", ev.get("n_items_evicted")),
+            "hole_bytes_changed": ((d.get("hole") or {}).get("byte_assertion")
+                                   or {}).get("bytes_changed"),
+            "hole_bytes_outside": ((d.get("hole") or {}).get("byte_assertion")
+                                   or {}).get("bytes_changed_outside_permitted"),
+            "negative_control_bytes": (
+                d.get("negative_control_refit") or {}).get("bytes_changed"),
+        }
+    return per
+
+
+def build(fixed_out: Path, joint_out: Path, dest: Path, log: Callable = print,
+          delete_out: Optional[Path] = None, parent_out: Optional[Path] = None) -> dict:
+    """Three trees, one table.
+
+    ``fixed_out``  MY pinned arm -- the parent's configuration, rebuilt by me.
+    ``joint_out``  MY joint arm  -- the only thing differing from ``fixed_out`` is which
+                   bridge seed the store seed selects. ⭐ This pair is the dial, clean.
+    ``parent_out`` the PARENT's own tree, printed as a third column. ⭐ It is what the
+                   target file means by "your parent's fixed-instrument spread", and
+                   ``parent`` vs ``mine-fixed`` is a **reproducibility** statement that
+                   would otherwise hide inside the contrast as an environment term.
+    """
+    log("=== fixed instrument, MY build (the parent's configuration) ===")
+    A = collect(Path(fixed_out), "mine-fixed (bridge seed 0 at every store seed)", log=log)
+    log("=== joint instrument, MY build ===")
+    B = collect(Path(joint_out), "mine-joint (bridge seed = store seed)", log=log)
+    P = None
+    if parent_out is not None:
+        log("=== the PARENT's own tree ===")
+        P = collect(Path(parent_out), "parent-fixed (as published)", log=log)
 
     # ⛔ ASSERTED, not assumed: the two trees must differ in the instrument at seeds 1/2
     # and COINCIDE at seed 0, or the comparison is measuring something else.
@@ -272,44 +322,57 @@ def build(fixed_out: Path, joint_out: Path, dest: Path, log: Callable = print) -
       "are scored by the SAME frozen `score_deletion`. ⛔ Neither column is a scored run: "
       "both re-read artifacts of rows that were already scored.")
     W("")
-    W("| quantity | fixed instrument (parent) | its observed [min,max] | ⭐ joint "
-      "instrument (this retry) | its observed [min,max] | spread ratio | ⭐⭐ joint mean "
-      "vs the parent's interval |")
+    W("| quantity | PARENT, fixed (as published) | mine, FIXED (its config, my build) | "
+      "⭐ mine, JOINT (the wider instrument) | observed [min,max]: parent / joint | "
+      "spread ratio joint:parent | ⭐⭐ joint mean vs the parent's published +/- |")
     W("|---|---|---|---|---|---|---|")
 
-    rows = [
-        ("EVICTION bytes changed", A["evict_bytes"]["changed"],
-         B["evict_bytes"]["changed"], 0),
-        ("EVICTION bytes changed OUTSIDE permitted ⭐ THE CLAIM",
-         A["evict_bytes"]["outside_permitted"], B["evict_bytes"]["outside_permitted"], 0),
-        ("EVICTION items evicted", A["evict_bytes"]["n_items_evicted"],
-         B["evict_bytes"]["n_items_evicted"], 1),
-        ("EVICTION read relative change on survivors",
-         A["evict_bytes"]["read_rel_change_on_survivors"],
-         B["evict_bytes"]["read_rel_change_on_survivors"], 4),
-        ("NEGATIVE CONTROL bytes (1e-3 nudge to one address-book row)",
-         A["evict_bytes"]["negative_control_bytes"],
-         B["evict_bytes"]["negative_control_bytes"], 0),
+    def _pick(path):
+        a = A
+        for k in path:
+            a = a[k] if isinstance(a, dict) else {}
+        p = P
+        if p is not None:
+            for k in path:
+                p = p[k] if isinstance(p, dict) else {}
+        b = B
+        for k in path:
+            b = b[k] if isinstance(b, dict) else {}
+        return (p if p else a), a, b
+
+    paths = [
+        (("evict_bytes", "changed"), "EVICTION bytes changed", 0),
+        (("evict_bytes", "outside_permitted"),
+         "EVICTION bytes changed OUTSIDE permitted ⭐ THE CLAIM", 0),
+        (("evict_bytes", "n_items_evicted"), "EVICTION items evicted", 1),
+        (("evict_bytes", "read_rel_change_on_survivors"),
+         "EVICTION read relative change on survivors", 4),
+        (("evict_bytes", "negative_control_bytes"),
+         "NEGATIVE CONTROL bytes (1e-3 nudge to one address-book row)", 0),
     ]
     for flav, tag in (("hole", "post-HOLE"), ("evict", "post-EVICTION")):
         for nm in NOVEL_REFUSERS:
-            a, b = A["novel"][flav].get(nm), B["novel"][flav].get(nm)
-            if a is None or b is None:
-                continue
-            rows.append((f"NOVEL TUPLES {tag} - `{nm}` ({LEDGER[nm]:,} B)", a, b, 1))
-    for name, a, b, dp in rows:
-        W(f"| {name} | {_fmt(a, dp)} | {_obs(a, dp)} | {_fmt(b, dp)} | {_obs(b, dp)} | "
-          f"{_widen(a, b)} | {_moved(a, b)} |")
+            if nm in A["novel"][flav] and nm in B["novel"][flav]:
+                paths.append((("novel", flav, nm),
+                              f"NOVEL TUPLES {tag} - `{nm}` ({LEDGER[nm]:,} B)", 1))
+    for path, name, dp in paths:
+        p, a, b = _pick(path)
+        W(f"| {name} | {_fmt(p, dp)} | {_fmt(a, dp)} | {_fmt(b, dp)} | "
+          f"{_obs(p, dp)} / {_obs(b, dp)} | {_widen(p, b)} | {_moved(p, b)} |")
 
     W("")
     W('### The fixed points -- printed so that "did not move" is MEASURED, not assumed')
     W("")
-    W("| quantity | fixed instrument | joint instrument |")
-    W("|---|---|---|")
+    W("| quantity | parent, fixed | mine, fixed | ⭐ mine, joint |")
+    W("|---|---|---|---|")
     for k in A["fixed_points"]:
-        W(f"| {k} | {_fmt(A['fixed_points'][k], 4)} | {_fmt(B['fixed_points'][k], 4)} |")
+        pv = _fmt(P["fixed_points"][k], 4) if P else "-"
+        W(f"| {k} | {pv} | {_fmt(A['fixed_points'][k], 4)} | "
+          f"{_fmt(B['fixed_points'][k], 4)} |")
     for k in A["boolean_fixed_points"]:
-        W(f"| {k} | {A['boolean_fixed_points'][k]} | {B['boolean_fixed_points'][k]} |")
+        pv = P["boolean_fixed_points"][k] if P else "-"
+        W(f"| {k} | {pv} | {A['boolean_fixed_points'][k]} | "
+          f"{B['boolean_fixed_points'][k]} |")
 
     W("")
     W("### ⭐ The per-seed byte table -- the three numbers, not their summary")
@@ -322,7 +385,7 @@ def build(fixed_out: Path, joint_out: Path, dest: Path, log: Callable = print) -
     W("| tree | store seed | evict: bytes changed | evict: OUTSIDE ⭐ | items evicted | "
       "hole: bytes | hole: OUTSIDE ⭐ | negative control |")
     W("|---|---|---|---|---|---|---|---|")
-    for rec in (A, B):
+    for rec in ([P] if P else []) + [A, B]:
         tag = rec["label"].split(" ")[0]
         for s, r in sorted(rec["per_seed_byte_table"].items()):
             W(f"| {tag} | {s} | {r['evict_bytes_changed']:,} | "
@@ -330,13 +393,91 @@ def build(fixed_out: Path, joint_out: Path, dest: Path, log: Callable = print) -
               f"{r['hole_bytes_changed']} | **{r['hole_bytes_outside']}** | "
               f"{r['negative_control_bytes']:,} |")
 
+    # ⭐ parent vs my-fixed is a REPRODUCIBILITY statement, kept out of the dial contrast.
+    repro = None
+    if P:
+        cells, same = 0, 0
+        for s in sorted(A["per_seed_byte_table"]):
+            if s not in P["per_seed_byte_table"]:
+                continue
+            for q, v in A["per_seed_byte_table"][s].items():
+                cells += 1
+                same += int(P["per_seed_byte_table"][s].get(q) == v)
+        nov = {}
+        for flav in ("hole", "evict"):
+            for nm in NOVEL_REFUSERS:
+                if nm in A["novel"][flav] and nm in P["novel"][flav]:
+                    cells += 1
+                    ok_ = (A["novel"][flav][nm]["per_seed"]
+                           == P["novel"][flav][nm]["per_seed"])
+                    same += int(ok_)
+                    nov[f"{flav}/{nm}"] = ok_
+        repro = {"cells": cells, "identical": same, "all_identical": bool(same == cells),
+                 "novel_per_seed_identical": nov}
+        W("")
+        W("### ⭐ Reproducibility of the PINNED arm -- my build against the parent's")
+        W("")
+        W(f"Same configuration, my machine, `OMP_NUM_THREADS=3`: **{same}/{cells}** "
+          "per-seed cells identical (byte counts, item counts, negative control and every "
+          "per-seed novel-tuple count). ⛔ Kept as a separate statement rather than folded "
+          "into the dial contrast, because a reproducibility failure and an instrument "
+          "effect are different things and must not be allowed to look alike.")
+
+    # -- ⭐ the cross-hub comparability test ------------------------------------
+    DH = collect_delete_hub(Path(delete_out)) if delete_out else {}
+    verdict = None
+    if DH:
+        W("")
+        W("### ⭐⭐ ARE THE TWO HUBS COMPARABLE NOW? -- the joint arm against "
+          "`w5 hub/delete`'s own artifacts")
+        W("")
+        W("⛔ Read from ITS `run1/seed_*/bytes.json`, not from its LOG. After "
+          "`--bridge-mode joint` the two hubs select the same pool draw, the same atom "
+          "seed, the same encoder, the same decoder and the same classifier off the same "
+          "store-seed index, so **its numbers are a prediction for mine**, not merely a "
+          "similar quantity. The parent's fixed column is printed beside, to show what "
+          "was and was not comparable before.")
+        W("")
+        W("| store seed | quantity | parent (fixed) | ⭐ this retry (joint) | "
+          "`w5 hub/delete` | joint == delete? |")
+        W("|---|---|---|---|---|---|")
+        agree, total = 0, 0
+        for s in ("0", "1", "2"):
+            if s not in DH or s not in B["per_seed_byte_table"]:
+                continue
+            for q, lbl in (("evict_bytes_changed", "evict: bytes changed"),
+                           ("evict_bytes_outside", "evict: bytes OUTSIDE ⭐"),
+                           ("n_items_evicted", "items evicted"),
+                           ("negative_control_bytes", "negative control bytes")):
+                fa = A["per_seed_byte_table"].get(s, {}).get(q)
+                bb = B["per_seed_byte_table"][s].get(q)
+                dd = DH[s].get(q)
+                same = (bb == dd)
+                total += 1
+                agree += int(same)
+                W(f"| {s} | {lbl} | {fa:,} | **{bb:,}** | {dd:,} | "
+                  f"{'⭐ **YES**' if same else '⛔ no'} |")
+        verdict = {"cells_agreeing": agree, "cells_compared": total,
+                   "all_agree": bool(agree == total)}
+        W("")
+        if verdict["all_agree"]:
+            W(f"⭐⭐ **{agree}/{total} cells agree EXACTLY.** The two hubs' seed-1 and seed-2 "
+              "numbers are now **comparable**, and the reason is mechanical rather than "
+              "statistical: under `joint` they are the same store, built from the same "
+              "bytes, so they may share a row.")
+        else:
+            W(f"⛔ **{agree}/{total} cells agree.** The two hubs are **NOT** comparable "
+              "even under `joint`, and the disagreeing cells above say where. Something "
+              "other than the bridge seed differs between the two builds and it must be "
+              "found before any shared row is printed.")
+
     W("")
     W("### Instrument provenance -- which encoder/decoder/classifier each seed actually read")
     W("")
     W("| tree | store seed | bridge seed | features sha256 | encoder hash | decoder hash | "
       "classifier hash |")
     W("|---|---|---|---|---|---|---|")
-    for rec in (A, B):
+    for rec in ([P] if P else []) + [A, B]:
         tag = rec["label"].split(" ")[0]
         for s, p in sorted(rec["provenance"].items()):
             W(f"| {tag} | {s} | {p['bridge_seed']} | "
@@ -349,10 +490,14 @@ def build(fixed_out: Path, joint_out: Path, dest: Path, log: Callable = print) -
     dest = Path(dest)
     dest.mkdir(parents=True, exist_ok=True)
     (dest / "BRIDGE-SPREAD.md").write_text(md, encoding="utf-8")
-    _jdump({"fixed": A, "joint": B, "instrument_cross_check": ok},
+    _jdump({"parent_fixed": P, "mine_fixed": A, "mine_joint": B,
+            "instrument_cross_check": ok, "delete_hub": DH,
+            "comparability_verdict": verdict, "pinned_arm_reproducibility": repro},
            dest / "bridge_spread.json")
     log(md)
-    return {"fixed": A, "joint": B, "cross_check": ok}
+    return {"parent_fixed": P, "mine_fixed": A, "mine_joint": B, "cross_check": ok,
+            "delete_hub": DH, "comparability_verdict": verdict,
+            "pinned_arm_reproducibility": repro}
 
 
 def main(argv=None) -> int:
@@ -360,8 +505,14 @@ def main(argv=None) -> int:
     p.add_argument("--fixed-out", required=True)
     p.add_argument("--joint-out", required=True)
     p.add_argument("--dest", required=True)
+    p.add_argument("--delete-out", default=None,
+                   help="w5 hub/delete's run tree, for the cross-hub comparability test")
+    p.add_argument("--parent-out", default=None,
+                   help="the PARENT hub's own run tree, printed as the published column")
     a = p.parse_args(argv)
-    build(Path(a.fixed_out), Path(a.joint_out), Path(a.dest))
+    build(Path(a.fixed_out), Path(a.joint_out), Path(a.dest),
+          delete_out=Path(a.delete_out) if a.delete_out else None,
+          parent_out=Path(a.parent_out) if a.parent_out else None)
     return 0
 
 
