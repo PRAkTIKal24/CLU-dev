@@ -684,6 +684,8 @@ def _judge_in_chunks(J, feats: np.ndarray, log: Callable, label: str,
     Lowered from 4096 to 1024 after a seed died silently mid-judge on a box shared with
     three other agents (hub LOG 2026-09-20T01:10Z).
     """
+    import jax
+
     if chunk % int(PINS["eval_batch"]):
         raise AssertionError(
             f"judge chunk {chunk} is not a multiple of eval_batch "
@@ -693,6 +695,19 @@ def _judge_in_chunks(J, feats: np.ndarray, log: Callable, label: str,
     for s in range(0, feats.shape[0], chunk):
         e = min(s + chunk, feats.shape[0])
         out[s:e] = J.read_back(feats[s:e], int(PINS["eval_batch"]))
+        # ⛔⛔ THE FROZEN HARNESS LEAKS A COMPILED EXECUTABLE PER CALL, and this is the
+        # only thing standing between a three-seed run and an OOM on a shared box.
+        # `gen_probe.decode_features` and `gen_probe.predict_factors` each build a FRESH
+        # `eqx.filter_jit(jax.vmap(model))` on every call, and `Judge.read_back` calls
+        # both once per `eval_batch`-sized slice. JAX keys its compilation cache on the
+        # wrapped function object, so each one is a new executable that is never reused
+        # and never freed -- measured by `w5 hub/delete` at ~13 MB/s, ~20 MB per unit.
+        # ⛔ `gen_probe` is harness code and charter §A.4 says editing it voids the
+        # numbers, so it is NOT edited. `jax.clear_caches()` is a JAX API call in MY
+        # code that frees exactly those orphaned executables. ⭐ It cannot move a number:
+        # it evicts compiled artifacts, and the next call recompiles the same function
+        # to the same code. The only cost is recompilation time.
+        jax.clear_caches()
         log(f"    judge[{label}] {e}/{feats.shape[0]} ({_now() - t:.0f}s)")
     return out
 
@@ -710,6 +725,13 @@ def run_deletion(out: Path, seed: int, max_seconds: float = 14400.0,
     if art.exists():
         log(f"  deletion(seed {seed}): already on disk")
         return {"skipped": True}
+    # ⭐ RESUMABLE, and this is not cosmetic: the two halves are independent measurements
+    # and the eviction half costs a second judge pass.  A kill during the eviction used
+    # to cost the hole as well.  Each half is checkpointed the moment it is complete, so
+    # a kill costs at most one half.  (Three of my seed processes were killed mid-stage
+    # on this shared box -- hub LOG 2026-09-20T01:30Z and 02:30Z.)
+    ck_h = seed_dir(out, seed) / "_ck_hole.pkl"
+    ck_e = seed_dir(out, seed) / "_ck_evict.pkl"
 
     from ..core.gen_field import (
         assert_no_refit, byte_diff, coupling_index, evict_term, field_address,
@@ -787,6 +809,7 @@ def run_deletion(out: Path, seed: int, max_seconds: float = 14400.0,
 
     FC, oor_C = _render(f0, CV)
     F1, oor_1 = _render(f0, R1["values"])
+
     TC = _judge_in_chunks(J, FC, log, f"corners s{seed}")
     T1 = _judge_in_chunks(J, F1, log, f"row1 s{seed}")
     GF = {k: _render(f0, v) for k, v in GROUPS.items()}

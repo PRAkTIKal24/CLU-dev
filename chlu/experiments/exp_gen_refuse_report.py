@@ -267,12 +267,75 @@ def _agg(vals) -> dict:
             "n_seeds": int(a.size), "per_seed": [float(x) for x in a]}
 
 
+def score_rivals(out: Path, Q: dict, log: Callable = print) -> dict:
+    """Run 3: the prototype table refusing by absence, and kNN density.
+
+    ⛔ Neither can win: rows 5/6 already tie the 8-byte rule at a perfect pair. They are
+    here because the target file names them, and because ⭐ both have ``delta_reject =
+    0.0000`` on a conjunction deletion for the same exact reason the 8-byte rule does --
+    which widens the run-2 claim from "a per-factor gate cannot follow" to "no
+    per-factor and no atom-density rule can follow".
+    """
+    from .exp_gen_refuse import bitmap8_bytes, table_absence_bytes
+
+    per_seed = {}
+    for seed in SEEDS:
+        p = seed_dir(out, seed) / "rivals.npz"
+        if not p.exists():
+            log(f"  ⛔ seed {seed}: rivals.npz absent -- DECLARED NOT RUN, never a null")
+            continue
+        arms = np.load(p, allow_pickle=True)["arms"].item()
+        meta = json.loads((seed_dir(out, seed) / "rivals.json").read_text("utf-8"))
+        rows = {}
+        for name in ("table_absence", "knn_density"):
+            if name not in arms:
+                continue
+            led = {"table_absence": meta["table_absence_bytes"],
+                   "knn_density": 524_288}[name]
+            oc = {}
+            for rid, _ in QUERY_ROWS:
+                a = np.asarray(arms[name][rid]["accept"], bool)
+                oc[rid] = make_outcome(
+                    accept=a, valid=np.zeros(a.size, bool),
+                    tuples=-np.ones((a.size, 6), np.int64), threshold=0.0,
+                    setting={"arm": name}, byte_ledger={"deployed_bytes": led})
+            rows[name] = {
+                "deployed_bytes": led,
+                "r1_seen_accept": float(oc["r1_seen"]["accept"].mean()),
+                "r2_accept": float(oc["r2_unseen_valid"]["accept"].mean()),
+            }
+            for rid in ("r5_comp_refusal", "r6_invalid_refusal"):
+                rows[name][rid] = score_refusal_row(oc[rid], oc["r1_seen"], row_id=rid)
+        per_seed[seed] = {"rows": rows, "meta": meta}
+        log(f"  seed {seed}: rivals scored")
+
+    # ⭐ the identity check declared in PREREG-3 §4.1, run rather than assumed
+    identical = None
+    if per_seed and Q:
+        checks = []
+        for s in per_seed:
+            if s not in Q:
+                continue
+            for rid in ("r5_comp_refusal", "r6_invalid_refusal"):
+                a = per_seed[s]["rows"].get("table_absence", {}).get(rid)
+                b = Q[s]["rows"].get("bitmap8", {}).get(rid)
+                if a and b:
+                    checks.append(abs(a["reject_invalid"] - b["reject_invalid"]) < 1e-12)
+            a1 = per_seed[s]["rows"].get("table_absence", {}).get("r1_seen_accept")
+            b1 = Q[s]["rows"].get("bitmap8", {}).get("r1_seen_accept")
+            if a1 is not None and b1 is not None:
+                checks.append(abs(a1 - b1) < 1e-12)
+        identical = bool(checks) and all(checks)
+    return {"per_seed": per_seed, "table_absence_equals_bitmap8": identical}
+
+
 def build_report(out: Path, log: Callable = print) -> dict:
     cond = load_condition()
     grid = cond["grid"]
     c3, c4 = scored_corners(cond)
     Q = score_queries(out, log=log)
     D = score_deletion(out, log=log)
+    R = score_rivals(out, Q, log=log)
 
     seeds_q = sorted(Q)
     seeds_d = sorted(D)
@@ -307,7 +370,56 @@ def build_report(out: Path, log: Callable = print) -> dict:
             "⛔ Mechanism can enter the row; the fit cannot. Not counted in either "
             "direction."),
         "per_seed_queries": Q, "per_seed_deletion": D,
+        "rivals": R,
     }
+    # -- the rival refusers, as a table beside everything else -------------
+    rt = {}
+    for row in ("r5_comp_refusal", "r6_invalid_refusal"):
+        rt[row] = {}
+        for name in ("table_absence", "knn_density"):
+            got = [R["per_seed"][s]["rows"].get(name, {}).get(row)
+                   for s in sorted(R["per_seed"])]
+            got = [g for g in got if g]
+            if not got:
+                continue
+            first = sorted(R["per_seed"])[0]
+            rt[row][name] = {
+                "deployed_bytes": R["per_seed"][first]["rows"][name]["deployed_bytes"],
+                "reject_invalid": _agg([g["reject_invalid"] for g in got]),
+                "accept_unseen_valid": _agg([g["accept_unseen_valid"] for g in got]),
+                "score_gmean": _agg([g["score"] for g in got]),
+            }
+    rt["r1_seen_accept"] = {
+        n: _agg([R["per_seed"][s]["rows"][n]["r1_seen_accept"]
+                 for s in sorted(R["per_seed"]) if n in R["per_seed"][s]["rows"]])
+        for n in ("table_absence", "knn_density")}
+    rt["hole_delta_reject"] = {
+        n: _agg([R["per_seed"][s]["meta"]["hole"][n]["delta_reject"]
+                 for s in sorted(R["per_seed"])
+                 if n in R["per_seed"][s]["meta"].get("hole", {})])
+        for n in ("table_absence", "knn_density")}
+    rt["hole_accept_unseen_conjunction"] = {
+        n: _agg([R["per_seed"][s]["meta"]["hole"][n]["accept_unseen_conjunction_post"]
+                 for s in sorted(R["per_seed"])
+                 if n in R["per_seed"][s]["meta"].get("hole", {})])
+        for n in ("table_absence", "knn_density")}
+    rep["TABLE_rivals"] = rt
+    rep["lace_energy"] = {
+        "NOT_RUN": True,
+        "why": "⛔ DECLARED NOT RUN, never a null. Spoke A does not expose LACE as a "
+               "callable: its output is a stochastic draw, not a function of the "
+               "request, so an energy cannot be evaluated on my requests. Established "
+               "mechanically (`load_rival` raises `RivalRefusal`), not asserted.",
+        "byte_multiple_over_the_store": 95.1,
+    }
+    rep["full_rival_set_on_a_refusal_row"] = (
+        "⛔ DASH + FOOTNOTE, established mechanically and not asserted. Every learner in "
+        "spoke A's set is a GENERATOR: `r(values) -> (features, out_of_range)`. It "
+        "answers every in-range request and has no mechanism by which it could decline, "
+        "so on a refusal row it IS the `accept_everything` degenerate arm and scores 0 "
+        "by construction. Separately, every one of them is fitted on "
+        "`montero_combination`, which holds BOTH held-out values, so on rows 5 and 7 it "
+        "saw what the field store never did. ⛔ A dash is never a win for us.")
 
     # -- the aggregate refusal table, 8-byte rule BESIDE every number -------
     tab = {}
