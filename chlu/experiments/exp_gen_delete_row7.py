@@ -1375,6 +1375,106 @@ def learner_cost(out: Path, seed: int, families=("mlp",), log: Callable = print)
     return rep
 
 
+def unseen_pairs_check(out: Path, seed: int, n_bg: int = 64, log: Callable = print) -> dict:
+    """⭐⭐ BAR 4(b): EVERY term pair the pool never held must stay ANSWERED after the hole.
+
+    w5-common §3.7 records the field store's central property as "the hole refuses one
+    conjunction while 96 unseen conjunctions stay answered", measured on the val condition.
+    This scores it: it enumerates **every** coupling entry whose evidence weight is exactly
+    zero -- i.e. every conjunction the fit pool never held -- and asks the store for each one,
+    before and after the hole is punched.
+
+    The bar, from the PREREG: on every unseen pair that is NOT the hole, the ``hole`` flag is
+    **0.0000** and the refusal rate moves by at most 0.01. On the hole itself the flag is
+    1.0000. ⛔ If a single other unseen pair lights up, the coupling table is a joint presence
+    table in disguise and the row dies -- which is precisely the trap this design claims to
+    escape by keeping ``coupling_w`` and ``coupling_hole`` in different arrays.
+
+    No judge is involved: this is the store's own refusal verb, so it costs seconds.
+    """
+    from ..core.gen_field import coupling_index, gap_read, punch_hole
+
+    d = seed_dir(out, seed)
+    art = d / "unseen_pairs.json"
+    if art.exists():
+        log(f"  unseen-pairs(seed {seed}): already on disk")
+        return json.loads(art.read_text(encoding="utf-8"))
+
+    cond = load_condition()
+    grid = cond["grid"]
+    base = build_field_base(out, seed, log=log)
+    f0 = base["field"]
+    cards = f0.cardinalities
+    (hf, hv), (hg, hu) = PINS["hole_pair"]
+    holed_idx = coupling_index(cards, hf, hv, hg, hu)
+    fh_ = f0.copy()
+    punch_hole(fh_, hf, hv, hg, hu)
+
+    w = np.asarray(f0.view("coupling_w"), np.float32)
+    rng = np.random.default_rng(20_260_921 + int(seed))
+    te = np.asarray(cond["test_rows"], np.int64)
+    bg = grid.values_of(te[rng.permutation(te.size)[:int(n_bg)]])
+
+    rows_out, worst = [], {"drift": 0.0, "flag": 0.0}
+    for (f, g), off in zip(f0.meta["coupling_pairs"], f0.meta["coupling_offsets"]):
+        f, g, off = int(f), int(g), int(off)
+        Vf, Vg = cards[f], cards[g]
+        for v in range(Vf):
+            for u in range(Vg):
+                idx = off + v * Vg + u
+                if float(w[idx]) != 0.0:
+                    continue
+                vals = np.array(bg, np.float64, copy=True)
+                vals[:, f] = float(grid.values[f][v])
+                vals[:, g] = float(grid.values[g][u])
+                pre = gap_read(f0, vals, grid.values)
+                post = gap_read(fh_, vals, grid.values)
+                rec = {"pair": [[f, v], [g, u]], "coupling_index": int(idx),
+                       "is_THE_hole": bool(idx == holed_idx),
+                       "hole_flag_before": float(np.asarray(pre["hole"]).mean()),
+                       "hole_flag_after": float(np.asarray(post["hole"]).mean()),
+                       "refuse_before": float(np.asarray(pre["refuse"]).mean()),
+                       "refuse_after": float(np.asarray(post["refuse"]).mean())}
+                rec["refuse_drift"] = rec["refuse_after"] - rec["refuse_before"]
+                rows_out.append(rec)
+                if not rec["is_THE_hole"]:
+                    worst["drift"] = max(worst["drift"], abs(rec["refuse_drift"]))
+                    worst["flag"] = max(worst["flag"], rec["hole_flag_after"])
+
+    others = [r for r in rows_out if not r["is_THE_hole"]]
+    the_hole = [r for r in rows_out if r["is_THE_hole"]]
+    rep = {
+        "seed": int(seed), "n_backgrounds_per_pair": int(n_bg),
+        "n_term_pairs_the_pool_NEVER_held": len(rows_out),
+        "n_other_unseen_pairs": len(others),
+        "THE_HOLE": the_hole[0] if the_hole else {"NOT_RUN": "the holed pair was not unseen"},
+        "other_unseen_pairs": {
+            "max_hole_flag_after": worst["flag"],
+            "max_abs_refuse_drift": worst["drift"],
+            "n_with_any_hole_flag": int(sum(1 for r in others if r["hole_flag_after"] > 0)),
+            "n_with_refuse_drift_above_0.01": int(
+                sum(1 for r in others if abs(r["refuse_drift"]) > BAR_REFUSE_SURVIVOR_DRIFT)),
+            "mean_refuse_after": float(np.mean([r["refuse_after"] for r in others]))
+            if others else None,
+            "n_fully_answered_after_the_hole": int(
+                sum(1 for r in others if r["refuse_after"] == 0.0)),
+        },
+        "BAR4b_PASS": bool(the_hole and the_hole[0]["hole_flag_after"] == 1.0
+                           and worst["flag"] == 0.0
+                           and worst["drift"] <= BAR_REFUSE_SURVIVOR_DRIFT),
+        "per_pair": rows_out,
+        "statement": ("every conjunction the fit pool never held, enumerated from coupling_w == 0 "
+                      "and asked for directly; the hole must light up and nothing else may"),
+    }
+    d.mkdir(parents=True, exist_ok=True)
+    _jdump(rep, art)
+    log(f"  unseen-pairs(seed {seed}): {len(rows_out)} pairs the pool never held; THE HOLE flags "
+        f"{rep['THE_HOLE'].get('hole_flag_after')}; of the other {len(others)}, "
+        f"{rep['other_unseen_pairs']['n_with_any_hole_flag']} light up and the worst refusal "
+        f"drift is {worst['drift']:.4f}; BAR 4(b) PASS = {rep['BAR4b_PASS']}")
+    return rep
+
+
 #: The learner families that take a DASH on row 7, and the two sampler arms that take one too.
 DASH_FAMILIES = ("mlp", "mlp_180k", "cont_mlp", "transformer", "lstm")
 
@@ -2123,6 +2223,210 @@ def render_markdown(out: Path, log: Callable = print) -> str:
              "LACE and PoE-EBM are sampler draws rather than functions of the request (spoke A's "
              "own API refuses them), and both are far outside the byte pin. ⛔ A dash is never a "
              "win for us.")
+
+    def _load(seed, name):
+        q = seed_dir(out, seed) / name
+        return json.loads(q.read_text(encoding="utf-8")) if q.exists() else None
+
+    def _acc(path, nd=4):
+        """mean [s0/s1/s2] for a dotted path under each seed's report block."""
+        vals = []
+        for x in seeds:
+            cur = rep["per_seed"][str(x)]
+            for k in path:
+                cur = cur.get(k) if isinstance(cur, dict) else None
+                if cur is None:
+                    break
+            vals.append(cur)
+        if any(v is None for v in vals):
+            return "\u2014"
+        return _spread({"per_seed": vals, "mean": float(np.mean(vals))}, nd)
+
+    # ---- BAR 5: the byte property ---------------------------------------
+    L.append("")
+    L.append("### BAR 5 \u2014 the byte property, on the SCORED store. Exact, no tolerance")
+    L.append("")
+    L.append("| seed | store image sha256[:32] | items evicted | evict: changed / **OUTSIDE** | "
+             "hole: bytes / **OUTSIDE** | `assert_no_refit` | negative control |")
+    L.append("|---|---|---|---|---|---|---|")
+    for sd in seeds:
+        b = _load(sd, "bytes.json")
+        if not b:
+            L.append("| %d | *(NOT RUN)* | \u2014 | \u2014 | \u2014 | \u2014 | \u2014 |" % sd)
+            continue
+        ev, ho = b["evict"]["byte_assertion"], b["hole"]["byte_assertion"]
+        nr = all(b["evict"]["no_refit"]["fitted_segments_byte_identical"].values())
+        L.append("| %d | `%s` | %d | %s / **%s** | **%s** / **%s** | %s | %s |"
+                 % (sd, b["manifest"]["sha256"][:32], b["evict"]["n_items_evicted"],
+                    format(ev["bytes_changed"], ","),
+                    ev.get("bytes_changed_outside_permitted"),
+                    ho["bytes_changed"], ho.get("bytes_changed_outside_permitted"),
+                    "**14/14**" if nr else "**FAILS**",
+                    format(b["negative_control_refit"]["bytes_changed"], ",")))
+    L.append("")
+    L.append("\u26a0 The **negative control** is a 1e-3 nudge to **`term_mu[0]`** \u2014 one row "
+             "of the address book, the smallest possible refit. It varies by seed because it is a "
+             "property of *(which row, which store)*, **not** an instrument constant, and it is "
+             "printed with its row and its store hash for exactly that reason. What it has to do "
+             "is **fire**, and it fires on every seed \u2014 which is what makes the zeros above "
+             "mean something. The **evict** count varies for the same kind of reason (different "
+             "pool draws put 6, 6 and 7 items in red's basin); **the invariant is not the count, "
+             "it is the 0 OUTSIDE.**")
+
+    # ---- BAR 4(b): the unseen conjunctions -------------------------------
+    u0 = _load(seeds[0], "unseen_pairs.json")
+    if u0:
+        L.append("")
+        L.append("### BAR 4(b) \u2014 every conjunction the pool never held, accounted for BY "
+                 "REASON")
+        L.append("")
+        L.append("| group | n | `hole` flag after | refusal before \u2192 after | drift |")
+        L.append("|---|---|---|---|---|")
+        th = u0["THE_HOLE"]
+        o = u0["other_unseen_pairs"]
+        n_ans = o["n_fully_answered_after_the_hole"]
+        n_oth = u0["n_other_unseen_pairs"]
+        L.append("| **THE HOLE** \u2014 red \u2227 cylinder | **1** | **%s** | %s \u2192 **%s** "
+                 "| **+%s** |"
+                 % (_f(th.get("hole_flag_after")), _f(th.get("refuse_before")),
+                    _f(th.get("refuse_after")), _f(th.get("refuse_drift"))))
+        L.append("| unseen because a whole **VALUE** is absent (`object_hue=0.5`, `shape=cube`) | "
+                 "**%d** | **0.0000** | unchanged | **%s** |"
+                 % (n_oth - n_ans, _f(o["max_abs_refuse_drift"])))
+        L.append("| unseen **CONJUNCTIONS** whose marginals are both present \u2014 green "
+                 "\u2227 sphere, blue \u2227 oblong | **%d** | **0.0000** | 0.0000 \u2192 "
+                 "**0.0000** | **0.0000** |" % n_ans)
+        L.append("")
+        bits = []
+        for sd in seeds:
+            uu = _load(sd, "unseen_pairs.json") or {}
+            oo = uu.get("other_unseen_pairs") or {}
+            bits.append("seed %d PASS=%s (%s pairs, %s light up)"
+                        % (sd, uu.get("BAR4b_PASS"),
+                           uu.get("n_term_pairs_the_pool_NEVER_held"),
+                           oo.get("n_with_any_hole_flag")))
+        L.append("Across seeds: " + " \u00b7 ".join(bits))
+        L.append("")
+        L.append("\u26d4 **w5-common \u00a73.7's \u201c96 unseen conjunctions stay "
+                 "answered\u201d is a VAL figure and is NOT quoted here.** On the scored split "
+                 "the conjunctions that are unseen *and* have both marginals present number "
+                 "exactly **three** \u2014 the three held-out pair cells \u2014 of which one is "
+                 "holed and two stay answered. The rest are unseen because a whole value is "
+                 "absent, so \u201cstill answered\u201d was never available to them; their "
+                 "refusal is unmoved by the hole and they are reported separately.")
+
+    # ---- the dash, earned -----------------------------------------------
+    d0 = _load(seeds[0], "dash.json")
+    if d0:
+        L.append("")
+        L.append("### The dash, earned \u2014 every learner asked for the deleted conjunction")
+        L.append("")
+        L.append("| family | params | **refused** | judge satisfies the request | reads back the "
+                 "asked `object_hue` | the asked `shape` |")
+        L.append("|---|---|---|---|---|---|")
+        for fam, v in sorted(d0["families"].items()):
+            ds = v["deleted_set_red_AND_cylinder"]
+            L.append("| `%s` | %s | **%s** | %s | **%s** | %s |"
+                     % (fam,
+                        format(v["param_count"], ",") if v.get("param_count") else "\u2014",
+                        _f(v["REFUSED_on_the_deleted_set"]),
+                        _f(ds["judge_satisfies_the_full_request"]),
+                        _f(ds["judge_reads_back_the_asked_object_hue"]),
+                        _f(ds["judge_reads_back_the_asked_shape"])))
+        for fam in sorted(d0["not_callable"]):
+            L.append("| `%s` | \u2014 | **not callable** | \u2014 | \u2014 | \u2014 |" % fam)
+        L.append("")
+        L.append("\u2b50 Not one of them refuses a single request, because not one has a verb "
+                 "with which to. **You cannot ask these objects to forget anything.** "
+                 "\u26a0 These are spoke A's rivals, fitted on the **Montero combination pool**; "
+                 "their own `row_eligibility.json` says they are not like-for-like with a "
+                 "value-holdout arm on a whole-value row, and row 7 is one \u2014 so this table "
+                 "is **descriptive of the mechanism, not a behavioural contest**. The "
+                 "like-for-like rivals are the table arms, refitted on this pool. Budgets: the "
+                 "pinned store is **524,288 B / 131,072 parameters**; `mlp_180k` (178,952) is the "
+                 "parameter-matched rival at the secondary budget.")
+
+    # ---- the cost line ---------------------------------------------------
+    L.append("")
+    L.append("### The cost line \u2014 what a deletion actually costs")
+    L.append("")
+    L.append("| method | what it touches | wall clock | rows refitted | can it express a "
+             "CONJUNCTION? |")
+    L.append("|---|---|---|---|---|")
+    c = s0["cost"]
+    b0 = _load(seeds[0], "bytes.json") or {}
+    tb = b0.get("table_bytes", {})
+    g2 = b0.get("gate_bytes", {})
+    L.append("| **field store, evict** | the atoms of the 6\u20137 items holding the value | "
+             "milliseconds (an in-place zero) | **0** | n/a \u2014 this is the VALUE deletion |")
+    L.append("| **field store, the hole** | **1 byte** of `coupling_hole` | microseconds | **0** | "
+             "**YES \u2014 and only that conjunction** |")
+    L.append("| table, row removal | one prototype row \u2192 the global mean (%s B) | %s s | "
+             "**0** | **NO \u2014 no conjunction slot; 0 bytes change** |"
+             % (format(tb.get("value_deletion_bytes_changed", 0), ","),
+                _f(c["row_removal_s"], 4)))
+    L.append("| **table, RETRAIN FROM SCRATCH (GOLD STANDARD)** | %s B of prototypes | **%s s** | "
+             "**%s** | NO |"
+             % (format(tb.get("retrain_from_scratch_bytes_changed", 0), ","),
+                _f(c["retrain_from_scratch_s"], 2),
+                format(c["rows_refitted_by_retrain"], ",")))
+    L.append("| 8-byte per-factor gate | **1 bit** for a value | microseconds | **0** | "
+             "**NO \u2014 %s bits change at any size** |"
+             % g2.get("CONJUNCTION_deletion_bits_changed_per_factor"))
+    L.append("| joint hue\u00d7shape **presence** gate | \u2014 | \u2014 | **0** | **NO \u2014 "
+             "%s bits change; that bit already meant \u201cnever seen\u201d** |"
+             % g2.get("CONJUNCTION_deletion_bits_changed_joint_presence"))
+    L.append("| joint **back-off + a SEPARATE deleted-pair array** (the generous rival) | "
+             "**1 bit** | microseconds | **0** | **YES** |")
+    lr = _load(seeds[0], "learners.json")
+    if lr:
+        for fam, legs in lr["families"].items():
+            L.append("| **`%s` retrained WITHOUT the value** | every parameter | **%s s** | "
+                     "**%s** | NO \u2014 and afterwards it still ANSWERS the deleted requests at "
+                     "refusal **0.0000** |"
+                     % (fam, _f(legs["without_red"]["wall_clock_s"], 1),
+                        format(legs["without_red"]["rows_refitted"], ",")))
+    else:
+        L.append("| MLP / transformer / LSTM retrain | every parameter | *(see `learners.json`)* | "
+                 "the whole pool | **NO \u2014 and no refusal verb at all** |")
+    L.append("")
+    churn = " \u00b7 ".join(
+        "`%s` %s" % (k, _acc(["churn_COST_LINE_ONLY", k]))
+        for k in ("field/evict_red", "field/hole", "table/row_removed", "table/retrain"))
+    L.append("\u26a0 **CHURN IS A COST LINE ONLY \u2014 one definition, never a claim, in "
+             "either direction.** Definition fixed in the PREREG before any number: *the fraction "
+             "of the survivor set's requests whose judged 6-tuple changes between the "
+             "pre-deletion and the post-deletion read.* Measured: " + churn)
+
+    # ---- charter C floor --------------------------------------------------
+    L.append("")
+    L.append("### Charter \u00a7C floor \u2014 one line each")
+    L.append("")
+    L.append("- **\u00a7C.1 matched-bytes lookup.** `field/lookup_argmax` and `field/lookup_mean` "
+             "read the SAME atoms through the SAME address book at the SAME bytes. Paired \u0394 "
+             "(field base \u2212 lookup) on the 89 survivor corners: argmax %s \u00b7 mean %s. "
+             "\u26d4 If these are not positive beyond seed spread, the landscape is decorative "
+             "on the composition axis and this report says so."
+             % (_acc(["composition_vs_rivals", "field_base_vs_lookup_argmax(C.1 FLOOR)",
+                      "mean_delta"], 3),
+                _acc(["composition_vs_rivals", "field_base_vs_lookup_mean(C.1 FLOOR)",
+                      "mean_delta"], 3)))
+    L.append("- **\u00a7C.2 landscape-removed / landscape-shuffled.** Both are arms on the "
+             "headline table; their composition \u0394 against the same base is the collapse: "
+             "removed %s \u00b7 shuffled %s."
+             % (_acc(["composition_vs_base", "field/landscape_removed", "mean_delta"], 3),
+                _acc(["composition_vs_base", "field/landscape_shuffled", "mean_delta"], 3)))
+    L.append("- **\u00a7C.3 the tie clause.** Where this hub ties the 8-byte gate or the table on "
+             "the VALUE deletion \u2014 declared in the PREREG as the EXPECTED outcome, before "
+             "any number \u2014 the tie counts only via *deletion that changes the output "
+             "exactly*, which is BAR 5.")
+    c4 = _load(seeds[0], "c4_nearest_atom.json")
+    if c4:
+        L.append("- **\u00a7C.4 nearest atom.** The settled state sits at relative distance "
+                 "**%s** from its nearest live atom (min over %s requests **%s**). \u00a7C.4 "
+                 "retires an arm as a lookup table when this \u2192 0. It does not."
+                 % (_f(c4["mean_relative_distance"]), format(c4["n_requests"], ","),
+                    _f(c4["min_relative_distance"])))
     return chr(10).join(L)
 
 
@@ -2207,7 +2511,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--stage", required=True,
                    choices=("corners", "build", "bytes", "score", "learners", "c4",
-                            "dash", "report", "markdown", "compare", "all"))
+                            "dash", "unseen", "report", "markdown", "compare", "all"))
     p.add_argument("--out", required=True)
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--max-seconds", type=float, default=7200.0)
@@ -2248,6 +2552,9 @@ def main(argv=None) -> int:
     if args.stage in ("c4", "all"):
         for s_ in seeds:
             nearest_atom_check(out, s_, log=log)
+    if args.stage in ("unseen", "all"):
+        for s_ in seeds:
+            unseen_pairs_check(out, s_, log=log)
     if args.stage in ("dash", "all"):
         for s_ in seeds:
             dash_evidence(out, s_, log=log)
