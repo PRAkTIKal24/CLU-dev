@@ -262,14 +262,15 @@ def main(n_eval=500, n_train=2000, seed0=1_000_000, **genkw):
     rng = np.random.default_rng(12345)
     print("CMAZE-1 screening -- exact judge, no tolerance anywhere")
     out = {}
-    out["filtered/slack10"] = sweep("A. ADOPTION CONFIGURATION", n_eval, n_train,
-                                    0.10, True, seed0, genkw, rng)
-    out["unfiltered/slack10"] = sweep("B. UNFILTERED GENERATOR (no 'bends the route' filter)",
-                                      n_eval, n_train, 0.10, False, seed0 + 2 * 10 ** 7,
-                                      genkw, rng)
-    out["filtered/slack50"] = sweep("C. LOOSE BUDGET (+50% slack) -- how much the budget matters",
-                                    n_eval, n_train, 0.50, True, seed0 + 4 * 10 ** 7,
-                                    genkw, rng)
+    out["adopted/slack10"] = sweep(
+        "A. ADOPTION CONFIGURATION (adversarial placement, NO acceptance filter)",
+        n_eval, n_train, 0.10, False, seed0, genkw, rng)
+    out["filtered/slack10"] = sweep(
+        "B. WITH THE ACCEPTANCE FILTER ALSO ON (comparison only)",
+        n_eval, n_train, 0.10, True, seed0 + 2 * 10 ** 7, genkw, rng)
+    out["adopted/slack50"] = sweep(
+        "C. LOOSE BUDGET (+50% slack) -- how much the budget matters",
+        n_eval, n_train, 0.50, False, seed0 + 4 * 10 ** 7, genkw, rng)
     return out
 
 

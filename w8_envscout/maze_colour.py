@@ -344,22 +344,32 @@ def _poison(inst, tint, target_kwargs, rng, max_poison):
 
 
 # ---------------------------------------------------------------- generator
-def generate(seed, h=7, w=7, n_colours=4, braid=0.12, p_tint=0.22,
-             slack=0.10, max_tries=400, require_bend=True, adversarial=0,
+def generate(seed, h=7, w=7, n_colours=4, braid=0.40, p_tint=0.22,
+             slack=0.10, max_tries=400, require_bend=False, adversarial=2,
              max_poison=8):
     """Return an accepted Instance, or None if max_tries is exhausted.
 
-    Acceptance is a statement about the INSTANCE, not about any baseline policy:
-      * the goal is unreachable with no key at all (the doors are load-bearing);
-      * the instance is feasible under RULES A+B;
-      * opt_len(A+B) > opt_len(A alone)  -- rule B genuinely BENDS the route.
-    The third condition is the research question made into a filter: an instance is
-    kept only when composing B with A yields a DIFFERENT route.
+    THE DEFAULTS ARE THE ADOPTED CONFIGURATION: braid=0.40, adversarial=2,
+    require_bend=False.  The interaction between the two rules lives in the
+    DISTRIBUTION (adversarial tint placement, see `_poison`), not in a rejection
+    filter, so no instance is discarded for failing to interact.  Measured at these
+    defaults, n=500, k=4: composition-blind 0.4980, fragment-lookup 0.0000, oracle
+    1.0000.  With uniform tinting instead, the same unfiltered generator gives a
+    composition-blind 0.8940-0.9100 -- that is the number this default exists to avoid.
 
-    `adversarial=R` replaces uniform tinting with R rounds of ADVERSARIAL placement
-    (see `_poison`): round 0 targets the rule-A-only planner, later rounds target the
-    factored planner.  It is normally used with `require_bend=False`, because its whole
-    point is to get the interaction out of the DISTRIBUTION instead of out of a filter.
+    Unconditional acceptance conditions, both statements about the INSTANCE:
+      * the goal is unreachable with no key at all (the doors are load-bearing);
+      * the instance is feasible under RULES A+B.
+
+    `require_bend=True` additionally keeps only instances where
+    opt_len(A+B) > opt_len(A alone) -- the research question turned into a filter.
+    It is OFF by default: adversarial placement already makes rule B bend the route in
+    ~78% of instances without discarding the rest.
+
+    `adversarial=R` runs R rounds of poisoning: round 0 targets the rule-A-only
+    planner, later rounds the factored planner.  It needs route multiplicity to work,
+    which is why braid defaults to 0.40 -- at braid 0.12 the key->door corridor is
+    usually unique, so ~8 of 9 poison candidates revert to preserve feasibility.
     """
     rng = np.random.default_rng(seed)
     for _ in range(max_tries):

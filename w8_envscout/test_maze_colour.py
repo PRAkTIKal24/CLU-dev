@@ -80,8 +80,14 @@ def test_each_rule_actually_refuses(n=300):
 
 
 def test_generator_contract(n=200):
-    """Every accepted instance satisfies the three acceptance conditions exactly."""
-    n_ok = 0
+    """Every accepted instance satisfies the unconditional acceptance conditions.
+
+    At the adopted defaults `require_bend` is OFF -- adversarial placement is supposed
+    to make rule B bend the route without a filter discarding the instances where it
+    does not.  So the bend is measured as a RATE and asserted to be high, not asserted
+    per instance; if it ever collapses, this test says so with the number.
+    """
+    n_ok = bends = 0
     for s in range(n):
         inst = mc.generate(s)
         if inst is None:
@@ -90,9 +96,12 @@ def test_generator_contract(n=200):
         assert not mc._reachable_without_keys(inst), s      # doors are load-bearing
         assert mc.solve(inst)[0] == inst.opt_len, s         # feasible, and opt recorded
         assert mc.solve(inst, rule_b=False)[0] == inst.opt_len_a_only, s
-        assert inst.opt_len > inst.opt_len_a_only, s        # rule B bends the route
         assert inst.budget >= inst.opt_len, s
-    return "%d/%d seeds accepted; all satisfy the acceptance contract" % (n_ok, n)
+        bends += inst.opt_len > inst.opt_len_a_only
+    rate = bends / n_ok
+    assert rate > 0.5, "rule B bends the route in only %.3f of instances" % rate
+    return ("%d/%d seeds accepted; contract holds; rule B bends the route in %.3f"
+            % (n_ok, n, rate))
 
 
 def test_rule_b_alone_is_not_a_cost(n=200):

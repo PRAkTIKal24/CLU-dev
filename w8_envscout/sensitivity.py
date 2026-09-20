@@ -56,36 +56,50 @@ def row(n_eval, seed0, slack, require_bend, genkw):
 
 def main(n_eval=150):
     t0 = time.time()
-    print("CMAZE-1 sensitivity -- 'blind' column is the MAX over the blind planner family")
-    print("%-34s %7s %7s %7s %9s  %s" %
-          ("setting", "accept", "opt", "detour", "blind", "which"))
-    seed = 5_000_000
-    settings = []
-    for k in (2, 3, 4):
-        settings.append(("n_colours=%d" % k, dict(n_colours=k), 0.10))
+    print("CMAZE-1 sensitivity at the ADOPTED DEFAULTS "
+          "(k=4, braid=0.40, adversarial=2, require_bend=False)")
+    print("'blind' is the MAX over the blind planner family -- the same quantity as the headline.")
+    print("%-36s %7s %7s %7s %7s %9s  %s" %
+          ("setting", "accept", "opt", "detour", "bends", "blind", "which"))
+    seed = 7_000_000
+    settings = []                                   # (label, genkw, slack, require_bend)
+    for k in (2, 3, 4, 5):
+        settings.append(("n_colours=%d" % k, dict(n_colours=k), 0.10, False))
+    for r in (0, 1, 2, 3):
+        settings.append(("adversarial=%d%s" % (r, " (uniform)" if r == 0 else ""),
+                         dict(adversarial=r), 0.10, False))
+    for b in (0.12, 0.25, 0.40, 0.55):
+        settings.append(("braid=%.2f" % b, dict(braid=b), 0.10, False))
     for p in (0.12, 0.22, 0.32):
-        settings.append(("p_tint=%.2f" % p, dict(p_tint=p), 0.10))
-    for b in (0.00, 0.12, 0.25):
-        settings.append(("braid=%.2f" % b, dict(braid=b), 0.10))
-    for s in (0.00, 0.10, 0.25, 0.50):
-        settings.append(("slack=%.2f" % s, dict(), s))
+        settings.append(("p_tint=%.2f" % p, dict(p_tint=p), 0.10, False))
+    for sl in (0.00, 0.10, 0.25, 0.50):
+        settings.append(("slack=%.2f" % sl, dict(), sl, False))
     for h in (5, 7, 9):
-        settings.append(("maze=%dx%d cells" % (h, h), dict(h=h, w=h), 0.10))
-    for label, gk, slack in settings:
+        settings.append(("maze=%dx%d cells" % (h, h), dict(h=h, w=h), 0.10, False))
+    for mp in (2, 4, 8, 16):
+        settings.append(("max_poison=%d" % mp, dict(max_poison=mp), 0.10, False))
+    settings.append(("require_bend=True (filter ON)", dict(), 0.10, True))
+    for label, gk, slack, rb in settings:
         seed += 100_000
         try:
-            r = row(n_eval, seed, slack, True, gk)
+            r = row(n_eval, seed, slack, rb, gk)
         except Exception as exc:                     # noqa: BLE001
-            print("%-34s  FAILED: %s" % (label, exc))
+            print("%-36s  FAILED: %s" % (label, exc))
             continue
         if r is None:
-            print("%-34s %7.3f %7s %7s %9s  %s"
-                  % (label, 0.0, "-", "-", "-", "NO INSTANCE SATISFIES THE CONTRACT"))
+            print("%-36s %7.3f %7s %7s %7s %9s  %s"
+                  % (label, 0.0, "-", "-", "-", "-", "NO INSTANCE SATISFIES THE CONTRACT"))
             continue
-        print("%-34s %7.3f %7.1f %7.1f %9.4f  %s"
-              % (label, r["accept"], r["opt"], r["detour"], r["best_blind"], r["best_name"].split("(")[0].strip()))
+        print("%-36s %7.3f %7.1f %7.1f %7.3f %9.4f  %s"
+              % (label, r["accept"], r["opt"], r["detour"], r["bends"], r["best_blind"],
+                 r["best_name"].split("(")[0].strip()))
     print("total %.1fs" % (time.time() - t0))
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    kw = {}
+    for a in sys.argv[1:]:
+        k, v = a.split("=")
+        kw[k] = float(v) if "." in v else int(v)
+    main(**kw)
