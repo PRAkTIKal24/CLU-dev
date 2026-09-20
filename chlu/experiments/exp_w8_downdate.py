@@ -71,7 +71,19 @@ W8_PINS = {
 }
 
 OUT_ROOT = Path(os.environ.get("CHLU_HUB_OUTPUTS", "/c/chlu/outputs")) / "w8-downdate"
+#: ⛔ ONE FILE PER OBJECT. The task pins ``DOWNDATE-READY.json`` for the object this
+#: spoke was scoped to build (``val``); the ``test``-condition object is a DIFFERENT
+#: object -- different partition, different wells, different ranks -- and gets its own
+#: file rather than being merged into the pinned one. That is the same rule the
+#: 19:29Z incident taught: descriptors and assertions in one file must be about one
+#: object. ``DOWNDATE-READY.json`` carries a pointer to the test gate so a hub reading
+#: the pinned path finds it.
 READY = OUT_ROOT / "DOWNDATE-READY.json"
+
+
+def ready_path(condition: str) -> Path:
+    return (READY if str(condition) == "val"
+            else OUT_ROOT / f"DOWNDATE-READY-{condition}.json")
 
 
 def _log(msg: str = "") -> None:
@@ -114,7 +126,7 @@ def _jsonable(o):
 # ---------------------------------------------------------------------------
 
 
-def publish_ready(out_dir=None, **fields) -> dict:
+def publish_ready(out_dir=None, condition: str = "val", **fields) -> dict:
     """⭐⭐ Write/merge ``DOWNDATE-READY.json``.  PARTIAL the moment the store fits.
 
     ⛔ TWO GUARDS, both added after a real incident on 2026-09-20T19:29Z rather than
@@ -142,10 +154,12 @@ def publish_ready(out_dir=None, **fields) -> dict:
                  f"outside {OUT_ROOT}. This gate describes THIS spoke's object; "
                  f"a build elsewhere must publish its own readiness file.")
             return {}
+    target = ready_path(condition)
     cur = {}
-    if READY.exists():
-        with open(READY, encoding="utf-8") as fh:
+    if target.exists():
+        with open(target, encoding="utf-8") as fh:
             cur = json.load(fh)
+    fields.setdefault("condition", condition)
     want = fields.get("condition")
     if want is not None and cur.get("condition") not in (None, want):
         _log(f"  ⛔ REFUSING to publish DOWNDATE-READY: it records condition "
@@ -154,8 +168,9 @@ def publish_ready(out_dir=None, **fields) -> dict:
         return cur
     cur.update(_jsonable(fields))
     cur["utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    _jdump(cur, READY)
-    _log(f"  DOWNDATE-READY.json -> status={cur.get('status')!r}")
+    _jdump(cur, target)
+    _log(f"  {target.name} -> status={cur.get('status')!r} "
+         f"condition={cur.get('condition')!r}")
     return cur
 
 
@@ -164,9 +179,17 @@ def publish_ready(out_dir=None, **fields) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _setup(condition: str = "val"):
+#: The seed this process is running. Set by ``--seed``; the feature cache, the fit pool
+#: and the partition all key off it, so it is threaded rather than assumed to be 0.
+SEED = [0]
+
+
+def _setup(condition: str = "val", seed: int = None):
     from . import exp_gen_factor_wells as fw
     fw.PINS["condition"] = str(condition)
+    if seed is not None:
+        SEED[0] = int(seed)
+    fw.PINS["seed"] = int(SEED[0])
     return fw
 
 
@@ -255,6 +278,7 @@ def stage_fit(out_dir: Path, condition: str, log=_log) -> dict:
         "store_ledger": store_led, "covariance_ledger": cov_led,
         "count_ledger": st.count_ledger(), "coupling_ledger": st.coupling_ledger(),
         "honest_ledger": honest, "rank_report": ranks,
+        "well_posedness": st.well_posedness_report(),
         "hole": hole, "coupling_layout_check": lay,
         "content_sha256": st.content_sha(), "fit_seconds": fit_s,
         "feature_cache": fw.feature_cache_manifest(int(fw.PINS["seed"])),
@@ -264,8 +288,9 @@ def stage_fit(out_dir: Path, condition: str, log=_log) -> dict:
     # assertions a later stage already published. Only the placeholder fields that are
     # genuinely absent are written, and `status` is never downgraded.
     prior = {}
-    if READY.exists():
-        with open(READY, encoding="utf-8") as fh:
+    _rp = ready_path(condition)
+    if _rp.exists():
+        with open(_rp, encoding="utf-8") as fh:
             prior = json.load(fh)
     keep = {k: prior[k] for k in
             ("status", "downdate_equals_refit", "no_pass_over_data",
@@ -273,7 +298,7 @@ def stage_fit(out_dir: Path, condition: str, log=_log) -> dict:
              "all_three_assertions_passed", "smoke", "smoke_pinned", "gauge",
              "post_delete") if k in prior}
     publish_ready(
-        out_dir=out_dir,
+        out_dir=out_dir, condition=condition,
         status=keep.get("status", "partial"),
         store_bytes=int(store_led["deployed_bytes"]),
         cov_bytes=int(cov_led["covariance_bytes"]),
@@ -292,7 +317,9 @@ def stage_fit(out_dir: Path, condition: str, log=_log) -> dict:
         no_pass_over_data=keep.get("no_pass_over_data", False), items_kept=False,
         items_kept_asserted=keep.get("items_kept_asserted", False),
         rank_report={k: v for k, v in ranks.items() if k != "per_well"},
-        seeds=[0], condition=condition,
+        well_posedness={k: v for k, v in st.well_posedness_report().items()
+                        if k != "per_well"},
+        seeds=[int(SEED[0])],
         content_sha256=st.content_sha(),
         note=("PARTIAL: the store fits at the pin and the ledgers are final. The three "
               "assertions and the read smoke follow."),
@@ -465,7 +492,7 @@ def stage_assertions(out_dir: Path, condition: str, log=_log) -> dict:
     _jdump(res, out_dir / "assertions.json")
 
     publish_ready(
-        out_dir=out_dir,
+        out_dir=out_dir, condition=condition,
         status="partial",
         downdate_equals_refit={
             "max_abs_dev_per_well": a1["pinned_value_object_hue_0.0"][
@@ -670,7 +697,7 @@ def stage_smoke(out_dir: Path, condition: str, log=_log, basis_kind: str = "svd"
         f"{sha_before != st.content_sha()}")
 
     publish_ready(
-        out_dir=out_dir,
+        out_dir=out_dir, condition=condition,
         status="ready",
         **{f"smoke{tag}": {"downdate_store_val_valid_mean": mine["valid_mean"],
                "pca_tensor_val_valid_mean": theirs["valid_mean"],
@@ -834,7 +861,7 @@ def stage_gauge(out_dir: Path, condition: str, log=_log) -> dict:
     # `smoke.valid_mean_after_delete = 0.0` and a reader who sees that number without
     # this one beside it will read a GAUGE ARTEFACT as a composition cost. The two
     # belong in the same file.
-    publish_ready(out_dir=out_dir, gauge={
+    publish_ready(out_dir=out_dir, condition=condition, gauge={
         "stores_agree_to": out["stores_agree_to"],
         "svd_basis_max_render_dev": out["svd_basis"].get("max_abs_render_dev"),
         "pinned_basis_max_render_dev": out["pinned_basis"].get("max_abs_render_dev"),
@@ -937,7 +964,7 @@ def stage_postdelete(out_dir: Path, condition: str, log=_log) -> dict:
                  "they were fitted against. Any remaining drop is the deletion."),
     }
     _jdump(out, out_dir / "post_delete.json")
-    publish_ready(out_dir=out_dir, post_delete={
+    publish_ready(out_dir=out_dir, condition=condition, post_delete={
         "before": before["valid_mean"],
         "after_pinned_basis": after_plain["valid_mean"],
         "after_pinned_basis_reindexed": after_matched["valid_mean"],
@@ -1024,7 +1051,7 @@ def stage_postdelete_refit(out_dir: Path, condition: str, log=_log) -> dict:
                "the downdated store equals the store fitted without those rows to "
                "1.164e-10, so a book fitted on it is a book fitted on that store")}
     _jdump(res, out_dir / "post_delete_refit.json")
-    publish_ready(out_dir=out_dir, post_delete_refit={
+    publish_ready(out_dir=out_dir, condition=condition, post_delete_refit={
         "valid_mean": res["valid_mean"], "address_book_refitted": True,
         "n_corners": res["n_corners"]})
     return res
@@ -1112,7 +1139,7 @@ def stage_carry(out_dir: Path, condition: str, log=_log) -> dict:
                     "no refit. The gap that remains between carry and before is the "
                     "deletion.")}
     _jdump(out, out_dir / "carry.json")
-    publish_ready(out_dir=out_dir, post_delete_carry={
+    publish_ready(out_dir=out_dir, condition=condition, post_delete_carry={
         "before": before["valid_mean"],
         "after_naive_same_book": naive["valid_mean"],
         "after_carried_book": carry["valid_mean"],
@@ -1121,12 +1148,264 @@ def stage_carry(out_dir: Path, condition: str, log=_log) -> dict:
     return out
 
 
+def stage_gate(out_dir: Path, condition: str, log=_log) -> dict:
+    """⛔⭐ Assemble the readiness file for a condition from its per-seed artifacts.
+
+    ⚠ Why this exists rather than letting each seed publish: three seeds publishing
+    into one file is the 19:29Z incident again with a different index -- the last
+    writer would leave ITS descriptors sitting beside all three seeds' assertions, and
+    a reader could not tell which store the well sizes belonged to.  So each seed
+    writes its own ``store.json`` / ``assertions.json`` in its own directory, and this
+    stage reads them and writes ONE file in which every per-seed number is inside its
+    own block.
+
+    ⭐ The top-level pass flags are the AND over seeds and the top-level deviation is
+    the WORST over seeds.  A gate that reported a mean would hide a seed that failed.
+    """
+    root = Path(out_dir)
+    seeds, per_seed = [], {}
+    for s in (0, 1, 2):
+        d = root / f"{condition}_seed{s}"
+        sj, aj, cj = d / "store.json", d / "assertions.json", d / "selfcheck.json"
+        if not sj.exists():
+            continue
+        with open(sj, encoding="utf-8") as fh:
+            store = json.load(fh)
+        block = {
+            "dir": str(d), "well_sizes": store["well_sizes"],
+            "dead_per_well": store["dead_per_well"],
+            "effective_well_sizes": store["effective_well_sizes"],
+            "store_bytes": store["store_ledger"]["deployed_bytes"],
+            "store_matches_pin": store["store_ledger"]["matches_budget"],
+            "rank_kept_per_well": store["store_ledger"]["rank_kept_per_well"],
+            "rank_over_d_per_well": store["store_ledger"]["rank_over_d_per_well"],
+            "any_well_saturated": store["store_ledger"]["any_well_saturated"],
+            "cov_bytes": store["covariance_ledger"]["covariance_bytes"],
+            "honest_total_bytes": store["honest_ledger"]["honest_total_bytes"],
+            "times_over_budget": store["honest_ledger"]["times_over_budget"],
+            "cut_is_marginal": store["rank_report"]["cut_is_marginal"],
+            "well_posedness": store.get("well_posedness", {}),
+            "content_sha256": store["content_sha256"],
+            "feature_cache_generation": store["feature_cache"].get("generation"),
+            "assertions_run": False,
+        }
+        if cj.exists():
+            with open(cj, encoding="utf-8") as fh:
+                c = json.load(fh)
+            block["reproducibility_floor"] = {
+                "floor_max_abs_dev": c["floor_max_abs_dev"],
+                "floor_in_float32_ulp_at_unit_scale":
+                    c["floor_in_float32_ulp_at_unit_scale"],
+                "floor_max_abs_dev_per_well": c["floor_max_abs_dev_per_well"],
+                "store_reproducible_below_one_float32_ulp": bool(
+                    c["floor_in_float32_ulp_at_unit_scale"] <= 1.0)}
+        if aj.exists():
+            with open(aj, encoding="utf-8") as fh:
+                a = json.load(fh)
+            a1 = a["downdate_equals_refit"]
+            block.update({
+                "assertions_run": True,
+                "downdate_equals_refit": {
+                    "max_abs_dev_per_well": a1["pinned_value_object_hue_0.0"][
+                        "max_abs_dev_per_well"],
+                    "max_abs_dev_per_well_random64": a1["random_64_rows"][
+                        "max_abs_dev_per_well"],
+                    "worst_max_abs_dev": a1["worst_max_abs_dev"],
+                    "worst_in_float32_ulp_at_unit_scale":
+                        a1["worst_max_abs_dev_in_float32_ulp"],
+                    "n_wells_bit_identical": a1["pinned_value_object_hue_0.0"][
+                        "n_wells_bit_identical"],
+                    "negative_control_fired": a1["negative_control"]["check_fired"],
+                    "passed": a1["passed"]},
+                "no_pass_over_data": a["no_pass_over_data"]["passed"],
+                "no_pass_over_data_detail": {
+                    "rows_consumed_by_delete": [
+                        r["rows_consumed_by_delete"]
+                        for r in a["no_pass_over_data"]["per_corpus_size"]],
+                    "corpus_sizes": [
+                        r["n_corpus_rows"]
+                        for r in a["no_pass_over_data"]["per_corpus_size"]],
+                    "invariant_to_corpus_size":
+                        a["no_pass_over_data"]["invariant_to_corpus_size"]},
+                "items_kept": False,
+                "items_kept_asserted": a["items_never_kept"]["passed"],
+                "items_kept_detail": {
+                    "object_bytes_full": a["items_never_kept"][
+                        "object_bytes_at_full_pool"],
+                    "object_bytes_half": a["items_never_kept"][
+                        "object_bytes_at_half_pool"],
+                    "size_independent_of_corpus": a["items_never_kept"][
+                        "size_independent_of_corpus"]},
+                "all_three_assertions_passed": a["all_three_passed"]})
+        seeds.append(s)
+        per_seed[str(s)] = block
+
+    if not seeds:
+        raise AssertionError(f"no {condition} seed directories under {root}")
+    scored = [per_seed[str(s)] for s in seeds if per_seed[str(s)]["assertions_run"]]
+    devs = [b["downdate_equals_refit"]["worst_max_abs_dev"] for b in scored]
+    ulps = [b["downdate_equals_refit"]["worst_in_float32_ulp_at_unit_scale"]
+            for b in scored]
+    all_pass = bool(scored and all(b["all_three_assertions_passed"] for b in scored)
+                    and len(scored) == len(seeds))
+    gate = {
+        "status": "ready" if all_pass else "partial",
+        "condition": condition,
+        "seeds": seeds,
+        "n_seeds_with_assertions": len(scored),
+        "store_bytes": 524_288,
+        "store_bytes_matches_pin_every_seed": bool(
+            all(b["store_matches_pin"] for b in per_seed.values())),
+        "cov_bytes": max(b["cov_bytes"] for b in per_seed.values()),
+        "cov_bytes_per_seed": {s: per_seed[s]["cov_bytes"] for s in per_seed},
+        "honest_total_bytes": max(
+            b["honest_total_bytes"] for b in per_seed.values()),
+        "times_over_budget": max(
+            b["times_over_budget"] for b in per_seed.values()),
+        "downdate_equals_refit": {
+            "worst_max_abs_dev_over_seeds": max(devs) if devs else None,
+            "worst_in_float32_ulp_at_unit_scale": max(ulps) if ulps else None,
+            "passed_every_seed": bool(
+                scored and all(b["downdate_equals_refit"]["passed"] for b in scored)),
+            "negative_control_fired_every_seed": bool(
+                scored and all(b["downdate_equals_refit"]["negative_control_fired"]
+                               for b in scored)),
+            "max_abs_dev_per_well_by_seed": {
+                str(s): per_seed[str(s)]["downdate_equals_refit"][
+                    "max_abs_dev_per_well"]
+                for s in seeds if per_seed[str(s)]["assertions_run"]}},
+        "no_pass_over_data": bool(
+            scored and all(b["no_pass_over_data"] for b in scored)),
+        "items_kept": False,
+        "items_kept_asserted": bool(
+            scored and all(b["items_kept_asserted"] for b in scored)),
+        "all_three_assertions_passed": all_pass,
+        "any_well_saturated": bool(
+            any(b["any_well_saturated"] for b in per_seed.values())),
+        "cut_is_marginal_any_seed": bool(
+            any(b["cut_is_marginal"] for b in per_seed.values())),
+        "reproducibility_floor": {
+            "worst_floor_over_seeds": max(
+                (b["reproducibility_floor"]["floor_max_abs_dev"]
+                 for b in per_seed.values() if "reproducibility_floor" in b),
+                default=None),
+            "worst_floor_in_float32_ulp": max(
+                (b["reproducibility_floor"]["floor_in_float32_ulp_at_unit_scale"]
+                 for b in per_seed.values() if "reproducibility_floor" in b),
+                default=None),
+            "seeds_not_reproducible_at_float32": [
+                s for s, b in per_seed.items()
+                if "reproducibility_floor" in b
+                and not b["reproducibility_floor"][
+                    "store_reproducible_below_one_float32_ulp"]],
+            "what": ("the SAME rows downdated in two orders -- a measured FLOOR on "
+                     "any exactness claim, needing no refit. A seed listed here "
+                     "cannot be reproduced to float32 by ANY method, so its A1 "
+                     "failure is a property of the CONTENT, not of the downdate.")},
+        "per_seed": per_seed,
+        "smoke": ("NOT RUN on this condition -- the read smoke and the gauge/carry "
+                  "legs were run on `val` only (see DOWNDATE-READY.json). "
+                  "⛔ A declared NOT-RUN, not a null."),
+        "note": ("the three assertions on the " + condition + " leg, per seed. "
+                 "⛔ No scored run and no claim: these are properties of the "
+                 "object (deviations, byte counts, row counts), not outcomes. "
+                 "hub/single-design scores the object."),
+    }
+    _jdump(gate, ready_path(condition))
+    log(f"  {ready_path(condition).name}: status={gate['status']} seeds={seeds} "
+        f"all_three={all_pass} worst_dev="
+        f"{gate['downdate_equals_refit']['worst_max_abs_dev_over_seeds']}")
+    return gate
+
+
+def stage_selfcheck(out_dir: Path, condition: str, log=_log) -> dict:
+    """⛔⭐ A MEASURED FLOOR on any exactness claim, needing no refit.
+
+    ⚠ Why this exists: the fit-time predictor (``well_posedness_report``) is a
+    rigorous upper bound and a USELESS gate -- validated across four legs it
+    over-predicts by 7.7x to 217,466x and flags three legs that passed. It bounds
+    ``||dC||`` by ``eps * lambda_max`` globally, while the real residual in a
+    tiny-eigenvalue subspace is far smaller. It localises the fragile well correctly
+    and certifies nothing.
+
+    ⭐ This does instead what can actually be measured. Downdate the SAME set of rows
+    twice, presenting them in two different orders. Both are valid downdates of the
+    same set and both are entitled to the same answer, so any disagreement is pure
+    numerical non-determinism in the accumulate-then-eigendecompose path. That
+    disagreement is a **floor**: no exactness claim about this store on this data can
+    be tighter than it, and it costs one extra downdate rather than a refit.
+
+    ⛔ It is a floor, not the deviation: the downdate-vs-refit comparison can be
+    larger (different summation structure entirely). It cannot be smaller.
+    """
+    fw = _setup(condition)
+    pool, wc, dead = _pool_and_wells(fw, out_dir)
+    grid, _ = fw.build_grid()
+    cards = [int(c) for c in grid.cardinalities]
+    vals_all = grid.values_of(pool)
+    f, v = int(W8_PINS["delete_factor"]), int(W8_PINS["delete_value_index"])
+    mask = np.isclose(vals_all[:, f], float(grid.values[f][v]))
+    idx = np.flatnonzero(mask)
+    log(f"stage selfcheck [{condition} seed {SEED[0]}]: downdating the same "
+        f"{idx.size:,} rows in two orders")
+
+    F = fw.features_mmap(int(fw.PINS["seed"]))
+    rng = np.random.default_rng(12345)
+    perm = rng.permutation(idx.size)
+
+    stores = []
+    for tag, order in (("as_indexed", np.arange(idx.size)), ("shuffled", perm)):
+        st = build_store(fw, out_dir, pool, wc, cards, log=lambda *_: None)
+        rows = idx[order]
+        X = fw.gather(F, pool[rows])
+        st.delete(X, vals_all[rows], grid.values)
+        del X
+        stores.append((tag, st))
+
+    cmp = compare_stores(stores[0][1], stores[1][1])
+    log(f"  floor per well "
+        f"{[f'{d:.3e}' for d in cmp['max_abs_dev_per_well']]}")
+    log(f"  worst {cmp['max_abs_dev']:.3e} = "
+        f"{cmp['max_dev_in_float32_ulp']:.3f} float32 ulp @1.0; "
+        f"{cmp['n_wells_bit_identical']}/{len(wc)} wells bit-identical")
+
+    out = {
+        "condition": condition, "seed": int(SEED[0]),
+        "n_rows_deleted": int(idx.size),
+        "orders_compared": ["as_indexed", "shuffled"],
+        "floor_max_abs_dev_per_well": cmp["max_abs_dev_per_well"],
+        "floor_max_abs_dev": cmp["max_abs_dev"],
+        "floor_in_float32_ulp_at_unit_scale": cmp["max_dev_in_float32_ulp"],
+        "n_wells_bit_identical": cmp["n_wells_bit_identical"],
+        "ranks_agree_in_every_well": cmp["ranks_agree_in_every_well"],
+        "per_well": cmp["per_well"],
+        "what": ("the SAME rows downdated in two orders. Both are valid downdates of "
+                 "the same set, so any disagreement is numerical non-determinism in "
+                 "the accumulate-then-eigendecompose path. ⛔ It is a FLOOR on any "
+                 "exactness claim about this store on this data -- the "
+                 "downdate-vs-refit deviation cannot be smaller, and may be larger."),
+    }
+    _jdump(out, out_dir / "selfcheck.json")
+    if condition == "val":          # one seed on this leg, so no cross-seed clobber
+        publish_ready(out_dir=out_dir, condition=condition, reproducibility_floor={
+            "floor_max_abs_dev": out["floor_max_abs_dev"],
+            "floor_in_float32_ulp_at_unit_scale":
+                out["floor_in_float32_ulp_at_unit_scale"],
+            "floor_max_abs_dev_per_well": out["floor_max_abs_dev_per_well"],
+            "store_reproducible_below_one_float32_ulp": bool(
+                out["floor_in_float32_ulp_at_unit_scale"] <= 1.0),
+            "what": out["what"]})
+    return out
+
+
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--stage", required=True,
-                   choices=("fit", "assertions", "smoke", "sweep", "gauge", "postdelete", "postdelete_refit", "carry", "all"))
+                   choices=("fit", "assertions", "smoke", "sweep", "gauge", "postdelete", "postdelete_refit", "carry", "gate", "selfcheck", "all"))
     p.add_argument("--out", default=str(OUT_ROOT / "build" / "val_seed0"))
     p.add_argument("--condition", default="val", choices=("val", "test"))
+    p.add_argument("--seed", type=int, default=0,
+                   help="bridge/feature seed; keys the cache, the pool and the partition")
     p.add_argument("--basis", default="svd", choices=("svd", "pinned"),
                    help="the read's basis; see --stage gauge for why it matters")
     return p
@@ -1134,6 +1413,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def main(argv=None) -> int:
     a = build_arg_parser().parse_args(argv)
+    SEED[0] = int(a.seed)
     out = Path(a.out)
     stages = (("fit", "assertions", "smoke") if a.stage == "all" else (a.stage,))
     for s in stages:
@@ -1145,7 +1425,9 @@ def main(argv=None) -> int:
              "sweep": stage_sweep, "gauge": stage_gauge,
              "postdelete": stage_postdelete,
              "postdelete_refit": stage_postdelete_refit,
-             "carry": stage_carry}[s](out, a.condition)
+             "carry": stage_carry,
+             "gate": stage_gate,
+             "selfcheck": stage_selfcheck}[s](out, a.condition)
     _log("done")
     return 0
 

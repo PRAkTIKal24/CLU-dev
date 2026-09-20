@@ -205,6 +205,41 @@ def modes_from_moments(S: np.ndarray, t: np.ndarray, n: int, n_atoms: int,
         B = np.vstack([B, np.zeros((A - B.shape[0], d), np.float32)])
     tot = float(np.maximum(w, 0.0).sum())
     thr = float(eig_rel_tol) * lmax
+    # ⛔⭐ THE PREDICTOR, computed at FIT TIME from the statistics alone -- no
+    # deletion, no second fit. Classical perturbation theory: an eigenvector rotates by
+    # ~ ||dC|| / gap, and the downdate's residual on C is at machine epsilon. So the
+    # precision to which this well's atom BYTES are determined is eps / gap, and the
+    # object can state it in advance instead of discovering it in a deletion.
+    #
+    # ⚠ THIS IS THE QUANTITY I PINNED WRONG AT 16:52Z. I pinned the eigenvalue
+    # MAGNITUDE and argued well-posedness from its margins. What actually determines
+    # whether an eigenvector is a function of the data is its GAP to its neighbours: a
+    # direction far above the magnitude threshold can be nearly degenerate with the one
+    # beside it, and is then no better determined than a null direction. MEASURED on
+    # the test leg: well 3's smallest kept gap is 1.36e-03 at seed 0 and 4.95e-11 at
+    # seed 2, and seed 2's downdate deviates by 3.92e-06 -- 33 float32 ulp -- against a
+    # predicted 4.45e-06. The val leg's ~1e-3 gap is seven orders safer, which is
+    # exactly how one leg passing hid it.
+    eps64 = float(np.finfo(np.float64).eps)
+    gap_kept = float("inf")
+    gap_any = float("inf")
+    if keep > 1:
+        gap_kept = float(np.min(np.abs(np.diff(w[:keep]))))
+    if keep > 0 and w.size > 1:
+        for j in range(keep):
+            nb = []
+            if j > 0:
+                nb.append(abs(w[j] - w[j - 1]))
+            if j + 1 < w.size:
+                nb.append(abs(w[j] - w[j + 1]))
+            if nb:
+                gap_any = min(gap_any, float(min(nb)))
+    # relative to lambda_max, which is the scale the perturbation is measured against
+    rel_gap_kept = gap_kept / lmax if lmax > 0 else float("inf")
+    rel_gap_any = gap_any / lmax if lmax > 0 else float("inf")
+    sens_kept = eps64 / rel_gap_kept if rel_gap_kept > 0 else float("inf")
+    sens_any = eps64 / rel_gap_any if rel_gap_any > 0 else float("inf")
+    f32_ulp = float(np.spacing(np.float32(1.0)))
     report = {
         "d_k": d, "n_rows": int(n), "rank_kept": keep,
         "rank_limited_by": ("atom budget A-1" if keep == A - 1 else
@@ -228,6 +263,19 @@ def modes_from_moments(S: np.ndarray, t: np.ndarray, n: int, n_atoms: int,
         # saturated build is visible instead of inferred.
         "rank_over_d": float(keep) / float(d),
         "saturated": bool(A - 1 >= d),
+        # -- the fit-time well-posedness declaration -------------------------
+        "min_rel_gap_among_kept": rel_gap_kept,
+        "min_rel_gap_to_any_neighbour": rel_gap_any,
+        "predicted_byte_sensitivity": sens_any,
+        "predicted_byte_sensitivity_kept_only": sens_kept,
+        "predicted_sensitivity_in_float32_ulp": sens_any / f32_ulp,
+        # ⭐ the claim the object is entitled to make about ITSELF, before any
+        # deletion: are this well's atom bytes determined more finely than a float32
+        # store can represent a unit direction?
+        "bytes_determined_below_one_float32_ulp": bool(sens_any < f32_ulp),
+        "sensitivity_rule": ("eps64 / (min relative eigenvalue gap); an eigenvector "
+                             "rotates by ~||dC||/gap and the downdate residual on C "
+                             "is at machine epsilon"),
     }
     return np.ascontiguousarray(B), report
 
@@ -645,6 +693,50 @@ class DowndatableStore:
             "what": ("a direction below the threshold is written as a ZERO row: it "
                      "costs the same bytes and buys no span, which is PCASpanStore's "
                      "own stated convention for an atom a well cannot use"),
+        }
+
+    def well_posedness_report(self) -> dict:
+        """⛔⭐ To what precision are this store's OWN BYTES determined? Fit time.
+
+        ⭐ The point of computing this from the statistics alone is that the object
+        declares its precision **before** anyone deletes anything. The failure it exists
+        to prevent -- test seed 2, deviation 3.92e-06 = 33 float32 ulp -- was invisible
+        on the val leg and would have been quoted as exactness across seeds.
+
+        ⚠ A well that reports ``bytes_determined_below_one_float32_ulp = False`` is
+        not broken arithmetic: its statistics still downdate exactly. It is a well whose
+        *eigenvectors* are not a function of its data, so neither the downdate nor a
+        refit from scratch has a unique answer for those bytes.
+        """
+        rr = [dict(r) for r in self.rank_reports]
+        f32 = float(np.spacing(np.float32(1.0)))
+        sens = [r.get("predicted_byte_sensitivity", float("nan")) for r in rr]
+        worst = max(sens) if sens else float("nan")
+        bad = [i for i, r in enumerate(rr)
+               if not r.get("bytes_determined_below_one_float32_ulp", True)]
+        return {
+            "float32_ulp_at_unit_scale": f32,
+            "per_well": [{
+                "well": i, "d_k": r["d_k"], "rank_kept": r["rank_kept"],
+                "rank_limited_by": r["rank_limited_by"],
+                "min_rel_gap_among_kept": r.get("min_rel_gap_among_kept"),
+                "min_rel_gap_to_any_neighbour": r.get("min_rel_gap_to_any_neighbour"),
+                "predicted_byte_sensitivity": r.get("predicted_byte_sensitivity"),
+                "predicted_sensitivity_in_float32_ulp": r.get(
+                    "predicted_sensitivity_in_float32_ulp"),
+                "bytes_determined_below_one_float32_ulp": r.get(
+                    "bytes_determined_below_one_float32_ulp"),
+            } for i, r in enumerate(rr)],
+            "worst_predicted_byte_sensitivity": worst,
+            "worst_predicted_in_float32_ulp": worst / f32 if f32 > 0 else None,
+            "wells_not_determined_at_float32": bad,
+            "store_bytes_well_posed": bool(not bad),
+            "what": ("computed from the sufficient statistics at FIT time -- no "
+                     "deletion and no second fit. ⛔ A well listed in "
+                     "wells_not_determined_at_float32 has atom bytes that are not a "
+                     "function of its data, so no deletion procedure and no refit can "
+                     "agree on them; that is a property of the CONTENT, not of the "
+                     "downdate."),
         }
 
     def content_sha(self) -> str:
