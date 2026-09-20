@@ -69,6 +69,11 @@ PINS = {
     "confinement_alphas": (0.0,),     # D14's Hessian check is arithmetic and needs no roll
     # V5 runs its lifetime protocol with a censoring cap; a cell whose PREDICTED
     # half-life exceeds this is censored and NOT rolled, and reported as censored.
+    # The local bracket around each mode's own predicted critical damping, so B4 is a
+    # test of D16 rather than of my grid spacing.  See corner_rows for why this does
+    # not put the answer in by hand.
+    "gamma_refine": 5,
+    "gamma_refine_span": 2.0,
     "censor_steps": 5000,
     "rollout_slack": 3.0,             # roll 3x the prediction: a 3x miss is still seen
     "settle_tol": 1e-10,
@@ -90,6 +95,7 @@ PINS_AUX.update({
     # bands are still spanned.
     "masses": (1e-2, 1.0, 1e2),
     "gammas": (0.005, 0.02, 0.05, 0.2, 0.5),
+    "gamma_refine": 0,
 })
 
 
@@ -474,6 +480,8 @@ def corner_rows(field, corner_id: str, address: np.ndarray, arms: dict,
 
             # ---- enumerate the grid, predict, decide censoring -------------------
             spec = []
+            n_ref = int(pins.get("gamma_refine", 0))
+            ref_span = float(pins.get("gamma_refine_span", 2.0))
             for alpha in alphas:
                 # D14: confinement CENTRED ON x* lifts every Hessian eigenvalue by
                 # exactly 2*alpha and leaves x* a critical point, so the prediction
@@ -481,9 +489,34 @@ def corner_rows(field, corner_id: str, address: np.ndarray, arms: dict,
                 he = hess0[sel] + 2.0 * float(alpha)
                 for mass in pins["masses"]:
                     mu2 = he / float(mass)
-                    for gamma in pins["gammas"]:
+                    # ⭐ The V-curve's minimum cannot be located more finely than the
+                    # gamma grid, and the global grid steps by ~2x.  For each mode we
+                    # therefore ADD a local geometric bracket around that mode's OWN
+                    # predicted critical damping (D16 inverted exactly).  ⛔ This does
+                    # not put the answer in by hand: the measured argmin is still free
+                    # to land anywhere on the union of the two grids, including on a
+                    # global point far from the bracket, in which case the ratio comes
+                    # out far from 1 and B4 misses.  What it removes is the grid
+                    # artefact that the underdamped floor FALLS with gamma, so a coarse
+                    # grid's argmin is biased to the last underdamped point below
+                    # gamma*.
+                    gsets = []
+                    for j in range(len(sel)):
+                        gl = list(pins["gammas"])
+                        if n_ref > 0 and mu2[j] > 0:
+                            gc = W6.gamma_crit_exact(np.sqrt(mu2[j]) * eta)
+                            if np.isfinite(gc) and 0.0 < gc < 1.0:
+                                lo = max(1e-4, gc / ref_span)
+                                hi = min(0.95, gc * ref_span)
+                                if hi > lo:
+                                    gl += list(np.geomspace(lo, hi, n_ref))
+                        gsets.append(sorted(set(round(float(x), 6) for x in gl)))
+                    all_g = sorted(set(g for gs in gsets for g in gs))
+                    for gamma in all_g:
                         for amp in amps:
                             for j in range(len(sel)):
+                                if gamma not in gsets[j]:
+                                    continue
                                 npred = W6.n_half_crr(mu2[j], eta, gamma)
                                 cens = (not np.isfinite(npred)) or npred > cap
                                 steps = 0 if cens else int(
@@ -667,10 +700,12 @@ def v_curve_analysis(rows: list, arm: str = "field") -> list:
                                                      np.isfinite(gce) and gce > 0
                                                      else float("nan")),
                     "bracketed": bool(g.min() < gc < g.max())})
-        # V5's own fit windows: gamma < gamma_crit/2.5 and gamma > 2.5 gamma_crit
+        # V5's own fit windows (gamma < gamma*/2.5 and gamma > 2.5 gamma*), taken
+        # around the EXACT critical damping rather than its small-h limit.
+        gw = gce if (gce and np.isfinite(gce) and gce > 0) else gc
         for name, mask, pred_fn, naive in (
-                ("under", g <= gc / 2.5, d18_slope, -1.0),
-                ("over", g >= 2.5 * gc, d17_slope, +1.0)):
+                ("under", g <= gw / 2.5, d18_slope, -1.0),
+                ("over", g >= 2.5 * gw, d17_slope, +1.0)):
             if int(mask.sum()) >= 3:
                 s = float(np.polyfit(np.log(g[mask]), np.log(n[mask]), 1)[0])
                 gm = float(np.exp(np.mean(np.log(g[mask]))))
