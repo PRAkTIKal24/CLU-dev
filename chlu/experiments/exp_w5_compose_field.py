@@ -296,6 +296,33 @@ class _ModeStore:
                 "param_count": b // 4, "what": self.what}
 
 
+def basis_at_fixed_rank(store, ranks) -> list:
+    """``span_basis`` but with each well's rank FORCED to the arm's own ``r_k``.
+
+    ⚠ Why this exists, and it is a correctness fix rather than a convenience.  A
+    POST-fit control keeps the ARM's address book and replaces only the atoms.  The
+    book emits ``r_k`` coefficients per well, fixed when it was fitted against the
+    unperturbed store.  ``span_basis`` re-derives the rank from the PERTURBED atoms'
+    singular values, and a permutation of the atom values can move it — measured: the
+    arm's well came out rank 63 and the permuted one rank 64, and ``render_span`` then
+    raised ``matmul: size 64 is different from 63`` mid-leg.
+
+    Truncating (or zero-padding) the perturbed basis to the book's rank is the only
+    reading that keeps the control a control: same book, same rank, same bytes, atoms
+    destroyed.  ⛔ It cannot flatter the control — a rank the book never learned to
+    address carries no information it could use.
+    """
+    out = []
+    for U, r in zip(span_basis(store), [int(r) for r in ranks]):
+        U = np.asarray(U, np.float32)
+        if U.shape[1] > r:
+            U = U[:, :r]
+        elif U.shape[1] < r:
+            U = np.hstack([U, np.zeros((U.shape[0], r - U.shape[1]), np.float32)])
+        out.append(np.ascontiguousarray(U))
+    return out
+
+
 def perturb_modes(store, kind: str, seed: int, what: str = ""):
     """charter C.2, at this hub's store interface.  Same shape, same ledger, atoms moved.
 
@@ -562,7 +589,14 @@ def _build_pca_arm(arm: str, out_dir: Path, arm_dir: Path, done: Path, t0: float
             obj["zeroed"] = True
             obj["basis"] = basis
         else:
-            obj["basis"] = span_basis(obj["store"])
+            # ⚠ FORCED to the arm's rank: the address book emits r_k coefficients and
+            # the perturbed atoms' own rank can differ.  See basis_at_fixed_rank.
+            obj["basis"] = basis_at_fixed_rank(obj["store"],
+                                               [np.asarray(U).shape[1] for U in basis])
+            obj["basis_rank_note"] = (
+                "the control keeps the ARM's address book, so its basis is truncated "
+                "or zero-padded to the arm's per-well rank; a rank the book never "
+                "learned to address carries nothing it could use")
     elif kind is not None:
         obj["perturbation"] = {"kind": kind,
                                "when": "BEFORE the address book was fitted"}
@@ -610,7 +644,18 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
     # -- the identity: the ceiling of EVERY store, at any budget -------------
     if arm == "oracle_true_feature":
         obj = {
-            "arm": arm, "read": "true_feature",
+            # ⚠ ``kind`` is REQUIRED by fw.delete_value_from_head, which fw.run_arm
+            # calls for row 7 on every arm.  A ceiling has no address book, so the
+            # non-"span" branch returns it unchanged and row 7 correctly measures
+            # nothing for it -- which is the honest answer for a DECLARED NON-ARM.
+            "arm": arm, "read": "true_feature", "kind": "oracle",
+            # fw.run_arm fingerprints "the object that must not have been refitted
+            # between the two halves of row 7" as o["protos"].protos.  This leg has NO
+            # store at all, so the sequence is EMPTY and the check is declared as
+            # proving nothing here rather than left to look like a passing check.
+            "protos": R._FitFingerprint(()),
+            "fingerprint_note": ("EMPTY: the identity read deploys no content, so "
+                                 "there is nothing a refit could have moved"),
             "byte_ledger": {
                 "deployed_bytes": None, "budget_bytes": int(W5_PINS["store_bytes"]),
                 "param_count": None,
@@ -666,8 +711,9 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         ranks = [int(U.shape[1]) for U in basis]
         log(f"  arm {arm}: {n_atoms} real items x {D} float32, span ranks {ranks} "
             f"(sum {sum(ranks)}), {led['deployed_bytes']:,} B")
-        obj = {"arm": arm, "read": "oracle_field", "store": store, "basis": basis,
-               "byte_ledger": led,
+        obj = {"arm": arm, "read": "oracle_field", "kind": "oracle",
+               "store": store, "basis": basis, "byte_ledger": led,
+               "protos": R._FitFingerprint(list(store.modes)),
                "address_bytes": {"address_bytes": 0,
                                  "what": "a ceiling has no address; charter B.3"},
                "head_bytes": {"head_bytes": 0},
@@ -725,8 +771,11 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
             f"{led['deployed_bytes']:,} B, variance explained "
             f"{[round(e, 4) for e in store.energy]}")
         obj = {
-            "arm": arm, "read": "oracle_field", "store": store, "basis": basis,
-            "byte_ledger": led,
+            "arm": arm, "read": "oracle_field", "kind": "oracle",
+            "store": store, "basis": basis, "byte_ledger": led,
+            # the fingerprint is the DEPLOYED atoms themselves, so row 7's
+            # "was this refitted between the halves" check is real for this leg
+            "protos": R._FitFingerprint(list(store.modes)),
             "address_bytes": {"address_bytes": 0,
                               "what": "a ceiling has no address; charter B.3"},
             "head_bytes": {"head_bytes": 0},
@@ -764,6 +813,8 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
     obj = {
         "arm": arm,
         "read": "oracle_field" if arm == "oracle_span_field" else "field_argmax",
+        "kind": "oracle",
+        "protos": R._FitFingerprint(list(store.modes)),
         "store": store, "basis": basis, "field": field,
         "byte_ledger": {
             "deployed_bytes": int(built["byte_ledger"]["deployed_bytes"]),
@@ -902,27 +953,29 @@ def _make_artifacts_portable() -> dict:
     ``import`` gets ``AttributeError: Can't get attribute 'PCASpanStore' on module
     '__main__'``, which is exactly what a replicator does.
 
-    Two lines fix it in both directions, and both are additive:
+    ⛔ **The obvious fix is wrong and I tried it first.** Stamping
+    ``cls.__module__ = "chlu.experiments.exp_w5_compose_field"`` on the ``__main__``
+    copies makes pickle IMPORT that package module to verify the class -- which creates
+    a SECOND module object with its own class objects -- and then refuse:
+    ``PicklingError: it's not the same object as ...._ModeStore``.  ⚠ It broke a live
+    leg. The lesson is that there must be exactly ONE copy of these classes in the
+    process, not two with matching names.
 
-    * when this file is running AS ``__main__``, stamp each class's ``__module__`` with
-      the package path, so every artifact written FROM HERE ON pickles portably;
-    * when this file is IMPORTED beside somebody else's ``__main__``, alias the classes
-      into that ``__main__``, so artifacts written BEFORE the fix still load.
+    So: the ``__main__`` entry point **delegates** to the package module (see the bottom
+    of this file), and this function runs at that module's import and **overwrites** the
+    ``__main__`` copies with the package ones.  After it, every class in the process is
+    the package's, new artifacts pickle under the package path, and artifacts written
+    before the fix -- which name ``__main__.PCASpanStore`` -- resolve to the same object.
     """
     import sys
     names = ("FieldSpanStore", "PCASpanStore", "_ItemSpanStore", "_ModeStore")
-    pkg = "chlu.experiments.exp_w5_compose_field"
     g = globals()
-    if __name__ == "__main__":
-        for n in names:
-            g[n].__module__ = pkg
-        return {"mode": "stamped __module__ for portable pickles", "classes": names}
     m = sys.modules.get("__main__")
-    if m is not None and m is not sys.modules.get(__name__):
+    if __name__ != "__main__" and m is not None and m is not sys.modules.get(__name__):
         for n in names:
-            if not hasattr(m, n):
-                setattr(m, n, g[n])
-        return {"mode": "aliased into __main__ so pre-fix artifacts load",
+            setattr(m, n, g[n])
+        return {"mode": "package classes installed into __main__ (one copy in the "
+                        "process; pre-fix artifacts resolve to it too)",
                 "classes": names}
     return {"mode": "no action needed"}
 
@@ -987,4 +1040,12 @@ def main(argv=None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # ⛔ Delegate to the PACKAGE module instead of running this copy.  Running the
+    # file as ``python -m`` defines its classes in ``__main__``; anything pickled from
+    # here would name ``__main__.PCASpanStore`` and be unreadable to a replicator who
+    # loads the artifacts from an ordinary import.  Importing the package module and
+    # calling ITS ``main`` means there is exactly one copy of every class in the
+    # process, so artifacts pickle under the package path and stay portable.
+    from chlu.experiments.exp_w5_compose_field import main as _pkg_main
+
+    raise SystemExit(_pkg_main())

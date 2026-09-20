@@ -49,8 +49,11 @@ fi
 if [ "$COND" = "test" ]; then
   : "${PREREG:?condition=test is a SCORED RUN: set PREREG to the pre-registration file}"
   [ -f "$PREREG" ] || { echo "[leg] REFUSING: PREREG $PREREG does not exist" >&2; exit 2; }
-  grep -q "w5/compose-field" /c/chlu/SCORED-LEDGER.md || {
-    echo "[leg] REFUSING: no /c/chlu/SCORED-LEDGER.md row for w5/compose-field" >&2
+  # The ledger row names this hub as "w5 hub/compose-field"; match either spelling so
+  # the guard fails on a MISSING row and never on a stylistic one.  (It fired on the
+  # real launch for exactly that reason, which is the guard working, and is logged.)
+  grep -Eq "w5[ /]hub/compose-field|w5/compose-field" /c/chlu/SCORED-LEDGER.md || {
+    echo "[leg] REFUSING: no /c/chlu/SCORED-LEDGER.md row for w5 hub/compose-field" >&2
     exit 2; }
   echo "[leg] scored run authorised by $PREREG + the ledger row"
 fi
@@ -75,16 +78,37 @@ python -u -m "$M" --stage pins \
 python -u -m "$M" --stage prepare \
   --out "$OUT" --seed "$SEED" --condition "$COND"
 
+# ⛔ One arm's failure must not cost the other twenty-one.  `set -e` aborted two scored
+# legs on a single control's crash; the arms are independent and every stage is
+# resumable, so a failure is RECORDED LOUDLY and the leg continues.  ⛔ It is never
+# swallowed: the arm gets a FAILED.json, the leg prints it, and the leg exits non-zero
+# at the end so a failure cannot look like a clean run.
+FAILED=()
 for arm in "${ARMS[@]}"; do
   echo "[leg] ---- $arm ----"
+  ok=1
   python -u -m "$M" --stage fit \
-    --out "$OUT" --seed "$SEED" --condition "$COND" --arm "$arm"
-  python -u -m "$M" --stage run \
-    --out "$OUT" --seed "$SEED" --condition "$COND" --arm "$arm" \
-    --max-seconds "$MAX_SECONDS"
+    --out "$OUT" --seed "$SEED" --condition "$COND" --arm "$arm" || ok=0
+  if [ "$ok" = 1 ]; then
+    python -u -m "$M" --stage run \
+      --out "$OUT" --seed "$SEED" --condition "$COND" --arm "$arm" \
+      --max-seconds "$MAX_SECONDS" || ok=0
+  fi
+  if [ "$ok" = 0 ]; then
+    echo "[leg] !!!! ARM FAILED: $arm -- continuing; see FAILED.json" >&2
+    mkdir -p "$LEG/arms/$arm"
+    printf '{"arm":"%s","failed":true,"seed":%s,"condition":"%s","note":"the stage raised; this is a FAILURE, not a declared NOT-RUN, and it is never a null"}\n' \
+      "$arm" "$SEED" "$COND" > "$LEG/arms/$arm/FAILED.json"
+    FAILED+=("$arm")
+  fi
 done
 
 python -u -m "$M" --stage table --out "$OUT" --seed "$SEED" --condition "$COND" \
   --primary "${PRIMARY:-oracle_span_field}" --margin "${MARGIN:-1.0}"
 
+if [ "${#FAILED[@]}" -gt 0 ]; then
+  echo "[leg] done WITH FAILURES: $LEG -- failed arms: ${FAILED[*]}" >&2
+  echo "[leg] done: $LEG"
+  exit 3
+fi
 echo "[leg] done: $LEG"
