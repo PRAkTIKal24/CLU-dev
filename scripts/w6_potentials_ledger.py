@@ -15,6 +15,12 @@ from pathlib import Path
 
 import numpy as np
 
+# The Windows console is cp1252; force UTF-8 so a table is never lost to an encoding.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 
 def leg_bars(obj) -> dict:
     rows = obj["rows"]
@@ -40,8 +46,11 @@ def leg_bars(obj) -> dict:
                     "B2_pass": bool(d.mean() < 0 and (d < 0).sum() >= 40)
                     if len(d) == 49 else None,
                     "fit1_C": meta["fit1_C"]})
+    # ⛔ GLOBAL gammas only, as in the report: a refined gamma exists for a single
+    # (well, mass, mode), so a slope against mu^2 there is fitted on one curvature.
     und = [r for r in main if r["band"] == "underdamped"
-           and np.isfinite(r["n_meas"]) and not r.get("censored")]
+           and np.isfinite(r["n_meas"]) and not r.get("censored")
+           and r.get("gamma_grid", "global") == "global"]
     if len(und) >= 8:
         slopes = []
         for g in sorted({r["gamma"] for r in und}):
