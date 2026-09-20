@@ -184,6 +184,47 @@ QUERY_ROWS = (
 
 SEEDS = (0, 1, 2)
 
+# ---------------------------------------------------------------------------
+# 1b. ⭐⭐ THE BRIDGE-SEED MODE — w5.1/refuse (R-A retry).  The ONE knob this retry adds.
+# ---------------------------------------------------------------------------
+# The parent hub pinned ``PINS["bridge_seed"] = 0`` at every store seed, so all three of
+# its seeds shared ONE encoder, ONE decoder and ONE external classifier and varied only
+# the store-fit draw and the atom selection.  That pin was inherited from the w4 build
+# hub, where it was FORCED: cache generation 1 is full scope at bridge seed 0 only
+# (9,288 rows at seeds 1 and 2).  ⭐ Generation 2 is full scope at all three — verified
+# from each cache's own ``feature_cache.json`` — so the justification has expired.
+#
+# ⛔ ``pinned`` is the DEFAULT and reproduces the parent BIT-FOR-BIT.  Nothing about the
+# store, the rule, the thresholds or the metric changes in either mode; the only thing
+# that moves is WHICH of the three frozen instruments the seed index selects.
+#
+# ⭐ ``joint`` makes the seed convention IDENTICAL to ``w5 hub/delete``'s, which calls
+# ``features_mmap(int(seed))`` and ``Judge(int(seed))`` off the same store-seed index and
+# draws its pool with the same two lines of arithmetic.  Under ``joint`` seed *s* varies
+# pool draw, atom seed, encoder, decoder and classifier together.  ⛔ Neither hub varies
+# the channel→well partition with the seed: it is built once from ``PINS["seed"]``'s
+# features and shared, in both.  At *s* = 0 the two modes coincide by construction, and
+# that is ASSERTED rather than assumed (``--stage seed0check``).
+
+BRIDGE_MODE = "pinned"
+
+
+def set_bridge_mode(mode: str) -> str:
+    global BRIDGE_MODE
+    if mode not in ("pinned", "joint"):
+        raise ValueError(f"unknown bridge mode {mode!r}; expected pinned|joint")
+    BRIDGE_MODE = mode
+    return BRIDGE_MODE
+
+
+def bridge_seed_for(seed: int) -> int:
+    """Which frozen (encoder, decoder, classifier) triple store seed ``seed`` is read by.
+
+    ⛔ Under ``pinned`` this is the parent's constant 0 for every store seed.
+    ⭐ Under ``joint`` it is the store seed itself, which is ``w5 hub/delete``'s convention.
+    """
+    return 0 if BRIDGE_MODE == "pinned" else int(seed)
+
 
 def _now() -> float:
     return time.time()
@@ -231,7 +272,7 @@ def build_field_arm(out: Path, seed: int, log: Callable = print) -> dict:
     K = int(labels.max()) + 1
     hosts = _host_factors(parts["info"], K)
     pool = refuse_fit_pool(cond, seed)
-    F = features_mmap(int(PINS["bridge_seed"]))
+    F = features_mmap(bridge_seed_for(seed))
     t0 = _now()
     X = gather(F, pool)
     Y = grid.factor_indices_of(pool)
@@ -249,7 +290,8 @@ def build_field_arm(out: Path, seed: int, log: Callable = print) -> dict:
     obj = {"arm": "field", "kind": "field", "seed": int(seed), "field": field,
            "byte_ledger": led, "request_only": ro, "manifest": field.manifest(),
            "pool_n": int(pool.size), "fit_seconds": _now() - t0,
-           "feature_cache": feature_cache_manifest(int(PINS["bridge_seed"]))}
+           "bridge_mode": BRIDGE_MODE, "bridge_seed": bridge_seed_for(seed),
+           "feature_cache": feature_cache_manifest(bridge_seed_for(seed))}
     d.mkdir(parents=True, exist_ok=True)
     with open(done, "wb") as fh:
         pickle.dump(obj, fh)
@@ -637,7 +679,7 @@ def run_queries(out: Path, seed: int, max_seconds: float = 3600.0,
     bitmap = value_presence_bitmap(grid, pool)
     ptable = pair_presence_table(grid, pool)
     no_deletions = np.zeros(ptable.size, np.uint8)
-    J = Judge(int(PINS["bridge_seed"]), log=log)
+    J = Judge(bridge_seed_for(seed), log=log)
 
     Q = query_requests(cond, grid)
     # ⭐ row 1 is drawn from the fit pool, exactly as its rationale requires, but the
@@ -805,7 +847,7 @@ def run_deletion(out: Path, seed: int, max_seconds: float = 14400.0,
     bitmap = value_presence_bitmap(grid, pool)
     ptable = pair_presence_table(grid, pool)
     zero_del = np.zeros(ptable.size, np.uint8)
-    J = Judge(int(PINS["bridge_seed"]), log=log)
+    J = Judge(bridge_seed_for(seed), log=log)
 
     (hf, hv), (hg, hu) = PINS["hole_pair"]
     ef, ev_i = int(PINS["delete_factor"]), int(PINS["delete_value"])
@@ -1021,6 +1063,8 @@ def run_deletion(out: Path, seed: int, max_seconds: float = 14400.0,
             "bytes_changed": int(d4["n_changed"]),
             "per_segment": d4["per_segment"], "would_fail_assert_no_refit": True},
         "judge": J.info, "feature_cache": obj["feature_cache"],
+        # ⭐ w5.1: the instrument the seed index selected, carried with every number.
+        "bridge_mode": BRIDGE_MODE, "bridge_seed": bridge_seed_for(seed),
         "bitmap8_bytes": bitmap8_bytes(grid), "pair_table": pair_table_bytes(grid),
         "seconds": _now() - t0,
     }
@@ -1214,6 +1258,64 @@ def run_rivals(out: Path, seed: int, log: Callable = print) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# 6b. ⭐⭐ w5.1/refuse — the seed-0 coincidence, ASSERTED rather than argued
+# ---------------------------------------------------------------------------
+
+
+def seed0_modes_coincide(out: Path, log: Callable = print) -> dict:
+    """At store seed 0 the two bridge modes MUST select the same instrument and build
+    the same store, byte for byte.  ⛔ This is the plumbing check for the whole retry: if
+    it fails, the joint-mode numbers at seeds 1 and 2 are measuring something other than
+    the instrument and nothing below them may be believed.
+
+    It is cheap on purpose — one store build in each mode — and it costs no scored run,
+    because a store image is not a number on a held-out row.
+    """
+    before = BRIDGE_MODE
+    try:
+        rec = {}
+        for mode in ("pinned", "joint"):
+            set_bridge_mode(mode)
+            d = out / f"seed0check_{mode}"
+            obj = build_field_arm(d, 0, log=log)
+            rec[mode] = {
+                "bridge_seed": bridge_seed_for(0),
+                "store_sha256": obj["field"].sha256(),
+                "deployed_bytes": int(obj["byte_ledger"]["deployed_bytes"]),
+                "total_image_bytes": int(obj["byte_ledger"]["total_image_bytes"]),
+                "features_sha256": obj["feature_cache"].get("features_sha256"),
+                "encoder_param_hash": obj["feature_cache"].get("encoder_param_hash"),
+                "pool_n": int(obj["pool_n"]),
+            }
+            log(f"  seed0check[{mode}]: bridge seed {rec[mode]['bridge_seed']}, store "
+                f"sha256 {rec[mode]['store_sha256'][:16]}")
+        J = {m: Judge(rec[m]["bridge_seed"], log=lambda *_: None).info
+             for m in ("pinned", "joint")}
+        same = {
+            "bridge_seed": rec["pinned"]["bridge_seed"] == rec["joint"]["bridge_seed"],
+            "store_sha256": rec["pinned"]["store_sha256"] == rec["joint"]["store_sha256"],
+            "features_sha256":
+                rec["pinned"]["features_sha256"] == rec["joint"]["features_sha256"],
+            "decoder_param_hash":
+                J["pinned"]["decoder_param_hash"] == J["joint"]["decoder_param_hash"],
+            "classifier_param_hash":
+                J["pinned"]["classifier_param_hash"] == J["joint"]["classifier_param_hash"],
+        }
+        res = {"per_mode": rec, "judge": J, "identical": same,
+               "all_identical": bool(all(same.values()))}
+        if not res["all_identical"]:
+            raise AssertionError(
+                "the two bridge modes DISAGREE at store seed 0: "
+                f"{ {k: v for k, v in same.items() if not v} } -- the mode switch is not a "
+                "pure reparametrisation and the seed-1/2 comparison is void")
+        _jdump(res, out / "seed0_modes_coincide.json")
+        log("  ⭐ seed0check: pinned and joint COINCIDE at seed 0 on all five hashes")
+        return res
+    finally:
+        set_bridge_mode(before)
+
+
+# ---------------------------------------------------------------------------
 # 7. CLI
 # ---------------------------------------------------------------------------
 
@@ -1222,7 +1324,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--stage", required=True,
                    choices=("fit", "queries", "deletion", "rivals", "report",
-                            "declare"))
+                            "declare", "seed0check"))
+    # ⭐ w5.1/refuse (R-A). `pinned` is the parent's behaviour, bit-for-bit, and is the
+    # default so that nothing already on disk can be reinterpreted by accident.
+    p.add_argument("--bridge-mode", choices=("pinned", "joint"), default="pinned")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", required=True)
     p.add_argument("--max-seconds", type=float, default=14400.0)
@@ -1231,6 +1336,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def main(argv=None) -> int:
     args = build_arg_parser().parse_args(argv)
+    set_bridge_mode(args.bridge_mode)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     t0 = _now()
@@ -1238,7 +1344,12 @@ def main(argv=None) -> int:
     def log(msg):
         print(f"[{_now() - t0:7.1f}s] {msg}", flush=True)
 
-    if args.stage == "declare":
+    log(f"bridge mode = {BRIDGE_MODE}; store seed {args.seed} reads instrument "
+        f"(encoder, decoder, classifier) = bridge seed {bridge_seed_for(args.seed)}")
+
+    if args.stage == "seed0check":
+        seed0_modes_coincide(out, log=log)
+    elif args.stage == "declare":
         cond = load_condition()
         grid = cond["grid"]
         c3, c4 = scored_corners(cond)
