@@ -92,7 +92,7 @@ import numpy as np
 
 __all__ = [
     "WellStats", "CovContentStore", "plan_partition", "assert_not_saturated",
-    "honest_byte_ledger", "SATURATION_NOTE", "spectral_gap_report", "reproducibility_floor",
+    "honest_byte_ledger", "SATURATION_NOTE", "spectral_gap_report", "reproducibility_floor", "subspace_deviation", "subspace_projectors", "reproducibility_floor",
 ]
 
 SATURATION_NOTE = (
@@ -588,6 +588,93 @@ def reproducibility_floor(store_cls, X, well_channels, n_atoms: int, dim: int,
                         "including re-running the identical computation -- so a failing "
                         "A1 there is a property of the CONTENT, not of the deletion"),
     }
+
+
+def subspace_projectors(store) -> list:
+    """Per-well orthogonal projector onto the deployed direction span.
+
+    ⭐⭐ THE OBJECT, under the Head-cleared design call of 2026-09-20: what this store IS
+    is the per-well SUBSPACE, not a particular set of eigenvectors spanning it.  The
+    read never uses an eigenvector -- it uses ``x_hat = c_k U_k^T`` with ``U_k``
+    re-derived from the atoms on load -- so two atom blocks spanning one subspace are
+    the same object once the address book is carried between their bases.
+    """
+    out = []
+    for M, r in zip(store.modes, store.deployed_rank):
+        if r <= 0:
+            out.append(np.zeros((M.shape[1], M.shape[1]), np.float64))
+            continue
+        # ⛔ SVD, NOT QR.  Un-pivoted Householder QR is not rank-revealing, so where the
+        # mean lies nearly inside the directions' span -- relative perpendicular norm
+        # ~2.3e-08 in exactly the rank-deficient wells -- truncating to the first r
+        # columns of Q discards an arbitrary direction.  The spoke measured two
+        # BIT-IDENTICAL stores reporting a principal angle of 0.97 rad (56 degrees) that
+        # way.  ⚠ I had written QR here and inherit the same defect; corrected on its
+        # report, before quoting any number computed with it.
+        Uf, sv, _ = np.linalg.svd(np.asarray(M[1:1 + r], np.float64).T,
+                                  full_matrices=False)
+        keep = int((sv > (sv[0] if sv.size else 0.0) * 1e-12).sum())
+        U = Uf[:, :keep]
+        out.append(U @ U.T)
+    return out
+
+
+def subspace_deviation(a, b) -> dict:
+    """``max_k ||P_a[k] - P_b[k]||_2`` -- the exactness metric the object now claims.
+
+    ⛔ Not a friendlier restatement of the atom metric: it is a DIFFERENT and weaker
+    claim, and the two must never be printed as if they were the same kind of statement.
+    Atom-level agreement implies subspace agreement; the converse does not hold, as this
+    hub's own sign-flip bug showed (atoms differing by 1.826, subspace by 9.258e-16).
+    """
+    Pa, Pb = subspace_projectors(a), subspace_projectors(b)
+    devs = [float(np.linalg.norm(x - y, 2)) for x, y in zip(Pa, Pb)]
+    return {"per_well": devs, "worst": max(devs) if devs else 0.0,
+            "ranks_agree": a.deployed_rank == b.deployed_rank,
+            "metric": "spectral norm of the per-well projector difference",
+            "what_this_is_not": ("⛔ NOT byte-level agreement of the atom block; a "
+                                 "content deletion can no longer be adjudicated by "
+                                 "assert_changed_bytes_within under this definition")}
+
+
+def reproducibility_floor(store_cls, X, well_channels, n_atoms: int, dim: int,
+                          rows_to_delete, allow_saturated: bool = False,
+                          seed: int = 20_260_920) -> dict:
+    """⭐⭐ A FLOOR on any exactness claim, needing no refit.  The spoke's certificate.
+
+    Downdate the SAME rows twice, presenting them in two different ORDERS.  Both are
+    valid downdates of the same set and both are entitled to the same answer, so any
+    disagreement is pure numerical non-determinism in the accumulate-then-eigendecompose
+    path.  ⭐ It bounds what ANY method could achieve on this object, costs one extra
+    downdate, and needs no from-scratch refit.
+
+    ⭐⭐ WHY IT WAS DECISIVE for the eigenvector definition: the spoke measured, on test
+    seed 2, a floor of 4.746e-06 against an observed downdate-vs-refit deviation of
+    4.227e-06 -- the same rows downdated twice disagreed by MORE than the downdate
+    disagreed with a from-scratch refit.  That exonerated the downdate: those atom bytes
+    were not a function of the data by any method.  ⭐ Reported here in BOTH metrics, so
+    the atom-level floor that condemned the old definition stays visible beside the
+    subspace-level floor the new one is judged by.
+    """
+    order = np.asarray(rows_to_delete)
+    rng = np.random.default_rng(seed)
+    perm = rng.permutation(order.shape[0])
+    a = store_cls(X, well_channels, n_atoms, dim, allow_saturated=allow_saturated)
+    a.delete_rows(order)
+    b = store_cls(X, well_channels, n_atoms, dim, allow_saturated=allow_saturated)
+    b.delete_rows(order[perm])
+    atom = [float(np.max(np.abs(a.modes[k] - b.modes[k]))) for k in range(a.K)]
+    sub = subspace_deviation(a, b)
+    ulp32 = 1.1920928955078125e-07
+    return {"n_rows": int(order.shape[0]),
+            "atom_floor_worst": max(atom) if atom else 0.0,
+            "atom_floor_worst_in_float32_ulp": (max(atom) if atom else 0.0) / ulp32,
+            "subspace_floor_worst": sub["worst"],
+            "subspace_floor_worst_in_float32_ulp": sub["worst"] / ulp32,
+            "ranks_agree": sub["ranks_agree"],
+            "what": ("same rows, two orders; both are valid downdates of the same set, "
+                     "so any disagreement is non-determinism in the "
+                     "accumulate-then-eigendecompose path")}
 
 
 def assert_not_saturated(n_atoms: int, well_sizes) -> None:
