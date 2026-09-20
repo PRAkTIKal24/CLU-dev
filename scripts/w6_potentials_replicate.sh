@@ -23,21 +23,30 @@ echo "[repl] tree clean: $(git status --porcelain | wc -l) modified files"
 
 # ⛔ The clean checkout must be the thing that runs: CHLU_ROOT and PYTHONPATH point HERE,
 # not at the worktree.  The assertion below is the whole point of the exercise.
-export CHLU_ROOT="$PWD"
-export PYTHONPATH="$CLEAN;C:\\Users\\PratikJawahar\\chlu\\chlu-bundle-v2\\.venv\\Lib\\site-packages"
+# PYTHONPATH must carry a WINDOWS path.  Python on Windows cannot use an MSYS
+# "/c/..." path, and the failure is silent until an import: running `python -c`
+# from inside the checkout still works (the CWD is on sys.path) while running a
+# script in scripts/ does not (sys.path[0] is the SCRIPT directory).  Convert.
+CLEAN_WIN="$(cygpath -w "$CLEAN")"
+export CHLU_ROOT="$CLEAN_WIN"
+export PYTHONPATH="$CLEAN_WIN;C:\Users\PratikJawahar\chlu\chlu-bundle-v2\.venv\Lib\site-packages"
 export CHLU_GEN_BRIDGE_ROOT="C:\\chlu\\outputs\\spoke-a-rivals\\cache_generation2"
 export CHLU_GEN_CLASSIFIER_ROOT="C:\\Users\\PratikJawahar\\chlu\\chlu-bundle-v2\\.claude\\outputs\\gen-external-classifier"
-export CHLU_HUB_OUTPUTS=/c/chlu/outputs
+export CHLU_HUB_OUTPUTS="C:/chlu/outputs"
 export JAX_PLATFORMS=cpu
 export OMP_NUM_THREADS=3 MKL_NUM_THREADS=3 OPENBLAS_NUM_THREADS=3 NUMEXPR_NUM_THREADS=3
 
-python -c "
+# Run the assertion the SAME way the leg runs -- from a file in scripts/, so sys.path[0]
+# is that directory and the CWD cannot mask a broken PYTHONPATH.
+cat > "$CLEAN/scripts/_repl_assert.py" <<'PY'
 import chlu, pathlib, os, sys
 here = pathlib.Path(os.environ['CHLU_ROOT']).resolve()
-got  = pathlib.Path(chlu.__file__).resolve()
+got = pathlib.Path(chlu.__file__).resolve()
 assert here in got.parents, f'chlu resolved to {got}, NOT inside the clean checkout {here}'
 print(f'[repl] chlu resolves inside the clean checkout: {got}')
-"
+PY
+python "$CLEAN/scripts/_repl_assert.py"
+rm -f "$CLEAN/scripts/_repl_assert.py"
 
 python -u scripts/w6_potentials_leg.py \
   --condition test --seed "$SEED" --out "$OUT" \
