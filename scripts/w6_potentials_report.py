@@ -163,6 +163,27 @@ def report_leg(name, obj, fh=sys.stdout):
                 a = np.array(s)
                 slopes.append(float(np.polyfit(a[:, 0], a[:, 1], 1)[0]))
         fl = np.array([abs(np.log10(r["n_meas"] / r["n_pred_floor"])) for r in undg])
+        # ⚠ DIAGNOSTIC, added after seeing seed 0: the pre-registered filter required
+        # ">= 3 distinct log10 mu^2" by exact float equality, which float noise satisfies
+        # even when the underdamped cells form only TWO clusters.  A slope fitted across
+        # two near-identical curvatures is not a measurement of d log n / d log mu^2 at
+        # all, and it is what produces the absurd max below.  ⛔ The BAR is NOT moved:
+        # the pre-registered median and max are printed first and the verdict is read on
+        # them.  The restricted figure is printed beside them, labelled, as a correction
+        # a reader can apply or ignore.
+        diag, good = [], []
+        for g in sorted({r["gamma"] for r in undg}):
+            pts = [(np.log10(r["mu2"]), np.log10(r["n_meas"]))
+                   for r in undg if r["gamma"] == g]
+            xs = {round(a, 6) for a, _ in pts}
+            if len(pts) < 4 or len(xs) < 3:
+                continue
+            a = np.array(pts)
+            sl = float(np.polyfit(a[:, 0], a[:, 1], 1)[0])
+            span = float(a[:, 0].max() - a[:, 0].min())
+            diag.append((g, len(pts), len(xs), span, sl))
+            if len(xs) >= 3 and span >= 0.5:
+                good.append(sl)
         if slopes:
             med = float(np.median(np.abs(slopes)))
             mx = float(np.max(np.abs(slopes)))
@@ -174,6 +195,15 @@ def report_leg(name, obj, fh=sys.stdout):
               f"{'PASS' if med <= 0.10 else 'MISS'}"
               f"   (on the max it would be {'PASS' if mx <= 0.10 else 'MISS'}"
               f" -- both printed, neither hidden)")
+            p(f"       {'gamma':>8}{'n':>7}{'distinct mu2':>14}"
+              f"{'log10 mu2 span':>16}{'slope':>12}")
+            for g, n_, nx, span, sl in diag:
+                flag = "" if (nx >= 3 and span >= 0.5) else "   <- UNFITTABLE"
+                p(f"       {g:8.3f}{n_:7d}{nx:14d}{span:16.4f}{sl:12.4f}{flag}")
+            if good:
+                p(f"       [correction, NOT the bar] restricted to gammas spanning "
+                  f">= 0.5 decade of mu^2: |slope| median {np.median(np.abs(good)):.4f}"
+                  f"  max {np.max(np.abs(good)):.4f}  over {len(good)} gammas")
         p(f"       |log10 n_meas / (2ln2/-ln(1-gamma))| median = {np.median(fl):.4f}"
           f"   BAR <= 0.10   {'PASS' if np.median(fl)<=0.10 else 'MISS'}")
 
