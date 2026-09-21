@@ -108,6 +108,32 @@ def main(argv=None) -> int:
               f"{rw_lo:>8.4f}..{rw_hi:<8.4f} {m:>8.4f}+-{sd:<6.4f} "
               f"{drop:>12.4f} {tot:>12,} {xp:>7.3f} {tot // 4:>11,}")
 
+    # A ROBUSTNESS CHECK, PRINTED BESIDE THE RULE AND NEVER INSTEAD OF IT.
+    # The declared rule averages over "the seeds actually run", so when K=5 and K carry
+    # different seed sets the rule still compares those two means -- that is what was
+    # frozen and it is applied literally. The common-seed drop is computed here as well,
+    # because a reader is entitled to know whether the two differ, and it is labelled as
+    # NOT the rule so it cannot be mistaken for one.
+    if "5" in out["per_K"]:
+        s5 = set(rows[5])
+        for K in SWEEP:
+            if not rows[K] or str(K) not in out["per_K"]:
+                continue
+            common = sorted(s5 & set(rows[K]))
+            if common:
+                a5 = float(np.mean([rows[5][s]["composition_val"]["valid_mean"]
+                                    for s in common]))
+                aK = float(np.mean([rows[K][s]["composition_val"]["valid_mean"]
+                                    for s in common]))
+                out["per_K"][str(K)]["common_seed_check"] = {
+                    "seeds": common, "v5_on_common": a5, "vK_on_common": aK,
+                    "drop_on_common_seeds": a5 - aK,
+                    "NOT_THE_RULE": ("the frozen rule averages over the seeds actually "
+                                     "run at each K; this row is a robustness check")}
+            else:
+                out["per_K"][str(K)]["common_seed_check"] = {
+                    "DECLARED_NOT_RUN": "no seed is shared with K=5"}
+
     ran = [K for K in SWEEP if rows[K]]
     if v5 is None:
         print("\nK=5 HAS NO ROW -- the rule references v(5) and cannot be applied. "
