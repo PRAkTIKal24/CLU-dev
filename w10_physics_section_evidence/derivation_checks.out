@@ -1,0 +1,71 @@
+D3/D4     OK   det J = 1-gamma and lambda_pm are the roots of the derived quadratic
+          max |lam+ * lam- - (1-gamma)| over 20 (h,gamma) cells = 5.551e-17
+D5        OK   n_half = ln2/(-ln lam_+) ~= 2 g ln2/[(2-g)(eps mu)^2] deep overdamped
+          worst relative gap exact-vs-asymptotic over 9 deep-overdamped cells (h <= h*/5) = 0.960 %; e.g. g=0.05 h=0.001 exact 35532.5 approx 35546.0
+D6        OK   d log n_half / d log mu^2 = -1 on the overdamped branch
+          measured slope over mu in [1e-3, 8e-3] at gamma=0.05: -1.000014 (derived -1)
+D7a       OK   floor 2 ln2/(-ln(1-gamma)) reproduces V2 Sec 4.1's printed 27.03 at gamma=0.05
+          formula 27.02681 vs V2 printed 27.03 / w6-potentials recomputed 27.02681
+D7b       OK   the floor is independent of mu wherever the eigenpair is complex
+          n_half at gamma=0.05 for h=0.2/0.5/1.0/1.5 = 27.02681, 27.02681, 27.02681, 27.02681
+D7c       OK   V5's printed lambda_ret 0.998999499 and n_half 692.5 at gamma=0.002
+          sqrt(1-gamma) = 0.9989994995 (V5 prints 0.998999499); n_half = 692.4538 (V5 prints 692.5, w6 692.4538); small-gamma 2ln2/gamma = 693.1 (V5 prints 693.1)
+D8/D9     OK   h* and h_f are exactly the two roots of tr^2 J = 4 det J
+          max |tr^2 - 4 det| at the 10 derived band edges = 3.109e-15; h*(0.05) = 0.025643 vs gamma/2 = 0.025; h_f(0.05) = 1.999836 vs 2
+D9b       OK   the map loses stability at h = 2 for every gamma
+          max|lambda| at h=2: g=0.002: 1.000000, g=0.05: 1.000000, g=0.2: 1.000000, g=0.5: 1.000000
+D10       OK   at h = h* the eigenvalues collide at sqrt(1-gamma) (one Jordan block)
+          gamma=0.05: |lam+ - lam-| = 2.107e-08, lam = 0.974679445, sqrt(1-gamma) = 0.974679434 -- the residual is the square root of double-precision cancellation in the discriminant (sqrt(1e-16) ~ 1e-8), not a gap: the collision is exact analytically
+D11       OK   phase exponent phi ~ (h - h*)^(1/2) above the exceptional point
+          log-log exponent over (h-h*) in [1e-6, 1e-4] = 0.500209 (derived 0.5)
+D12       OK   latch q_inf = q0 + eps p0/(M gamma) at mu = 0
+          rolled out 4e5 steps: q = 1.000000000000; derived 1.000000000000
+D13       OK   gamma = 0 is ballistic drift, not a latch
+          20000 steps at gamma=0: q = 700.3000 (derived 700.3000); the latch would give 1.0000
+D14a      OK   a confinement term alpha ||q||^2 lifts every Hessian eigenvalue by exactly 2 alpha
+          max |lift - 2 alpha| over 6 eigenvalues of a random Gram matrix = 1.976e-14
+D14b      OK   a flat direction becomes mu^2 = 2 alpha and the lifetime caps at tau_max = Gamma/(2 alpha)
+          Gamma = gamma/eps = 1.000; tau_max = Gamma/(2 alpha) = 1.3514 time units = 27.03 steps; the exact-root half-life at mu^2 = 2 alpha is 27.03 steps -- same order, D14 is a CAP not an equality
+D16       OK   gamma_crit = 2 eps mu is the small-h inversion of h*(gamma) = h
+          h -> exact gamma*, 2h, rel err: 0.0001 -> 0.000200 vs 0.000200 (0.01 %); 0.001 -> 0.001998 vs 0.002000 (0.10 %); 0.01 -> 0.019802 vs 0.020000 (0.99 %); 0.0315 -> 0.061069 vs 0.063000 (3.07 %); 0.063 -> 0.118477 vs 0.126000 (5.97 %)  [w6-potentials LOG.md quotes h=0.063 -> gamma*_exact 0.1185]
+D17a      OK   1 + gamma/(2-gamma) IS d ln n_half / d ln gamma of the EXACT slow root, deep overdamped
+          gamma: derived vs numeric d ln n/d ln gamma at FIXED h = 1e-3 (h/h* <= 0.04): 0.05: 1.025641 vs 1.026347; 0.1: 1.052632 vs 1.052950; 0.2: 1.111111 vs 1.111168; 0.35: 1.212121 vs 1.212030; 0.5: 1.333333 vs 1.333266
+D17b      OK   the derived slope exceeds +1 at every finite gamma in (0,2)
+          min over gamma in (0.001, 1.999) of [1+gamma/(2-gamma)] - 1 = 0.000500 > 0; monotone increasing, -> 1 only as gamma -> 0
+D17c      OK   the QUOTED derived constant +1.1385 back-solves to a single gamma
+          1 + gamma/(2-gamma) = 1.1385 at gamma = 0.243303. The scored gamma grid is [0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.35,0.5] (test/s0/results.json pins.gammas), so 0.2433 lies INSIDE the overdamped span but is NOT a grid point; the per-cell fit windows that average to it are NOT in any recorded machine-readable artefact
+D17d      OK   derived slope at each recorded gamma grid point (for the reader to place +1.1385)
+          0.002: 1.0010; 0.005: 1.0025; 0.01: 1.0050; 0.02: 1.0101; 0.05: 1.0256; 0.1: 1.0526; 0.2: 1.1111; 0.35: 1.2121; 0.5: 1.3333
+D18       OK   -gamma/[(1-gamma)(-ln(1-gamma))] IS d ln(floor)/d ln gamma, and ~ -1 - gamma/2
+          gamma: derived / small-g form (-1-g/2) / numeric: 0.002: -1.001002 / -1.001000 / -1.001002; 0.05: -1.026091 / -1.025000 / -1.026091; 0.2: -1.120355 / -1.100000 / -1.120355; 0.5: -1.442695 / -1.250000 / -1.442695
+D18-DIAG  OK   the QUOTED derived -1.0050 and the QUOTED measured -1.1090 sit at DIFFERENT gamma on the same derived curve -- reported as a diagnostic, NOT as a bar
+          d18(gamma) = -1.0050 at gamma = 0.009917; d18(gamma) = -1.1090 at gamma = 0.184104. d18 on the recorded grid: 0.002: -1.0010; 0.01: -1.0050; 0.05: -1.0261; 0.1: -1.0546; 0.2: -1.1204; 0.35: -1.2500; 0.5: -1.4427. No secant of ln(floor) vs ln gamma over the recorded grid reaches -1.109 (ln-slope over [0.002,0.1] = -1.01309, over [0.002,0.2] = -1.02356). The shorts' own underdamped slopes are -1.006 (V5 E5.1) and -1.0020 +- 0.0003 (V5 E5.2, I-J). The per-cell fit windows are NOT recorded, so which of these explains w6's -1.1090 CANNOT be adjudicated from the artefacts.
+D20       OK   sigma* = sqrt(M T gamma (2-gamma)) is exactly what forces Var(p) = sigma^2/[g(2-g)] = M T
+          residual |Var(p) - M T| at gamma = 0.05/0.2/0.5 with M T = 0.009200 is 0.000e+00
+D21       OK   D_theta = eps T (2-gamma)/(2 F^2 gamma): d log D/d log T = +1 exactly
+          d log D/d log T = 1.000000 (V5 E5.6 measured +0.992..+1.010); raw d log D/d log gamma over 0.05->0.1 = -1.037475, and ln((2-0.1)/(2-0.05))/ln2 = -0.037475 is exactly the (2-gamma) factor V5 isolates before quoting -1.014..-0.980
+D23       OK   n_half ~ gamma/[(2-gamma) T]: friction PRESERVES the coset, temperature ERASES it
+          d log n_half/d log gamma over gamma 0.05->0.2 = 1.057739 (V5 E5.7 measured +0.9552 +- 0.0422, positive in 10/10 cells); d log n_half/d log T = -1 exactly (V5 measured -0.956..-0.979); predicted effect size for gamma 0.05->0.2 is 4.333x (V5 measured 3.77 +- 0.23x)
+D26/D27   OK   gamma_eff = 1-(1-g)(1-g_phi) and T_local/T = g(2-g)/[g_eff(2-g_eff)] reproduce V5 E5.11
+          g_phi=0.1: g_eff=0.1450, T_loc/T pred 0.36249 vs V5 measured 0.36171; g_phi=0.2: g_eff=0.2400, T_loc/T pred 0.23082 vs V5 measured 0.23044; g_phi=0.3: g_eff=0.3350, T_loc/T pred 0.17480 vs V5 measured 0.17513; g_phi=0.5: g_eff=0.5250, T_loc/T pred 0.12591 vs V5 measured 0.12600
+D29       OK   vault = (gamma_eff/gamma)^2 reproduces V5 E5.10's measured vaults
+          g_phi=0.1: pred 8.41x vs measured 8.42x; g_phi=0.2: pred 23.04x vs measured 22.39x; g_phi=0.3: pred 44.89x vs measured 44.31x; g_phi=0.5: pred 110.25x vs measured 107.77x  [V5's own headline prediction at g_phi=0.5 is 110.25x; this formula gives 110.25x]
+D30       OK   the REJECTED coupled-bath vault (2-g)g_eff/[g(2-g_eff)] is exactly the 13.88x V5 refutes
+          coupled-bath prediction at g_phi=0.5 = 13.8814x (V5 quotes 13.88x and refutes it; the matched-g_eff uniform-scalar control measured 13.28 +- 0.12x)
+D31       OK   separation = g_eff(2-g_eff)/[g(2-g)] equals T/T_local IDENTICALLY
+          at g_phi=0.5: separation 7.9423 == T/T_local 7.9423 (V5 E5.11 measured a 7.94x refrigerator and a 7.942x separation; E5.14 emergent arm 7.955x vs 7.942 predicted)
+D37/D38   OK   det S_z = 1 exactly, and H(S_z z) <= e^{2|z|} H(z)
+          max |cosh^2 z - sinh^2 z - 1| = 1.776e-15; max (H' - e^{2|z|} H) over 20000 random (u,v,z) = -1.292e-08 (<= 0, bound never violated; equality on u = +-v)
+D43       OK   det(I + Delta grad_g^T) = 1 + grad_g . Delta (a varying gate breaks det J = 1)
+          max residual over 2000 random (Delta, grad_g) in d=3 = 5.773e-15; the defect is first order in the gate's variation, so no smallness of Delta removes it
+D40       OK   cosh 2z = 1 + 2 (M0 delta/p0)^2 exactly; the CERTIFICATE e^{2|z|} is exponential in RAPIDITY
+          delta=0.1: cosh2z 1.222222 == 1+2(M0 d/p0)^2 1.222222, certificate e^{2z} 1.9250; delta=0.5: cosh2z 6.555556 == 1+2(M0 d/p0)^2 6.555556, certificate e^{2z} 13.0344; delta=1.0: cosh2z 23.222222 == 1+2(M0 d/p0)^2 23.222222, certificate e^{2z} 46.4229
+B1/B2     OK   RESULTS-LEDGER.md's B1 and B2 RECOMPUTE from test/s{0,1,2}/results.json
+          seed0: B1 0.043256 (ledger 0.0433), B2 mean delta -0.596831 (ledger -0.5968), better 49/49; seed1: B1 0.043516 (ledger 0.0435), B2 mean delta -0.579639 (ledger -0.5796), better 49/49; seed2: B1 0.043102 (ledger 0.0431), B2 mean delta -0.598172 (ledger -0.5982), better 49/49
+AUDIT     OK   byte pin, field sha, integrator, instrument floor and B6 from the same files
+          seed0: 524288 B pin=True, sha 697d60dfa3e4b70c, integrator 1.885e-08, floor 0.034919, B6 3.519e-11; seed1: 524288 B pin=True, sha 608fc3da332b972d, integrator 1.885e-08, floor 0.034919, B6 1.202e-10; seed2: 524288 B pin=True, sha fca1c4a89befc12e, integrator 1.885e-08, floor 0.034919, B6 2.699e-11; scored-corner rows [41493, 41405, 41358] of total rows [64335, 64320, 64320]
+D14-TAUTO OK   results.json's `d14_confinement` is EXACTLY 0.0 on 60 cells - the tautology the hub itself declared; the SCORED B6 is `hessian_fd_check`, not this field
+          d14_confinement max_abs_residual = [0.0, 0.0, 0.0] (identically zero: the same algebra on both sides); hessian_fd_check max_abs_residual = ['3.519e-11', '1.202e-10', '2.699e-11'] (a finite difference that CAN fail)
+
+==============================================================================
+34/34 checks reproduced; 0 FAIL
