@@ -118,8 +118,16 @@ def save_table(seed: int, protos, grid, cache_manifest: dict,
 def save_learner(seed: int, name: str, model, width: int, in_kind: str, grid,
                  out_dim: int, cache_manifest: dict,
                  population: Optional[dict] = None,
-                 root: Optional[Path] = None) -> Path:
-    """Serialise a fitted learner with the metadata needed to rebuild its shape."""
+                 root: Optional[Path] = None,
+                 extra: Optional[dict] = None) -> Path:
+    """Serialise a fitted learner with the metadata needed to rebuild its shape.
+
+    ``extra`` is merged into the manifest.  It is how a derived object states what
+    it is: w12's deletion comparators carry ``base_family`` (the architecture whose
+    builder rebuilds them) plus their deletion spec and cost line, so
+    :func:`load_rival` can load ``mlp__retrain_without__value-object_hue-0`` without
+    that name having to appear on a hand-maintained list.
+    """
     d = _ckpt_dir(seed, root)
     meta = {"kind": name, "seed": int(seed), "width": int(width),
             "in_kind": in_kind, "out_dim": int(out_dim),
@@ -130,6 +138,7 @@ def save_learner(seed: int, name: str, model, width: int, in_kind: str, grid,
             "generation": 2,
             "population": population or {},
             "features_sha256": cache_manifest["features_sha256"]}
+    meta.update(dict(extra or {}))
     with open(d / f"{name}.rival.json", "w", encoding="utf-8") as fh:
         json.dump(meta, fh, indent=2, sort_keys=True)
         fh.write("\n")
@@ -325,11 +334,13 @@ def load_rival(seed: int, name: str, root: Optional[Path] = None) -> RivalRead:
     # Measured: the 573k replicate - the object another hub's PREREG names as its
     # PRIMARY leg - was refused purely for being absent from that list while its
     # checkpoint sat valid on disk.
-    if meta.get("in_kind") != "continuous_raw" and name not in LEARNER_FAMILIES:
+    declared = meta.get("base_family")
+    if (meta.get("in_kind") != "continuous_raw" and name not in LEARNER_FAMILIES
+            and declared not in LEARNER_FAMILIES):
         raise RivalRefusal(
             f"{name!r} is not exposed as a callable (no builder for base family "
-            f"{base_family(name)!r} and its metadata does not declare a "
-            "self-describing input kind)")
+            f"{base_family(declared or name)!r} and its metadata declares neither a "
+            "self-describing input kind nor a loadable base_family)")
 
     import jax
 
@@ -341,7 +352,7 @@ def load_rival(seed: int, name: str, root: Optional[Path] = None) -> RivalRead:
             int(meta["width"]), int(meta["out_dim"]))
         kind = "continuous_raw"
     else:
-        build, kind = bs[base_family(name)]
+        build, kind = bs[base_family(declared or name)]
         skeleton = build(int(meta["width"]))
     model = eqx.tree_deserialise_leaves(d / f"{name}.rival.eqx", skeleton)
     got = L.count_params(model)
@@ -354,7 +365,8 @@ def load_rival(seed: int, name: str, root: Optional[Path] = None) -> RivalRead:
     # out-of-distribution number by accident when an in-distribution one exists.
     return RivalRead(name, seed, meta, _learner_fn(model, meta),
                      offgrid_ok=kind in ("continuous", "continuous_raw"),
-                     partial_ok=name.endswith("_dropout"))
+                     partial_ok=bool(meta.get("partial_ok",
+                                              name.endswith("_dropout"))))
 
 
 def discover(seed: int, root: Optional[Path] = None) -> list:

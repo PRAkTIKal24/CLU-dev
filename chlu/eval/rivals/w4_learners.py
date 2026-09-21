@@ -397,6 +397,12 @@ def dropout_present(n: int, n_factors: int, rng: np.random.Generator) -> np.ndar
 # ---------------------------------------------------------------------------
 
 
+def _as_model_input(X) -> np.ndarray:
+    """float32 for continuous inputs, dtype PRESERVED for integer token inputs."""
+    A = np.asarray(X)
+    return A if np.issubdtype(A.dtype, np.integer) else A.astype(np.float32)
+
+
 def train(model, Xin, Y: np.ndarray, key, epochs: int, lr: float,
           wd: float, batch: int = BATCH, log: Optional[Callable] = None,
           rng: Optional[np.random.Generator] = None) -> tuple:
@@ -413,9 +419,15 @@ def train(model, Xin, Y: np.ndarray, key, epochs: int, lr: float,
     n = int(X0.shape[0])
     steps_per_epoch = max(n // batch, 1)
     total = steps_per_epoch * int(epochs)
+    # ⛔ MEASURED DEFECT, fixed here (w12 spoke/deletion-baselines, 2026-09-21).
+    # At `total == 1` (a single-step fit, which a smoke or a property check does make)
+    # warmup_steps is 1 and optax computes decay_steps - warmup_steps == 0, raising
+    # "The cosine_decay_schedule requires positive decay_steps". The guard below is a
+    # no-op for every `total >= 2`, so no working run's schedule changes.
+    warm = max(total // 20, 1)
     sched = optax.warmup_cosine_decay_schedule(
-        init_value=lr * 0.1, peak_value=lr, warmup_steps=max(total // 20, 1),
-        decay_steps=total, end_value=lr * 0.01)
+        init_value=lr * 0.1, peak_value=lr, warmup_steps=warm,
+        decay_steps=max(total, warm + 1), end_value=lr * 0.01)
     opt = optax.adamw(sched, weight_decay=wd)
     opt_state = opt.init(eqx.filter(model, eqx.is_array))
 
@@ -434,11 +446,18 @@ def train(model, Xin, Y: np.ndarray, key, epochs: int, lr: float,
     # is what killed the first pool refit. Per-batch conversion of 256 x 2048 is
     # free by comparison.
     Ynp = np.asarray(Y, np.float32)
-    Xnp = np.asarray(X0, np.float32)
+    # ⛔ MEASURED DEFECT, fixed here (w12 spoke/deletion-baselines, 2026-09-21).
+    # An unconditional cast to float32 destroys the TOKEN families: `tokens` inputs
+    # are vocabulary indices and `eqx.nn.Embedding` indexes with them.  Under
+    # jax 0.9.0 that raises `TypeError: Indexer must have integer or boolean type,
+    # got indexer with type float32`, so `transformer` and `lstm` could not be
+    # trained at all through this function.  Integer inputs are now preserved; the
+    # float path is byte-identical to before.
+    Xnp = _as_model_input(X0)
     first = last = None
     for ep in range(int(epochs)):
         if resample and ep > 0:
-            Xnp = np.asarray(Xin(rng), np.float32)
+            Xnp = _as_model_input(Xin(rng))
         key, sk = jax.random.split(key)
         perm = np.asarray(jax.random.permutation(sk, n))
         for i in range(steps_per_epoch):
