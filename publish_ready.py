@@ -16,11 +16,15 @@ import os
 FIELDS = ("mlp", "lstm", "transformer", "table", "refuser")
 
 
-def load(outdir, pattern="harness_seed*.json"):
+def load(outdir, tier="cmaze1", pattern="harness_seed*.json"):
+    """Seed reports for ONE tier.  The tiers are separate instruments and are never
+    averaged together."""
     reps = []
     for path in sorted(glob.glob(os.path.join(outdir, pattern))):
         with open(path) as f:
-            reps.append((os.path.basename(path), json.load(f)))
+            r = json.load(f)
+        if r.get("tier", "cmaze1") == tier:
+            reps.append((os.path.basename(path), r))
     return reps
 
 
@@ -32,6 +36,7 @@ def build(outdir, reps, want_seeds=(0, 1, 2), status=None):
     params = {}
     cols = {"fragment_lookup": False, "composition_blind": False}
     seeds_done = sorted({r["seed"] for _, r in reps})
+    tiers = sorted({r.get("tier", "cmaze1") for _, r in reps})
     for _, r in reps:
         for k in ("mlp", "lstm", "transformer"):
             if k in r.get("results", {}):
@@ -62,6 +67,7 @@ def build(outdir, reps, want_seeds=(0, 1, 2), status=None):
         "param_counts": params,
         "columns": cols,
         "seeds": seeds_done if seeds_done else [],
+        "tier": tiers[0] if len(tiers) == 1 else tiers,
         "seeds_requested": list(want_seeds),
         "utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "reports": [n for n, _ in reps],
@@ -95,8 +101,14 @@ def main():
     ap.add_argument("--out", default="/c/chlu/outputs/w9-harness")
     ap.add_argument("--status", default="")
     a = ap.parse_args()
-    reps = load(a.out)
+    reps = load(a.out, "cmaze1")
     doc = build(a.out, reps, status=a.status or None)
+    easy = load(a.out, "cmaze1-easy")
+    doc["easy_tier"] = {"seeds": sorted({r["seed"] for _, r in easy}),
+                        "reports": [n for n, _ in easy],
+                        "note": "CMAZE-1-EASY: same generator (h=w=4, k=2), same "
+                                "exact judge, declared separately and never "
+                                "averaged with the main tier."}
     path = os.path.join(a.out, "HARNESS-READY.json")
     with open(path, "w") as f:
         json.dump(doc, f, indent=1)

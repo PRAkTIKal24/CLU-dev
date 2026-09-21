@@ -135,6 +135,87 @@ def features(enc, images, batch=64):
     return np.concatenate(out) if out else np.zeros((0,))
 
 
+def _patch_matrix(S, r):
+    """Every cell's (2r+1)^2 x D neighbourhood, flattened -- what an arm actually
+    reads at that cell.  Zero-padded outside the grid, like `features.patch`."""
+    N, D, H, W = S.shape
+    P = np.zeros((N, H, W, (2 * r + 1) ** 2 * D), dtype=np.float32)
+    side = 2 * r + 1
+    for i, (dr, dc) in enumerate([(a, b) for a in range(-r, r + 1)
+                                  for b in range(-r, r + 1)]):
+        src = np.zeros_like(S)
+        r0, r1 = max(0, dr), min(H, H + dr)
+        c0, c1 = max(0, dc), min(W, W + dc)
+        src[:, :, r0 - dr:r1 - dr, c0 - dc:c1 - dc] = S[:, :, r0:r1, c0:c1]
+        P[..., i * D:(i + 1) * D] = src.transpose(0, 2, 3, 1)
+    return P.reshape(N * H * W, side * side * D)
+
+
+def probe_report(enc, images, names=None, ridge=1e-3, radius=0, verbose=True):
+    """What the shared features actually carry, per cell, read off linearly.
+
+    A linear probe from the feature vector at one cell back to that cell's image
+    planes.  This is the check behind "the encoder does not advantage one arm": if
+    a fact is linearly present for one arm it is linearly present for all of them,
+    because they read the same arrays.  It is also how an arm's failure gets
+    attributed -- a policy that steps into walls when `floor` probes at 1.00 is
+    failing to use the features, not failing to have them.
+
+    Trained on the first half of the images, scored on the second.
+    """
+    S = features(enc, images)                       # (N, D, H, W)
+    N, D, H, W = S.shape
+    Xf = (S.transpose(0, 2, 3, 1).reshape(-1, D) if radius == 0
+          else _patch_matrix(S, radius))
+    Yf = np.asarray(images).transpose(0, 2, 3, 1).reshape(-1, images.shape[1])
+    Xf = np.concatenate([Xf, np.ones((Xf.shape[0], 1), np.float32)], 1)
+    cut = (N // 2) * H * W
+    A = Xf[:cut].T @ Xf[:cut] + ridge * np.eye(Xf.shape[1], dtype=np.float32)
+    Wt = np.linalg.solve(A, Xf[:cut].T @ Yf[:cut])
+    raw = Xf[cut:] @ Wt
+    ref = Yf[cut:] > 0.5
+    names = names or ["ch%d" % c for c in range(ref.shape[1])]
+    out = {}
+    for c, n in enumerate(names):
+        y, s_ = ref[:, c], raw[:, c]
+        pos, neg = int(y.sum()), int((~y).sum())
+        # A fixed 0.5 threshold is meaningless on a plane that is 0.4% positive --
+        # least squares shrinks every prediction below it, and the probe reads 0
+        # recall for a fact that is perfectly present.  AUC is threshold-free, and
+        # balanced accuracy is quoted at the threshold that maximises it.
+        if pos == 0 or neg == 0:
+            out[n] = {"auc": float("nan"), "balanced_accuracy": float("nan"),
+                      "prevalence": pos / max(pos + neg, 1)}
+            continue
+        order = np.argsort(s_)
+        ranks = np.empty(len(s_), dtype=np.float64)
+        ranks[order] = np.arange(1, len(s_) + 1)
+        auc = (ranks[y].sum() - pos * (pos + 1) / 2) / (pos * neg)
+        qs = np.quantile(s_, np.linspace(0.001, 0.999, 60))
+        bal = max(0.5 * ((s_[y] >= q).mean() + (s_[~y] < q).mean()) for q in qs)
+        out[n] = {"auc": float(auc), "balanced_accuracy": float(bal),
+                  "prevalence": pos / (pos + neg)}
+    if verbose:
+        print("  encoder linear probe r=%d, AUC / balanced-acc (features at a cell"
+              "%s -> that cell's planes):"
+              % (radius, "" if radius == 0 else " and its %dx%d neighbourhood"
+                 % (2 * radius + 1, 2 * radius + 1)))
+        items = list(out.items())
+        for i in range(0, len(items), 5):
+            print("    " + "  ".join("%s %.3f/%.3f" % (n, v["auc"],
+                                                       v["balanced_accuracy"])
+                                     for n, v in items[i:i + 5]))
+        print("    (threshold-free; every arm reads these same arrays)")
+    return out
+
+
+def plane_names(k):
+    return (["floor", "start", "goal"]
+            + ["door%d" % c for c in range(1, k + 1)]
+            + ["tint%d" % c for c in range(1, k + 1)]
+            + ["key%d" % c for c in range(1, k + 1)])
+
+
 def independence_report(enc):
     """What the encoder's objective can see.  The basis for 'shared, not rigged'."""
     import inspect

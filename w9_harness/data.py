@@ -158,12 +158,17 @@ def build_sequences(insts, feats, routes, obs_dim, tmax=None, n_out_pad=0):
                      "steps_available": int(sum(lens))}
 
 
-def refuse_sequences(insts, feats, obs_dim, T, refuse_index):
+def refuse_sequences(insts, feats, obs_dim, T, refuse_index, weight=1.0):
     """Impossible instances: the target is REFUSE, from the first step on.
 
     The agent is walked along a legal random prefix so the refusal is not trivially
     tied to the start cell -- a refuser that only knows how to refuse at t=0 would
     be refusing the picture, not the problem.
+
+    `weight` scales the loss mask.  An impossible instance contributes ~4 labelled
+    steps against a possible instance's ~20-40, so without it REFUSE is a few
+    percent of the objective and the refuser learns to never use the token.  The
+    driver sets it so the two classes carry equal total weight, and says so.
     """
     rng = np.random.default_rng(3)
     N = len(insts)
@@ -177,7 +182,7 @@ def refuse_sequences(insts, feats, obs_dim, T, refuse_index):
         steps = min(int(rng.integers(1, 9)), T)
         for t in range(steps):
             X[i, t] = obs(inst, S, st, gs)
-            M[i, t] = 1.0
+            M[i, t] = weight
             for a in rng.permutation(list(ACTIONS)):
                 nxt, legal, goal = step(inst, st, str(a), homes)
                 if legal and not goal:

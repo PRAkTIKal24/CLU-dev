@@ -27,8 +27,11 @@ PATCH_R = 2                      # 5x5 patch
 DYN_BASE = 29                    # for k = 4; see dyn_dim()
 
 
+BUDGET_SCALE = 64.0      # a fixed divisor, so the number carries the ABSOLUTE budget
+
+
 def dyn_dim(k):
-    return 3 * k + (k + 1) + 4 + 2 + 2 + k
+    return 3 * k + (k + 1) + 4 + 2 + 4 + k
 
 
 def obs_dim(feat_dim, k):
@@ -82,7 +85,14 @@ def dyn(inst, st):
     o += 2
     v[o + 0] = st.t / max(int(inst.budget), 1)
     v[o + 1] = (int(inst.budget) - st.t) / max(int(inst.budget), 1)
-    o += 2
+    # The two ratios above are 0 and 1 at t=0 for EVERY instance, so on their own
+    # they hide the budget completely at the moment a refusal is decided.  A maze
+    # whose only defect is a budget below its optimum is then indistinguishable
+    # from a solvable one, and the refuser cannot be asked about it.  These two
+    # carry the budget on an absolute scale.
+    v[o + 2] = int(inst.budget) / BUDGET_SCALE
+    v[o + 3] = (int(inst.budget) - st.t) / BUDGET_SCALE
+    o += 4
     for c in range(k):                                     # key still on its cell
         v[o + c] = 1.0 if st.ks[c] == UNTAKEN else 0.0
     return v

@@ -44,8 +44,16 @@ def _forward(policy, X):
 
 
 def rollout(policy, insts, feats, obs_dim, n_out, refuse_index=None, tmax=None,
-            verbose=False):
-    """Greedy rollout.  Returns (routes, refused, steps_taken)."""
+            refuse_only_at_start=True, verbose=False):
+    """Greedy rollout.  Returns (routes, refused, steps_taken).
+
+    `refuse_only_at_start` is how a refusal is read as a DECISION ABOUT THE PROBLEM
+    rather than a per-step coin flip.  A refuse token that stays live for every one
+    of ~50 steps turns even a 2%-per-step refusal rate into a ~60% episode refusal
+    rate, which measures the episode length, not the refuser.  So the refuse logit
+    is live at t=0 -- look at the maze, decide -- and masked out afterwards.  The
+    per-step reading is still available by passing False, and both are reported.
+    """
     t0 = time.time()
     N = len(insts)
     T = tmax if tmax is not None else max(int(i.budget) for i in insts)
@@ -62,7 +70,9 @@ def rollout(policy, insts, feats, obs_dim, n_out, refuse_index=None, tmax=None,
             break
         for i in idx:
             H[i, t] = obs(insts[i], feats[i], states[i], gsums[i])
-        logits = np.asarray(_forward(policy, jnp.asarray(H)))[:, t, :]
+        logits = np.array(_forward(policy, jnp.asarray(H))[:, t, :])
+        if refuse_index is not None and refuse_only_at_start and t > 0:
+            logits[:, refuse_index] = -np.inf
         acts = logits.argmax(-1)
         for i in idx:
             a = int(acts[i])
@@ -104,7 +114,17 @@ def score(insts, routes, refused=None, label=""):
         _, plen, _ = replay(inst, route)
         legal_frac.append(min(plen, inst.opt_len) / max(inst.opt_len, 1))
     n = len(insts)
+    buckets = {}
+    for lo, hi in ((0, 20), (21, 40), (41, 10 ** 9)):
+        sel = [j for j, i in enumerate(insts) if lo <= i.opt_len <= hi]
+        if not sel:
+            continue
+        v = sum(JUDGE(insts[j], routes[j])[0] for j in sel
+                if refused is None or not refused[j])
+        buckets["opt_len %d-%s" % (lo, "inf" if hi > 10 ** 8 else hi)] = \
+            {"n": len(sel), "validity": v / len(sel)}
     return {"label": label, "n": n, "validity": ok_n / n, "score": sc / n,
+            "validity_by_optimal_length": buckets,
             "goal_rate_budget_lifted": goal_lifted / n,
             "mean_legal_prefix_over_opt": float(np.mean(legal_frac)) if legal_frac else 0.0,
             "n_refused": int(refused.sum()) if refused is not None else 0,

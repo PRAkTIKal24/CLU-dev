@@ -47,26 +47,40 @@ SCALES = {
 
 FEAT_DIM = 8
 
+# Two DECLARED tiers of the same environment, same generator, same exact judge.
+# The defaults are env-scout's adopted configuration, unchanged.  The easy tier is
+# the same generator with a smaller grid and two colours: the composition (rule A x
+# rule B x colour) is intact, the routes are ~18 steps instead of ~43, and that is
+# the difference between an instrument with dynamic range for a learned arm and one
+# that reads 0.0000 for every arm because 43 consecutive actions must all be right.
+TIERS = {
+    "cmaze1": {},
+    "cmaze1-easy": dict(h=4, w=4, n_colours=2),
+}
+
 
 def utc():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
 def run(seed, scale, outdir, arm_kinds=("mlp", "lstm", "transformer"),
-        do_refuser=True, tag=""):
+        do_refuser=True, tag="", tier="cmaze1"):
     cfg = SCALES[scale]
+    gen = TIERS[tier]
     t_all = time.time()
     rep = {"seed": seed, "scale": scale, "config": cfg, "utc_start": utc(),
-           "arms_run": list(arm_kinds), "refuser_run": do_refuser}
+           "arms_run": list(arm_kinds), "refuser_run": do_refuser,
+           "tier": tier, "generator_kwargs": gen}
     base = 1_000_000 + 5_000_000 * seed
 
     # ---------------------------------------------------------------- 1. data
     print("\n" + "=" * 78)
-    print("w9 HARNESS  seed=%d  scale=%s" % (seed, scale))
+    print("w9 HARNESS  seed=%d  scale=%s  tier=%s %s"
+          % (seed, scale, tier, gen or "(env-scout adopted defaults)"))
     print("=" * 78)
     t0 = time.time()
-    tr_insts, tr_seeds = data.make_instances(cfg["n_train"], base)
-    ev_insts, ev_seeds = data.make_instances(cfg["n_eval"], base + 2_000_000)
+    tr_insts, tr_seeds = data.make_instances(cfg["n_train"], base, **gen)
+    ev_insts, ev_seeds = data.make_instances(cfg["n_eval"], base + 2_000_000, **gen)
     tr_routes = data.oracle_routes(tr_insts)
     ev_routes = data.oracle_routes(ev_insts)
     print("instances: %d train / %d eval  (CMAZE-1 adopted defaults)  [%.1fs]"
@@ -98,6 +112,8 @@ def run(seed, scale, outdir, arm_kinds=("mlp", "lstm", "transformer"),
                                  seed=seed)
     rep["encoder"] = enc_rep
     rep["encoder_independence"] = encoder.independence_report(enc)
+    rep["encoder_probe"] = encoder.probe_report(
+        enc, ev_imgs, encoder.plane_names(int(tr_insts[0].n_colours)))
     tr_feats = encoder.features(enc, tr_imgs)
     ev_feats = encoder.features(enc, ev_imgs)
 
@@ -146,15 +162,21 @@ def run(seed, scale, outdir, arm_kinds=("mlp", "lstm", "transformer"),
              rep["head_identity"]["same_init_key"]))
 
     print("\nEVALUATION -- exact judge, %d instances" % len(ev_insts))
-    print("  %-34s %8s %8s   %s" % ("arm", "validity", "score", "top failure modes"))
+    print(HEADER)
     results = {}
     for kind in arm_kinds:
         routes, refused, _ = rollout(policies[kind], ev_insts, ev_feats, obs_dim,
                                      arms.N_ACTIONS, tmax=Tmax)
         r = score(ev_insts, routes, label="%s (matched, %d params)"
                   % (kind.upper(), train_reps[kind]["params"]))
+        r["teacher_forced_action_acc"] = train_reps[kind]["val_teacher_forced_action_acc"]
         results[kind] = r
         print_row(r)
+        print("       teacher-forced per-step action accuracy %.4f ; validity by "
+              "optimal length %s"
+              % (r["teacher_forced_action_acc"],
+                 {b: round(v["validity"], 4)
+                  for b, v in r["validity_by_optimal_length"].items()}))
 
     # ------------------------------------------------------------ 6. table floor
     rng = np.random.default_rng(100 + seed)
@@ -176,7 +198,7 @@ def run(seed, scale, outdir, arm_kinds=("mlp", "lstm", "transformer"),
 
     # -------------------------------------------------------- 7. reported columns
     print("\nREPORTED COLUMNS (never abort conditions)")
-    print("  %-34s %8s %8s   %s" % ("column", "validity", "score", "note"))
+    print(HEADER)
     cols = {}
     for name, spec in columns.BLIND.items():
         routes = [columns.plan(i, spec) or "" for i in ev_insts]
@@ -193,11 +215,17 @@ def run(seed, scale, outdir, arm_kinds=("mlp", "lstm", "transformer"),
               % (info["signatures"], info["train_coverage"]))
     print(NOTE)
     rep["columns"] = cols
+    hname, hres = columns.headline(cols)
     rep["column_headline"] = {
-        "composition_blind": cols[columns.HEADLINE]["score"],
-        "composition_blind_validity": cols[columns.HEADLINE]["validity"],
-        "fragment_lookup": cols["fragment-lookup r=2"]["score"],
-        "fragment_lookup_validity": cols["fragment-lookup r=2"]["validity"]}
+        "composition_blind_planner": hname,
+        "composition_blind": hres["score"],
+        "composition_blind_validity": hres["validity"],
+        "fragment_lookup": max(cols["fragment-lookup r=1"]["score"],
+                               cols["fragment-lookup r=2"]["score"]),
+        "fragment_lookup_validity": max(cols["fragment-lookup r=1"]["validity"],
+                                        cols["fragment-lookup r=2"]["validity"])}
+    print("  headline composition-blind = %s (score %.4f); fragment-lookup = %.4f"
+          % (hname, hres["score"], rep["column_headline"]["fragment_lookup"]))
 
     # ------------------------------------------------------------ 8. the refuser
     if not do_refuser:
@@ -216,9 +244,9 @@ def run(seed, scale, outdir, arm_kinds=("mlp", "lstm", "transformer"),
     print("\nSUPERVISED REFUSER (the ONLY comparator for DISPLAY rows)")
     t0 = time.time()
     imp_tr, fam_tr = data.make_impossible(cfg["n_imp_train"], base + 4_000_000,
-                                          rng_seed=seed)
+                                          rng_seed=seed, **gen)
     imp_ev, fam_ev = data.make_impossible(cfg["n_imp_eval"], base + 4_500_000,
-                                          rng_seed=100 + seed)
+                                          rng_seed=100 + seed, **gen)
     bad = data.certify_impossible(imp_tr + imp_ev, fam_tr + fam_ev)
     unseen = data.assert_unseen(list(tr_seeds) + list(ev_seeds), imp_tr + imp_ev)
     print("  impossible set: %d train / %d eval, certification failures %d, "
@@ -240,6 +268,16 @@ def run(seed, scale, outdir, arm_kinds=("mlp", "lstm", "transformer"),
     imp_ev_feats = encoder.features(enc, imp_ev_imgs)
     rX, rY, rM = data.refuse_sequences(imp_tr, imp_tr_feats, obs_dim, trT,
                                        arms.N_ACTIONS)
+    # equal total loss weight for "act" and "refuse", stated rather than left to
+    # the accident of how many steps each population happens to contribute
+    w_refuse = float(M.sum()) / max(float(rM.sum()), 1.0)
+    rM = rM * w_refuse
+    print("  class balance: %d action-steps vs %d refuse-steps -> refuse weight "
+          "x%.1f (equal total weight)"
+          % (int(M.sum()), int(rM.sum() / w_refuse), w_refuse))
+    rep["refuser_class_balance"] = {"action_steps": int(M.sum()),
+                                    "refuse_steps": int(rM.sum() / w_refuse),
+                                    "refuse_weight": w_refuse}
     RX = np.concatenate([X, rX])
     RY = np.concatenate([Y, rY])
     RM = np.concatenate([M, rM])
@@ -254,17 +292,41 @@ def run(seed, scale, outdir, arm_kinds=("mlp", "lstm", "transformer"),
                                       seed=seed, label="refuser")
     rep["refuser_training"] = ref_tr
 
-    ro, refd, _ = rollout(ref_p, ev_insts, ev_feats, obs_dim, arms.N_OUT_REFUSER,
-                          refuse_index=arms.N_ACTIONS, tmax=Tmax)
-    r_poss = score(ev_insts, ro, refused=refd, label="REFUSER on POSSIBLE")
-    ro2, refd2, _ = rollout(ref_p, imp_ev, imp_ev_feats, obs_dim, arms.N_OUT_REFUSER,
-                            refuse_index=arms.N_ACTIONS, tmax=Tmax)
-    r_imp = score(imp_ev, ro2, refused=refd2, label="REFUSER on IMPOSSIBLE")
+    refuser_rows = {}
+    for mode, at_start in (("decision at t=0", True), ("any step", False)):
+        ro, refd, _ = rollout(ref_p, ev_insts, ev_feats, obs_dim, arms.N_OUT_REFUSER,
+                              refuse_index=arms.N_ACTIONS, tmax=Tmax,
+                              refuse_only_at_start=at_start)
+        rp = score(ev_insts, ro, refused=refd,
+                   label="REFUSER on POSSIBLE [%s]" % mode)
+        ro2, refd2, _ = rollout(ref_p, imp_ev, imp_ev_feats, obs_dim,
+                                arms.N_OUT_REFUSER, refuse_index=arms.N_ACTIONS,
+                                tmax=Tmax, refuse_only_at_start=at_start)
+        ri = score(imp_ev, ro2, refused=refd2,
+                   label="REFUSER on IMPOSSIBLE [%s]" % mode)
+        refuser_rows[mode] = (rp, ri)
+        results["refuser_possible_%s" % mode.replace(" ", "_")] = rp
+        results["refuser_impossible_%s" % mode.replace(" ", "_")] = ri
+    r_poss, r_imp = refuser_rows["decision at t=0"]
+    tpr, fpr = r_imp["refusal_rate"], r_poss["refusal_rate"]
+    rep["refuser_headline"] = {
+        "refusal_rate_on_impossible": tpr,
+        "refusal_rate_on_possible": fpr,
+        "separation": tpr - fpr,
+        "reading": "decision at t=0; the any-step reading is also recorded"}
     print("  %-38s %8s %8s   %s" % ("", "validity", "refusal", "note"))
     print("  %-38s %8.4f %8.4f   false refusals on solvable mazes"
           % (r_poss["label"], r_poss["validity"], r_poss["refusal_rate"]))
     print("  %-38s %8.4f %8.4f   correct refusals (the DISPLAY comparator)"
           % (r_imp["label"], r_imp["validity"], r_imp["refusal_rate"]))
+    for mode, (rp, ri) in refuser_rows.items():
+        if mode != "decision at t=0":
+            print("  %-38s %8.4f %8.4f   alternative reading"
+                  % (rp["label"], rp["validity"], rp["refusal_rate"]))
+            print("  %-38s %8.4f %8.4f   alternative reading"
+                  % (ri["label"], ri["validity"], ri["refusal_rate"]))
+    print("  refusal separation (impossible - possible) = %+.4f"
+          % rep["refuser_headline"]["separation"])
     results["refuser_possible"] = r_poss
     results["refuser_impossible"] = r_imp
 
@@ -296,8 +358,10 @@ def main():
     ap.add_argument("--arms", default="mlp,lstm,transformer")
     ap.add_argument("--no-refuser", action="store_true")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--tier", default="cmaze1", choices=list(TIERS))
     a = ap.parse_args()
-    run(a.seed, a.scale, a.out, tuple(a.arms.split(",")), not a.no_refuser, a.tag)
+    run(a.seed, a.scale, a.out, tuple(a.arms.split(",")), not a.no_refuser, a.tag,
+        a.tier)
 
 
 if __name__ == "__main__":

@@ -27,8 +27,18 @@ BLIND = {
     "blind-sequential (key order from A)": "sequential",
 }
 
-# The single headline "composition-blind" number: the strongest blind planner.
-HEADLINE = "blind-factor (A x B local only)"
+
+def headline(col_results):
+    """The composition-blind headline is the STRONGEST blind planner on this run.
+
+    Fixing one relaxation as "the" composition-blind number would let the headline
+    be chosen after the fact.  Taking the maximum over the relaxations is the
+    conservative reading: it is the best a planner can do while missing part of the
+    composition, so it is the number an arm has to beat to have shown anything.
+    """
+    blind = {k: v for k, v in col_results.items() if k.startswith("blind-")}
+    name = max(blind, key=lambda k: blind[k]["score"])
+    return name, blind[name]
 
 
 def plan(inst, spec):
