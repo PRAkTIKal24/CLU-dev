@@ -99,7 +99,12 @@ def main(argv=None) -> int:
     L = load(runs)
     D = L["data"]
 
-    rep = {"n_seeds_declared": len(SEEDS), "seeds": SEEDS,
+    rep = {"placement": "APPENDIX -- the K-sweep's ENDPOINT at K = 5. NOT main text: the main text carries ONE K, K*, and never both (Head ruling, 2026-09-21T12:38:07Z, HEAD-RULING-K.md).",
+           "K_of_the_store_arms": 5,
+           "K_star": None,
+           "K_star_source": ("w12-single-design-crossover/CROSSOVER-val.json: "
+                             "K_star=null, 'K=5 reference row absent; rule not applicable'"),
+           "n_seeds_declared": len(SEEDS), "seeds": SEEDS,
            "n_configurations_per_rung": None,
            "metric": METRIC,
            "margin_name": "DECORATION_MARGIN_NOVELTY",

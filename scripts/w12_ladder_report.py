@@ -50,6 +50,13 @@ def main(argv=None) -> int:
 
     W("# w12 hub/composition-ladder — THE LADDER TABLE")
     W("")
+    W("> ⛔ **PLACEMENT — %s**" % rep.get("placement", "unset"))
+    W("")
+    W("> The store arms run at **K = 5, DECLARED** (`PREREG.md` §3): K\* was unpublished when "
+      "this hub started and is unpublished still — `CROSSOVER-val.json: K_star = null`. "
+      "The Head re-runs the store arm at K\* as a free replication; ⛔ this hub does not "
+      "wait for it and ⛔ no row here is a K\* row.")
+    W("")
     W("Every number below is `distinct_valid_novel_tuples` per corner, the metric and the "
       "margin the harness pre-declared (`LADDER-READY.json:estimand`). Unit = **corner**. "
       "Cells read `mean over seeds (seed0 / seed1 / seed2)`.")

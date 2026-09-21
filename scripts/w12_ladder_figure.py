@@ -194,8 +194,9 @@ def main(argv=None) -> int:
         who = sorted({b[s]["arm"] for s in b if b[s].get("arm")})
         if who:
             bl["k=" + r] = who
-    fig.suptitle("Shapes3D composition ladder — how far composition stretches as k grows",
-                 fontsize=11, fontweight="bold", y=1.02)
+    fig.suptitle("Shapes3D composition ladder — how far composition stretches as k grows\n"
+                 "APPENDIX FIGURE · the K-sweep's ENDPOINT at K = 5 (not main text)",
+                 fontsize=11, fontweight="bold", y=1.04)
     fig.text(0.5, -0.30,
              ("Band = min..max over seeds; line = seed mean; marker on the four primary "
               "series only. %s. Corners per rung per seed: %s.\n"
@@ -208,7 +209,11 @@ def main(argv=None) -> int:
               "AMENDMENT-3 so the opponent can only get stronger): %s.\n"
               "Hues are the entity's BYTE PIN + POPULATION group; the arm inside a group "
               "is the line style. Palette validated at --pairs all (see the module "
-              "docstring). Every arm also appears as its own row in LADDER.md / LADDER.csv.")
+              "docstring). Every arm also appears as its own row in LADDER.md / LADDER.csv.\n"
+              "PLACEMENT (Head ruling 2026-09-21T12:38:07Z): the store arms run at K = 5, "
+              "DECLARED, because K* is unpublished (CROSSOVER-val.json: K_star = null). The "
+              "main text carries ONE K, K*; this figure is the sweep's ENDPOINT and belongs "
+              "in the appendix. Never both in main text.")
              % (nstr, ncorn, rep["margin"], bl),
              ha="center", fontsize=7.0, color=INK2)
     fig.tight_layout()

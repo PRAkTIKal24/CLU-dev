@@ -33,6 +33,7 @@ from chlu.experiments import exp_gen_delete_row7 as D7
 from chlu.experiments import exp_gen_factor_wells as fw
 from chlu.experiments import exp_gen_read as R
 from chlu.eval.rivals import w4_learners as WL
+from w12_fastjudge import FastJudge, assert_identical
 
 import w12_ladder_leg as LEG  # the condition swap, verbatim
 
@@ -143,6 +144,11 @@ def main(argv=None) -> int:
     bitmap = fw.value_presence_bitmap(grid, cond["train_rows"])
     seen_mask = fw.seen_tuple_mask(grid, cond["train_rows"])
     judge = fw.Judge(int(a.seed), log=log)
+    fast = FastJudge(judge)
+    _chk = assert_identical(judge, fast,
+                            fw.gather(fw.features_mmap(int(a.seed)), pool[:256]))
+    log("FastJudge positive control: %s (%d requests, %d elements)"
+        % (_chk["identical"], _chk["n_requests"], _chk["n_elements_compared"]))
 
     tgt = one_x_target(leg)
     with open(leg / "ONEX_TARGET.json", "w", encoding="utf-8") as fh:
@@ -179,7 +185,7 @@ def main(argv=None) -> int:
                    "byte_ledger": {"param_count": f["param_count"],
                                    "deployed_bytes": f["param_count"] * 4},
                    "head_bytes": {"head_bytes": 0}}
-            per = LEG.score_arm(obj, cond, judge, bitmap, seen_mask)
+            per = LEG.score_arm(obj, cond, fast, bitmap, seen_mask)
             dv = np.array([r["distinct_valid_novel_tuples"] for r in per], float)
             ja = np.array([r["judge_accuracy"] for r in per], float)
             summ = {"arm": arm, "n_corners": len(per),
@@ -195,6 +201,7 @@ def main(argv=None) -> int:
                     "byte_matching": matching,
                     "train_info": f["train_info"],
                     "fitted_by": "w12 hub/composition-ladder, AMENDMENT-1",
+                    "fastjudge_positive_control": _chk,
                     "seconds": time.time() - t}
             with open(done, "w", encoding="utf-8") as fh:
                 json.dump({"summary": summ, "per_corner": per}, fh, indent=1, default=str)
