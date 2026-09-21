@@ -103,3 +103,13 @@ All three run in-turn, foreground, to completion. No PIDs detached; no kills iss
 - REGENERATION CHECK: cloned the bundle into the scratchpad and re-ran all four
   substantive checks from the clone -> exit 0 each, and all four JSON outputs
   diff-identical to the ones in checks/.
+- Re-bundled after the second commit. Final bundle head bfedaf4f5398c464d986d21e875a6b3f6c31af9e
+  refs/heads/w12/clue-theorist; verify "is okay" + "complete history"; list-heads = 1 ref.
+  Re-cloned once more to confirm; scratchpad clones deleted.
+- No background job was ever launched; no PID was killed; no box-wide kill issued.
+- Nothing written outside /c/chlu/outputs/w12-clue-theorist/ and the worktree's own
+  w12_clue_theorist/ directory (plus the session scratchpad, now cleaned).
+- END_UTC 2026-09-21T11:18:29Z (START 2026-09-21T11:09:27Z; ~9 min wall).
+- NOTE ON THIS FILE: the authoritative LOG is this one, in the outputs directory. The copy
+  committed at w12_clue_theorist/LOG.md is a snapshot and necessarily ends one line before
+  the final bundle head it would otherwise have to quote; the two differ only in that tail.
