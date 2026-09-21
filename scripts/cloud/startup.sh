@@ -56,10 +56,16 @@ exp_row() {   # $1 = EXP -> "module out_mode needs_art"
     gen_certificate) echo "chlu.experiments.exp_gen_certificate sweep 1" ;;
     gen_atom_mean)   echo "chlu.experiments.exp_gen_atom_mean   sweep 1" ;;
     gen_baselines)   echo "chlu.experiments.exp_gen_baselines   unit  1" ;;
+    # w8 hub/encoder-loop. out_mode=sweep: the module appends its own seed_<N>/.
+    # needs_art=1: it loads THE external classifier (the invariant instrument) and the
+    # dataset. One unit = one seed = warm start + every arm's stage 2, intra-unit
+    # checkpointed through scripts/cloud/ckpt.py, so a pre-emption costs the steps since
+    # the last checkpoint and not the unit.
+    w8_encoder_loop) echo "chlu.experiments.exp_w8_encoder_loop sweep 1" ;;
     *) return 1 ;;
   esac
 }
-EXP_KNOWN="smoke cluformer gen_encoder gen_store gen_cell gen_dream gen_certificate gen_atom_mean gen_baselines"
+EXP_KNOWN="smoke cluformer gen_encoder gen_store gen_cell gen_dream gen_certificate gen_atom_mean gen_baselines w8_encoder_loop"
 
 #: ⛔ THE DECODER TRAP. chlu/config.py's GenBridgeConfig.dec_recipe still
 #: defaults to "baseline" -- the recipe that FAILED the gate (0.7191 balanced
