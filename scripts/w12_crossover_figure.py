@@ -88,20 +88,22 @@ def main(argv=None) -> int:
     ax2.tick_params(axis="y", labelcolor=CAT[1])
     ax2.axhline(524_288 / 1e6, color=INK3, lw=1.0, ls=":", zorder=1)
     ax2.annotate("524,288 B REFERENCE (not a budget here)",
-                 (Ks[-1], 524_288 / 1e6), xytext=(-2, 4), textcoords="offset points",
-                 ha="right", fontsize=7.0, color=INK3)
+                 (Ks[0], 524_288 / 1e6), xytext=(4, 4), textcoords="offset points",
+                 ha="left", fontsize=7.0, color=INK3)
     ks = doc.get("K_star")
     kc = doc.get("K_crossover")
+    top = ax.get_ylim()[1]
     if ks:
         ax.axvline(ks, color=CAT[2], lw=1.0, alpha=0.5, zorder=1)
-        ax.annotate(f"K* = {ks}", (ks, ax.get_ylim()[0]), xytext=(3, 6),
-                    textcoords="offset points", fontsize=8, color=CAT[2],
-                    fontweight="bold")
+        ax.annotate(f"K* = {ks}", (ks, top), xytext=(3, -12),
+                    textcoords="offset points", fontsize=8.5, color=CAT[2],
+                    fontweight="bold", va="top")
     if kc:
         ax.axvline(kc, color=CAT[7], lw=1.0, alpha=0.5, zorder=1)
-        ax.annotate(f"crossover K = {kc}", (kc, ax.get_ylim()[0]), xytext=(3, 20),
-                    textcoords="offset points", fontsize=8, color=CAT[7],
-                    fontweight="bold")
+        ax.annotate(f"crossover K = {kc}", (kc, top), xytext=(3, -26),
+                    textcoords="offset points", fontsize=8.5, color=CAT[7],
+                    fontweight="bold", va="top")
+    ax.set_xticks(Ks)
     ax.set_title("composition and ledger bytes vs K   (%s)" % nlab, fontsize=9.8)
 
     # ---- panel B: the controls and rank/width -----------------------------
@@ -124,6 +126,7 @@ def main(argv=None) -> int:
     ax3.axhline(0.938, color=CAT[6], lw=1.0, ls=":", zorder=1)
     ax3.annotate("w9 saturation trap sat at rank/d_k = 0.938", (Ks[0], 0.938),
                  xytext=(2, 4), textcoords="offset points", fontsize=7.0, color=CAT[6])
+    ax3.set_xticks(Ks)
     ax3.set_xlabel("K")
     ax3.set_ylabel("val composition  /  rank per well width")
     ax3.set_title("the controls, and the saturation tell-tale", fontsize=9.8)
