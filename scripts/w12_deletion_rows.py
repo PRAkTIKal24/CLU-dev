@@ -62,7 +62,7 @@ SHAPE_FACTOR, CUBE_INDEX = 4, 0     # shape = 0.0 = cube
 #:   red & cylinder 0 / 0          (red-cylinder is the held-out PAIR cell)
 #:   red & sphere   5,507 / 5,511
 #:   red & oblong   5,517 / 5,533
-#: So the DECLARED NON-VACUOUS SUBSTITUTE is red AND SPHERE (shape index 2) -- a
+#: So the DECLARED NON-VACUOUS SUBSTITUTE is RED SPHERE (shape index 2) -- a
 #: conjunction whose two marginals both survive the deletion, which is the only version of
 #: this row that can test anything.
 #: THE INDEX IS NOT MINE TO CHOOSE FREELY: spoke/deletion-baselines found the same
@@ -74,7 +74,69 @@ SHAPE_FACTOR, CUBE_INDEX = 4, 0     # shape = 0.0 = cube
 #: rather than picked here.  BOTH rows are reported: the specified one with its count of
 #: 0 and its reason, and the substitute with its own row.
 SPHERE_INDEX = 2                    # shape = 2.0 = sphere
+SHAPE_NAMES = {0: "cube", 1: "cylinder", 2: "sphere", 3: "oblong"}
+
+#: HEAD RULING, 2026-09-21: the conjunction pin STAYS object_hue = 0.0 AND
+#: shape = 2.0 -- that IS the RED SPHERE -- and a caveat column is printed with it.
+#: `chlu/data/gen_value_holdout.py:299` REJECTED sphere as a held-out VALUE in these
+#: words: "the shape hazard of section 3.1, exactly: a degraded render is a rounded
+#: blob, so the SPHERE is the shape the model degrades TOWARDS. A held-out sphere
+#: would be unremovable for rendering reasons, not store reasons."
+#: CONSEQUENCE FOR THIS ROW, and it runs against any arm that is damaged by the
+#: deletion: after the red-sphere rows are removed, an arm whose render DEGRADES may
+#: be judged "sphere" for reasons that have nothing to do with what it stored, and
+#: would then score SPURIOUSLY WELL on exactly the deleted conjunction.
+#: ⭐ So it is MEASURED rather than stated: `shape_report` prints the judged-shape
+#: histogram beside the requested-shape histogram for every arm on every scope, and
+#: the maximally degraded controls (`landscape_removed`, `random_atoms`) are scored
+#: on the same corners to give the artefact's own upper bound.
+SPHERE_CAVEAT = (
+    "gen_value_holdout.py:299 rejected sphere as a HELD-OUT value because 'a degraded "
+    "render is a rounded blob, so the SPHERE is the shape the model degrades TOWARDS'. "
+    "A degrading arm can therefore be judged sphere for rendering reasons rather than "
+    "store reasons, and would score spuriously well on the deleted conjunction. "
+    "judged_sphere_excess = frac(judged shape == sphere) - frac(requested shape == "
+    "sphere); the degraded controls bound how large the artefact can get.")
+
 ITEM_FRACTION = 0.01                # the declared 1 %
+
+
+def shape_report(done: dict, corners, grid) -> dict:
+    """The judged-shape histogram beside the requested-shape histogram.
+
+    THE HEAD'S CAVEAT COLUMN, MEASURED. `done` carries the judge's own tuples and
+    the acceptance mask, so this is the shape the external classifier actually read
+    back, not a proxy for it. Unaccepted requests are excluded: their tuple is -1 by
+    construction and counting them would dilute the very effect being measured.
+    """
+    from chlu.experiments import exp_gen_factor_wells as fw
+    jud = np.zeros(4, np.int64)
+    req = np.zeros(4, np.int64)
+    n_acc = 0
+    gv = np.asarray(grid.values[SHAPE_FACTOR], np.float64)
+    for c in corners:
+        r = done[c["corner_id"]]
+        acc = np.asarray(r["accept"], bool)
+        t = np.asarray(r["tuples"])[acc]
+        if t.size:
+            jud += np.bincount(t[:, SHAPE_FACTOR].astype(np.int64), minlength=4)[:4]
+        vals = fw._request_values_from_rows(grid, c["rows"])[acc]
+        col = np.asarray(vals, np.float64)[:, SHAPE_FACTOR]
+        ok = ~np.isnan(col)
+        if ok.any():
+            idx = np.abs(col[ok, None] - gv[None, :]).argmin(1)
+            req += np.bincount(idx, minlength=4)[:4]
+        n_acc += int(acc.sum())
+    tot = max(int(jud.sum()), 1)
+    rtot = max(int(req.sum()), 1)
+    fj = {SHAPE_NAMES[i]: float(jud[i]) / tot for i in range(4)}
+    fr = {SHAPE_NAMES[i]: float(req[i]) / rtot for i in range(4)}
+    return {"n_accepted_requests": n_acc,
+            "judged_shape_counts": {SHAPE_NAMES[i]: int(jud[i]) for i in range(4)},
+            "judged_shape_frac": fj,
+            "requested_shape_frac": fr,
+            "judged_sphere_excess": fj["sphere"] - fr["sphere"],
+            "caveat": SPHERE_CAVEAT}
 
 
 def factor_indices(pool: np.ndarray, cards) -> np.ndarray:
@@ -279,6 +341,25 @@ def main(argv=None) -> int:
     before = score_corners_full(obj, corners, grid, judge, bitmap, "BEFORE deletion")
     rows_before = fw._per_corner(corners, before, grid, seen_mask)
     by_id_before = {r["corner_id"]: r for r in rows_before}
+    shape_before = shape_report(before, corners, grid)
+    log(f"  SHAPE (before)  judged {shape_before['judged_shape_frac']}  "
+        f"sphere excess {shape_before['judged_sphere_excess']:+.4f}")
+
+    # THE ARTEFACT'S OWN UPPER BOUND: score the maximally DEGRADED arms on the same
+    # corners. If a rounded-blob render is judged "sphere", these are where it shows.
+    from w12_crossover_lib import ShimStore, perturb_modes, qr_basis
+    degraded = {}
+    for nm, kind in (("landscape_removed", "zero"), ("random_atoms", "random_span")):
+        mods = perturb_modes(st.modes, kind, seed)
+        sh = ShimStore(mods, st.well_channels, st.dim, st.deployed_rank)
+        cobj = (dict(obj, store=sh, basis=basis, zeroed=True, arm=nm) if kind == "zero"
+                else dict(obj, store=sh,
+                          basis=qr_basis(mods, st.deployed_rank,
+                                         widths=[b.shape[1] for b in basis]), arm=nm))
+        dd = score_corners_full(cobj, corners, grid, judge, bitmap, f"DEGRADED {nm}")
+        degraded[nm] = shape_report(dd, corners, grid)
+        log(f"  SHAPE ({nm})  judged {degraded[nm]['judged_shape_frac']}  "
+            f"sphere excess {degraded[nm]['judged_sphere_excess']:+.4f}")
 
     out = {
         "SMOKE_NOT_A_CLAIM": a.condition == "val",
@@ -288,7 +369,23 @@ def main(argv=None) -> int:
             "STORE-SCOPED: downdate(delete rows) equals the store fitted from scratch "
             "without those rows, same partition, same rank. THE FROZEN ENCODER AND "
             "DECODER ARE NOT REFIT."),
-        "before": {"all": summarise(rows_before), "per_corner": rows_before},
+        "before": {"all": summarise(rows_before), "per_corner": rows_before,
+                   "shape_report": shape_before},
+        "sphere_caveat": {
+            "HEAD_RULING": ("the conjunction pin STAYS object_hue = 0.0 AND "
+                            "shape = 2.0 -- the RED SPHERE -- and this caveat column "
+                            "is printed with it"),
+            "source": "chlu/data/gen_value_holdout.py:299",
+            "verbatim": ("the shape hazard of section 3.1, exactly: a degraded render "
+                         "is a rounded blob, so the SPHERE is the shape the model "
+                         "degrades TOWARDS. A held-out sphere would be unremovable "
+                         "for rendering reasons, not store reasons"),
+            "what_it_threatens": ("an arm DAMAGED by the red-sphere deletion could be "
+                                  "judged sphere for rendering reasons and score "
+                                  "spuriously well on exactly the deleted "
+                                  "conjunction"),
+            "measured_upper_bound_degraded_arms": degraded,
+        },
         "scopes": {},
         "display_refusal": None,
     }
@@ -359,7 +456,7 @@ def main(argv=None) -> int:
                 "value": "every fit row carrying red (object_hue index 0)",
                 "conjunction": ("every fit row carrying red AND cube (shape index 0)"
                                 " -- AS LITERALLY SPECIFIED BY THE TASK FILE"),
-                "conjunction_live": ("every fit row carrying red AND sphere (shape "
+                "conjunction_live": ("every fit row carrying a RED SPHERE (object_hue index 0 AND shape "
                                      "index 2) -- THE DECLARED NON-VACUOUS "
                                      "SUBSTITUTE, because red AND cube and red AND "
                                      "cylinder are both EMPTY in this split"),
@@ -399,6 +496,7 @@ def main(argv=None) -> int:
                         + sum(w.stat_bytes() for w in ref.stats)),
                     "refit": True},
             },
+            "shape_report_after": shape_report(after, corners, grid),
             "after": {"survivors": summarise([by_id_after[i] for i in surv]),
                       "deleted": summarise([by_id_after[i] for i in dele]) if dele
                       else {"DECLARED_NOT_RUN": "this scope deletes no corner"},
@@ -440,7 +538,7 @@ def main(argv=None) -> int:
                       "to have existed.")},
             {"index": int(hidx_live),
              "pair": [["object_hue", int(RED_INDEX)], ["shape", int(SPHERE_INDEX)]],
-             "label": "red AND sphere -- the non-vacuous substitute",
+             "label": "red sphere -- the non-vacuous substitute",
              "note": ("here rows WERE deleted, so the hole and the downdate are "
                       "exercised on the same conjunction and the two mechanisms are "
                       "separable on one object")},
