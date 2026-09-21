@@ -433,12 +433,26 @@ def train(model, Xin, Y: np.ndarray, key, epochs: int, lr: float,
     # 131k rows x 2048 features, and holding X, Y and their device copies at once
     # is what killed the first pool refit. Per-batch conversion of 256 x 2048 is
     # free by comparison.
+    # ⚠ REPAIR, w13 hub/encoder-adapt, 2026-09-21, DECLARED.  This line used to read
+    # `Xnp = np.asarray(X0, np.float32)` and it cast TOKEN IDS to float.  `eqx.nn.Embedding`
+    # then indexes its table with a float array, which jax 0.9.0 rejects outright:
+    #     TypeError: Indexer must have integer or boolean type, got indexer with type float32
+    # so `transformer` and `lstm` -- the two `tokens` families -- could not be FITTED at all
+    # on this JAX, while `mlp` (one-hot) and `cont_mlp` (continuous) were unaffected.
+    # `predict()` below never made the cast, so INFERENCE always preserved the dtype and
+    # only training was broken; a rival that cannot be fitted is a rival that cannot lose.
+    # ⛔ Nothing about the protocol, the grids, the architecture, the schedule or the
+    # parameter budget changes here.  The repair only preserves an integer input's dtype.
+    def _as_input(a):
+        a = np.asarray(a)
+        return a if np.issubdtype(a.dtype, np.integer) else np.asarray(a, np.float32)
+
     Ynp = np.asarray(Y, np.float32)
-    Xnp = np.asarray(X0, np.float32)
+    Xnp = _as_input(X0)
     first = last = None
     for ep in range(int(epochs)):
         if resample and ep > 0:
-            Xnp = np.asarray(Xin(rng), np.float32)
+            Xnp = _as_input(Xin(rng))
         key, sk = jax.random.split(key)
         perm = np.asarray(jax.random.permutation(sk, n))
         for i in range(steps_per_epoch):
