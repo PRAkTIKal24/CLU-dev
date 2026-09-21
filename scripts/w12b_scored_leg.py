@@ -313,7 +313,13 @@ def main(argv=None) -> int:
                 t_fit = time.time()
                 res = W12B.fit_as_trained(armspec, grid, fit_rows, Y_fit, cards_r, k2,
                                           log=log)
-                W12B.save_comparator(res, seed, grid, man,
+                # ⛔ `assert_generation2` returns generation/scope/n_rows/root ONLY --
+                # it has NO `features_sha256`, which `save_learner` requires. The full
+                # manifest is `fw.feature_cache_manifest`. Measured before any run: the
+                # wrong one raises KeyError and the arm would have become a silent
+                # DECLARED NOT-RUN inside the except below.
+                W12B.save_comparator(res, seed, grid,
+                                     fw.feature_cache_manifest(seed),
                                      root=str(MYOUT / "comparators_refit"),
                                      spec_label="")
                 rv2 = W12B.load_comparator(seed, f"{fam}__as_trained",

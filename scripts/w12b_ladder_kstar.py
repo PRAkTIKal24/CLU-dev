@@ -373,6 +373,86 @@ def main(argv=None) -> int:
                               indent=1)
                 log("  !!!! learned_1x FAILED: %s: %s" % (type(exc).__name__, exc))
 
+    # -- THE TWO TOKEN FAMILIES, RE-FITTED POST THE DTYPE REPAIR -------------------
+    # ⛔ The ladder's published table carries `rival_transformer` and `rival_lstm` from
+    # SPOKE A's wave-4 set, which PRE-DATES the `w4_learners.train` dtype repair. Before
+    # that repair `eqx.nn.Embedding` refused to index a float32 array, so neither family
+    # could be FITTED at all, and their flat scores (0.489-0.531 and 0.579-0.604 of the
+    # per-corner ceiling) may be artefacts of a rival that could not train.
+    # ⭐ These arms re-fit both families HERE, at the ladder's own 524,288 B REFERENCE pin
+    # (131,072 float32 parameters), on THIS rung's own fit pool.
+    # ⚠ DECLARED: spoke A's set was fitted on the `montero_combination` population, not on
+    # the rung's pool. The populations DIFFER, so these are not drop-in replacements for
+    # that row -- they are a POST-FIX reading of the same families, and the direction of
+    # the difference runs AGAINST this hub, because a rival fitted on the rung's own pool
+    # is the STRONGER of the two.
+    if "rivals_refit" in want:
+        import jax
+        from chlu.eval.rivals import w12_deletion_baselines as W12B
+        cards_r = [int(c) for c in grid.cardinalities]
+        key0 = jax.random.PRNGKey(int(a.seed) * 7717 + 20_260_921)
+        rows_fit = np.asarray(pool, np.int64)[: int(ONEX.N_FIT_ROWS)]
+        Yf = fw.gather(fw.features_mmap(int(a.seed)), rows_fit)
+        for fam in ("transformer", "lstm"):
+            nm = "rival_%s__refit_postfix" % fam
+            done = leg / ("rows_%s.json" % nm)
+            if done.exists():
+                log("  %s: already on disk, skipping" % nm)
+                with open(done, encoding="utf-8") as fh:
+                    meta["arms"][nm] = json.load(fh)["summary"]
+                continue
+            t = time.time()
+            try:
+                key0, k1 = jax.random.split(key0)
+                armspec = W12B.matched_arm(fam, cards_r, D, k1, log=log)
+                key0, k2 = jax.random.split(key0)
+                res = W12B.fit_as_trained(armspec, grid, rows_fit, Yf, cards_r, k2,
+                                          log=log)
+                # ⛔ `cache` here is `assert_generation2`'s dict, which carries NO
+                # `features_sha256`; `save_learner` requires it. The full manifest is
+                # `fw.feature_cache_manifest`.
+                W12B.save_comparator(res, int(a.seed), grid,
+                                     fw.feature_cache_manifest(int(a.seed)),
+                                     root=str(leg / "rivals_refit"), spec_label="")
+                rv = W12B.load_comparator(int(a.seed), "%s__as_trained" % fam,
+                                          root=str(leg / "rivals_refit"))
+                obj = {"arm": nm, "read": "rival", "kind": "rival", "rival": rv,
+                       "rival_partial": None, "store": None, "protos": None,
+                       "byte_ledger": {"param_count": armspec["param_count"],
+                                       "deployed_bytes": armspec["param_count"] * 4,
+                                       "budget_bytes": 524288},
+                       "head_bytes": {"head_bytes": 0}}
+                per = LEG.score_arm(obj, cond, fast, bitmap, seen_mask)
+                s_ = summarise(nm, per, {
+                    "param_count": armspec["param_count"],
+                    "param_target": armspec["param_target"],
+                    "width": armspec["width"], "in_kind": armspec["in_kind"],
+                    "byte_matching": "the 524,288 B REFERENCE pin (131,072 params)",
+                    "population": ("THIS rung's own fit pool -- ⚠ NOT spoke A's "
+                                   "montero_combination, so this is not a drop-in "
+                                   "replacement for the ladder's rival_%s row" % fam),
+                    "n_fit_rows": int(rows_fit.size),
+                    "POST_DATES_THE_DTYPE_FIX": True,
+                    "train_info": res.get("fit"), "cost_line": res.get("cost"),
+                    "seconds": round(time.time() - t, 1)})
+                with open(done, "w", encoding="utf-8") as fh:
+                    json.dump({"summary": s_, "per_corner": per}, fh, indent=1,
+                              default=str)
+                meta["arms"][nm] = s_
+                log("  %-34s novel %.4f  (%d params)  in %.1fs"
+                    % (nm, s_["distinct_valid_novel_tuples_mean"],
+                       armspec["param_count"], time.time() - t))
+            except Exception as exc:                                # noqa: BLE001
+                import traceback
+                traceback.print_exc()
+                meta["failed_arms"].append(nm)
+                with open(leg / ("FAILED_%s.json" % nm), "w", encoding="utf-8") as fh:
+                    json.dump({"arm": nm,
+                               "error": "%s: %s" % (type(exc).__name__, exc)}, fh,
+                              indent=1)
+                log("  !!!! %s FAILED: %s: %s" % (nm, type(exc).__name__, exc))
+        del Yf
+
     if store_arm in meta["arms"] and "learned_1x" in meta["arms"]:
         m = (meta["arms"][store_arm]["distinct_valid_novel_tuples_mean"]
              - meta["arms"]["learned_1x"]["distinct_valid_novel_tuples_mean"])
