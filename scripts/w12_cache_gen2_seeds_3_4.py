@@ -149,7 +149,10 @@ def stage_det(args, config) -> dict:
     gb = config.gen_bridge
     rows = full_rows(config)
     block = int(gb.cache_block)
-    out = {}
+    # ⛔ MERGE, never overwrite: a per-seed launch must not erase the seed that ran
+    # before it. (It did once, on 2026-09-21, and the defect is recorded in LOG.md.)
+    det_p = OUT / "determinism_check.json"
+    out = json.load(open(det_p)) if det_p.exists() else {}
     for seed in args.seeds:
         enc, bman = load_encoder(seed)
         shard = rows[:block]
