@@ -80,7 +80,7 @@ def test_encoder(insts):
     check("encoder loss sees no actions/labels", not ind["sees_actions"])
     check("encoder loss sees no judge", not ind["sees_judge"])
     check("encoder loss takes exactly (model, images)",
-          ind["loss_arguments"] == ["ae", "X"])
+          ind["loss_arguments"] == ["ae", "X"], str(ind["loss_identifiers"]))
     f1 = encoder.features(enc, imgs)
     f2 = encoder.features(enc, imgs)
     check("frozen encoder is deterministic", bool(np.array_equal(f1, f2)))
@@ -161,7 +161,6 @@ def main():
     enc, feats = test_encoder(insts)
     test_observation(insts, feats)
     k = int(insts[0].n_colours)
-    test_observation(insts, feats)
     test_head_and_params(features.obs_dim(8, k))
     test_impossible()
     test_columns(insts)

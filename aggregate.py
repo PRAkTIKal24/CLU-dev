@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import io
 import json
 import os
 
@@ -41,7 +42,7 @@ def row(reps, getter):
 def table(reps, title):
     if not reps:
         return "_(NOT RUN)_\n"
-    out = ["### %s — %d seed(s): %s\n" % (title, len(reps),
+    out = ["### %s - %d seed(s): %s\n" % (title, len(reps),
                                           ", ".join(str(r["seed"]) for r in reps)),
            "tier `%s`, generator %s, %d train / %d eval instances per seed\n"
            % (reps[0].get("tier", "cmaze1"),
@@ -56,7 +57,7 @@ def table(reps, title):
         if key not in reps[0]["results"]:
             continue
         p = (reps[0]["training"][key]["params"]
-             if key in reps[0].get("training", {}) else "—")
+             if key in reps[0].get("training", {}) else "-")
         out.append("| %s | %s | %s | %s | %s | %s | %s |" % (
             label, p,
             row(reps, lambda r: r["results"][key]["validity"]),
@@ -67,7 +68,7 @@ def table(reps, title):
     out.append("| | | | | | | |")
     for name in reps[0]["columns"]:
         tag = "**reported column**" if name.startswith(("blind", "fragment")) else ""
-        out.append("| %s %s | — | %s | %s | %s | %s | — |" % (
+        out.append("| %s %s | - | %s | %s | %s | %s | - |" % (
             name, tag,
             row(reps, lambda r: r["columns"][name]["validity"]),
             row(reps, lambda r: r["columns"][name]["score"]),
@@ -137,15 +138,15 @@ def main():
     a = ap.parse_args()
     main_reps = load(a.out, "")
     easy_reps = load(a.out, "_easy")
-    doc = ["# w9 maze harness — results\n",
-           "Scored by `w9_harness.judge_maze.JUDGE` — env-scout's exact integer "
+    doc = ["# w9 maze harness - results\n",
+           "Scored by `w9_harness.judge_maze.JUDGE` - env-scout's exact integer "
            "judge, re-exported unwrapped. No tolerance anywhere.\n",
            "## Audits\n", audits(main_reps or easy_reps),
            "## CMAZE-1, env-scout adopted defaults\n", table(main_reps, "Main tier"),
            "## CMAZE-1-EASY (declared tier: h=w=4, k=2, same generator, same judge)\n",
            table(easy_reps, "Easy tier")]
     path = os.path.join(a.out, "RESULTS.md")
-    with open(path, "w") as f:
+    with io.open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(doc))
     print("\n".join(doc))
     print("\nwrote %s" % path)

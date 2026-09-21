@@ -83,8 +83,57 @@ def _loss(ae, X):
 
 
 def train(images, feat_dim=12, width=32, steps=1500, batch=32, lr=3e-3, seed=0,
-          verbose=True):
-    """Fit the autoencoder on maze images alone.  Returns (Encoder, report)."""
+          restarts=1, accept_bce=None, verbose=True):
+    """Fit the autoencoder on maze images alone.  Returns (Encoder, report).
+
+    `restarts` / `accept_bce` exist because a single run of this is not reliable.
+    Measured on CMAZE-1 at 1200 steps: seed 0 reached BCE 0.0050 and a linear probe
+    that reads every image plane back at AUC ~0.95, while seed 1 stalled at BCE
+    0.0796 with probe AUC ~0.60 -- near chance -- and the sign-quantised features
+    collapsed to 3-5 distinct patterns for the whole grid.  Everything downstream
+    reads those features, so the whole seed inherits it.
+
+    The selection criterion is RECONSTRUCTION LOSS AND NOTHING ELSE.  No arm, no
+    action, no judge takes part in choosing which restart is kept, so the encoder
+    stays arm-agnostic: it is the same objective the training loop already uses,
+    evaluated on the same images.
+    """
+    t0 = time.time()
+    if restarts > 1 or accept_bce is not None:
+        best = None
+        tries = []
+        for r in range(max(restarts, 1)):
+            enc_r, rep_r = _train_once(images, feat_dim, width, steps, batch, lr,
+                                       seed * 1000 + r)
+            tries.append(rep_r["final_bce"])
+            if best is None or rep_r["final_bce"] < best[1]["final_bce"]:
+                best = (enc_r, rep_r)
+            if accept_bce is not None and rep_r["final_bce"] <= accept_bce:
+                break
+        enc, rep = best
+        rep["restarts_run"] = len(tries)
+        rep["restart_bce"] = tries
+        rep["accept_bce"] = accept_bce
+        rep["seconds"] = time.time() - t0
+        if verbose:
+            print("ENCODER (reconstruction only, %d restart(s), best of %s): "
+                  "%d imgs, %d params, BCE %.5f -> pixel acc %.5f, on-pixel recall "
+                  "%.4f  [%.1fs]"
+                  % (len(tries), ["%.4f" % b for b in tries], rep["n_images"],
+                     rep["params_encoder"], rep["final_bce"], rep["pixel_accuracy"],
+                     rep["on_pixel_recall"], rep["seconds"]))
+        return enc, rep
+    enc, rep = _train_once(images, feat_dim, width, steps, batch, lr, seed)
+    rep["restarts_run"] = 1
+    if verbose:
+        print("ENCODER (reconstruction only): %d imgs, %d params, BCE %.5f -> "
+              "pixel acc %.5f, on-pixel recall %.4f  [%.1fs]"
+              % (rep["n_images"], rep["params_encoder"], rep["final_bce"],
+                 rep["pixel_accuracy"], rep["on_pixel_recall"], rep["seconds"]))
+    return enc, rep
+
+
+def _train_once(images, feat_dim, width, steps, batch, lr, seed):
     t0 = time.time()
     X = jnp.asarray(images)
     key = jax.random.PRNGKey(seed)
@@ -118,11 +167,6 @@ def train(images, feat_dim=12, width=32, steps=1500, batch=32, lr=3e-3, seed=0,
            "final_bce": hist[-1][1], "loss_curve": hist,
            "pixel_accuracy": px_acc, "on_pixel_recall": on_recall,
            "n_images": int(n), "seconds": time.time() - t0}
-    if verbose:
-        print("ENCODER (reconstruction only): %d imgs, %d params, BCE %.5f -> "
-              "pixel acc %.5f, on-pixel recall %.4f  [%.1fs]"
-              % (n, rep["params_encoder"], rep["final_bce"], px_acc, on_recall,
-                 rep["seconds"]))
     return ae.enc, rep
 
 
@@ -216,14 +260,39 @@ def plane_names(k):
             + ["key%d" % c for c in range(1, k + 1)])
 
 
+_ARM_WORDS = {"route", "routes", "action", "actions", "label", "labels", "Y",
+              "target", "targets", "policy", "arm", "oracle"}
+_JUDGE_WORDS = {"judge", "JUDGE", "judge_ref", "score", "validity", "reason"}
+
+
 def independence_report(enc):
-    """What the encoder's objective can see.  The basis for 'shared, not rigged'."""
+    """What the encoder's objective can see.  The basis for 'shared, not rigged'.
+
+    The scan is over the loss function's IDENTIFIERS, parsed, with the docstring
+    dropped -- a substring search over the source reads its own prose and reports
+    that a loss which says "no labels" sees labels.
+    """
+    import ast
     import inspect
-    src = inspect.getsource(_loss)
-    return {"loss_source": src.strip(),
-            "loss_arguments": ["ae", "X"],
-            "sees_actions": "route" in src or "action" in src or "label" in src,
-            "sees_judge": "judge" in src or "JUDGE" in src,
+    tree = ast.parse(_dedent_src(inspect.getsource(_loss)))
+    fn = tree.body[0]
+    if (fn.body and isinstance(fn.body[0], ast.Expr)
+            and isinstance(fn.body[0].value, ast.Constant)):
+        fn.body = fn.body[1:]                      # drop the docstring
+    names = {n.id for n in ast.walk(fn) if isinstance(n, ast.Name)}
+    names |= {n.attr for n in ast.walk(fn) if isinstance(n, ast.Attribute)}
+    args = [a.arg for a in fn.args.args]
+    return {"loss_source": inspect.getsource(_loss).strip(),
+            "loss_arguments": args,
+            "loss_identifiers": sorted(names),
+            "sees_actions": bool(names & _ARM_WORDS),
+            "sees_judge": bool(names & _JUDGE_WORDS),
             "trained_on": "maze images only",
             "frozen_before_any_arm_is_trained": True,
             "params": n_params(enc)}
+
+
+def _dedent_src(src):
+    lines = src.splitlines()
+    pad = min((len(l) - len(l.lstrip()) for l in lines if l.strip()), default=0)
+    return "\n".join(l[pad:] for l in lines)
