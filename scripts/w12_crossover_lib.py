@@ -68,22 +68,41 @@ def pinned_basis(store):
     return out
 
 
-def qr_basis(modes, deployed_rank):
-    """An orthonormal basis of a PERTURBED atom block.
+def qr_basis(modes, deployed_rank, widths=None):
+    """An orthonormal basis of a PERTURBED atom block, at the BOOK'S OWN WIDTHS.
 
     `pinned_basis` assumes the direction rows are already orthonormal, which is true
     of the real store and FALSE of a shuffled or random block.  A control must be read
     through a basis of ITS OWN atoms, or the perturbation is silently discarded and the
     control proves nothing.  This is the `CovContentStore.span_bases()` construction
     (QR of the deployed rows), applied to whatever block it is given.
+
+    ⛔ THIS FUNCTION CRASHED THE SWEEP AT K=28 AND K=32 AND THE FIX IS RECORDED HERE
+    RATHER THAN QUIETLY APPLIED.  The earlier version returned `min(d, 1+r)` columns
+    while `pinned_basis` returns `r` columns, or `r + 1` when the mean's perpendicular
+    component clears the 1e-4 relative admission threshold.  Those two counts agree for
+    most wells and DISAGREE exactly where the mean lies (numerically) inside the span --
+    which is common in the narrow wells of a fine partition.  The address book emits one
+    coefficient per column of the basis it was FITTED against, so a control basis of a
+    different width is not a control at all, it is a shape error:
+        `ValueError: matmul ... size 63 is different from 62`   (K=32, sweep_s0_A.log)
+        `ValueError: matmul ... size 64 is different from 63`   (K=28, sweep_s0_B.log)
+    `widths` is therefore REQUIRED for a control: it is `[b.shape[1] for b in
+    pinned_basis(store)]`, and the returned basis has exactly those widths.  A complete
+    QR supplies extra orthonormal columns when the perturbed block spans fewer
+    directions than the book expects; those columns carry no content, which is the
+    correct thing for a control whose content is meant to be destroyed.
     """
     out = []
-    for M, r in zip(modes, deployed_rank):
-        if r <= 0:
-            out.append(np.zeros((M.shape[1], 0), np.float64))
+    for i, (M, r) in enumerate(zip(modes, deployed_rank)):
+        d = int(M.shape[1])
+        w = int(widths[i]) if widths is not None else min(d, 1 + int(r))
+        if w <= 0:
+            out.append(np.zeros((d, 0), np.float64))
             continue
-        Q = np.linalg.qr(np.asarray(M[:1 + r], np.float64).T)[0]
-        out.append(np.ascontiguousarray(Q))
+        blk = np.asarray(M[:max(1, 1 + int(r))], np.float64).T          # (d, 1+r)
+        Q = np.linalg.qr(blk, mode="complete")[0]                        # (d, d)
+        out.append(np.ascontiguousarray(Q[:, :min(w, d)]))
     return out
 
 

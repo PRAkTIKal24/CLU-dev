@@ -163,7 +163,7 @@ def run_one(K: int, seed: int, condition: str, corr, dead, pool, X, red,
             if kind == "zero":
                 cobj = dict(obj, store=sh, basis=basis, zeroed=True, arm=name)
             else:
-                cobj = dict(obj, store=sh, basis=qr_basis(mods, st.deployed_rank),
+                cobj = dict(obj, store=sh, basis=qr_basis(mods, st.deployed_rank, widths=[b.shape[1] for b in basis]),
                             arm=name)
             sc = score_corners(cobj, corners, cond, grid, judge, bitmap, name)
             rec["controls"][name] = {k: v for k, v in sc.items() if k != "per_corner"}

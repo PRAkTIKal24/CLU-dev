@@ -44,8 +44,16 @@ LEDGER = Path("C:/chlu/SCORED-LEDGER.md")
 #: six-factor requests, so the `full_only` variants are the right ones
 #: (`w4_learners.fit_family`: "rows 3 and 4 - the pair and n-way corners, whose runner
 #: builds FULL six-factor requests").
+#:
+#: THESE ARE THE 524,288 B REFERENCE COLUMN, NOT THE 1x COLUMN, AND THE DIFFERENCE
+#: RUNS AGAINST THIS HUB'S OWN INTEREST.  `spoke/deletion-baselines` matched them to
+#: `param_target = 131,072` (= 524,288 B / 4) -- its BASELINES-READY.json pins say so.
+#: This object's four-part total at K* is SEVERAL TIMES that, so a genuinely
+#: 1x-matched rival would carry several times these parameters and would be STRONGER.
+#: A win over this set is therefore NOT a 1x result and is never reported as one.
 RIVALS = ("mlp", "lstm", "transformer", "cont_mlp")
 FLOOR = "table"          # printed as a FLOOR, never as a rival
+COMPARATORS_ROOT = "C:/chlu/outputs/w12-deletion-baselines/comparators"
 
 
 def assert_gates(run_n: int, require_ledger: bool = True) -> dict:
@@ -203,22 +211,37 @@ def main(argv=None) -> int:
         mods = perturb_modes(st.modes, kind, seed)
         sh = ShimStore(mods, st.well_channels, st.dim, st.deployed_rank)
         cobj = (dict(obj, store=sh, basis=basis, zeroed=True, arm=name) if kind == "zero"
-                else dict(obj, store=sh, basis=qr_basis(mods, st.deployed_rank),
+                else dict(obj, store=sh, basis=qr_basis(mods, st.deployed_rank, widths=[b.shape[1] for b in basis]),
                           arm=name))
         arms[name] = score_corners_full(cobj, corners, grid, judge, bitmap, name)
 
     rival_meta = {}
-    for name in RIVALS + (FLOOR,):
+    from chlu.eval.rivals.w12_deletion_baselines import load_comparator
+    jobs = [(f"{r}__as_trained", "w12 comparator (524,288 B reference column)")
+            for r in RIVALS]
+    jobs.append((FLOOR, "the prototype TABLE, printed as a FLOOR"))
+    for name, role in jobs:
         try:
-            rv = w4_api.load_rival(seed, name)
+            rv = (w4_api.load_rival(seed, name) if name == FLOOR
+                  else load_comparator(seed, name, root=COMPARATORS_ROOT))
+            f0, _ = rv(grid.values_of(pool[:8]))
         except Exception as exc:                       # noqa: BLE001
-            rival_meta[name] = {"DECLARED_NOT_RUN": f"{type(exc).__name__}: {exc}"}
+            rival_meta[name] = {"DECLARED_NOT_RUN": f"{type(exc).__name__}: {exc}",
+                                "role": role}
             log(f"    {name:38s} DECLARED NOT-RUN: {exc}")
             continue
-        rival_meta[name] = {"param_count": rv.meta.get("param_count"),
-                            "fit_population": rv.fit_population,
-                            "generation": rv.generation,
-                            "matched_to": "its own w4 fit -- see the 1x column note"}
+        meta = getattr(rv, "meta", None) or getattr(getattr(rv, "read", None),
+                                                    "meta", {})
+        rival_meta[name] = {
+            "param_count": meta.get("param_count"),
+            "role": role,
+            "matched_to_bytes": 524_288,
+            "matched_to_params": 131_072,
+            "NOT_1x": ("matched to the RETIRED 524,288 B pin, not to this object's "
+                       "own four-part total. A 1x-matched rival would be STRONGER, "
+                       "so this comparison FLATTERS the arm and no row against it is "
+                       "reported as a 1x result."),
+        }
         robj = {"arm": name, "read": "rival", "rival": rv, "rival_partial": None,
                 "store": None, "head_bytes": {"head_bytes": 0}}
         arms[name] = score_corners_full(robj, corners, grid, judge, bitmap, name)
@@ -236,6 +259,20 @@ def main(argv=None) -> int:
         "request_only": {k: str(v) for k, v in (ro or {}).items()},
         "n_corners": {"row3_pair": len(n3), "row4_nway": len(n4)},
         "rival_meta": rival_meta,
+        "baseline_matching": {
+            "1x_column": "DECLARED NOT-RUN",
+            "1x_reason": ("the comparator set on this box is matched to "
+                          "param_target = 131,072 (= 524,288 B / 4), declared in "
+                          "BASELINES-READY.json pins. No 1x-matched entry point is "
+                          "named there, and refitting four families at this "
+                          "object's own four-part total was not affordable beside "
+                          "the sweep."),
+            "reference_column_bytes": 524_288,
+            "direction_of_the_error": ("AGAINST this hub: a 1x-matched rival would "
+                                       "carry several times these parameters and "
+                                       "would be STRONGER, so the available "
+                                       "comparison flatters the arm"),
+        },
         "per_arm": {}, "paired_vs_cov_tensor": {},
     }
     for a_, rr in rows.items():
