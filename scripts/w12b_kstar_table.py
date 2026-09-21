@@ -61,6 +61,23 @@ def summary(p: Path):
     return d["summary"]
 
 
+def ceiling_of(p: Path):
+    """The per-corner CEILING = max requests in any corner of the rung.
+
+    ⛔ This is a property of Shapes3D and of the rung's corner construction, NOT of any
+    arm: `w12_ladder_table.py:134` takes it as `max(n_requests)` over the corners, and the
+    same expression is used here so a normalised number of this hub's is comparable, cell
+    for cell, with the ladder's published `frac_of_ceiling` column.
+    """
+    d = jload(p)
+    if d is None or "per_corner" not in d:
+        return None
+    try:
+        return int(max(int(r["n_requests"]) for r in d["per_corner"]))
+    except Exception:                                               # noqa: BLE001
+        return None
+
+
 def leg_kstar(root: Path, rung: str, seed: int, K: int) -> dict:
     """One (rung, seed, K) of THIS hub's replication."""
     leg = root / f"{rung}_seed{seed}_K{K}"
@@ -72,7 +89,8 @@ def leg_kstar(root: Path, rung: str, seed: int, K: int) -> dict:
         s = summary(leg / f"rows_single_design_K{K}__{c}.json")
         ctl[c] = (s["distinct_valid_novel_tuples_mean"] if s
                   else NOT_RUN + f": {leg / f'rows_single_design_K{K}__{c}.json'}")
-    out = {"dir": str(leg),
+    ceil = ceiling_of(leg / f"rows_single_design_K{K}.json")
+    out = {"dir": str(leg), "ceiling_per_corner": ceil if ceil else NOT_RUN,
            "store": (store["distinct_valid_novel_tuples_mean"] if store
                      else NOT_RUN + f": {leg / f'rows_single_design_K{K}.json'}"),
            "learned_1x": (lx["distinct_valid_novel_tuples_mean"] if lx
@@ -89,6 +107,10 @@ def leg_kstar(root: Path, rung: str, seed: int, K: int) -> dict:
                                         for v in ctl.values())}
     if isinstance(out["store"], float) and isinstance(out["learned_1x"], float):
         out["margin"] = out["store"] - out["learned_1x"]
+        if ceil:
+            out["store_frac_of_ceiling"] = out["store"] / ceil
+            out["learned_1x_frac_of_ceiling"] = out["learned_1x"] / ceil
+            out["margin_frac_of_ceiling"] = out["margin"] / ceil
     else:
         out["margin"] = NOT_RUN + ": one of the two arms is missing"
     return out
@@ -100,7 +122,8 @@ def leg_ladder(rung: str, seed: int) -> dict:
     store = summary(leg / "rows_single_design_K5.json")
     lx = summary(leg / "rows_learned_1x.json")
     tgt = jload(leg / "ONEX_TARGET.json") or {}
-    out = {"dir": str(leg),
+    ceil = ceiling_of(leg / "rows_single_design_K5.json")
+    out = {"dir": str(leg), "ceiling_per_corner": ceil if ceil else NOT_RUN,
            "store": (store["distinct_valid_novel_tuples_mean"] if store else NOT_RUN),
            "learned_1x": (lx["distinct_valid_novel_tuples_mean"] if lx else NOT_RUN),
            "learned_1x_params": lx["param_count"] if lx else NOT_RUN,
@@ -112,6 +135,10 @@ def leg_ladder(rung: str, seed: int) -> dict:
                                  "for line")}
     if isinstance(out["store"], float) and isinstance(out["learned_1x"], float):
         out["margin"] = out["store"] - out["learned_1x"]
+        if ceil:
+            out["store_frac_of_ceiling"] = out["store"] / ceil
+            out["learned_1x_frac_of_ceiling"] = out["learned_1x"] / ceil
+            out["margin_frac_of_ceiling"] = out["margin"] / ceil
     else:
         out["margin"] = NOT_RUN
     return out
@@ -163,6 +190,15 @@ def main(argv=None) -> int:
                       [float(rr[col][str(s)]["learned_1x_params"])
                        if isinstance(rr[col][str(s)]["learned_1x_params"], (int, float))
                        else NOT_RUN for s in SEEDS]),
+                  "margin_frac_of_ceiling": agg(
+                      [rr[col][str(s)].get("margin_frac_of_ceiling", NOT_RUN)
+                       for s in SEEDS]),
+                  "store_frac_of_ceiling": agg(
+                      [rr[col][str(s)].get("store_frac_of_ceiling", NOT_RUN)
+                       for s in SEEDS]),
+                  "learned_1x_frac_of_ceiling": agg(
+                      [rr[col][str(s)].get("learned_1x_frac_of_ceiling", NOT_RUN)
+                       for s in SEEDS]),
                   "controls_all_collapse_every_seed": all(
                       rr[col][str(s)].get("controls_all_collapse", False)
                       for s in SEEDS) if col != "ladder_K5" else "see the w12 ladder",
