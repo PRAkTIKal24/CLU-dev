@@ -259,10 +259,18 @@ def main(argv=None) -> int:
                         (False if not any(down) else "no consistent direction across seeds"))
                     ent["n_seeds_compared"] = len(shared)
             # does the arm CLEAR THE BAR here? (AMENDMENT-2 section 3)
-            cleared, per = [], {}
+            # ⛔ An arm that IS the best learned baseline on a seed is being compared with
+            # itself there; that is not a bar test and is never counted as a failure.
+            cleared, per, selfcmp = [], {}, []
             for s in sorted(A["per_seed"]):
                 pe = A["per_seed"][s].get("paired_vs_best_learned")
                 if pe is None:
+                    continue
+                if pe["control"] == arm:
+                    selfcmp.append(s)
+                    per[s] = {"vs": pe["control"], "delta": pe["mean_paired_delta"],
+                              "bar_test": "NOT APPLICABLE -- this arm IS the best learned "
+                                          "baseline on this seed"}
                     continue
                 cleared.append(bool(pe["beats_beyond_margin"]))
                 per[s] = {"vs": pe["control"], "delta": pe["mean_paired_delta"],
@@ -271,6 +279,11 @@ def main(argv=None) -> int:
             ent["clears_bar"] = bool(cleared) and all(cleared)
             ent["clears_bar_per_seed"] = per
             ent["n_seeds_with_a_bar_test"] = len(cleared)
+            ent["seeds_where_this_arm_IS_the_baseline"] = selfcmp
+            if selfcmp and not cleared:
+                ent["clears_bar"] = None
+                ent["bar_test"] = ("NOT APPLICABLE at this rung -- this arm is the best "
+                                   "learned baseline on every seed that ran")
             if arm in STORE:
                 v = verdict.get(rung, {}).get(arm, {}).get("VERDICT", "")
                 ent["decorative"] = v.startswith("DECORATIVE")
@@ -279,7 +292,8 @@ def main(argv=None) -> int:
         # the breaking point
         usable = [r for r in RUNGS
                   if a["per_rung"][r].get("status") == "RUN"
-                  and not a["per_rung"][r].get("decorative", False)]
+                  and not a["per_rung"][r].get("decorative", False)
+                  and a["per_rung"][r].get("clears_bar") is not None]
         seq = [(r, a["per_rung"][r]["clears_bar"]) for r in usable]
         a["rungs_used_for_breaking_point"] = usable
         a["clears_bar_sequence"] = {r: c for r, c in seq}
@@ -287,11 +301,19 @@ def main(argv=None) -> int:
             a["breaking_point"] = None
             ran = [r for r in RUNGS if a["per_rung"][r].get("status") == "RUN"]
             dec = [r for r in ran if a["per_rung"][r].get("decorative")]
-            a["breaking_point_statement"] = (
-                "DECLARED NOT-RUN -- no rung of this arm was scored"
-                if not ran else
-                "NO ROW CLAIMED -- every rung that ran (%s) is DECORATIVE"
-                % ", ".join("k=" + r for r in dec))
+            na = [r for r in ran if a["per_rung"][r].get("clears_bar") is None]
+            if not ran:
+                a["breaking_point_statement"] = (
+                    "DECLARED NOT-RUN -- no rung of this arm was scored")
+            elif dec:
+                a["breaking_point_statement"] = (
+                    "NO ROW CLAIMED -- every rung that ran (%s) is DECORATIVE"
+                    % ", ".join("k=" + r for r in dec))
+            else:
+                a["breaking_point_statement"] = (
+                    "NOT APPLICABLE -- this arm IS the best learned baseline at every rung "
+                    "that ran (%s), so there is no bar for it to clear; it is the bar"
+                    % ", ".join("k=" + r for r in na))
         elif not seq[0][1]:
             a["breaking_point"] = None
             a["breaking_point_statement"] = (
