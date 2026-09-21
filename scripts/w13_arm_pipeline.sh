@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # w13 hub/encoder-adapt -- the whole pipeline for ONE (seed, arm), resumable at every stage.
 #
-#   scripts/w13_arm_pipeline.sh <out> <seed> <arm> [joint_steps] [dec_steps]
+#   scripts/w13_arm_pipeline.sh <out> <seed> <arm> [rival_families] [joint_steps] [dec_steps]
 #
 # Every stage is idempotent: a completed artefact short-circuits, so a killed run is
 # restarted by re-issuing the identical command.  The stages, in order:
@@ -18,12 +18,14 @@ set -uo pipefail
 OUT="${1:?out dir}"
 SEED="${2:?seed}"
 ARM="${3:?arm}"
-JS="${4:-}"
-DS="${5:-}"
+FAMS="${4:-}"
+JS="${5:-}"
+DS="${6:-}"
 LOGD="$(dirname "$OUT")/logs"
 mkdir -p "$LOGD"
 
 EXTRA=()
+[ -n "$FAMS" ] && EXTRA+=(--rival-families "$FAMS")
 [ -n "$JS" ] && EXTRA+=(--joint-steps "$JS")
 [ -n "$DS" ] && EXTRA+=(--dec-steps "$DS")
 

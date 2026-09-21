@@ -144,18 +144,32 @@ def score_corners_full(obj, corners, grid, judge, bitmap, tag):
 
 
 def summarise(rows, family=None) -> dict:
+    """Both metrics on every row, so a DEGENERATE primary can never pass as a result.
+
+    `distinct_valid_novel_tuples` is the programme's rows-3/4 estimand and is the PRIMARY.
+    `distinct_valid_tuples` is carried beside it because NOVELTY is a property of the
+    CONDITION: on `val` every corner's tuples are inside `train_rows`, so the novel count
+    is identically 0 for the arm, for all four controls and for every rival alike -- a
+    measured property of the val split, not a floor and not a result.  The judge accuracy
+    and the valid fraction are carried for the same reason: they say whether the
+    instrument read anything at all.
+    """
     sel = [r for r in rows if family is None or r["family"] == family]
     if not sel:
         return {"n_corners": 0, "DECLARED_NOT_RUN": f"no corner of family {family!r}"}
     nov = np.array([r["distinct_valid_novel_tuples"] for r in sel], float)
+    dvt = np.array([r["distinct_valid_tuples"] for r in sel], float)
     jac = np.array([r["judge_accuracy"] for r in sel], float)
-    val = np.array([float(np.mean(r.get("valid_frac", np.nan))) for r in sel], float)
+    nv = np.array([r["n_valid"] for r in sel], float)
+    nr = np.array([r["n_requests"] for r in sel], float)
     return {"n_corners": len(sel),
             "novel_per_corner_mean": float(nov.mean()),
             "novel_per_corner_sd": float(nov.std(ddof=1)) if nov.size > 1 else None,
+            "distinct_valid_per_corner_mean": float(dvt.mean()),
+            "distinct_valid_per_corner_sd": (float(dvt.std(ddof=1)) if dvt.size > 1
+                                             else None),
             "judge_accuracy_mean": float(jac.mean()),
-            "valid_frac_mean": (float(np.nanmean(val)) if np.isfinite(val).any()
-                                else None),
+            "valid_frac_mean": float((nv / np.maximum(nr, 1)).mean()),
             "n_requests_total": int(sum(r["n_requests"] for r in sel))}
 
 
@@ -330,37 +344,73 @@ def main(argv=None) -> int:
                       "all": summarise(rr), "per_corner": rr}
     margin = {"DECLARED_NOT_RUN": "no learned baseline scored"} if not learned else None
     if learned:
-        def mean_of(k, fam=None):
-            return per_arm[k]["all" if fam is None else fam]["novel_per_corner_mean"]
-        best = max(learned, key=lambda f: mean_of(f))
-        paired = fw.paired_estimand(rows["cov_tensor"], rows[best],
-                                    "distinct_valid_novel_tuples", 1.0,
-                                    "cov_tensor", best)
+        def mean_of(k, fam=None, key="novel_per_corner_mean"):
+            return per_arm[k]["all" if fam is None else fam][key]
+
+        # IS THE PRIMARY METRIC DEGENERATE?  Declared rule, fixed before any test number:
+        # the primary is `distinct_valid_novel_tuples`.  It is DEGENERATE iff it reads
+        # exactly 0 for the single design AND for every learned baseline AND for every
+        # control -- i.e. it separates nothing at all.  When that happens the secondary
+        # `distinct_valid_tuples` decides and the row SAYS SO in `primary_degenerate`;
+        # the primary is never quietly swapped for whichever number is larger.
+        DVT = "distinct_valid_per_corner_mean"
+        primary_all_zero = all(abs(mean_of(k)) == 0.0 for k in rows)
+        metric_key = DVT if primary_all_zero else "novel_per_corner_mean"
+        metric_name = ("distinct_valid_tuples (SECONDARY -- the primary is degenerate on "
+                       "this condition, see `primary_degenerate`)" if primary_all_zero
+                       else "distinct_valid_novel_tuples (PRIMARY)")
+        best = max(learned, key=lambda f: mean_of(f, key=metric_key))
+        paired = fw.paired_estimand(
+            rows["cov_tensor"], rows[best],
+            "distinct_valid_tuples" if primary_all_zero
+            else "distinct_valid_novel_tuples", 1.0, "cov_tensor", best)
         margin = {
-            "metric": "distinct_valid_novel_tuples per corner, paired by corner",
+            "metric": metric_name + ", per corner, paired by corner",
+            "metric_key": metric_key,
+            "primary_degenerate": bool(primary_all_zero),
+            "primary_degenerate_note": (
+                "distinct_valid_novel_tuples reads EXACTLY 0 for the single design, for "
+                "every learned baseline and for every control on this condition. On "
+                "`val` that is a property of the split -- every val corner's tuples are "
+                "inside `train_rows`, so nothing can be novel -- and NOT a floor: the "
+                "judge accuracy and distinct_valid_tuples on the same rows are nonzero "
+                "for the arm and exactly 0.0000 for all four charter-C controls."
+                if primary_all_zero else
+                "the primary metric separates the arms and is the one used"),
             "best_learned_baseline": best,
             "best_chosen_by": ("highest mean novel-per-corner among THIS ARM's own refit "
                                "baselines -- chosen per arm, so the bar is always the "
                                "strongest available competitor on that arm's features"),
             "learned_baselines_scored": learned,
-            "single_design_mean": mean_of("cov_tensor"),
-            "best_learned_mean": mean_of(best),
-            "MARGIN_all_corners": mean_of("cov_tensor") - mean_of(best),
-            "MARGIN_row3_pair": (per_arm["cov_tensor"]["row3_pair"].get("novel_per_corner_mean")
-                                 - per_arm[best]["row3_pair"].get("novel_per_corner_mean")
-                                 if per_arm["cov_tensor"]["row3_pair"].get("novel_per_corner_mean")
+            "single_design_mean": mean_of("cov_tensor", key=metric_key),
+            "best_learned_mean": mean_of(best, key=metric_key),
+            "MARGIN_all_corners": (mean_of("cov_tensor", key=metric_key)
+                                   - mean_of(best, key=metric_key)),
+            "MARGIN_novel_all_corners": mean_of("cov_tensor") - mean_of(best),
+            "MARGIN_distinct_valid_all_corners": (mean_of("cov_tensor", key=DVT)
+                                                  - mean_of(best, key=DVT)),
+            "single_design_judge_accuracy":
+                per_arm["cov_tensor"]["all"]["judge_accuracy_mean"],
+            "best_learned_judge_accuracy": per_arm[best]["all"]["judge_accuracy_mean"],
+            "controls_must_be_zero": {
+                k: per_arm[k]["all"][DVT] for k in
+                ("landscape_removed", "landscape_shuffled",
+                 "landscape_shuffled_across_wells", "random_atoms") if k in per_arm},
+            "MARGIN_row3_pair": (per_arm["cov_tensor"]["row3_pair"].get(metric_key)
+                                 - per_arm[best]["row3_pair"].get(metric_key)
+                                 if per_arm["cov_tensor"]["row3_pair"].get(metric_key)
                                  is not None and
-                                 per_arm[best]["row3_pair"].get("novel_per_corner_mean")
+                                 per_arm[best]["row3_pair"].get(metric_key)
                                  is not None else None),
-            "MARGIN_row4_nway": (per_arm["cov_tensor"]["row4_nway"].get("novel_per_corner_mean")
-                                 - per_arm[best]["row4_nway"].get("novel_per_corner_mean")
-                                 if per_arm["cov_tensor"]["row4_nway"].get("novel_per_corner_mean")
+            "MARGIN_row4_nway": (per_arm["cov_tensor"]["row4_nway"].get(metric_key)
+                                 - per_arm[best]["row4_nway"].get(metric_key)
+                                 if per_arm["cov_tensor"]["row4_nway"].get(metric_key)
                                  is not None and
-                                 per_arm[best]["row4_nway"].get("novel_per_corner_mean")
+                                 per_arm[best]["row4_nway"].get(metric_key)
                                  is not None else None),
             "paired_vs_best_learned": paired,
-            "per_baseline_margin": {f: mean_of("cov_tensor") - mean_of(f)
-                                    for f in learned},
+            "per_baseline_margin": {f: mean_of("cov_tensor", key=metric_key)
+                                    - mean_of(f, key=metric_key) for f in learned},
             "how_to_read": ("wave 12 measured this NEGATIVE. The bar is whether it GROWS "
                             "from `frozen` to an adapted arm. A margin that grows and "
                             "stays negative is a real and reportable result."),
@@ -406,8 +456,12 @@ def main(argv=None) -> int:
                      "condition": a.condition, "encoder_arm": a.arm}, fh)
     log(f"wrote {d / 'score.json'}")
     for k in arms:
-        s = per_arm[k]["all"]
-        log(f"  {k:38s} novel/corner {s.get('novel_per_corner_mean', float('nan')):8.3f}")
+        st = per_arm[k]["all"]
+        log(f"  {k:38s} novel/corner "
+            f"{st.get('novel_per_corner_mean', float('nan')):8.3f}"
+            f"  distinct_valid/corner "
+            f"{st.get('distinct_valid_per_corner_mean', float('nan')):8.3f}"
+            f"  judge_acc {st.get('judge_accuracy_mean', float('nan')):.4f}")
     if margin and "MARGIN_all_corners" in margin:
         log(f"  MARGIN ({a.arm}) = {margin['MARGIN_all_corners']:+.4f} "
             f"vs best learned baseline {margin['best_learned_baseline']}")
