@@ -53,8 +53,9 @@ def main(argv=None) -> int:
            "per_K": {}, "not_run": []}
 
     print(f"\n{'K':>4} {'n':>3} {'A':>3} {'width':>9} {'rank/width':>18} "
-          f"{'val comp':>16} {'drop vs K=5':>12} {'4-part B':>12} {'xPin':>7}")
-    print("-" * 108)
+          f"{'val comp':>16} {'drop vs K=5':>12} {'4-part B':>12} {'xPin':>7} "
+          f"{'1x params':>11}")
+    print("-" * 121)
     v5 = None
     for K in SWEEP:
         per = rows[K]
@@ -77,8 +78,22 @@ def main(argv=None) -> int:
             v5 = m
         drop = (v5 - m) if v5 is not None else float("nan")
         sd = float(comp.std(ddof=1)) if comp.size > 1 else float("nan")
+        led = per[ss[0]]["ledger_four_part"]
         out["per_K"][str(K)] = {
             "n_seeds": len(ss), "seeds": ss, "A_requested": int(A),
+            # THE 1x MATCHING TARGET, and the REFERENCE column beside it.
+            # The learned baselines are matched to the single design's OWN four-part
+            # total this wave. The 524,288 B figure is a reference, not a budget.
+            "baseline_match_1x": {
+                "target_bytes": int(led["honest_total_bytes"]),
+                "target_params_float32": int(led["honest_total_bytes"] // 4),
+                "reference_pin_bytes": 524_288,
+                "reference_pin_params_float32": 524_288 // 4,
+                "times_reference": led["times_reference_pin"],
+                "note": ("1x means 1x THIS OBJECT'S four-part total. The 524,288 B "
+                         "column is printed for continuity with waves 5-8 and is NOT "
+                         "a budget this wave."),
+            },
             "well_width_min": int(wmin), "well_width_max": int(wmax),
             "rank_over_width_min": float(rw_lo), "rank_over_width_max": float(rw_hi),
             "val_composition_per_seed": {str(s): float(per[s]["composition_val"]
@@ -91,7 +106,7 @@ def main(argv=None) -> int:
         }
         print(f"{K:>4} {len(ss):>3} {A:>3} {wmin:>4}..{wmax:<4} "
               f"{rw_lo:>8.4f}..{rw_hi:<8.4f} {m:>8.4f}+-{sd:<6.4f} "
-              f"{drop:>12.4f} {tot:>12,} {xp:>7.3f}")
+              f"{drop:>12.4f} {tot:>12,} {xp:>7.3f} {tot // 4:>11,}")
 
     ran = [K for K in SWEEP if rows[K]]
     if v5 is None:

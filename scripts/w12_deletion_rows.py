@@ -50,7 +50,24 @@ from w12_crossover_lib import (  # noqa: E402
 
 OUT = Path("C:/chlu/outputs/w12-single-design-crossover")
 RED_FACTOR, RED_INDEX = 2, 0        # object_hue = 0.0, pinned at exp_gen_factor_wells.py:1348
-SHAPE_FACTOR, CUBE_INDEX = 4, 0     # shape = 0.0
+SHAPE_FACTOR, CUBE_INDEX = 4, 0     # shape = 0.0 = cube
+#: THE CONJUNCTION AS LITERALLY SPECIFIED IS VACUOUS ON THIS CONDITION, and it is
+#: reported as vacuous rather than quietly replaced.  `shape = cube` is HELD OUT of the
+#: value-holdout split entirely, so the fit pool contains ZERO cubes and "delete every
+#: row carrying red AND cube" removes 0 rows.  The repo already says so in its own words:
+#:   exp_gen_delete_row7.py:325  "red_cube": (0, 0, False,
+#:       "shape=cube is held out entirely; reported, not a bar")
+#: MEASURED on the fit pool, val / test:
+#:   red & cube     0 / 0          (cube is a held-out VALUE)
+#:   red & cylinder 0 / 0          (red-cylinder is the held-out PAIR cell)
+#:   red & sphere   5,507 / 5,511
+#:   red & oblong   5,517 / 5,533
+#: So the DECLARED NON-VACUOUS SUBSTITUTE is red AND OBLONG -- the conjunction whose two
+#: marginals both survive the deletion, which is the only version of this row that can
+#: test anything.  exp_gen_delete_row7:320 names it "red's other shape, SEEN -- the hole
+#: must leave it allowed".  BOTH are reported: the specified one with its count of 0 and
+#: its reason, and the substitute with its own row.
+OBLONG_INDEX = 3                    # shape = 3.0 = oblong
 ITEM_FRACTION = 0.01                # the declared 1 %
 
 
@@ -137,11 +154,12 @@ def main(argv=None) -> int:
     ap.add_argument("--K", type=int, default=None)
     ap.add_argument("--run-n", type=int, default=None)
     ap.add_argument("--scope", action="append",
-                    choices=("value", "conjunction", "item"), default=None)
+                    choices=("value", "conjunction", "conjunction_live", "item"),
+                    default=None)
     ap.add_argument("--reuse-arm", default=None,
                     help="a directory holding arm.pkl from a previous build/fit")
     a = ap.parse_args(argv)
-    scopes = a.scope or ["value", "conjunction", "item"]
+    scopes = a.scope or ["value", "conjunction", "conjunction_live", "item"]
 
     if a.condition == "test":
         from w12_scored_leg import assert_gates
@@ -193,11 +211,16 @@ def main(argv=None) -> int:
     del Xc
     X = np.asarray(fw.gather(F, pool), np.float32)
     idx = factor_indices(pool, cards)
+    red = idx[:, RED_FACTOR] == RED_INDEX
     masks = {
-        "value": idx[:, RED_FACTOR] == RED_INDEX,
-        "conjunction": (idx[:, RED_FACTOR] == RED_INDEX)
-                       & (idx[:, SHAPE_FACTOR] == CUBE_INDEX),
+        "value": red,
+        "conjunction": red & (idx[:, SHAPE_FACTOR] == CUBE_INDEX),
+        "conjunction_live": red & (idx[:, SHAPE_FACTOR] == OBLONG_INDEX),
     }
+    shape_counts = {nm: int((red & (idx[:, SHAPE_FACTOR] == si)).sum())
+                    for si, nm in ((0, "cube"), (1, "cylinder"), (2, "sphere"),
+                                   (3, "oblong"))}
+    log(f"  red AND <shape> rows in the fit pool: {shape_counts}")
     rng = np.random.default_rng(20_260_921 + seed)
     m_item = np.zeros(pool.size, bool)
     m_item[rng.choice(pool.size, int(round(ITEM_FRACTION * pool.size)),
@@ -301,11 +324,11 @@ def main(argv=None) -> int:
                     if not corner_requests_value(c, grid, RED_FACTOR, RED_INDEX)]
             dele = [c["corner_id"] for c in corners
                     if corner_requests_value(c, grid, RED_FACTOR, RED_INDEX)]
-        elif scope == "conjunction":
+        elif scope in ("conjunction", "conjunction_live"):
+            si = CUBE_INDEX if scope == "conjunction" else OBLONG_INDEX
             surv = [c["corner_id"] for c in corners
                     if not (corner_requests_value(c, grid, RED_FACTOR, RED_INDEX)
-                            and corner_requests_value(c, grid, SHAPE_FACTOR,
-                                                      CUBE_INDEX))]
+                            and corner_requests_value(c, grid, SHAPE_FACTOR, si))]
             dele = [c["corner_id"] for c in corners if c["corner_id"] not in surv]
         else:
             surv = [c["corner_id"] for c in corners]
@@ -317,6 +340,26 @@ def main(argv=None) -> int:
                                      f"after_{scope}", "before")
                   if surv else {"DECLARED_NOT_RUN": "no survivor corner"})
         out["scopes"][scope] = {
+            "scope_definition": {
+                "value": "every fit row carrying red (object_hue index 0)",
+                "conjunction": ("every fit row carrying red AND cube (shape index 0)"
+                                " -- AS LITERALLY SPECIFIED BY THE TASK FILE"),
+                "conjunction_live": ("every fit row carrying red AND oblong (shape "
+                                     "index 3) -- THE DECLARED NON-VACUOUS "
+                                     "SUBSTITUTE, because red AND cube and red AND "
+                                     "cylinder are both EMPTY in this split"),
+                "item": "a random 1 % of fit rows",
+            }[scope],
+            "VACUOUS": bool(int(m.sum()) == 0),
+            "vacuous_reason": (
+                ("shape=cube is held out of the value-holdout split entirely, so the "
+                 "fit pool contains ZERO cubes and this deletion removes 0 rows. It "
+                 "is reported as a count of 0 with its reason, NEVER as a passing "
+                 "row. exp_gen_delete_row7.py:325 states the same property in the "
+                 "repo's own words. The non-vacuous substitute is the "
+                 "`conjunction_live` scope.")
+                if int(m.sum()) == 0 else None),
+            "red_and_shape_row_counts": shape_counts,
             "n_rows_deleted": int(m.sum()),
             "frac_rows_deleted": float(m.mean()),
             "survivor_corner_ids": surv, "deleted_corner_ids": dele,
@@ -361,17 +404,35 @@ def main(argv=None) -> int:
     lay = coupling_layout(cards)
     hole = np.zeros(lay["size"], np.uint8)
     hidx = coupling_index(cards, RED_FACTOR, RED_INDEX, SHAPE_FACTOR, CUBE_INDEX)
+    hidx_live = coupling_index(cards, RED_FACTOR, RED_INDEX, SHAPE_FACTOR,
+                               OBLONG_INDEX)
     t0 = time.time()
     hole[hidx] = 1
+    hole[hidx_live] = 1
     t_hole = time.time() - t0
     from chlu.core.downdate_store import assert_layout_matches_field_store
     out["display_refusal"] = {
         "DISPLAY_NEVER_A_RESULT": True,
         "layout_is_the_field_store's": assert_layout_matches_field_store(cards),
-        "hole_index": int(hidx),
-        "pair": [["object_hue", int(RED_INDEX)], ["shape", int(CUBE_INDEX)]],
+        "holes": [
+            {"index": int(hidx),
+             "pair": [["object_hue", int(RED_INDEX)], ["shape", int(CUBE_INDEX)]],
+             "label": "red AND cube -- the task file's conjunction",
+             "note": ("shape=cube is held out of the split, so NO red cube was ever "
+                      "written. The hole still makes the request refusable, and "
+                      "that is the point of the row: refusal is a SEPARATE "
+                      "mechanism from forgetting and does not need a deleted row "
+                      "to have existed.")},
+            {"index": int(hidx_live),
+             "pair": [["object_hue", int(RED_INDEX)], ["shape", int(OBLONG_INDEX)]],
+             "label": "red AND oblong -- the non-vacuous substitute",
+             "note": ("here rows WERE deleted, so the hole and the downdate are "
+                      "exercised on the same conjunction and the two mechanisms are "
+                      "separable on one object")},
+        ],
         "cost_line": {"arm": "cov_tensor (ours)", "seconds": round(t_hole, 6),
-                      "bytes_rewritten": 1, "data_rows_read": 0, "refit": False},
+                      "bytes_rewritten": 2, "data_rows_read": 0, "refit": False,
+                      "note": "one byte per hole, two holes"},
         "n_holes_after": int(hole.sum()),
         "coupling_table_bytes": int(lay["size"]),
         "comparator": ("the refuse-token transformer from spoke/deletion-baselines is "
