@@ -245,7 +245,16 @@ def main(argv=None) -> int:
         with open(reuse, "rb") as fh:
             saved = pickle.load(fh)
         st, addr, basis = saved["store"], saved["address"], saved["basis"]
-        log(f"  reusing the fitted arm from {reuse} (K={saved['K']}, A={saved['A']})")
+        # Use the SAVED well_channels, not a re-derived cut.  The refit-without store
+        # must be built on the very same wells as the store being downdated, and a
+        # re-derived partition that agrees "by construction" is exactly the kind of
+        # assumption this programme asserts instead of trusting.
+        wc = [np.asarray(c, np.int64) for c in saved["well_channels"]]
+        sizes = [int(c.size) for c in wc]
+        A = int(saved["A"])
+        if int(saved["K"]) != Kstar:
+            raise SystemExit(f"--reuse-arm holds K={saved['K']}, not K={Kstar}")
+        log(f"  reusing the fitted arm from {reuse} (K={saved['K']}, A={A})")
         t_addr = None
     else:
         t0 = time.time()
