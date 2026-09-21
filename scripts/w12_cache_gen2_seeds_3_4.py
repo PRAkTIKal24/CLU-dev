@@ -91,19 +91,38 @@ def gen2_dir(seed: int) -> Path:
 
 
 def load_encoder(seed: int):
-    """The frozen seed-N encoder, hash-asserted against its own bridge manifest."""
+    """The frozen seed-N encoder, hash-asserted against its own manifest.
+
+    Prefers ``bridge_manifest.json`` (written by the decoder stage, and the manifest
+    every downstream stage asserts against). Falls back to ``encoder_manifest.json``
+    while the decoder stage is still running, so the generation-2 cache - which needs
+    the ENCODER and nothing else - can be built as soon as the encoder is frozen.
+    ⛔ The hash is asserted either way; there is no path that skips it.
+    """
     d = bridge_dir(seed)
-    with open(d / "bridge_manifest.json") as fh:
-        bman = json.load(fh)
+    bp, ep = d / "bridge_manifest.json", d / "encoder_manifest.json"
+    if bp.exists():
+        with open(bp) as fh:
+            man = json.load(fh)
+        want, src = man["encoder_param_hash"], bp
+    else:
+        with open(ep) as fh:
+            man = json.load(fh)
+        want, src = man["encoder"]["param_hash"], ep
+        man = {"encoder_param_hash": want,
+               "decoder_param_hash": None, "probe_param_hash": None,
+               "result": {"gate": {"NOT_RUN": "decoder stage had not finished when the "
+                                              "generation-2 cache was built"}},
+               "feature_cache": man["feature_cache"]}
     enc = load_model(d / "encoder.pkl")
     h = param_hash(enc)
-    if h != bman["encoder_param_hash"]:
+    if h != want:
         raise AssertionError(
-            f"seed {seed}: encoder.pkl hash {h} != bridge manifest "
-            f"{bman['encoder_param_hash']} - this is not the frozen encoder")
+            f"seed {seed}: encoder.pkl hash {h} != {src.name} {want} - this is not "
+            "the frozen encoder")
     log(f"  seed {seed}: frozen encoder loaded, param_hash={h[:16]}... "
-        f"(asserted against {d / 'bridge_manifest.json'})")
-    return enc, bman
+        f"(asserted against {src})")
+    return enc, man
 
 
 def full_rows(config) -> np.ndarray:
@@ -249,6 +268,54 @@ def stage_gate(args, config) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Stage bridgify - make the cache dir a DROP-IN bridge dir, exactly as
+# exp_w4_rivals.stage_bridgify does for seeds 0-2
+# ---------------------------------------------------------------------------
+
+#: The four small frozen artefacts that turn a generation-2 cache directory into a
+#: drop-in bridge directory. Verbatim from exp_w4_rivals.BRIDGE_SIDECARS.
+BRIDGE_SIDECARS = ("encoder.pkl", "probe.pkl", "decoder.pkl", "bridge_manifest.json")
+
+
+def stage_bridgify(args, config) -> dict:
+    """Copy the four frozen sidecars next to the generation-2 cache, byte for byte.
+
+    The scored cell resolves features through ``exp_gen_store.bridge_dir``, which is
+    ``bridge_root / <dataset>_<pretext> / seed_<n>``. Giving generation 2 the same shape
+    is how seeds 0-2 are read, so seeds 3-4 are made readable the identical way.
+    """
+    import hashlib
+    import shutil
+
+    out = {}
+    for seed in args.seeds:
+        src, dst = bridge_dir(seed), gen2_dir(seed)
+        if not (dst / "feature_cache.json").exists():
+            out[str(seed)] = {"NOT_RUN": "no generation-2 cache for this seed"}
+            continue
+        if not (src / "bridge_manifest.json").exists():
+            out[str(seed)] = {"NOT_RUN": ("the bridge decoder/probe stage has not "
+                                          "finished, so the sidecars do not all exist")}
+            continue
+        copied = {}
+        for name in BRIDGE_SIDECARS:
+            s_p, d_p = src / name, dst / name
+            if not d_p.exists() or args.force:
+                shutil.copy2(s_p, d_p)
+            h = hashlib.sha256(d_p.read_bytes()).hexdigest()
+            hs = hashlib.sha256(s_p.read_bytes()).hexdigest()
+            if h != hs:
+                raise AssertionError(f"copy of {name} for seed {seed} does not match "
+                                     "the frozen original")
+            copied[name] = h
+        out[str(seed)] = {"dir": str(dst), "sidecars_sha256": copied,
+                          "note": "byte-identical copies of the frozen bridge artefacts"}
+        log(f"  seed {seed}: generation-2 cache is now a drop-in bridge dir at {dst}")
+    _write(out, OUT / "bridgify.json")
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Stage ready - CACHE-READY.json, the acceptance criterion
 # ---------------------------------------------------------------------------
 
@@ -296,9 +363,50 @@ def stage_ready(args, config) -> dict:
                     if m.get(k) != pin[k]}
         g = (gate or {}).get("generations", {}).get("generation_2_w12", {}).get(str(seed))
         bman_p = bridge_dir(seed) / "bridge_manifest.json"
-        bman = json.load(open(bman_p))
+        if bman_p.exists():
+            bman = json.load(open(bman_p))
+            bridge = {
+                "manifest": str(bman_p.resolve()),
+                "complete": True,
+                "built_by": ("chlu.experiments.exp_gen_bridge --stage all, on THIS box, "
+                             "on one CPU device - there was no generation-1 bridge for "
+                             "this seed"),
+                "encoder_param_hash": bman["encoder_param_hash"],
+                "decoder_param_hash": bman["decoder_param_hash"],
+                "probe_param_hash": bman["probe_param_hash"],
+                "gate": bman["result"]["gate"],
+                "rows": bman["rows"],
+                "training": bman["training"],
+            }
+        else:
+            eman_p = bridge_dir(seed) / "encoder_manifest.json"
+            eman = json.load(open(eman_p))
+            bridge = {
+                "manifest": str(eman_p.resolve()),
+                "complete": False,
+                "NOT_RUN": ("the decoder/probe/ceiling stage of exp_gen_bridge had not "
+                            "finished when this file was written. The CACHE is complete "
+                            "and gated; the four BRIDGE_SIDECARS a downstream stage needs "
+                            "(encoder.pkl, probe.pkl, decoder.pkl, bridge_manifest.json) "
+                            "are NOT all present yet, so this seed is not yet adoptable "
+                            "as a drop-in bridge dir."),
+                "built_by": ("chlu.experiments.exp_gen_bridge --stage all, on THIS box, "
+                             "on one CPU device - there was no generation-1 bridge for "
+                             "this seed"),
+                "encoder_param_hash": eman["encoder"]["param_hash"],
+                "decoder_param_hash": None,
+                "probe_param_hash": None,
+                "gate": None,
+                "rows": eman["rows"],
+                "training": {"enc_steps": eman["encoder"]["steps"],
+                             "enc_loss_first": eman["encoder"]["loss_first"],
+                             "enc_loss_final": eman["encoder"]["loss_final"]},
+            }
+        cache_ok = bool(not mismatch and g and g.get("passed"))
         seeds_out[str(seed)] = {
-            "status": "READY" if (not mismatch and g and g.get("passed")) else "SEE_FLAGS",
+            "status": ("READY" if (cache_ok and bridge["complete"])
+                       else "CACHE_READY_BRIDGE_PENDING" if cache_ok
+                       else "SEE_FLAGS"),
             "cache_dir": str(d.resolve()),
             "features_file": str((d / m["features_file"]).resolve()),
             "rows_file": str((d / m["rows_file"]).resolve()),
@@ -326,18 +434,7 @@ def stage_ready(args, config) -> dict:
             "shape_dtype_mismatches": mismatch or None,
             "reencode_gate": g,
             "determinism_check": (det or {}).get(str(seed)),
-            "bridge": {
-                "manifest": str(bman_p.resolve()),
-                "built_by": ("chlu.experiments.exp_gen_bridge --stage all, on THIS box, "
-                             "on one CPU device - there was no generation-1 bridge for "
-                             "this seed"),
-                "encoder_param_hash": bman["encoder_param_hash"],
-                "decoder_param_hash": bman["decoder_param_hash"],
-                "probe_param_hash": bman["probe_param_hash"],
-                "gate": bman["result"]["gate"],
-                "rows": bman["rows"],
-                "training": bman["training"],
-            },
+            "bridge": bridge,
         }
     ready = {
         "schema": "chlu-w12-cache-ready/1",
@@ -364,7 +461,7 @@ def stage_ready(args, config) -> dict:
 
 
 STAGES = {"det": stage_det, "cache2": stage_cache2, "gate": stage_gate,
-          "ready": stage_ready}
+          "bridgify": stage_bridgify, "ready": stage_ready}
 
 
 def main(argv=None) -> int:
