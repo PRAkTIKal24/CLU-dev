@@ -22,6 +22,7 @@ set -uo pipefail
 
 OUT="${1:?usage: w13_killproof.sh <out-dir> <seed>}"
 SEED="${2:-0}"
+WARM="${3:?warm-start run base (the --out that holds seed_<S>/warm_start.json)}"
 KP="$OUT/killproof"
 mkdir -p "$KP"
 PY=(python -u -m chlu.experiments.exp_w13_encoder_adapt)
@@ -32,9 +33,23 @@ note() { echo "[killproof] $*" | tee -a "$KP/killproof.log"; }
 
 note "START $(date -u +%Y-%m-%dT%H:%M:%SZ)  arm=$ARM seed=$SEED"
 
+# The train stage starts from the SHARED warm start, so both proof directories are given
+# a byte-for-byte copy of it.  Copying (not re-deriving) is the point: the proof is about
+# the training loop's resumability, and a re-derived warm start would change the object.
+seed_copy() {
+  local dst="$1"
+  mkdir -p "$dst/seed_$SEED"
+  cp -f "$WARM/seed_$SEED/warm_start.json"   "$dst/seed_$SEED/" || return 1
+  cp -f "$WARM/seed_$SEED/warm_encoder.pkl"  "$dst/seed_$SEED/" || return 1
+  cp -f "$WARM/seed_$SEED/warm_store.pkl"    "$dst/seed_$SEED/" || return 1
+  cp -f "$WARM/seed_$SEED/warm_decoder.pkl"  "$dst/seed_$SEED/" || return 1
+  cp -f "$WARM/seed_$SEED/warm_rows.npz"     "$dst/seed_$SEED/" || return 1
+}
+
 # ---------------------------------------------------------------- PART 1
 rm -rf "$KP/interrupted"
 mkdir -p "$KP/interrupted"
+seed_copy "$KP/interrupted" || { note "PART 1: FAILED -- no warm start under $WARM"; exit 2; }
 note "PART 1: launching, 5 s checkpoint timer, will SIGKILL my own PID only"
 "${PY[@]}" "${COMMON[@]}" --out "$KP/interrupted" > "$KP/run_interrupted_1.log" 2>&1 &
 VICTIM=$!
@@ -76,6 +91,7 @@ grep -E "RESUMED from checkpoint step|no checkpoint -- fresh start" "$KP/run_res
 # ---------------------------------------------------------------- PART 3
 note "PART 3: an UNINTERRUPTED run of the identical configuration, for comparison"
 rm -rf "$KP/clean"; mkdir -p "$KP/clean"
+seed_copy "$KP/clean" || note "PART 3: FAILED -- no warm start to copy"
 "${PY[@]}" "${COMMON[@]}" --out "$KP/clean" > "$KP/run_clean.log" 2>&1
 note "PART 3: exit $?"
 
