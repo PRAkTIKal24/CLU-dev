@@ -217,6 +217,30 @@ def main(argv=None) -> int:
         gap["test"] = NOT_RUN + ": one of the two K's has no TEST leg"
     report["val_test_gap"] = gap
 
+    # ---- 4b. THE PAIRED ESTIMAND -- the verdict function, never a mean difference --
+    # `fw.paired_estimand` is the pre-declared verdict: the corner is the unit, the deltas
+    # are paired, and `beats_beyond_margin` is checked against the 1.0 novel-tuple margin
+    # declared in advance. ⛔ A difference of means is NOT the verdict and is never
+    # substituted for it here.
+    paired = {}
+    for (K, seed), d in sorted(docs.items()):
+        pv = d.get("paired_vs_cov_tensor") or {}
+        paired[f"{K}_seed{seed}"] = {
+            nm: {"mean_paired_delta": v.get("mean_paired_delta"),
+                 "bootstrap_ci95": v.get("bootstrap_ci95"),
+                 "corners_arm_wins": v.get("corners_arm_wins"),
+                 "corners_control_wins": v.get("corners_control_wins"),
+                 "sign_test_p_two_sided": v.get("sign_test_p_two_sided"),
+                 "margin_declared_in_advance": v.get("margin_declared_in_advance"),
+                 "beats_beyond_margin": v.get("beats_beyond_margin")}
+            for nm, v in pv.items()}
+    report["paired_estimand"] = {
+        "function": "exp_gen_factor_wells.paired_estimand",
+        "unit": "the CORNER, paired -- never a single cell",
+        "margin_declared_in_advance": 1.0,
+        "per_leg": paired,
+    }
+
     # ---- 5. the two token families, re-fitted post the dtype fix ------------------
     tok = {}
     for (K, seed), d in sorted(docs.items()):
@@ -301,6 +325,18 @@ def main(argv=None) -> int:
                  f"{fmt(v['row4_nway_sd'], 3) if v['row4_nway_sd'] else 'n/a'}; "
                  f"per seed row 3 {[round(x, 3) for x in v['row3_pair_per_seed']]}, "
                  f"row 4 {[round(x, 3) for x in v['row4_nway_per_seed']]}")
+    L.append("\n## The paired estimand — the verdict function, per leg\n")
+    L.append("| leg | comparator | mean paired delta | CI95 | corners won/lost "
+             "| beats the 1.0 margin? |")
+    L.append("|---|---|---|---|---|---|")
+    for leg in sorted(paired):
+        for nm, v in paired[leg].items():
+            ci = v["bootstrap_ci95"]
+            L.append("| `%s` | `%s` | %s | %s | %s/%s | **%s** |"
+                     % (leg, nm, fmt(v["mean_paired_delta"], 3),
+                        ("[%s, %s]" % (fmt(ci[0], 2), fmt(ci[1], 2))) if ci else "n/a",
+                        v["corners_arm_wins"], v["corners_control_wins"],
+                        v["beats_beyond_margin"]))
     L.append("\n## The val/test gap at the selection rule's own quantity\n")
     L.append("```\n" + json.dumps(gap, indent=1, default=str) + "\n```")
     (out / "NR6-T7.md").write_text("\n".join(L) + "\n", encoding="utf-8")
