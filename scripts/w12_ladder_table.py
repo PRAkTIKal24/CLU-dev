@@ -69,14 +69,24 @@ def _per(d, arm):
     return d.get(arm, {}).get("per_corner")
 
 
-def best_learned(d: dict) -> tuple:
-    """The PRE-DECLARED rule (PREREG section 5): the learned arm with the largest mean."""
-    cand = [(a, float(np.mean([r[METRIC] for r in _per(d, a)]))) for a in LEARNED
-            if _per(d, a) is not None]
-    if not cand:
+def _best(d: dict, cands) -> tuple:
+    c = [(a, float(np.mean([r[METRIC] for r in _per(d, a)]))) for a in cands
+         if _per(d, a) is not None]
+    if not c:
         return None, None
-    cand.sort(key=lambda t: -t[1])
-    return cand[0][0], cand[0][1]
+    c.sort(key=lambda t: -t[1])
+    return c[0][0], c[0][1]
+
+
+def best_learned(d: dict) -> tuple:
+    """AMENDMENT-3's rule: the largest mean over ALL SEVEN learned arms.
+
+    Returns ``(arm_all, mean_all, arm_5, mean_5)`` -- the amended rule AND the
+    narrow PREREG section-5 rule, because both are reported on every row.
+    """
+    a_all, m_all = _best(d, LEARNED + OWNPOOL)
+    a_5, m_5 = _best(d, LEARNED)
+    return a_all, m_all, a_5, m_5
 
 
 def main(argv=None) -> int:
@@ -124,8 +134,13 @@ def main(argv=None) -> int:
                 r["leg"][s] = {k: lj[k] for k in ("n_train", "n_test", "n_corners",
                                                   "corner_check", "cache")
                                if k in lj}
-            bl, blv = best_learned(d)
-            r["best_learned_per_seed"][s] = {"arm": bl, "mean": blv}
+            a_all, m_all, a_5, m_5 = best_learned(d)
+            r["best_learned_per_seed"][s] = {
+                "arm": a_all, "mean": m_all,
+                "rule": "AMENDMENT-3: largest mean over all SEVEN learned arms",
+                "best_learned_5_arm": a_5, "best_learned_5_mean": m_5,
+                "best_learned_5_rule": "PREREG section 5 as written: the five pre-existing rivals",
+                "the_two_rules_agree": bool(a_all == a_5)}
         for arm in ARMS:
             per_seed = {}
             for s in r["seeds_present"]:
@@ -141,12 +156,17 @@ def main(argv=None) -> int:
                             "population", "byte_matching", "perturbation"):
                     if key in summ:
                         e[key] = summ[key]
-                # the paired margin against the PRE-DECLARED best learned baseline
+                # the paired margin against BOTH readings of "best learned baseline"
                 bl = r["best_learned_per_seed"][s]["arm"]
                 if bl is not None and _per(D[rung][s], bl) is not None:
                     e["paired_vs_best_learned"] = fw.paired_estimand(
                         pc, _per(D[rung][s], bl), METRIC,
                         float(fw.DECORATION_MARGIN_NOVELTY), arm, bl)
+                bl5 = r["best_learned_per_seed"][s]["best_learned_5_arm"]
+                if bl5 is not None and _per(D[rung][s], bl5) is not None:
+                    e["paired_vs_best_learned_5"] = fw.paired_estimand(
+                        pc, _per(D[rung][s], bl5), METRIC,
+                        float(fw.DECORATION_MARGIN_NOVELTY), arm, bl5)
                 per_seed[s] = e
             if not per_seed:
                 r["arms"][arm] = {"status": "DECLARED NOT-RUN",
@@ -205,6 +225,104 @@ def main(argv=None) -> int:
                             "the store survives both charter-C.2 controls at this rung")
             verdict[rung][base] = v
     rep["control_verdicts"] = verdict
+
+    # ---- AMENDMENT-2: deterioration and the breaking point, per arm -----
+    ladder = {}
+    for arm in ARMS:
+        a = {"arm": arm, "per_rung": {}}
+        base = rep["rungs"]["2"]["arms"].get(arm, {})
+        c2 = rep["rungs"]["2"].get("ceiling_per_corner")
+        for rung in RUNGS:
+            R = rep["rungs"][rung]
+            A = R["arms"].get(arm, {})
+            if A.get("status") != "RUN":
+                a["per_rung"][rung] = {"status": "DECLARED NOT-RUN",
+                                       "reason": A.get("reason", "arm absent at this rung")}
+                continue
+            ceil = R.get("ceiling_per_corner") or 1
+            norm = {s: A["per_seed"][s]["mean"] / ceil for s in A["per_seed"]}
+            ent = {"status": "RUN", "ceiling": int(ceil),
+                   "normalised_per_seed": {s: round(v, 6) for s, v in norm.items()},
+                   "normalised_mean": float(np.mean(list(norm.values())))}
+            if rung != "2" and base.get("status") == "RUN" and c2:
+                b = {s: base["per_seed"][s]["mean"] / c2 for s in base["per_seed"]}
+                shared = sorted(set(norm) & set(b))
+                if shared:
+                    down = [norm[s] < b[s] for s in shared]
+                    ent["deteriorates_vs_k2"] = (
+                        True if all(down) else
+                        (False if not any(down) else "no consistent direction across seeds"))
+                    ent["n_seeds_compared"] = len(shared)
+            # does the arm CLEAR THE BAR here? (AMENDMENT-2 section 3)
+            cleared, per = [], {}
+            for s in sorted(A["per_seed"]):
+                pe = A["per_seed"][s].get("paired_vs_best_learned")
+                if pe is None:
+                    continue
+                cleared.append(bool(pe["beats_beyond_margin"]))
+                per[s] = {"vs": pe["control"], "delta": pe["mean_paired_delta"],
+                          "ci95": pe["bootstrap_ci95"],
+                          "beats_beyond_margin": pe["beats_beyond_margin"]}
+            ent["clears_bar"] = bool(cleared) and all(cleared)
+            ent["clears_bar_per_seed"] = per
+            ent["n_seeds_with_a_bar_test"] = len(cleared)
+            if arm in STORE:
+                v = verdict.get(rung, {}).get(arm, {}).get("VERDICT", "")
+                ent["decorative"] = v.startswith("DECORATIVE")
+                ent["control_verdict"] = v
+            a["per_rung"][rung] = ent
+        # the breaking point
+        usable = [r for r in RUNGS
+                  if a["per_rung"][r].get("status") == "RUN"
+                  and not a["per_rung"][r].get("decorative", False)]
+        seq = [(r, a["per_rung"][r]["clears_bar"]) for r in usable]
+        a["rungs_used_for_breaking_point"] = usable
+        a["clears_bar_sequence"] = {r: c for r, c in seq}
+        if not seq:
+            a["breaking_point"] = None
+            a["breaking_point_statement"] = (
+                "no rung is usable -- every rung is a NOT-RUN or DECORATIVE for this arm")
+        elif not seq[0][1]:
+            a["breaking_point"] = None
+            a["breaking_point_statement"] = (
+                "NEVER CLEARED THE BAR -- the arm does not clear the pre-declared +1.0 "
+                "margin against the best learned baseline at k=%s, so there is nothing to "
+                "break" % seq[0][0])
+        else:
+            first_fail = next((r for r, c in seq if not c), None)
+            if first_fail is None:
+                a["breaking_point"] = None
+                a["breaking_point_statement"] = (
+                    "NO BREAKING POINT in the rungs that ran (%s) -- the arm clears the bar "
+                    "at every one" % ", ".join("k=%s" % r for r, _ in seq))
+            else:
+                after = [c for r, c in seq if int(r) > int(first_fail)]
+                if any(after):
+                    a["breaking_point"] = None
+                    a["breaking_point_statement"] = (
+                        "NON-MONOTONE -- first failure at k=%s but the arm clears the bar "
+                        "again at a larger k; reported as a FIRST FAILURE, explicitly not "
+                        "as a breaking point" % first_fail)
+                    a["first_failure"] = int(first_fail)
+                else:
+                    a["breaking_point"] = int(first_fail)
+                    a["breaking_point_statement"] = (
+                        "BREAKING POINT at k=%s -- clears the bar at every lower rung and "
+                        "fails there and above" % first_fail)
+        ladder[arm] = a
+    rep["ladder_verdicts"] = ladder
+    # is the collapse a property of the DATASET rather than of any arm?
+    bps = {arm: ladder[arm].get("breaking_point") for arm in ARMS
+           if ladder[arm].get("breaking_point") is not None}
+    rep["same_k_for_every_arm"] = {
+        "arms_with_a_breaking_point": bps,
+        "all_equal": bool(bps) and len(set(bps.values())) == 1,
+        "statement": (
+            "EVERY ARM THAT HAS A BREAKING POINT BREAKS AT THE SAME k -- that is a property "
+            "of Shapes3D, not of any arm, and it is the dataset's composition ceiling"
+            if bps and len(set(bps.values())) == 1 else
+            "the arms do not all break at the same k" if bps else
+            "no arm has a breaking point")}
 
     # ---- the two END REPRODUCTION checks --------------------------------
     ends = {}
