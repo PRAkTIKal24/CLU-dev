@@ -74,6 +74,11 @@ SERIES = [
     ("learned_ref_ownpool", "MLP own-pool @ ref pin", H_OWN, SOLID, 2.0, True),
     ("learned_1x", "MLP own-pool @ 1x", H_OWN, LONG, 2.0, True),
 ]
+#: vertical nudges for the end-of-line labels.  `single_design_K5` and `pca_tensor`
+#: are BIT-IDENTICAL, so their lines coincide exactly and their labels must not overprint.
+LABEL_DY = {"single_design_K5": 8, "pca_tensor": -8,
+            "learned_ref_ownpool": 0, "learned_1x": 22}
+
 GROUPS = [
     (H_SD, "single design K=5 (DECLARED) + its two charter-C.2 controls"),
     (H_PCA, "pca_tensor, the wave-5 subspace store + its two charter-C.2 controls"),
@@ -116,8 +121,8 @@ def draw(ax, rep, field):
                 marker="o" if primary else None, markersize=5.0,
                 markerfacecolor=col, markeredgecolor=SURFACE, markeredgewidth=2.0)
         if primary:
-            ax.annotate(" " + lab, (ks[-1], mu[-1]), xytext=(4, 0),
-                        textcoords="offset points", fontsize=7.2, color=INK2,
+            ax.annotate(" " + lab, (ks[-1], mu[-1]), xytext=(5, LABEL_DY[arm]),
+                        textcoords="offset points", fontsize=7.0, color=INK2,
                         va="center", zorder=6)
     ax.set_xticks([2, 3, 4, 5, 6])
     ax.set_xlim(1.85, 6.9)
@@ -141,7 +146,7 @@ def main(argv=None) -> int:
     ncorn = {("k=" + r): sorted(set(rep["rungs"][r]["n_corners_per_seed"].values()))
              for r in RUNGS if rep["rungs"].get(r, {}).get("n_corners_per_seed")}
 
-    fig, axes = plt.subplots(1, 2, figsize=(12.4, 4.8))
+    fig, axes = plt.subplots(1, 2, figsize=(11.2, 5.0))
 
     ax = axes[0]
     draw(ax, rep, "mean")
@@ -158,7 +163,8 @@ def main(argv=None) -> int:
                     % " / ".join(str(c) for c in sorted(set(cs))),
                     (2.0, max(cs)), xytext=(0, 5), textcoords="offset points",
                     fontsize=7.0, color=INK2, ha="left")
-    ax.set_xlabel("k  —  number of factors jointly composed in the held-out box")
+    ax.set_xlabel("k  —  factors pinned in the HELD-OUT CELL\n"
+                  "(k≥3 probes the SAME 120 corners; only the hold-out changes)")
     ax.set_ylabel("distinct valid NOVEL tuples per corner")
     ax.set_title("A. the composition ladder", fontsize=9.5)
 
@@ -168,7 +174,8 @@ def main(argv=None) -> int:
     draw(ax, rep, "delta")
     ax.annotate("declared margin +%.1f" % rep["margin"], (1.9, rep["margin"]),
                 xytext=(0, 3), textcoords="offset points", fontsize=7.0, color=INK2)
-    ax.set_xlabel("k  —  number of factors jointly composed in the held-out box")
+    ax.set_xlabel("k  —  factors pinned in the HELD-OUT CELL\n"
+                  "(k≥3 probes the SAME 120 corners; only the hold-out changes)")
     ax.set_ylabel("paired per-corner margin vs the BEST learned baseline")
     ax.set_title("B. margin against the strongest learner at each rung", fontsize=9.5)
 
@@ -185,7 +192,7 @@ def main(argv=None) -> int:
         plt.Line2D([], [], color=INK3, linestyle=FINE, linewidth=1.3, label="table floor"),
     ]
     fig.legend(handles=handles, frameon=False, ncol=3, fontsize=7.4,
-               loc="lower center", bbox_to_anchor=(0.5, -0.19))
+               loc="lower center", bbox_to_anchor=(0.5, -0.17))
 
     bl = {}
     for r in RUNGS:
@@ -197,24 +204,22 @@ def main(argv=None) -> int:
     fig.suptitle("Shapes3D composition ladder — how far composition stretches as k grows\n"
                  "APPENDIX FIGURE · the K-sweep's ENDPOINT at K = 5 (not main text)",
                  fontsize=11, fontweight="bold", y=1.04)
-    fig.text(0.5, -0.30,
-             ("Band = min..max over seeds; line = seed mean; marker on the four primary "
-              "series only. %s. Corners per rung per seed: %s.\n"
-              "The metric and the +%.1f margin are the harness's "
-              "(LADDER-READY.json:estimand); the unit is the CORNER. The ceiling is the "
-              "corner's own row count and it CHANGES at k=3 (36 -> 72), so a k=2 absolute "
-              "and a k>=3 absolute are not on one scale — the ceiling is drawn for that "
-              "reason.\nBest learned baseline per (k, seed) = the learned arm with the "
-              "largest mean, fixed before any arm number existed (PREREG §5, widened by "
-              "AMENDMENT-3 so the opponent can only get stronger): %s.\n"
-              "Hues are the entity's BYTE PIN + POPULATION group; the arm inside a group "
-              "is the line style. Palette validated at --pairs all (see the module "
-              "docstring). Every arm also appears as its own row in LADDER.md / LADDER.csv.\n"
-              "PLACEMENT (Head ruling 2026-09-21T12:38:07Z): the store arms run at K = 5, "
-              "DECLARED, because K* is unpublished (CROSSOVER-val.json: K_star = null). The "
-              "main text carries ONE K, K*; this figure is the sweep's ENDPOINT and belongs "
-              "in the appendix. Never both in main text.")
-             % (nstr, ncorn, rep["margin"], bl),
+    fig.text(0.5, -0.40,
+             ("Band = min..max over %s; line = seed mean. Metric, unit (CORNER) and the "
+              "+%.1f margin are the harness's (LADDER-READY.json:estimand).\n"
+              "⚠ k≥3 probes the SAME 120 corners — only the held-out CELL changes (12 large "
+              "kway3 cells, 300,000 rows, → 120 singleton kway6 cells, 200,640), so the five "
+              "rival columns are CONSTANT there by construction\n"
+              "and only the store arms can move; k=2 is a different probe (60 corners of 36 "
+              "rows). The ceiling is the corner's own row count and changes 36→72 at k=3, so "
+              "k=2 and k≥3 absolutes are not on one scale.\n"
+              "Best learned baseline per (k, seed), fixed before any arm number existed "
+              "(PREREG §5, widened by AMENDMENT-3 so the opponent can only get stronger): %s."
+              "   ⭐ single design and pca_tensor COINCIDE EXACTLY.\n"
+              "APPENDIX placement, K = 5 DECLARED (K* unpublished): Head ruling "
+              "2026-09-21T12:38:07Z. Full per-arm rows, controls and CIs: LADDER.md / "
+              "LADDER.csv. Sources: FINDINGS.md.")
+             % (nstr, rep["margin"], bl),
              ha="center", fontsize=7.0, color=INK2)
     fig.tight_layout()
     p = out / "fig_composition_ladder.png"
