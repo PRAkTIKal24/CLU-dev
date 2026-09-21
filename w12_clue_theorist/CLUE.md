@@ -344,6 +344,12 @@ that code came from your own worktree and not from the shared editable `.pth`.
 (within-seed byte identity, the store pin, the zero-step flag) and prints the cross-seed column
 mismatch of §6 as a DISCLOSURE rather than a failure.
 
+⭐ **The checks regenerate from the bundle alone.** `w12-clue-theorist.bundle` was cloned into a
+clean directory and all four substantive scripts re-run there: **exit 0 each**, and all four JSON
+outputs **byte-identical** to the ones in `checks/` (`diff -q`, 2026-09-21). ⛔ Nothing in this
+directory depends on state that only exists in the worktree it was produced in, apart from `chlu`
+itself, which `check_00` is there to pin.
+
 ---
 
 ## 9. ⛔ WHAT WOULD PROVE THIS SPOKE WRONG — and where I stand on each

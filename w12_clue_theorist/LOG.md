@@ -93,3 +93,13 @@ All three run in-turn, foreground, to completion. No PIDs detached; no kills iss
 - Exit codes re-verified for all five checks: 0 / 0 / 0 / 0 / 0.
 
 ## 12:05 — commit and bundle
+- Committed 5b47ab9 on branch w12/clue-theorist (only w12_clue_theorist/ added; no
+  production chlu/ code touched; no .claude/ dir created).
+- Bundle: git bundle create /c/chlu/outputs/w12-clue-theorist/w12-clue-theorist.bundle
+  w12/clue-theorist   (that branch only, never --all). 6,036,278 B.
+  verify -> "is okay", "The bundle records a complete history."
+  list-heads -> exactly 1 ref: 5b47ab99e15929e04b9a783dedcb0362081aa897
+                refs/heads/w12/clue-theorist
+- REGENERATION CHECK: cloned the bundle into the scratchpad and re-ran all four
+  substantive checks from the clone -> exit 0 each, and all four JSON outputs
+  diff-identical to the ones in checks/.
