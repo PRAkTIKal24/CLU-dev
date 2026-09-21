@@ -215,7 +215,7 @@ def main(argv=None) -> int:
               "k=2 and k≥3 absolutes are not on one scale.\n"
               "Best learned baseline per (k, seed), fixed before any arm number existed "
               "(PREREG §5, widened by AMENDMENT-3 so the opponent can only get stronger): %s."
-              "   ⭐ single design and pca_tensor COINCIDE EXACTLY.\n"
+              "   * single design and pca_tensor COINCIDE EXACTLY.\n"
               "APPENDIX placement, K = 5 DECLARED (K* unpublished): Head ruling "
               "2026-09-21T12:38:07Z. Full per-arm rows, controls and CIs: LADDER.md / "
               "LADDER.csv. Sources: FINDINGS.md.")

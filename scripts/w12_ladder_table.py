@@ -280,6 +280,14 @@ def main(argv=None) -> int:
             ent["clears_bar_per_seed"] = per
             ent["n_seeds_with_a_bar_test"] = len(cleared)
             ent["seeds_where_this_arm_IS_the_baseline"] = selfcmp
+            # ⛔ AMENDMENT-2 section 3 says "on EVERY seed".  A rung scored on FEWER than the
+            # declared seeds cannot answer that, and a partial pass must never read as a pass.
+            if cleared and len(cleared) + len(selfcmp) < len(SEEDS):
+                ent["clears_bar"] = None
+                ent["bar_test"] = (
+                    "INCOMPLETE -- %d of %d declared seeds carry a bar test at this rung; "
+                    "'clears the bar' requires EVERY seed and is not decidable yet"
+                    % (len(cleared) + len(selfcmp), len(SEEDS)))
             if selfcmp and not cleared:
                 ent["clears_bar"] = None
                 ent["bar_test"] = ("NOT APPLICABLE at this rung -- this arm is the best "
