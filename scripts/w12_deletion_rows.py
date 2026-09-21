@@ -62,12 +62,18 @@ SHAPE_FACTOR, CUBE_INDEX = 4, 0     # shape = 0.0 = cube
 #:   red & cylinder 0 / 0          (red-cylinder is the held-out PAIR cell)
 #:   red & sphere   5,507 / 5,511
 #:   red & oblong   5,517 / 5,533
-#: So the DECLARED NON-VACUOUS SUBSTITUTE is red AND OBLONG -- the conjunction whose two
-#: marginals both survive the deletion, which is the only version of this row that can
-#: test anything.  exp_gen_delete_row7:320 names it "red's other shape, SEEN -- the hole
-#: must leave it allowed".  BOTH are reported: the specified one with its count of 0 and
-#: its reason, and the substitute with its own row.
-OBLONG_INDEX = 3                    # shape = 3.0 = oblong
+#: So the DECLARED NON-VACUOUS SUBSTITUTE is red AND SPHERE (shape index 2) -- a
+#: conjunction whose two marginals both survive the deletion, which is the only version of
+#: this row that can test anything.
+#: THE INDEX IS NOT MINE TO CHOOSE FREELY: spoke/deletion-baselines found the same
+#: vacuity independently and moved its own conjunction pin to
+#:   "object_hue 0.0 AND shape 2.0 = 5,511 rows", declared in its PINS_W12
+#: (/c/chlu/outputs/w12-deletion-baselines/LOG.md, 11:44Z entry), and its
+#: retrained-without comparator deletes exactly those rows.  A comparator and an arm that
+#: delete DIFFERENT rows are not a comparison, so this pin is adopted from the spoke
+#: rather than picked here.  BOTH rows are reported: the specified one with its count of
+#: 0 and its reason, and the substitute with its own row.
+SPHERE_INDEX = 2                    # shape = 2.0 = sphere
 ITEM_FRACTION = 0.01                # the declared 1 %
 
 
@@ -215,7 +221,7 @@ def main(argv=None) -> int:
     masks = {
         "value": red,
         "conjunction": red & (idx[:, SHAPE_FACTOR] == CUBE_INDEX),
-        "conjunction_live": red & (idx[:, SHAPE_FACTOR] == OBLONG_INDEX),
+        "conjunction_live": red & (idx[:, SHAPE_FACTOR] == SPHERE_INDEX),
     }
     shape_counts = {nm: int((red & (idx[:, SHAPE_FACTOR] == si)).sum())
                     for si, nm in ((0, "cube"), (1, "cylinder"), (2, "sphere"),
@@ -325,7 +331,7 @@ def main(argv=None) -> int:
             dele = [c["corner_id"] for c in corners
                     if corner_requests_value(c, grid, RED_FACTOR, RED_INDEX)]
         elif scope in ("conjunction", "conjunction_live"):
-            si = CUBE_INDEX if scope == "conjunction" else OBLONG_INDEX
+            si = CUBE_INDEX if scope == "conjunction" else SPHERE_INDEX
             surv = [c["corner_id"] for c in corners
                     if not (corner_requests_value(c, grid, RED_FACTOR, RED_INDEX)
                             and corner_requests_value(c, grid, SHAPE_FACTOR, si))]
@@ -344,8 +350,8 @@ def main(argv=None) -> int:
                 "value": "every fit row carrying red (object_hue index 0)",
                 "conjunction": ("every fit row carrying red AND cube (shape index 0)"
                                 " -- AS LITERALLY SPECIFIED BY THE TASK FILE"),
-                "conjunction_live": ("every fit row carrying red AND oblong (shape "
-                                     "index 3) -- THE DECLARED NON-VACUOUS "
+                "conjunction_live": ("every fit row carrying red AND sphere (shape "
+                                     "index 2) -- THE DECLARED NON-VACUOUS "
                                      "SUBSTITUTE, because red AND cube and red AND "
                                      "cylinder are both EMPTY in this split"),
                 "item": "a random 1 % of fit rows",
@@ -405,7 +411,7 @@ def main(argv=None) -> int:
     hole = np.zeros(lay["size"], np.uint8)
     hidx = coupling_index(cards, RED_FACTOR, RED_INDEX, SHAPE_FACTOR, CUBE_INDEX)
     hidx_live = coupling_index(cards, RED_FACTOR, RED_INDEX, SHAPE_FACTOR,
-                               OBLONG_INDEX)
+                               SPHERE_INDEX)
     t0 = time.time()
     hole[hidx] = 1
     hole[hidx_live] = 1
@@ -424,8 +430,8 @@ def main(argv=None) -> int:
                       "mechanism from forgetting and does not need a deleted row "
                       "to have existed.")},
             {"index": int(hidx_live),
-             "pair": [["object_hue", int(RED_INDEX)], ["shape", int(OBLONG_INDEX)]],
-             "label": "red AND oblong -- the non-vacuous substitute",
+             "pair": [["object_hue", int(RED_INDEX)], ["shape", int(SPHERE_INDEX)]],
+             "label": "red AND sphere -- the non-vacuous substitute",
              "note": ("here rows WERE deleted, so the hole and the downdate are "
                       "exercised on the same conjunction and the two mechanisms are "
                       "separable on one object")},
