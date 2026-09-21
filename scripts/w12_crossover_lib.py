@@ -120,6 +120,18 @@ def perturb_modes(modes, kind: str, seed: int):
                         Well j's block is deployed into well k.  ward_balanced wells
                         differ in width by at most 1, so a block is cropped or
                         zero-padded to the destination width; that is recorded on the row.
+                        MEASURED PROPERTY OF THIS IMPLEMENTATION, stated rather than
+                        left for a reader to discover: the permutation is uniform with
+                        only the IDENTITY rejected, not a derangement, so a well may
+                        keep its own block.  A uniform permutation has one fixed point in
+                        expectation at any K, i.e. about 1/K of wells; at K=5 seed 0 one
+                        of the five wells did keep its own atoms.  That makes this
+                        control slightly WEAKER than a derangement would be, which is the
+                        conservative direction for a control that must COLLAPSE.  The
+                        primary C.2 control is ``value_permute``, which has no such
+                        property, and the verdict is taken from it.  The definition is
+                        held FIXED across every row this wave rather than improved
+                        mid-sweep, so val rows and scored rows carry the same control.
     ``random_span``     atoms replaced by a random Gaussian block of the same shape,
                         rescaled to the same Frobenius norm -> `random_atoms`.
     """
