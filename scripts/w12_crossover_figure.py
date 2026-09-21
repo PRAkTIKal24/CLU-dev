@@ -54,7 +54,10 @@ def main(argv=None) -> int:
                     for k in Ks], float)
     rw = np.array([per[str(k)]["rank_over_width_max"] for k in Ks])
     ns = sorted({per[str(k)]["n_seeds"] for k in Ks})
-    nlab = f"n = {ns[0]} seeds" if len(ns) == 1 else f"n = {min(ns)}-{max(ns)} seeds"
+    if len(ns) == 1:
+        nlab = f"n = {ns[0]} seed" + ("" if ns[0] == 1 else "s")
+    else:
+        nlab = f"n = {min(ns)}-{max(ns)} seeds, printed per K"
 
     fig, axes = plt.subplots(1, 2, figsize=(11.0, 4.2),
                              gridspec_kw={"width_ratios": [1.25, 1.0]})
@@ -95,12 +98,16 @@ def main(argv=None) -> int:
     top = ax.get_ylim()[1]
     if ks:
         ax.axvline(ks, color=CAT[2], lw=1.0, alpha=0.5, zorder=1)
-        ax.annotate(f"K* = {ks}", (ks, top), xytext=(3, -12),
+        ax.annotate(f"K* = {ks}", (ks, top), xytext=(-6, -12), ha="right",
                     textcoords="offset points", fontsize=8.5, color=CAT[2],
                     fontweight="bold", va="top")
+    if not kc:
+        ax.annotate("NO CROSSOVER inside the swept range", (Ks[len(Ks) // 2], top),
+                    xytext=(0, -12), textcoords="offset points", fontsize=8.5,
+                    color=CAT[7], fontweight="bold", va="top", ha="center")
     if kc:
         ax.axvline(kc, color=CAT[7], lw=1.0, alpha=0.5, zorder=1)
-        ax.annotate(f"crossover K = {kc}", (kc, top), xytext=(3, -26),
+        ax.annotate(f"crossover K = {kc}", (kc, top), xytext=(-6, -26), ha="right",
                     textcoords="offset points", fontsize=8.5, color=CAT[7],
                     fontweight="bold", va="top")
     ax.set_xticks(Ks)
