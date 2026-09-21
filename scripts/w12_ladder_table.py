@@ -280,8 +280,13 @@ def main(argv=None) -> int:
         a["clears_bar_sequence"] = {r: c for r, c in seq}
         if not seq:
             a["breaking_point"] = None
+            ran = [r for r in RUNGS if a["per_rung"][r].get("status") == "RUN"]
+            dec = [r for r in ran if a["per_rung"][r].get("decorative")]
             a["breaking_point_statement"] = (
-                "no rung is usable -- every rung is a NOT-RUN or DECORATIVE for this arm")
+                "DECLARED NOT-RUN -- no rung of this arm was scored"
+                if not ran else
+                "NO ROW CLAIMED -- every rung that ran (%s) is DECORATIVE"
+                % ", ".join("k=" + r for r in dec))
         elif not seq[0][1]:
             a["breaking_point"] = None
             a["breaking_point_statement"] = (

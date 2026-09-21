@@ -22,10 +22,13 @@ from __future__ import annotations
 import argparse
 import json
 import pickle
+import sys
 import time
 from pathlib import Path
 
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import chlu
 
@@ -39,6 +42,7 @@ from chlu.experiments import exp_gen_factor_wells as fw
 from chlu.experiments import exp_gen_read as R
 from chlu.experiments import exp_w5_compose_field as W5
 from chlu.experiments import exp_w8_downdate as W8
+from w12_fastjudge import FastJudge, assert_identical
 
 T0 = time.time()
 
@@ -215,26 +219,30 @@ def build_rival_obj(name: str, seed: int) -> dict:
 # ---------------------------------------------------------------------------
 
 def score_arm(obj: dict, cond: dict, judge, bitmap, seen_mask) -> list:
+    """Every corner of the rung, through the shipped acceptance / validity / scoring path.
+
+    ⭐ The corners are answered in ONE call rather than one call each. MEASURED
+    (`logs/batch_check.log`): `exp_gen_read.arm_features` returns `IDENTICAL: True,
+    max|diff| 0.0` batched vs per-corner, and the judge's tuples are `IDENTICAL: True`
+    at the pinned `eval_batch = 256` vs 72-row fragments. ⛔ Nothing is approximated:
+    the reads and the judge are row-wise, the offsets slice the same rows back into the
+    same corners, and `per_corner_scores` is the shipped function, unchanged.
+    """
     grid = cond["grid"]
     corners = cond["corners"]
-    arm_features = R.arm_features
-    vals_cat, tup_cat, val_cat, acc_cat, offs = [], [], [], [], []
+    vals_cat, offs = [], []
     p = 0
     for c in corners:
         vals = fw._request_values_from_rows(grid, c["rows"])
-        feats, oor = arm_features(obj, vals, grid)
-        acc = fw.accept_rule(vals, oor, np.zeros(vals.shape[0], bool), bitmap, grid)
-        tup = judge.read_back(feats, int(fw.PINS["eval_batch"]))
-        valid = fw.judge_valid(vals, tup, grid) & acc
         vals_cat.append(vals)
-        tup_cat.append(tup)
-        val_cat.append(valid)
-        acc_cat.append(acc)
         offs.append((p, p + vals.shape[0]))
         p += vals.shape[0]
-    return fw.per_corner_scores(corners, np.concatenate(vals_cat),
-                                np.concatenate(tup_cat), np.concatenate(val_cat),
-                                np.concatenate(acc_cat), offs, grid, seen_mask)
+    V = np.concatenate(vals_cat)
+    feats, oor = R.arm_features(obj, V, grid)
+    acc = fw.accept_rule(V, oor, np.zeros(V.shape[0], bool), bitmap, grid)
+    tup = judge.read_back(feats, int(fw.PINS["eval_batch"]))
+    valid = fw.judge_valid(V, tup, grid) & acc
+    return fw.per_corner_scores(corners, V, tup, valid, acc, offs, grid, seen_mask)
 
 
 def main(argv=None) -> int:
@@ -269,6 +277,16 @@ def main(argv=None) -> int:
     bitmap = fw.value_presence_bitmap(grid, cond["train_rows"])
     seen_mask = fw.seen_tuple_mask(grid, cond["train_rows"])
     judge = fw.Judge(int(a.seed), log=log)
+    # the read-back path, with the jit hoisted out of the per-call body.  Proven
+    # element-for-element identical to the shipped Judge on REAL features before use;
+    # the leg refuses to produce a number if it is not.  See scripts/w12_fastjudge.py.
+    fast = FastJudge(judge)
+    _pool = np.asarray(np.load(leg / "partitions.npz")["pool"], np.int64)[:256]
+    _t = time.time()
+    _chk = assert_identical(judge, fast, fw.gather(fw.features_mmap(int(a.seed)), _pool))
+    log("FastJudge positive control: %s (%d requests, %d elements) in %.1fs"
+        % (_chk["identical"], _chk["n_requests"], _chk["n_elements_compared"],
+           time.time() - _t))
 
     want = [x for x in a.arms.split(",") if x] or (
         list(STORE_ARMS)
@@ -280,6 +298,7 @@ def main(argv=None) -> int:
             "n_train": int(cond["train_rows"].size),
             "n_test": int(cond["test_rows"].size),
             "n_corners": len(corners),
+            "fastjudge_positive_control": _chk,
             "corner_ids": [c["corner_id"] for c in corners],
             "estimand": {
                 "function": "exp_gen_factor_wells.paired_estimand",
@@ -315,7 +334,7 @@ def main(argv=None) -> int:
                          "address_bytes": obj["address_bytes"],
                          "perturbation": obj.get("perturbation"),
                          "byte_matching": "1x the arm's own deployed total (store+book)"}
-            per = score_arm(obj, cond, judge, bitmap, seen_mask)
+            per = score_arm(obj, cond, fast, bitmap, seen_mask)
             dv = np.array([r["distinct_valid_novel_tuples"] for r in per], float)
             ja = np.array([r["judge_accuracy"] for r in per], float)
             summ = {"arm": arm, "n_corners": len(per),

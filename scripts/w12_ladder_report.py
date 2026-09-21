@@ -15,10 +15,10 @@ ORDER = (STORE + ["%s__%s" % (s, c) for s in STORE for c in CONTROLS]
 LABEL = {
     "single_design_K5": "**single design** (K=5, DECLARED)",
     "pca_tensor": "**pca_tensor** (wave-5 subspace store)",
-    "single_design_K5__landscape_shuffled": "&nbsp;&nbsp;· control `landscape_shuffled`",
-    "single_design_K5__random_atoms": "&nbsp;&nbsp;· control `random_atoms`",
-    "pca_tensor__landscape_shuffled": "&nbsp;&nbsp;· control `landscape_shuffled`",
-    "pca_tensor__random_atoms": "&nbsp;&nbsp;· control `random_atoms`",
+    "single_design_K5__landscape_shuffled": "&nbsp;&nbsp;↳ single design · control `landscape_shuffled`",
+    "single_design_K5__random_atoms": "&nbsp;&nbsp;↳ single design · control `random_atoms`",
+    "pca_tensor__landscape_shuffled": "&nbsp;&nbsp;↳ pca_tensor · control `landscape_shuffled`",
+    "pca_tensor__random_atoms": "&nbsp;&nbsp;↳ pca_tensor · control `random_atoms`",
     "rival_mlp": "MLP @ 524,288 B ref", "rival_lstm": "LSTM @ 524,288 B ref",
     "rival_transformer": "transformer @ 524,288 B ref",
     "rival_cont_mlp": "continuous MLP @ 524,288 B ref",
@@ -64,10 +64,12 @@ def main(argv=None) -> int:
         R = rep["rungs"].get(r, {})
         n = sorted(set((R.get("n_corners_per_seed") or {}).values()))
         hdr.append("k=%s<br><sub>%s corners · ceiling %s</sub>"
-                   % (r, n or "—", R.get("ceiling_per_corner") or "—"))
+                   % (r, "/".join(str(x) for x in n) or "—",
+                      R.get("ceiling_per_corner") or "—"))
     R = rep["rungs"].get("shipped", {})
     n = sorted(set((R.get("n_corners_per_seed") or {}).values()))
-    hdr.append("shipped<br><sub>%s corners (row3+row4)</sub>" % (n or "—"))
+    hdr.append("shipped<br><sub>%s corners (row3+row4)</sub>"
+               % ("/".join(str(x) for x in n) or "—"))
 
     W("## 1. The ladder — score per corner")
     W("")
@@ -134,21 +136,26 @@ def main(argv=None) -> int:
         W("| " + " | ".join(row) + " |")
     W("")
 
-    W("## 4. Paired margin against the BEST learned baseline (PREREG §5 rule)")
+    W("## 4. Paired margin against the BEST learned baseline")
     W("")
-    W("The rule was fixed at 2026-09-21T11:38:41Z, before any arm number existed: per "
-      "(rung, seed) the learned arm with the **largest** mean, among the five pre-existing "
-      "learned arms. The winner's identity is printed.")
+    W("The rule was fixed at 2026-09-21T11:38:41Z (PREREG §5) and **widened** at "
+      "2026-09-21T11:49:46Z (AMENDMENT-3) so the opponent can only get STRONGER: per "
+      "(rung, seed), the learned arm with the **largest** mean over that rung's corners, "
+      "among all seven learned arms. Both readings are printed — the narrow five-rival "
+      "reading is in the column marked `§5`.")
     W("")
-    W("| rung | best learned baseline (seed0 / seed1 / seed2) | " +
+    W("| rung | best learned (all 7) — s0 / s1 / s2 | best learned (§5, 5 rivals) | " +
       " | ".join("Δ %s" % LABEL.get(s, s).replace("**", "") for s in STORE) + " |")
-    W("|---|---|" + "---|" * len(STORE))
+    W("|---|---|---|" + "---|" * len(STORE))
     for r in RUNGS + ["shipped"]:
         R = rep["rungs"].get(r, {})
         bl = R.get("best_learned_per_seed") or {}
         who = " / ".join("%s (%.3f)" % (bl[s]["arm"], bl[s]["mean"])
-                         for s in sorted(bl) if bl[s]["arm"]) or "—"
-        row = ["k=%s" % r if r != "shipped" else "shipped", who]
+                         for s in sorted(bl) if bl[s].get("arm")) or "—"
+        who5 = " / ".join("%s (%.3f)" % (bl[s]["best_learned_5_arm"],
+                                         bl[s]["best_learned_5_mean"])
+                          for s in sorted(bl) if bl[s].get("best_learned_5_arm")) or "—"
+        row = ["k=%s" % r if r != "shipped" else "shipped", who, who5]
         for arm in STORE:
             A = R.get("arms", {}).get(arm, {})
             if A.get("status") != "RUN":
@@ -160,6 +167,48 @@ def main(argv=None) -> int:
                                   % (d["mean_paired_delta"], d["bootstrap_ci95"][0],
                                      d["bootstrap_ci95"][1]) for d in ds) or "—")
         W("| " + " | ".join(row) + " |")
+    W("")
+
+    W("## 4b. ⭐ THE ANSWER — deterioration and the breaking point, per arm")
+    W("")
+    W("Both words were defined in `AMENDMENT-2.md` at 2026-09-21T11:46:30Z, before any arm "
+      "number existed. `deteriorates` compares the **ceiling-normalised** score with the "
+      "arm's own k=2 value and requires the same sign on every seed. `clears the bar` is the "
+      "harness's own `beats_beyond_margin` against the best learned baseline, on every seed. "
+      "A DECORATIVE rung claims no row and is excluded from the breaking point.")
+    W("")
+    W("| arm | deteriorates vs its own k=2 (k=3/4/5/6) | clears the bar (k=2..6) | "
+      "**breaking point** |")
+    W("|---|---|---|---|")
+    for arm in ORDER:
+        V = (rep.get("ladder_verdicts") or {}).get(arm)
+        if not V:
+            W("| %s | — | — | **DECLARED NOT-RUN** |" % LABEL.get(arm, arm))
+            continue
+        det, clr = [], []
+        for r in RUNGS:
+            e = V["per_rung"].get(r, {})
+            if e.get("status") != "RUN":
+                if r != "2":
+                    det.append("—")
+                clr.append("—")
+                continue
+            if r != "2":
+                d = e.get("deteriorates_vs_k2")
+                det.append("yes" if d is True else
+                           ("no" if d is False else
+                            ("mixed" if isinstance(d, str) else "—")))
+            mark = "✓" if e.get("clears_bar") else "✗"
+            if e.get("decorative"):
+                mark += "(DEC)"
+            clr.append(mark)
+        W("| %s | %s | %s | %s |" % (LABEL.get(arm, arm), " / ".join(det),
+                                     " / ".join(clr), V["breaking_point_statement"]))
+    W("")
+    sk = rep.get("same_k_for_every_arm") or {}
+    if sk:
+        W("> **%s** — arms with a breaking point: `%s`." % (sk.get("statement", "—"),
+                                                            sk.get("arms_with_a_breaking_point")))
     W("")
 
     W("## 5. ⛔ END REPRODUCTION — the non-negotiable")
