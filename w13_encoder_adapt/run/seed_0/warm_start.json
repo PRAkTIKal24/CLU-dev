@@ -1,0 +1,311 @@
+{
+  "D": 2048,
+  "classifier": {
+    "gate_balacc_on_real": 1.0,
+    "note": "ONE instrument for every arm and every column; hash-asserted, never fitted here",
+    "param_hash": "c8741ac417d88ebf8ee82163ba9d7090ed66856aa9ee951e621791f08794669e",
+    "path": "C:\\Users\\PratikJawahar\\chlu\\chlu-bundle-v2\\.claude\\outputs\\gen-external-classifier\\seed_0\\external_classifier.pkl",
+    "seed": 0
+  },
+  "decoder_param_count": 1516227,
+  "decoder_param_hash": "f154ee1b76d848caf0917373ad84b86a9f5667b02e33a65b1b7ebbefa4600140",
+  "decoder_recipe": {
+    "batch": 128,
+    "blocks_per_stage": 2,
+    "channels": [
+      256,
+      128,
+      64
+    ],
+    "edge_blur": 5,
+    "edge_weight": 8.0,
+    "grad_weight": 1.0,
+    "groups": 8,
+    "loss": "mse",
+    "lr": 0.001,
+    "lr_schedule": "cosine",
+    "name": "w8_v1_warm",
+    "steps": 200,
+    "warmup_frac": 0.05
+  },
+  "encoder_param_count": 428576,
+  "encoder_param_hash": "4a6e7a6366ecff2110dc624df27056d92b28586b5bb41373483000d8f4d915f8",
+  "feat_shape": [
+    128,
+    4,
+    4
+  ],
+  "grouping": {
+    "attempts": [
+      {
+        "accepted": false,
+        "floor": 40,
+        "method": "average",
+        "min_well_size": 0,
+        "sizes": [
+          2048,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "accepted": true,
+        "floor": 40,
+        "method": "ward",
+        "min_well_size": 268,
+        "sizes": [
+          268,
+          350,
+          297,
+          281,
+          852
+        ]
+      }
+    ],
+    "method_order": [
+      "average",
+      "ward"
+    ],
+    "method_requested": "auto",
+    "method_used": "ward",
+    "min_well_frac": 0.1,
+    "min_well_size_floor": 40,
+    "n_dead_channels": 0,
+    "n_live_channels": 2048,
+    "well_sizes": [
+      268,
+      350,
+      297,
+      281,
+      852
+    ]
+  },
+  "n_train_rows": 8192,
+  "note": "EVERY arm starts from this triple, bit-identically; ownership is derived here ONCE and is a constant for every arm and every step",
+  "own": [
+    4,
+    1,
+    0,
+    3,
+    2
+  ],
+  "ownership": {
+    "identity_ceiling": {
+      "exact": 0.1640625,
+      "note": "no swap; the judge's own accuracy on real encoder features",
+      "per_factor_tuple": [
+        1.0,
+        1.0,
+        0.99609375,
+        0.41796875,
+        0.80078125,
+        0.54296875
+      ]
+    },
+    "n_pairs": 256,
+    "note": "derived ONCE on the shared warm start and held CONSTANT for every arm and every step; gen_swap_probe: 'a refinement loop must fix it, or the objective moves under the optimiser'",
+    "transfer_S": [
+      [
+        1.0,
+        0.4296875,
+        0.99609375,
+        0.26171875,
+        0.72265625,
+        0.23828125
+      ],
+      [
+        1.0,
+        0.33984375,
+        0.96484375,
+        0.24609375,
+        0.69140625,
+        0.19921875
+      ],
+      [
+        0.0078125,
+        1.0,
+        0.9453125,
+        0.26953125,
+        0.69140625,
+        0.53125
+      ],
+      [
+        1.0,
+        1.0,
+        0.99609375,
+        0.41796875,
+        0.8046875,
+        0.5390625
+      ],
+      [
+        0.9375,
+        0.96484375,
+        0.0234375,
+        0.1640625,
+        0.203125,
+        0.25390625
+      ]
+    ],
+    "transfer_T": [
+      [
+        0.0,
+        0.11328125,
+        0.0,
+        0.0859375,
+        0.08203125,
+        0.04296875
+      ],
+      [
+        0.0,
+        0.18359375,
+        0.0,
+        0.14453125,
+        0.109375,
+        0.06640625
+      ],
+      [
+        0.85546875,
+        0.0,
+        0.0,
+        0.09765625,
+        0.109375,
+        0.015625
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.078125,
+        0.06640625,
+        0.0234375
+      ],
+      [
+        0.0,
+        0.0,
+        0.80078125,
+        0.1171875,
+        0.5234375,
+        0.1015625
+      ]
+    ],
+    "well_sizes": [
+      268,
+      350,
+      297,
+      281,
+      852
+    ]
+  },
+  "pins": {
+    "K_star": 32,
+    "K_star_source": "C:/chlu/evidence/outputs/w12-single-design-crossover/CROSSOVER-val.json :: K_star",
+    "adapter_rank": 32,
+    "adapter_up_init": "zeros",
+    "anchor_lambda_mode": "auto_from_warm_start",
+    "anchor_reference_displacement_rho": 0.1,
+    "anchor_terms": [
+      "feature_relative_l2",
+      "weight_relative_l2"
+    ],
+    "arms_without_render_decoder": [],
+    "beta_codebook": 1.0,
+    "beta_commitment": 0.25,
+    "beta_swap": "auto",
+    "cache_block": 8192,
+    "cache_dtype": "float16",
+    "ckpt_every_s": 120.0,
+    "code_grad": "straight_through",
+    "dataset": "shapes3d",
+    "dec_recipe": "w8_v1_short",
+    "dec_recipe_architecture_of": "v1_capacity_schedule",
+    "dec_refit_steps": 400,
+    "eval_batch": 256,
+    "grouping_method": "auto",
+    "in_loop_store_A": 64,
+    "in_loop_store_K": 5,
+    "in_loop_store_bytes": 524288,
+    "joint_batch": 64,
+    "joint_lr": 0.001,
+    "joint_steps": 400,
+    "k_wells": 5,
+    "min_well_frac": 0.1,
+    "n_modes": 64,
+    "n_train": 8192,
+    "ownership_batch": 256,
+    "ownership_pairs": 256,
+    "pretext": "recon",
+    "probe_batch": 256,
+    "probe_lr": 0.001,
+    "probe_n_eval": 4096,
+    "probe_n_fit": 8192,
+    "probe_steps": 1500,
+    "rival_families": [
+      "mlp",
+      "cont_mlp",
+      "transformer",
+      "lstm"
+    ],
+    "rival_families_declared_not_run": [
+      "lace"
+    ],
+    "rival_val_rows": 512,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "swap_loss_ill_posed_at_K32": true,
+    "swap_wells_per_step": 1,
+    "warm_batch": 128,
+    "warm_dec_steps": 200,
+    "warm_steps": 1500
+  },
+  "quick": false,
+  "schema": "chlu-w8-encoder-loop-warm/1",
+  "seed": 0,
+  "status": "ok",
+  "store_bytes": {
+    "bits_per_read": 30.0,
+    "bytes_formula": "n_modes * sum_k d_k * 4 = n_modes * D * 4",
+    "dim": 2048,
+    "dtype": "float32",
+    "n_modes": 64,
+    "n_modes_per_well": [
+      64,
+      64,
+      64,
+      64,
+      64
+    ],
+    "n_wells": 5,
+    "note": "The modes ARE the store. The addressing head is reported separately and is not part of this count; a byte-matched baseline matches store_bytes.",
+    "store_bytes": 524288,
+    "store_bytes_per_well": [
+      68608,
+      89600,
+      76032,
+      71936,
+      218112
+    ],
+    "uniform_allocation": true
+  },
+  "store_param_hash": "c1ae2ae1d85b004e79af2b22c2190b1da4dda6d3f0832d252c5ef9836163f15c",
+  "void_as_a_reported_number": false,
+  "warm_batch": 128,
+  "warm_decoder_loss_final": 0.007023666985332966,
+  "warm_decoder_loss_first": 0.16336652636528015,
+  "warm_decoder_steps": 1200,
+  "warm_loss_final": 0.002360787009820342,
+  "warm_loss_first": 0.16343382000923157,
+  "warm_seconds": 2608.0588796138763,
+  "warm_steps": 1500,
+  "well_sizes": [
+    268,
+    350,
+    297,
+    281,
+    852
+  ]
+}
