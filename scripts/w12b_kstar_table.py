@@ -103,8 +103,27 @@ def leg_kstar(root: Path, rung: str, seed: int, K: int) -> dict:
                "rank_over_width_max", NOT_RUN),
            "n_corners": meta.get("n_corners", NOT_RUN),
            "controls": ctl,
-           "controls_all_collapse": all(isinstance(v, float) and v == 0.0
+           # ⚠ TWO DIFFERENT THINGS, KEPT APART ON PURPOSE.
+           # `controls_exactly_zero` is the OBSERVATION the crossover hub reported at K*
+           # on val ("all four read EXACTLY 0.0000"). It is not a bar and was never
+           # declared as one.
+           # `controls_collapse_beyond_declared_margin` is the PRE-DECLARED BAR:
+           # `LADDER-READY.json:estimand` pins `DECORATION_MARGIN_NOVELTY = 1.0`, so a
+           # control collapses when the arm beats it by at least one novel tuple per
+           # corner. ⛔ The bar is not moved to accommodate a non-zero reading, and a
+           # non-zero reading is not rounded away either -- both are printed.
+           "controls_exactly_zero": all(isinstance(v, float) and v == 0.0
                                         for v in ctl.values())}
+    if isinstance(store and store.get("distinct_valid_novel_tuples_mean"), float):
+        arm_v = float(store["distinct_valid_novel_tuples_mean"])
+        out["controls_collapse_beyond_declared_margin"] = all(
+            isinstance(v, float) and (arm_v - v) >= 1.0 for v in ctl.values())
+        out["control_margins"] = {c: (arm_v - v) if isinstance(v, float) else NOT_RUN
+                                  for c, v in ctl.items()}
+    else:
+        out["controls_collapse_beyond_declared_margin"] = False
+        out["control_margins"] = NOT_RUN + ": the arm itself has no number"
+    out["controls_all_collapse"] = out["controls_collapse_beyond_declared_margin"]
     if isinstance(out["store"], float) and isinstance(out["learned_1x"], float):
         out["margin"] = out["store"] - out["learned_1x"]
         if ceil:
@@ -223,11 +242,47 @@ def main(argv=None) -> int:
                                  for r in RUNGS},
             "seeds_per_rung": {r: rep["by_rung"][r][col]["margin"]["n"] for r in RUNGS},
         }
+    # ⛔ SEED-MATCHED, because the two columns need not carry the same seeds. Comparing a
+    # 3-seed mean against a 1-seed mean would charge a SEED difference to K, which is the
+    # same class of mistake as charging a CONSTRUCTION difference to K -- the mistake the
+    # bridge column exists to prevent. Only seeds that have BOTH numbers are used.
+    matched = {}
+    for rung in RUNGS:
+        rr = rep["legs"][rung]
+        common = [str(x) for x in SEEDS
+                  if isinstance(rr["ladder_K5"][str(x)]["margin"], float)
+                  and isinstance(rr["kstar_K32"][str(x)]["margin"], float)]
+        if not common:
+            matched[rung] = {"seeds": [], "status": NOT_RUN
+                             + ": no seed carries BOTH a K = 5 and a K* number"}
+            continue
+        l5 = [rr["ladder_K5"][x]["margin"] for x in common]
+        lk = [rr["kstar_K32"][x]["margin"] for x in common]
+        matched[rung] = {
+            "seeds": [int(x) for x in common], "n_seeds": len(common),
+            "ladder_K5_margin_mean": float(S.fmean(l5)),
+            "kstar_K32_margin_mean": float(S.fmean(lk)),
+            "ladder_K5_margin_per_seed": l5, "kstar_K32_margin_per_seed": lk,
+            "delta": float(S.fmean(lk) - S.fmean(l5)),
+            "sign_flipped": (S.fmean(l5) > 0) != (S.fmean(lk) > 0),
+            "sign_flipped_on_every_matched_seed": all(
+                (a > 0) != (b > 0) for a, b in zip(l5, lk)),
+            "store_K5_mean": float(S.fmean(
+                [rr["ladder_K5"][x]["store"] for x in common])),
+            "store_Kstar_mean": float(S.fmean(
+                [rr["kstar_K32"][x]["store"] for x in common])),
+            "opponent_K5_params_mean": float(S.fmean(
+                [float(rr["ladder_K5"][x]["learned_1x_params"]) for x in common])),
+            "opponent_Kstar_params_mean": float(S.fmean(
+                [float(rr["kstar_K32"][x]["learned_1x_params"]) for x in common])),
+        }
+        m_ = matched[rung]
+        m_["opponent_shrank_by"] = (m_["opponent_K5_params_mean"]
+                                    / max(m_["opponent_Kstar_params_mean"], 1.0))
+    rep["seed_matched_K5_vs_Kstar"] = matched
+
     v5, vk = rep["verdict"]["ladder_K5"], rep["verdict"]["kstar_K32"]
-    flipped = [r for r in RUNGS
-               if isinstance(v5["margins_per_rung"][r], float)
-               and isinstance(vk["margins_per_rung"][r], float)
-               and (v5["margins_per_rung"][r] > 0) != (vk["margins_per_rung"][r] > 0)]
+    flipped = [r for r in RUNGS if matched[r].get("sign_flipped")]
     rep["SIGN_FLIPPED_AT_RUNGS"] = flipped
     rep["SIGN_FLIP_READING"] = (
         "⭐⭐ THE K* REPLICATION FLIPS THE SIGN at rungs %s. Under the Head's ruling the "
@@ -266,16 +321,41 @@ def main(argv=None) -> int:
             return f"{m:,.0f}" if isinstance(m, float) else "NOT-RUN"
         L.append(f"| n={rung} | {p('ladder_K5')} | {p('bridge_K5')} | {p('kstar_K32')} |")
     L.append("\n## The control gate at K* — checked BEFORE any margin\n")
-    L.append("| rung | seed | " + " | ".join(f"`{c}`" for c in CONTROLS)
-             + " | all collapse? |")
-    L.append("|---|---|" + "---|" * (len(CONTROLS) + 1))
+    L.append("| rung | seed | arm | " + " | ".join(f"`{c}`" for c in CONTROLS)
+             + " | exactly 0? | collapses beyond the declared 1.0 margin? |")
+    L.append("|---|---|---|" + "---|" * (len(CONTROLS) + 2))
     for rung in RUNGS:
         for s in SEEDS:
             lg = rep["legs"][rung]["kstar_K32"][str(s)]
-            L.append("| n=%s | %d | %s | **%s** |"
-                     % (rung, s,
+            L.append("| n=%s | %d | %s | %s | %s | **%s** |"
+                     % (rung, s, fmt(lg["store"], 3),
                         " | ".join(fmt(lg["controls"][c]) for c in CONTROLS),
+                        "yes" if lg.get("controls_exactly_zero") else "no",
                         "YES" if lg["controls_all_collapse"] else "⛔ NO / NOT-RUN"))
+    L.append("\n⚠ `exactly 0` is the crossover hub's OBSERVATION at K* on val, not a bar. "
+             "The PRE-DECLARED bar is `LADDER-READY.json`'s "
+             "`DECORATION_MARGIN_NOVELTY = 1.0` novel tuple per corner. ⛔ Neither is "
+             "moved to accommodate the other, and a non-zero control reading is printed "
+             "rather than rounded away.\n")
+    L.append("\n## SEED-MATCHED K = 5 vs K\\* — the only honest comparison\n")
+    L.append("| rung | seeds | store K=5 | store K\\* | opp K=5 params | opp K\\* params "
+             "| opp shrank | margin K=5 | margin K\\* | sign flipped? |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|")
+    for rung in RUNGS:
+        m_ = matched[rung]
+        if not m_.get("seeds"):
+            L.append("| n=%s | — | %s | | | | | | | |" % (rung, m_["status"]))
+            continue
+        L.append("| n=%s | %s | %s | %s | %s | %s | %.2f× | %s | %s | **%s** |"
+                 % (rung, m_["seeds"], fmt(m_["store_K5_mean"], 3),
+                    fmt(m_["store_Kstar_mean"], 3),
+                    format(int(m_["opponent_K5_params_mean"]), ","),
+                    format(int(m_["opponent_Kstar_params_mean"]), ","),
+                    m_["opponent_shrank_by"],
+                    fmt(m_["ladder_K5_margin_mean"], 3),
+                    fmt(m_["kstar_K32_margin_mean"], 3),
+                    "YES" if m_["sign_flipped"] else "no"))
+
     L.append("\n## Verdict\n```\n"
              + json.dumps({"SIGN_FLIPPED_AT_RUNGS": rep["SIGN_FLIPPED_AT_RUNGS"],
                            "reading": rep["SIGN_FLIP_READING"],
