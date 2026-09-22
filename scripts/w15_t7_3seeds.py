@@ -77,6 +77,37 @@ def _ms(xs):
     return {"n": len(xs), "mean": m, "sd": sd, "values": xs}
 
 
+def _paired(after_rows, before_rows, metric="distinct_valid_novel_tuples",
+            margin=1.0):
+    """fw.paired_estimand's own arithmetic, on rows already on disk.
+
+    Imported rather than re-derived where possible; here the two row lists come from
+    two different JSON files, so the estimand is applied to them directly.  The corner
+    is the unit, never a single cell.
+    """
+    import numpy as np
+    from chlu.experiments import exp_gen_factor_wells as fw
+    return fw.paired_estimand(after_rows, before_rows, metric, margin,
+                              "retrain_without", "as_trained")
+
+
+def _survivor_as_trained(scored_doc, arm, survivor_ids):
+    """The rival AS-TRAINED restricted to the scope's OWN survivor corners.
+
+    Free: the per-corner rows are already in the scored artefact, scored on the same
+    109 corners by the same judge.  Without this the rival column would compare a
+    109-corner as-trained figure against an 89-corner retrain-without figure, which is
+    not a before/after on the same corners.
+    """
+    keep = set(survivor_ids)
+    rows = [r for r in scored_doc["per_arm"][arm]["per_corner"]
+            if r["corner_id"] in keep]
+    if not rows:
+        return None, []
+    v = [float(r["distinct_valid_novel_tuples"]) for r in rows]
+    return sum(v) / len(v), rows
+
+
 def main() -> int:
     scored = {s: _load(SCORED[s]) for s in SEEDS}
     delet = {s: _load(DELETION[s]) for s in SEEDS}
@@ -305,7 +336,31 @@ def main() -> int:
                 pm = (col.get("paired_ours_minus_rival") or {}).get(f, {})
                 at = ((d.get("rival_as_trained_carried") or {})
                       .get(f"{f}__as_trained") or {})
+                # the rival's own BEFORE, on the scope's OWN survivor corners
+                surv_ids = ((delet[s] or {}).get("scopes", {})
+                            .get(sc, {}) or {}).get("survivor_corner_ids") or []
+                at_surv, at_rows = _survivor_as_trained(
+                    scored[s], f"{f}__as_trained", surv_ids) if scored[s] else (
+                        None, [])
+                rival_paired = None
+                if at_rows and "per_corner" in rw:
+                    pr = _paired(rw["per_corner"], at_rows)
+                    rival_paired = {
+                        "mean_paired_delta": pr.get("mean_paired_delta"),
+                        "ci95": pr.get("bootstrap_ci95"),
+                        "corners_won": pr.get("corners_arm_wins"),
+                        "corners_tied": pr.get("corners_tied"),
+                        "corners_lost": pr.get("corners_control_wins"),
+                        "what": ("the RIVAL's own after-minus-before on the same "
+                                 "survivor corners: retrain-without MINUS as-trained. "
+                                 "Ours on the same quantity is in "
+                                 "deletion_rows[scope].per_seed[seed]"
+                                 ".paired_after_minus_before."),
+                    }
                 fams[f] = {
+                    "as_trained_novel_per_corner_on_the_scopes_survivors": at_surv,
+                    "n_survivor_corners": len(surv_ids),
+                    "rival_after_minus_before_on_survivors": rival_paired,
                     "retrain_without_novel_per_corner": (
                         (rw.get("survivors") or {}).get("novel_per_corner_mean")
                         if "survivors" in rw else

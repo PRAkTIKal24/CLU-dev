@@ -185,18 +185,22 @@ def main() -> int:
     A("")
     A(f"> {rv['rule']}")
     A("")
-    A("| scope | seed | family | rival **as-trained** (109 corners) | rival "
-      "**retrain-without** (survivors) | ours after deletion (same survivors) | "
+    A("Every figure on a row is measured on the **same survivor corners** as the arm, "
+      "so the rival's as-trained → retrain-without step is a before/after on exactly "
+      "the corners our before/after uses.")
+    A("")
+    A("| scope | seed | survivors | family | rival **as-trained** (survivors) | rival "
+      "**retrain-without** (survivors) | rival after − before | ours after deletion | "
       "paired ours − rival | CI95 | won / tied / lost | beats 1.0? | rival retrain "
       "seconds | rival rows read |")
-    A("|---|---|---|---|---|---|---|---|---|---|---|---|")
+    A("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for sc in SCOPES:
         rec = rv["scopes"][sc]
         for s in SEEDS:
             v = rec["per_seed"][f"seed{s}"]
             if "DECLARED_NOT_RUN" in v:
-                A(f"| `{sc}` | {s} | — | **DECLARED NOT-RUN** — "
-                  f"{v['DECLARED_NOT_RUN']} | | | | | | | | |")
+                A(f"| `{sc}` | {s} | — | — | **DECLARED NOT-RUN** — "
+                  f"{v['DECLARED_NOT_RUN']} | | | | | | | | | |")
                 continue
             for fam in RIVALS:
                 x = v["families"][fam]
@@ -205,8 +209,10 @@ def main() -> int:
                 cost = x.get("retrain_without_cost") or {}
                 ci = pm.get("ci95") or [None, None]
                 rws = ("**DECLARED NOT-RUN**" if isinstance(rw, dict) else f(rw, 3))
-                A(f"| `{sc}` | {s} | `{fam}` | "
-                  f"{f(x['as_trained_novel_per_corner_all_109_corners'], 3)} | {rws} | "
+                rp = x.get("rival_after_minus_before_on_survivors") or {}
+                A(f"| `{sc}` | {s} | {x.get('n_survivor_corners')} | `{fam}` | "
+                  f"{f(x['as_trained_novel_per_corner_on_the_scopes_survivors'], 3)} | "
+                  f"{rws} | {f(rp.get('mean_paired_delta'), 3)} | "
                   f"{f(v['ours_after_deletion_on_the_same_survivors'], 3)} | "
                   f"{f(pm.get('mean_paired_delta'), 3)} | "
                   f"[{f(ci[0], 2)}, {f(ci[1], 2)}] | {pm.get('corners_won')} / "
