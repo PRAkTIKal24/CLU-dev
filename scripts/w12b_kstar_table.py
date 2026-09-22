@@ -267,6 +267,14 @@ def main(argv=None) -> int:
             "sign_flipped": (S.fmean(l5) > 0) != (S.fmean(lk) > 0),
             "sign_flipped_on_every_matched_seed": all(
                 (a > 0) != (b > 0) for a, b in zip(l5, lk)),
+            # ⭐ THE LADDER'S OWN PRE-DECLARED BAR, applied unchanged.
+            # `AMENDMENT-2 §3` of w12 hub/composition-ladder: the arm clears only if it
+            # beats the opponent by `DECORATION_MARGIN_NOVELTY = 1.0` novel tuple per
+            # corner on EVERY declared seed -- not on the seed mean. ⛔ The bar is not
+            # moved; it is simply evaluated at the other K as well.
+            "clears_declared_bar_every_seed_K5": all(v >= 1.0 for v in l5),
+            "clears_declared_bar_every_seed_Kstar": all(v >= 1.0 for v in lk),
+            "min_margin_K5": float(min(l5)), "min_margin_Kstar": float(min(lk)),
             "store_K5_mean": float(S.fmean(
                 [rr["ladder_K5"][x]["store"] for x in common])),
             "store_Kstar_mean": float(S.fmean(
@@ -404,6 +412,24 @@ def main(argv=None) -> int:
                     fmt(m_["ladder_K5_margin_mean"], 3),
                     fmt(m_["kstar_K32_margin_mean"], 3),
                     "YES" if m_["sign_flipped"] else "no"))
+    L.append("\n### The ladder's OWN pre-declared bar, evaluated at both K\n")
+    L.append("⛔ `AMENDMENT-2 §3` of `w12 hub/composition-ladder`: the arm clears only if "
+             "it beats the opponent by `DECORATION_MARGIN_NOVELTY = 1.0` novel tuple per "
+             "corner on **every** declared seed — not on the seed mean. The bar is not "
+             "moved here; it is evaluated at the other K as well.\n")
+    L.append("| rung | clears at K=5? | worst seed K=5 | clears at K\\*? | worst seed K\\* |")
+    L.append("|---|---|---|---|---|")
+    for rung in RUNGS:
+        m_ = matched[rung]
+        if not m_.get("seeds"):
+            L.append("| n=%s | %s | | | |" % (rung, m_["status"]))
+            continue
+        L.append("| n=%s | %s | %s | **%s** | **%s** |"
+                 % (rung,
+                    "yes" if m_["clears_declared_bar_every_seed_K5"] else "**no**",
+                    fmt(m_["min_margin_K5"], 3),
+                    "YES" if m_["clears_declared_bar_every_seed_Kstar"] else "no",
+                    fmt(m_["min_margin_Kstar"], 3)))
 
     L.append("\n## ⭐ THE SWING, DECOMPOSED — what the bridge column buys\n")
     L.append("| rung | seeds | margin: ladder K=5 → bridge K=5 → K\\* | CONSTRUCTION step "
