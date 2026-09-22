@@ -34,7 +34,7 @@ and the interface here is 201,312 of 202,848 read floats (99.24 %). That is reco
 
 | | |
 |---|---|
-| **request** | nine words — layout id × agent colour × key colour × tinted-floor colour × door colour × agent cell × key cell × door cell × goal cell |
+| **request** | nine words — layout id × agent colour × key colour × door colour × tinted-floor colour × agent cell × key cell × door cell × goal cell |
 | **answer** | the rendered grid state |
 | **judge** | exact placement of every object **AND** legality of the state under the engine's rules. `valid = exact_objects AND legal` |
 | **tolerance** | `tolerance_used` is `null` on **every** row of **every** artefact; checked by `HARNESS-READY.json → ACCEPTANCE.4` which walks the whole smoke document |
@@ -86,8 +86,9 @@ whether a state exists at all. Over the whole pool, **74.5 %** of uniformly draw
 A CMAZE-O state carries exactly one key, but `Instance` needs a home for all five colours.
 The four absent colours get homes on **WALL cells**. This is inert and it is asserted on
 real states rather than argued: `sentinels_are_inert` replays the engine's own optimal
-route and counts how often the walker stands on a sentinel cell — **0 of 64 states
-replayed** (`chlu/exp_w15_cmaze_o_env.py::sentinels_are_inert`). A CMAZE-O state's
+route and counts how often the walker stands on a sentinel cell — **0 sentinel-cell
+occupancies over 600 states replayed**, 200 per seed × 3 seeds
+(`artefacts/sentinel_inert.json`). A CMAZE-O state's
 legality never mentions the sentinels: "a key never on a wall" is a statement about the
 state's one key.
 
