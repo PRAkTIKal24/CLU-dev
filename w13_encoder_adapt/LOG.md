@@ -384,3 +384,17 @@ finding about the ENCODER, not about the store. That is the headline, not a cave
   pressure. ⭐ No compute process was affected: every reap was checked and all worker PIDs
   survived. Recorded because it is why the poll cadence changes mid-LOG.
 - Scored runs on `encoder-adapt`: **1 of 3 SPENT. 2 and 3 UNSPENT and returned.**
+
+## 06:13Z — BUNDLE
+`git bundle create /c/chlu/outputs/w13-encoder-adapt/w13-encoder-adapt.bundle w13/encoder-adapt`
+⛔ that branch only, never `--all`.
+- `git bundle verify`: **"is okay"**, *"The bundle records a complete history"*, sha1.
+- `git bundle list-heads`: **exactly ONE ref** —
+  `326e1f0d74e71be17934a680550782a35c3d0827 refs/heads/w13/encoder-adapt`. 6,268,564 B.
+- ⭐ Independently CLONED from the bundle into a scratch directory and re-checked from
+  that clone alone: 9 scored legs present, every one `SCORED: true`, `K_star: 32`,
+  `n_corners {row3_pair 60, row4_nway 49, total 109}`, all four controls 0.0,
+  `primary_degenerate: false`.
+- The 18 GB of caches and checkpoints under `/c/chlu/outputs/w13-encoder-adapt/` are
+  deliberately NOT in the bundle; `w13_encoder_adapt/README.md` says so and says where
+  they are.
