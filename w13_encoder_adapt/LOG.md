@@ -385,7 +385,7 @@ finding about the ENCODER, not about the store. That is the headline, not a cave
   survived. Recorded because it is why the poll cadence changes mid-LOG.
 - Scored runs on `encoder-adapt`: **1 of 3 SPENT. 2 and 3 UNSPENT and returned.**
 
-## 06:13Z — BUNDLE
+## 04:13Z — BUNDLE
 `git bundle create /c/chlu/outputs/w13-encoder-adapt/w13-encoder-adapt.bundle w13/encoder-adapt`
 ⛔ that branch only, never `--all`.
 - `git bundle verify`: **"is okay"**, *"The bundle records a complete history"*, sha1.
