@@ -13,7 +13,7 @@
 | `claims_matrix.md` | matrix, title → **v2.22 (PROPOSED)** (prior title kept verbatim as its tail) + `§I8.10` (`CM-W14-3`, `CM-W17-1`…`CM-W17-4`) + `§I8.11` open flags | 1,624 → **1,731** |
 | `FINDINGS.md`, `LOG.md`, `START_UTC.txt`, `END_UTC.txt`, `PIDS.txt` | record | — |
 
-**Base:** `evidence/outputs/w14-refusal-displays-closeout/{negative_results,claims_matrix}.md`. This is the latest pair on batmac, and it is byte-identical to the worktree copy under `w14_refusal_displays_closeout/` (md5 `6b8042dd…` / `5568a6f2…`). The repo has no `.claude/` directory, so by the w13 precedent the pair lives as a per-spoke copy in `w18_registry_fold/`.
+**Base:** `evidence/outputs/w14-refusal-displays-closeout/{negative_results,claims_matrix}.md`. This is the latest pair on batmac, and it is byte-identical to the worktree copy under `w14_refusal_displays_closeout/` (md5: registry `5568a6f2…`, matrix `6b8042dd…`). The repo has no `.claude/` directory, so by the w13 precedent the pair lives as a per-spoke copy in `w18_registry_fold/`.
 
 **Additivity was checked with difflib, not just claimed:**
 - Registry: 5,974 lines equal, 277 inserted, **0 replaced, 0 deleted**.

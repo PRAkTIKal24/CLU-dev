@@ -7,3 +7,4 @@
 - 2026-09-22T23:40:23Z registry: header note + ◈ block N338-N344 appended
 - 2026-09-22T23:41:47Z claims_matrix v2.22: §I8.10 (CM-W14-3, CM-W17-1..4) + §I8.11; additivity verified (difflib); FINDINGS.md written; evidence md5 unchanged
 - 2026-09-22T23:41:47Z END
+- 2026-09-22T23:41:58Z FIX: base md5 labels were swapped in ◈.0 and FINDINGS §0 (registry=5568a6f2, matrix=6b8042dd); corrected, recommitted, re-bundled

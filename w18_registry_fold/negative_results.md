@@ -5990,7 +5990,7 @@ none of it.**
 **Commissioned by** `~/clu/tasks/w18/registry-fold.md` (fold waves 15, 16 and 17), bound by
 `~/clu/tasks/w17/AMENDMENT-1.md` (Head ruling 2026-09-22) and `~/clu/tasks/w18/COMMON.md`.
 **Base:** `evidence/outputs/w14-refusal-displays-closeout/negative_results.md` (5,973 lines,
-md5 `6b8042dd01a01ae4124c860fb444f053`), the latest registry copy on batmac. Last entry before this
+md5 `5568a6f2d9e9930ea25de7510367652f`), the latest registry copy on batmac. Last entry before this
 block: `N337`. **This block adds `N338`–`N344`.** ⛔ Nothing above this line was edited, renumbered
 or removed.
 
