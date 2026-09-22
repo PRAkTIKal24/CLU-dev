@@ -1,0 +1,943 @@
+--- pre/DRAFT-v2-style.tex	2026-09-23 01:36:34
++++ work/DRAFT-v2-style.tex	2026-09-23 01:44:54
+@@ -73,8 +73,8 @@
+ \newcommand{\figslot}[3]{% #1 file stem in figures/, #2 caption, #3 label
+   \begin{figure}[t]\centering
+   \IfFileExists{figures/#1.pdf}{\includegraphics[width=0.92\linewidth]{figures/#1.pdf}}%
+-  {\fbox{\parbox{0.9\linewidth}{\centering\small Figure slot \texttt{figures/\detokenize{#1}.pdf} (owned by the
+-  \texttt{plots} spoke; not yet on disk at draft time).}}}
++  {\fbox{\parbox{0.9\linewidth}{\centering\small Figure pending (\texttt{figures/\detokenize{#1}.pdf} not yet
++  available).}}}
+   \caption{#2}\label{#3}\end{figure}}
+ 
+ \title{Exactly Deletable Compositional Generation\\ on a Frozen Encoder}
+@@ -92,9 +92,9 @@
+ \begin{abstract}
+ A world model trusted with requests it has never seen needs three things at once: its outputs are \emph{valid} under an exact judge, it \emph{composes}
+ held-out combinations of factors from factors it has seen, and it can \emph{forget} specific
+-training rows exactly. Compositional generation is extensively studied and exact unlearning established; their intersection, however, is empty: a mechanical
+-screen of approximately 4,050 works finds no generative model that deletes training rows
+-exactly. % SRC: _thinkpad/w8/w8-novelty/NOVELTY.md
++training rows exactly. Compositional generation is extensively studied and exact unlearning established; their intersection, however, is empty in a precise sense: a mechanical
++screen of approximately 4,050 works finds no \emph{factor-compositional} generative model (one that generates held-out combinations of factor values) that deletes training rows
++exactly while reading no data and retraining nothing. % SRC: _thinkpad/w8/w8-novelty/NOVELTY.md
+ We therefore study the simplest object with all three properties, the \emph{Naive CLU}: a
+ label-free store of per-well principal subspaces, computed on the latents of a frozen
+ encoder, read through a request-indexed address book and rendered by a frozen decoder; its
+@@ -121,7 +121,7 @@
+ \label{sec:intro}
+ % =======================================================================================
+ 
+-\subsection{Positioning: compositional generation is crowded; with exact deletion it is empty}
++\subsection{Positioning: compositional generation is crowded; with data-free exact deletion it is empty}
+ \label{sec:positioning}
+ 
+ Generating held-out combinations of factors is a long-standing and active problem~\citep{du2020compositional,liu2022compositional,du2023reduce,okawa2023compositional}. The multilinear line (Tenenbaum and Freeman, 2000\nocite{tenenbaum2000separating}; TensorFaces,
+@@ -152,11 +152,22 @@
+ and none of the 759 deletion-side works combines principal-subspace, generative and
+ frozen-model language. % SRC: _thinkpad/w8/w8-novelty/NOVELTY.md
+ The orthogonal query that poses the question directly, \emph{compositional} $\wedge$
+-\emph{generative} $\wedge$ \emph{exact deletion}, returns zero works.
++\emph{generative} $\wedge$ \emph{exact deletion}, returns zero works on the screen.
+ % SRC: _thinkpad/w8/w8-novelty/NOVELTY.md
+-We therefore state the position only in the form that the screen supports: \emph{the
+-intersection of compositional generation with exact deletion is empty} in the works we could
+-screen. The residual risk is real, and \S\ref{sec:limits} states it: abstract-level screening
++Two works outside the screen answer a broader reading of that query, and they fix the form of
++our claim. SISA training~\citep{bourtoule2021machine} makes any learned model, a generator
++included, exactly unlearnable by retraining the shard that held the deleted rows: the deletion is
++exact, but it reads that shard's retained data and retrains. Compartmentalized diffusion models
++(Golatkar, Achille, Swaminathan and Soatto) train separate diffusion models on separate data
++sources and compose them at inference, which gives selective forgetting of a source by dropping
++or retraining the model that saw it; ``compositional'' there means composing models of data
++sources, not composing held-out combinations of factor values.
++% cite-tagger: bib entry needed -- Golatkar, Achille, Swaminathan, Soatto, "Training Data Protection with Compositional Diffusion Models", arXiv:2308.01937 (not in references.bib)
++Neither deletes without reading data and retraining, and neither generates held-out
++combinations of factor values.
++We therefore state the position only in the form that the screen and these two works support:
++\emph{the intersection of factor-compositional generation with exact deletion that reads no data
++and retrains nothing is empty} in the works we could screen. The residual risk is real, and \S\ref{sec:limits} states it: abstract-level screening
+ cannot see a match buried in a method section, and the indexing of preprints younger than about
+ three months is incomplete.
+ 
+@@ -182,8 +193,8 @@
+   equals, to floating-point roundoff, the object fitted without those rows.
+ \end{itemize}
+ However, the three pull against each other: a lookup table deletes exactly but
+-composes nothing it has not stored; a learned generator composes but can delete only by
+-retraining; and approximate unlearning~\citep{guo2020certified,izzo2021approximate,golatkar2020eternal} misses the exact answer in either direction
++composes nothing it has not stored; a learned generator composes but can delete exactly only by
++retraining (the whole model, or a shard of it~\citep{bourtoule2021machine}); and approximate unlearning~\citep{guo2020certified,izzo2021approximate,golatkar2020eternal} misses the exact answer in either direction
+ (\S\ref{sec:del-comparators}). The object we study therefore makes them properties of one store, and we measure, row by row, where each holds and where it does not.
+ 
+ \subsection{What we show, and at what thickness}
+@@ -193,7 +204,7 @@
+ \item \emph{Composition at a stated partition, against read-path-matched rivals.} On a
+   Shapes3D~\citep{burgess2018shapes,kim2018disentangling} value hold-out at $\Kstar=32$ wells and three scored seeds, the store beats every % SRC: w12b-nr6-and-kstar/NR6-T7.md
+   learned rival matched on read-path parameters, on both composition rows and on 109 of 109 % SRC: w12b-nr6-and-kstar/NR6-T7.md
+-  corners per seed, while every charter control collapses
++  corners per seed, while every pre-declared landscape control collapses
+   (\S\ref{sec:shapes-t7}). The same holds on every rung of an $n$-way ladder
+   (\S\ref{sec:ladder}), read with the inference note that, for $n\ge3$, the rungs form a
+   training-data axis and not a depth axis.
+@@ -217,7 +228,7 @@
+ seeds: seeds 3 and 4 have verified caches but neither a frozen decoder nor an external
+ classifier, so none of their corners can be judged. % SRC: w12b-nr6-and-kstar/FINDINGS.md
+ The one environment with an exact route judge and three scored seeds returns a negative for
+-the store and a positive for the interface. Several rows await a later wave; each is a
++the store and a positive for the interface. Several rows await further runs; each is a
+ marked placeholder whose text names the row and states that it may land as a negative.
+ 
+ % =======================================================================================
+@@ -286,7 +297,7 @@
+ % SRC: w13-seeds-and-tables/TABLES.md
+ The ledger is memory, not a read-path parameter: it is printed, never matched~\citep{borgeaud2021improving,khandelwal2020generalization,lample2019large,wu2022memorizing,berges2024memory}. A lookup table
+ of written items is a printed \emph{floor}, never a rival. Before any row is claimed for the
+-store, the charter controls (\texttt{landscape\_removed}, \texttt{landscape\_shuffled},
++store, the pre-declared landscape controls (\texttt{landscape\_removed}, \texttt{landscape\_shuffled},
+ \texttt{landscape\_shuffled\_across\_wells}, \texttt{random\_atoms}) must collapse; if they do
+ not, the row is an interface row or nothing.
+ 
+@@ -319,7 +330,9 @@
+ The control gate is checked before any margin, and it was measured, not assumed, on every seed:
+ all four landscape controls read exactly 0.0000 on both rows on all three legs.
+ % SRC: w12b-nr6-and-kstar/NR6-T7.md
+-On every leg, every rival is beaten beyond the declared 1.0 margin on 109 of 109 corners; the
++The rivals of Table~\ref{tab:t7} are the weaker of the two rival sets in this paper; the
++store's standing against the strongest available rival is given below (\emph{Two rival sets}).
++On every leg, each of them is beaten beyond the declared 1.0 margin on 109 of 109 corners; the
+ smallest paired delta against any comparator on any $\Kstar$ leg is $+39.266$, against the
+ table floor on seed 0. % SRC: w12b-nr6-and-kstar/NR6-T7.md
+ The seed-0 row, scored first, lies inside the three-seed spread on both rows.
+@@ -329,7 +342,7 @@
+ \centering\small
+ \caption{\textbf{Composition at $\Kstar=32$, Shapes3D value hold-out, TEST, $n=3$ seeds
+ (0, 1, 2).} Distinct valid novel tuples per corner (ceiling 36 on row 3, 72 on row 4), per % SRC: w13-seeds-and-tables/TABLES.md
+-seed. Rivals are matched on read-path parameters (about 131k); the table is a floor, never a % SRC: w13-seeds-and-tables/TABLES.md
++seed. Rivals are matched on read-path parameters (about 131k) and are the weaker of the paper's two rival sets (\S\ref{sec:shapes-t7}, \emph{Two rival sets}); the table is a floor, never a % SRC: w13-seeds-and-tables/TABLES.md
+ rival. ``Paired $\Delta$'' is the arm minus the comparator over all 109 corners (CI95 lower % SRC: w12b-nr6-and-kstar/NR6-T7.md
+ bound in the source); every comparator is beaten on 109/109 corners on every seed. The % SRC: w12b-nr6-and-kstar/NR6-T7.md
+ \texttt{refit\_postfix} rows re-fit the two token families from scratch inside the scoring
+@@ -364,6 +377,38 @@
+ a matched quantity. Appendix~\ref{app:t7more} gives the rival pins, the geometry and the stress
+ comparison. % SRC: w13-seeds-and-tables/TABLES.md
+ 
++\paragraph{Two rival sets, and which is stronger.} Two sets of read-path-matched learned rivals
++appear in the main text, and on the same corners they score up to an order of magnitude apart.
++The rivals of Table~\ref{tab:t7} are the as-trained comparators built for the deletion study
++(\S\ref{sec:del-comparators}): fitted on a 16,384-row build-scale subsample of the value % SRC: w12-deletion-baselines/FINDINGS.md
++hold-out fit pool, at 130,433 to 131,891 parameters, with epochs, learning rate and weight % SRC: w12-deletion-baselines/FINDINGS.md
++decay inherited from the earlier rival grids and not tuned. % SRC: w12-deletion-baselines/FINDINGS.md
++The rivals of Table~\ref{tab:ladder} are that earlier set: fitted on 32,256 rows of the % SRC: _thinkpad/w4/spoke-a-rivals/rivals/seed_0/mlp.rival.json
++combination-split pool, at 117,878 to 119,858 parameters, 40 epochs at batch 256 and learning % SRC: _thinkpad/w4/spoke-a-rivals/REPORT.md; _thinkpad/w4/spoke-a-rivals/rivals/seed_0/mlp.json
++rate 0.003 (5,040 steps), the same for every family and seed. % SRC: _thinkpad/w4/spoke-a-rivals/rivals/seed_0/mlp.json
++The combination-split pool holds out combinations but no factor value, so the earlier set was
++fitted on rows carrying the held-out \texttt{object\_hue} and shape values that the value
++hold-out store and the rivals of Table~\ref{tab:t7} never saw. Its own record states that such a
++comparison is not like-for-like and flatters whichever arm saw more, here the rival; the overlap
++of its fit rows with the held-out corners was not measured.
++% SRC: _thinkpad/w4/spoke-a-rivals/rivals/seed_0/mlp.rival.json; w12-composition-ladder/PREREG.md
++On the shared corners the earlier set is the stronger. On the 60 pair corners the MLP reads % SRC: w12b-nr6-and-kstar/NR6-T7.md
++2.9333 / 3.4333 / 5.2667 in Table~\ref{tab:t7} and 17.0167 / 22.0000 / 23.3333 in % SRC: w12b-nr6-and-kstar/NR6-T7.md; w13-seeds-and-tables/TABLES.md
++Table~\ref{tab:ladder}, while the table floor reads 5.8333 / 3.4833 / 6.1833 in both. % SRC: w12b-nr6-and-kstar/NR6-T7.md; w13-seeds-and-tables/TABLES.md
++Against the strongest learned rival of either set the store still scores higher on every seed.
++On all 109 corners of Table~\ref{tab:t7} the store reads 47.4954 / 47.4037 / 49.1193, and the % SRC: w12b-nr6-and-kstar/NR6-T7.md
++strongest earlier-set rival 30.0275 (LSTM) / 28.9174 (LSTM) / 37.5138 (transformer), scored on % SRC: w13-seeds-and-tables/TABLES.md
++the same corners in the ladder's reproduction leg (a rival's score does not depend on $K$). % SRC: w12-composition-ladder/FINDINGS.md
++On the ladder's $n=2$ rung the store reads 31.800 / 32.500 / 33.633 against 19.4167 / % SRC: w12b-nr6-and-kstar/KSTAR-LADDER.md; w13-seeds-and-tables/TABLES.md
++22.0000 / 24.2500; on $n=3$, its lowest rung on the identical 120 corners, 60.150 / 62.783 / % SRC: w12b-nr6-and-kstar/KSTAR-LADDER.md; w13-seeds-and-tables/TABLES.md
++61.908 against 44.4333 / 41.5667 / 51.9917. % SRC: w12b-nr6-and-kstar/KSTAR-LADDER.md; w13-seeds-and-tables/TABLES.md
++These are score comparisons, not paired margins, and we do not lead with the margins of
++Table~\ref{tab:t7} over its own rivals.
++\TODO{no artefact isolates which difference between the two rival sets (fit population, fit-pool
++size, parameter count or schedule) causes the gap, and none pairs the $\Kstar$ store against the
++earlier set with an interval; a refit of the earlier set on the value hold-out pool exists but is
++scored in no artefact.}
++
+ \begin{table}[t]
+ \centering\small
+ \caption{\textbf{The four-part ledger of the $\Kstar=32$ object, per seed, never netted.}
+@@ -371,18 +416,18 @@
+ arithmetic on the partition shape and are constant across seeds; only the address book varies.
+ The 524,288-byte figure is a reference column, not a budget the object met.}
+ \label{tab:ledger-kstar}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccc}
+ \toprule
+-part (bytes) & seed 0 & seed 1 & seed 2 \\
++part (bytes) & seeds & seed 0 & seed 1 & seed 2 \\
+ \midrule
+ % SRCBLOCK: w12b-nr6-and-kstar/FINDINGS.md
+-1. atoms & 516,096 & 516,096 & 516,096 \\
+-2. covariance + count & 560,608 & 560,608 & 560,608 \\
+-3. address book & 1,060,864 & 1,054,104 & 1,058,264 \\
+-4. coupling / hole table & 6,610 & 6,610 & 6,610 \\
+-honest four-part total & 2,144,178 & 2,137,418 & 2,141,578 \\
++1. atoms & 3 & 516,096 & 516,096 & 516,096 \\
++2. covariance + count & 3 & 560,608 & 560,608 & 560,608 \\
++3. address book & 3 & 1,060,864 & 1,054,104 & 1,058,264 \\
++4. coupling / hole table & 3 & 6,610 & 6,610 & 6,610 \\
++honest four-part total & 3 & 2,144,178 & 2,137,418 & 2,141,578 \\
+ % ENDSRC
+-$\times$ the 524,288 B reference & 4.0897 & 4.0768 & 4.0847 \\ % SRC: w13-seeds-and-tables/TABLES.md; w13-referee-2/REFEREE-v1.md
++$\times$ the 524,288 B reference & 3 & 4.0897 & 4.0768 & 4.0847 \\ % SRC: w13-seeds-and-tables/TABLES.md; w13-referee-2/REFEREE-v1.md
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+ \end{table}
+@@ -406,26 +451,27 @@
+ \centering\small
+ \caption{\textbf{The ladder at $\Kstar=32$, $n=3$ seeds, distinct valid novel tuples per % SRC: w12b-nr6-and-kstar/KSTAR-LADDER.md
+ corner, per seed (0 / 1 / 2).} Store rows from the $\Kstar$ replication (a free replication,
+-no scored budget; every row held out). Rival rows are the read-path-matched rivals scored on
++no scored budget; every row held out). Rival rows are the earlier, stronger read-path-matched rival
++set (\S\ref{sec:shapes-t7}, \emph{Two rival sets}) scored on
+ the same corners; a rival does not depend on $K$. $n=2$: 60 corners; $n\ge3$: the identical % SRC: w12-composition-ladder/FINDINGS.md
+ 120 corners (see the inference note). \emph{Inference note:} for $n\ge3$ the rungs differ in % SRC: w12-composition-ladder/FINDINGS.md
+ fit-pool coverage, not in composition depth.}
+ \label{tab:ladder}
+ \setlength{\tabcolsep}{2.6pt}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccccc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccccc}
+ \toprule
+-arm & $n=2$ & $n=3$ & $n=4$ & $n=5$ & $n=6$ \\
++arm & seeds & $n=2$ & $n=3$ & $n=4$ & $n=5$ & $n=6$ \\
+ \midrule
+ % SRCBLOCK: w12b-nr6-and-kstar/KSTAR-LADDER.md
+-\textbf{store, $\Kstar$} & \textbf{31.800 / 32.500 / 33.633} & \textbf{60.150 / 62.783 / 61.908} & \textbf{65.242 / 65.817 / 67.200} & \textbf{65.642 / 66.817 / 67.283} & \textbf{65.908 / 66.250 / 67.650} \\
+-\quad 3-seed mean & 32.644 & 61.614 & 66.086 & 66.581 & 66.603 \\
++\textbf{store, $\Kstar$} & 3 & \textbf{31.800 / 32.500 / 33.633} & \textbf{60.150 / 62.783 / 61.908} & \textbf{65.242 / 65.817 / 67.200} & \textbf{65.642 / 66.817 / 67.283} & \textbf{65.908 / 66.250 / 67.650} \\
++\quad 3-seed mean & 3 & 32.644 & 61.614 & 66.086 & 66.581 & 66.603 \\
+ % ENDSRC
+ % SRCBLOCK: w13-seeds-and-tables/TABLES.md
+-MLP & 17.0167 / 22.0000 / 23.3333 & \multicolumn{4}{c}{35.2083 / 41.5667 / 49.7500 (identical on $n=3$--$6$)} \\
+-LSTM & 19.4167 / 19.3333 / 23.7500 & \multicolumn{4}{c}{44.4333 / 39.4000 / 46.6750 (identical)} \\
+-transformer & 12.7500 / 15.7833 / 24.2500 & \multicolumn{4}{c}{28.8000 / 33.9000 / 51.9917 (identical)} \\
+-continuous MLP & 3.8833 / 4.5667 / 6.5333 & \multicolumn{4}{c}{6.3333 / 9.1167 / 12.6667 (identical)} \\
+-table (floor) & 5.8333 / 3.4833 / 6.1833 & \multicolumn{4}{c}{8.4333 / 7.9167 / 12.2333 (identical)} \\
++MLP & 3 & 17.0167 / 22.0000 / 23.3333 & \multicolumn{4}{c}{35.2083 / 41.5667 / 49.7500 (identical on $n=3$--$6$)} \\
++LSTM & 3 & 19.4167 / 19.3333 / 23.7500 & \multicolumn{4}{c}{44.4333 / 39.4000 / 46.6750 (identical)} \\
++transformer & 3 & 12.7500 / 15.7833 / 24.2500 & \multicolumn{4}{c}{28.8000 / 33.9000 / 51.9917 (identical)} \\
++continuous MLP & 3 & 3.8833 / 4.5667 / 6.5333 & \multicolumn{4}{c}{6.3333 / 9.1167 / 12.6667 (identical)} \\
++table (floor) & 3 & 5.8333 / 3.4833 / 6.1833 & \multicolumn{4}{c}{8.4333 / 7.9167 / 12.2333 (identical)} \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -449,9 +495,11 @@
+ \TODO{no artefact for the paired $\Kstar$ ladder margin (with CI) against the read-path-matched
+ rivals; the $\Kstar$ replication pairs the store only against the $1\times$ opponent of
+ Appendix~\ref{app:1x}.}
+-Two caveats accompany the rival rows: the ladder's \texttt{rival\_transformer} and
+-\texttt{rival\_lstm} columns are the earlier rival set's pre-repair numbers and were not
+-re-fitted on the ladder's rungs; and nothing in this table is a composition-depth result.
++Two caveats accompany the rival rows: the ladder's rival columns are the earlier rival set,
++whose \texttt{rival\_transformer} and \texttt{rival\_lstm} were fitted before a later dtype repair of
++the token families and were not re-fitted on the ladder's rungs, yet that set is the
++\emph{stronger} of the paper's two rival sets on shared corners (\S\ref{sec:shapes-t7}); and
++nothing in this table is a composition-depth result.
+ % SRC: w12b-nr6-and-kstar/FINDINGS.md
+ 
+ \paragraph{The coverage control.} A direct test of the inference note refits $n=6$ with the
+@@ -462,7 +510,7 @@
+ effect, that it is not, or neither; the ladder table and its inference note stand unchanged in
+ every case.}
+ 
+-\figslot{fig_ladder}{\textbf{The ladder at $\Kstar$ (placeholder figure; wave 18 regenerates).} (a) Score
++\figslot{fig_ladder}{\textbf{The ladder at $\Kstar$ (placeholder figure).} (a) Score
+ against $n$ per arm, 3 seeds, with the read-path rivals and the table floor. (b) Margin of the store
+ over a learner matched to the object's own four-part total, i.e.\ the stress comparison of
+ Appendix~\ref{app:1x}, \emph{not} the paper's read-path matching rule. For $n\ge3$ the
+@@ -473,7 +521,7 @@
+ 
+ We run three deletions on the $\Kstar$ object on TEST. \emph{Value}: every fit row carrying
+ red. \emph{Conjunction}: every fit row carrying red \emph{and} sphere, which we call the red
+-sphere everywhere; the conjunction the task first named, red $\wedge$ cube, deletes zero rows,
++sphere everywhere; the conjunction first named in the design, red $\wedge$ cube, deletes zero rows,
+ because cube is the shape held out of the split entirely, and it is printed as vacuous, never as
+ a deletion result. \emph{Item}: a random 1\% of fit rows.
+ Table~\ref{tab:del} gives each deletion with its cost. Post-deletion adaptation of the store is
+@@ -541,7 +589,7 @@
+ unlearners, measured on the fit pool (16,384 rows; no held-out corner and no scored run).
+ Retraining without the red rows costs each rival 8.86 to 34.62 s and reads 15,032 data rows
+ (Table~\ref{tab:rivals-del}). The approximate unlearners are appendix rows
+-(Appendix~\ref{app:delbase}), both because a ruling drops them from paper rows and because
++(Appendix~\ref{app:delbase}), both because they are not scored rows of this study and because
+ they miss the exact answer. % SRC: w12-deletion-baselines/FINDINGS.md
+ 
+ \noindent Against that exact reference, NegGrad+ over-forgets by 9.4 to 20.8 times and
+@@ -620,10 +668,9 @@
+ % SRC: w13-seeds-and-tables/TABLES.md; w12-composition-ladder/FINDINGS.md
+ The statistic is not consulted at generation time, hence the equal reads. Whether the
+ equality survives at $\Kstar$ is not measured: \texttt{pca\_tensor} was not run at
+-$\Kstar$ (a declared not-run, Appendix~\ref{app:notrun}). \TODO{no artefact for the
+-``$\sim$1/7$\times$'' byte ratio of the composition-only store named in the task spine; the
+-artefacts give the two totals printed here and in Table~\ref{tab:ledger-kstar}, and this spoke
+-does not divide them.}
++$\Kstar$ (a declared not-run, Appendix~\ref{app:notrun}). \TODO{no artefact prints the byte ratio of the composition-only store to the single design;
++the artefacts give the two totals printed here and in Table~\ref{tab:ledger-kstar}, and they are
++not divided here.}
+ On its own scored TEST legs (three seeds), the composition-only store beats a parameter-matched
+ learner on both rows beyond a margin declared in advance, at total deployed bytes matched to within $\pm0.5$\% (713,632 / 719,352 / 719,352 against the rival's 715,808) and parameters within $-0.304$\% to $+0.495$\%, the arm carrying more parameters on two of three seeds.
+ % SRC: w13-seeds-and-tables/TABLES.md
+@@ -648,7 +695,7 @@
+ Training the encoder through the store, in contrast, is a wash of two real effects: unfreezing
+ hurts and a swap loss repairs. The store's margin over a matched learner does not grow, so the
+ store does not shape the representation. Appendix~\ref{app:encoder-main} reports both results,
+-with the pending scored BAR D row of the longer leg.
++with the pending scored row of pre-registered criterion D on the longer leg.
+ 
+ \PLACEHOLDER{w15 \texttt{lace-poe-rows}: LACE~\citep{nie2021controllable} and PoE~\citep{hinton2002training} rows (at their own declared budgets) added
+ beside the learned rivals on rows 3--4 (Table~\ref{tab:t7}) and on every ladder rung, 3 seeds,
+@@ -691,18 +738,18 @@
+ green target; store-scoped. Matched on parameters, not on the Shapes reference pin: the read is
+ 410,688 floats against rivals of 410,920 (MLP) / 409,846 (LSTM) / 405,776 (transformer).} % SRC: w13-seeds-and-tables/TABLES.md
+ \label{tab:maze-del}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcc}
+ \toprule
+-property & seed 0 / seed 1 / seed 2 \\
++property & seeds & seed 0 / seed 1 / seed 2 \\
+ \midrule
+ % SRCBLOCK: w13-seeds-and-tables/TABLES.md
+-statistic, max relative residual (downdate vs refit) & \sci{7.522}{-16} / \sci{8.826}{-16} / \sci{7.818}{-16} \\
+-subspace, max projector residual & 0.000 / 0.000 / 0.000 \\
+-rows removed / kept & 216/992 $\cdot$ 226/975 $\cdot$ 193/1084 \\
+-refit $\cdot$ passes over retained data $\cdot$ items kept & False $\cdot$ 0 $\cdot$ False (every seed) \\
+-ledger: atoms $\cdot$ statistic (float64) $\cdot$ address book & 31,744 $\cdot$ 35,904 $\cdot$ 1,611,008 B \\
+-statistic as a share of the 1,642,752 B deployed read & 2.19\% \\
+-coupling / hole table & declared not present \\
++statistic, max relative residual (downdate vs refit) & 3 & \sci{7.522}{-16} / \sci{8.826}{-16} / \sci{7.818}{-16} \\
++subspace, max projector residual & 3 & 0.000 / 0.000 / 0.000 \\
++rows removed / kept & 3 & 216/992 $\cdot$ 226/975 $\cdot$ 193/1084 \\
++refit $\cdot$ passes over retained data $\cdot$ items kept & 3 & False $\cdot$ 0 $\cdot$ False (every seed) \\
++ledger: atoms $\cdot$ statistic (float64) $\cdot$ address book & 3 & 31,744 $\cdot$ 35,904 $\cdot$ 1,611,008 B \\
++statistic as a share of the 1,642,752 B deployed read & 3 & 2.19\% \\
++coupling / hole table & 3 & declared not present \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -736,7 +783,7 @@
+ CMAZE-2b therefore adds one integer rule, \emph{keep a pair iff its optimal route takes at least
+ two keys}, and changes nothing else. The fraction of routes needing at least two keys goes from
+ 0.1428 to 1.0000, blind-sequential on held-out unseen pairs falls from 0.9077 to 0.1818--0.2344,
+-and the oracle stays at 1.0000 (Table~\ref{tab:req}, Appendix~\ref{app:verb}). % SRC: w14-request-layer-fix/FINAL-REPORT.md
++and the oracle stays at 1.0000 (Tables~\ref{tab:req} and~\ref{tab:req2b}, Appendix~\ref{app:verb}). % SRC: w14-request-layer-fix/FINAL-REPORT.md
+ 
+ The fix lands in the multi-key band of CMAZE-1 itself rather than at its mixture value of 0.4980, and % SRC: w14-request-layer-fix/FINAL-REPORT.md
+ its costs are declared (Appendix~\ref{app:verb}).
+@@ -762,24 +809,24 @@
+ (unseen pair).}
+ \label{tab:verb}
+ \setlength{\tabcolsep}{3pt}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{llc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{llcc}
+ \toprule
+-row & verb & seed 0 / seed 1 / seed 2 \\
++row & verb & seed 0 / seed 1 / seed 2 & seeds \\
+ \midrule
+ % SRCBLOCK: w14-read-verb/FINAL-REPORT.md
+-unseen pair & \texttt{FULL} (the earlier read) & 0.2261 / 0.2929 / 0.3173 \\
+-unseen pair & \texttt{AVG} (ablation) & 0.0704 / 0.1313 / 0.1298 \\
+-unseen pair & \texttt{MERGE} (the verb) & \textbf{0.5126 / 0.6667 / 0.5769} \\
+-unseen pair & \texttt{MERGE} $-$ \texttt{AVG} & +0.4422 / +0.5354 / +0.4471 \\
+-$n$-way (conjunction) & \texttt{AVG} $\to$ \texttt{MERGE} & 0.0000 / 0.0160 / 0.0000 $\to$ 0.4891 / 0.4652 / 0.3915 \\
+-budget interpolation & \texttt{AVG} $\to$ \texttt{MERGE} & 0.0802 / 0.0875 / 0.0924 $\to$ 0.5142 / 0.5650 / 0.4988 \\
++unseen pair & \texttt{FULL} (the earlier read) & 0.2261 / 0.2929 / 0.3173 & 3 \\
++unseen pair & \texttt{AVG} (ablation) & 0.0704 / 0.1313 / 0.1298 & 3 \\
++unseen pair & \texttt{MERGE} (the verb) & \textbf{0.5126 / 0.6667 / 0.5769} & 3 \\
++unseen pair & \texttt{MERGE} $-$ \texttt{AVG} & +0.4422 / +0.5354 / +0.4471 & 3 \\
++$n$-way (conjunction) & \texttt{AVG} $\to$ \texttt{MERGE} & 0.0000 / 0.0160 / 0.0000 $\to$ 0.4891 / 0.4652 / 0.3915 & 3 \\
++budget interpolation & \texttt{AVG} $\to$ \texttt{MERGE} & 0.0802 / 0.0875 / 0.0924 $\to$ 0.5142 / 0.5650 / 0.4988 & 3 \\
+ \midrule
+-\multicolumn{2}{l}{gain, lookup floor (matched bytes)} & +0.8299 \\
+-\multicolumn{2}{l}{gain, \textbf{store}} & +0.4749 \\
+-\multicolumn{2}{l}{gain, \texttt{random\_atoms} / \texttt{landscape\_shuffled} (controls)} & +0.3557 / +0.3541 \\
+-\multicolumn{2}{l}{gain, transformer / MLP / LSTM} & +0.2757 / +0.1829 / +0.1380 \\
+-\multicolumn{2}{l}{gain, \texttt{landscape\_removed}} & 0.0000 \\
+-\multicolumn{2}{l}{lookup floor under \texttt{MERGE}, unseen pair} & 0.9648 / 0.9646 / 0.9808 \\
++\multicolumn{2}{l}{gain, lookup floor (matched bytes)} & +0.8299 & 3 \\
++\multicolumn{2}{l}{gain, \textbf{store}} & +0.4749 & 3 \\
++\multicolumn{2}{l}{gain, \texttt{random\_atoms} / \texttt{landscape\_shuffled} (controls)} & +0.3557 / +0.3541 & 3 \\
++\multicolumn{2}{l}{gain, transformer / MLP / LSTM} & +0.2757 / +0.1829 / +0.1380 & 3 \\
++\multicolumn{2}{l}{gain, \texttt{landscape\_removed}} & 0.0000 & 3 \\
++\multicolumn{2}{l}{lookup floor under \texttt{MERGE}, unseen pair} & 0.9648 / 0.9646 / 0.9808 & 3 \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -803,7 +850,7 @@
+ arm that reads anything. It lifts the matched-bytes lookup floor by $+0.8299$, against the
+ store's $+0.4749$, carrying that floor to 0.9648 / 0.9646 / 0.9808 on unseen pairs, past the
+ store and past the single-decode pipeline ceiling. % SRC: w14-read-verb/FINAL-REPORT.md
+-The charter controls do not collapse: on the seen row, \texttt{landscape\_shuffled} reads 0.5111
++The pre-declared landscape controls do not collapse: on the seen row, \texttt{landscape\_shuffled} reads 0.5111
+ / 0.5552 / 0.5727 and \texttt{random\_atoms} 0.5395 / 0.5650 / 0.5858, against a collapse bar of
+ half the store's score, 0.3606 / 0.3455 / 0.3508. % SRC: w14-read-verb/FINAL-REPORT.md
+ No row is therefore claimed for the store, on either verb. The verb claim survives because
+@@ -830,12 +877,12 @@
+ \emph{generate} a world model's states and transitions under the exact judge, on random mazes
+ never seen at test, so that the within-maze lookup floor cannot transfer and the cross-maze
+ fragment lookup is the floor. Every rival is matched on parameters on the same frozen encoder;
+-charter controls and blind columns are printed; bars are pre-registered before any number; three
++pre-declared landscape controls and blind columns are printed; bars are pre-registered before any number; three
+ seeds. The tables are written as they will be filled. Every cell is pending, and each table may be
+ filled either by a result or by a declared negative with its failing link (content,
+ factorisation, read or interface).
+ 
+-Table~\ref{tab:cmazet} (Appendix~\ref{app:mazewm}) lays out as placeholders the pending rows,
++Tables~\ref{tab:cmazet} and~\ref{tab:cmazeo} (Appendix~\ref{app:mazewm}) lay out as placeholders the pending rows,
+ the harness smokes, the configuration ladder, the fallback and the declared negatives. If no
+ maze world-model row lands, the maze section of this paper is Table~\ref{tab:maze-del}
+ (deletion transfers), Table~\ref{tab:verb} (the verb, an interface result) and those negatives, still a complete answer to whether the store's properties transfer to a route world.
+@@ -851,7 +898,7 @@
+ 
+ \begin{enumerate}[leftmargin=*,itemsep=1pt]
+ \item \emph{No store row on the maze.} On CMAZE-2 a matched-parameter transformer beats the
+-  store on every composition row ($-0.0560$ / $-0.0209$ / $-0.0434$), and the charter controls do
++  store on every composition row ($-0.0560$ / $-0.0209$ / $-0.0434$), and the landscape controls do
+   not collapse (\texttt{landscape\_shuffled} 0.9509 and \texttt{random\_atoms} 0.9601 against
+   1.0000 on the seen row), so no row is claimed for the store (Appendix~\ref{app:cmaze2}). On CMAZE-2b they again fail to collapse (\S\ref{sec:verb}). % SRC: w13-seeds-and-tables/TABLES.md
+ \item \emph{The value identity is not in the store at $\Kstar$.} Exact deletion of every red
+@@ -947,7 +994,7 @@
+ 
+ % ---------------------------------------------------------------------------------------
+ \subsubsection*{AI use statement}
+-\TODO{AI use statement --- the Head to confirm which of the venue's required disclosure categories
++\TODO{AI use statement --- the authors to confirm which of the venue's required disclosure categories
+ apply. This draft, the evidence pipeline and most of the code were produced with substantial LLM-agent
+ assistance (implementing methods, designing and critiquing experiments, interpreting results,
+ drafting the paper); the statement must say so accurately.}
+@@ -963,8 +1010,8 @@
+ Every number in this paper is read from a recorded artefact of a pre-registered or declared run,
+ and the provenance of each is kept beside it in the source. \S\ref{sec:object} defines the
+ object, judge, estimand and ledger; every table states its seeds, condition and pins; and
+-Appendices~\ref{app:notrun}--\ref{app:corrections} give the declared not-runs, corrections and
+-per-cell provenance conventions. An anonymised code archive will accompany the submission as
++Appendices~\ref{app:conventions} and~\ref{app:notrun} give the per-cell provenance conventions and
++the declared not-runs. An anonymised code archive will accompany the submission as
+ supplementary material. \TODO{anonymised code archive not yet built.}
+ 
+ % ---- references (cite-tagger owns references.bib; this draft carries no \cite yet) --------
+@@ -1029,7 +1076,7 @@
+ \label{app:k5}
+ 
+ The ladder was first run at $K=5$ (MI partition, full square), before $\Kstar$ existed. Under
+-the one-$K$ ruling it is the endpoint of the sweep, and its sign is a property of $K=5$, not of
++the one-$K$ rule of this paper it is the endpoint of the sweep, and its sign is a property of $K=5$, not of
+ the store. Table~\ref{tab:k5} reports the store against the read-path rivals, whose rows are
+ those of Table~\ref{tab:ladder}.
+ 
+@@ -1037,19 +1084,19 @@
+ \centering\small
+ \caption{\textbf{Ladder at $K=5$ (MI partition), 3 seeds, the sweep's endpoint.} Store
+ (bit-identical to \texttt{pca\_tensor} on every rung and seed), paired margin against the best
+-read-path rival with the rung's own corners, and the two charter controls as paired deltas.}
++read-path rival with the rung's own corners, and the two pre-declared landscape controls as paired deltas.}
+ \label{tab:k5}
+ \setlength{\tabcolsep}{2.4pt}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccccc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccccc}
+ \toprule
+-rung & store, seeds 0 / 1 / 2 & $\Delta$ vs best read-path rival & ceiling-norm. & \texttt{landscape\_shuffled} $\Delta$ & \texttt{random\_atoms} $\Delta$ \\
++rung & seeds & store, seeds 0 / 1 / 2 & $\Delta$ vs best read-path rival & ceiling-norm. & \texttt{landscape\_shuffled} $\Delta$ & \texttt{random\_atoms} $\Delta$ \\
+ \midrule
+ % SRCBLOCK: w13-seeds-and-tables/TABLES.md
+-$n=2$ & 28.6333 / 31.6500 / 31.3333 & +9.2167 / +9.6500 / +7.0833 & 0.8483 & +28.6333 / +31.6500 / +31.3333 & +28.3833 / +31.5667 / +30.5833 \\
+-$n=3$ & 56.9500 / 59.4250 / 62.8750 & +12.5167 / +17.8583 / +10.8833 & 0.8299 & +56.9500 / +59.4250 / +62.8750 & +56.3833 / +59.2500 / +62.2250 \\
+-$n=4$ & 60.9333 / 62.2333 / 64.9583 & +16.5000 / +20.6667 / +12.9667 & 0.8709 & +60.9333 / +62.2333 / +64.9500 & +60.4500 / +62.0500 / +63.7167 \\
+-$n=5$ & 63.2417 / 64.5083 / 66.4083 & +18.8083 / +22.9417 / +14.4167 & 0.8989 & +63.2417 / +64.5083 / +66.4083 & +62.5583 / +63.9250 / +64.3750 \\
+-$n=6$ & 62.6917 / 63.9917 / 66.9833 & +18.2583 / +22.4250 / +14.9917 & 0.8966 & +62.6917 / +63.9917 / +66.9833 & +62.4333 / +63.8333 / +66.4917 \\
++$n=2$ & 3 & 28.6333 / 31.6500 / 31.3333 & +9.2167 / +9.6500 / +7.0833 & 0.8483 & +28.6333 / +31.6500 / +31.3333 & +28.3833 / +31.5667 / +30.5833 \\
++$n=3$ & 3 & 56.9500 / 59.4250 / 62.8750 & +12.5167 / +17.8583 / +10.8833 & 0.8299 & +56.9500 / +59.4250 / +62.8750 & +56.3833 / +59.2500 / +62.2250 \\
++$n=4$ & 3 & 60.9333 / 62.2333 / 64.9583 & +16.5000 / +20.6667 / +12.9667 & 0.8709 & +60.9333 / +62.2333 / +64.9500 & +60.4500 / +62.0500 / +63.7167 \\
++$n=5$ & 3 & 63.2417 / 64.5083 / 66.4083 & +18.8083 / +22.9417 / +14.4167 & 0.8989 & +63.2417 / +64.5083 / +66.4083 & +62.5583 / +63.9250 / +64.3750 \\
++$n=6$ & 3 & 62.6917 / 63.9917 / 66.9833 & +18.2583 / +22.4250 / +14.9917 & 0.8966 & +62.6917 / +63.9917 / +66.9833 & +62.4333 / +63.8333 / +66.4917 \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -1102,16 +1149,16 @@
+ \caption{\textbf{$\Kstar$ replication against a $1\times$-total-bytes MLP (stress comparison),
+ 3 seeds, held out, 0 scored runs.} Per-seed margins (seeds 0 / 1 / 2) and 3-seed mean.}
+ \label{tab:1x}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccc}
+ \toprule
+-rung & opponent params & margin per seed & 3-seed mean \\
++rung & seeds & opponent params & margin per seed & 3-seed mean \\
+ \midrule
+ % SRCBLOCK: w12b-nr6-and-kstar/KSTAR-LADDER.md; w13-draft-revise/DRAFT-v1.md
+-$n=2$ & 536,972 & +6.667 / +3.117 / +3.283 & +4.356 \\
+-$n=3$ & 536,270 & +17.875 / +12.808 / +11.533 & +14.072 \\
+-$n=4$ & 536,270 & +12.700 / +8.742 / +8.625 & +10.022 \\
+-$n=5$ & 536,972 & +10.350 / +6.517 / +8.200 & +8.356 \\
+-$n=6$ & 536,972 & +9.375 / +6.108 / +8.450 & +7.978 \\
++$n=2$ & 3 & 536,972 & +6.667 / +3.117 / +3.283 & +4.356 \\
++$n=3$ & 3 & 536,270 & +17.875 / +12.808 / +11.533 & +14.072 \\
++$n=4$ & 3 & 536,270 & +12.700 / +8.742 / +8.625 & +10.022 \\
++$n=5$ & 3 & 536,972 & +10.350 / +6.517 / +8.200 & +8.356 \\
++$n=6$ & 3 & 536,972 & +9.375 / +6.108 / +8.450 & +7.978 \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -1200,9 +1247,27 @@
+ 
+ \begin{table}[h]
+ \centering\small
+-\caption{\textbf{Three implementations of exact (store-scoped) deletion, three rows, bands not
++\caption{\textbf{Exact (store-scoped) deletion, implementation 1: the maze store (CMAZE-2).} The
++two Shapes3D implementations are in Table~\ref{tab:impl}; environments never share a table.}
++\label{tab:impl-maze}
++\setlength{\tabcolsep}{2.4pt}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{p{3.6cm}cccp{5.2cm}}
++\toprule
++implementation & seeds & configs & scored runs & band \\
++\midrule
++% SRCBLOCK: w13-seeds-and-tables/TABLES.md
++1. maze store (CMAZE-2, TEST) & 3 & 1 & 3 & \sci{7.522}{-16} .. \sci{8.826}{-16} on the statistic; projector exactly 0.000 \\
++% ENDSRC
++\bottomrule
++\end{tabular}\end{adjustbox}
++\end{table}
++
++\begin{table}[h]
++\centering\small
++\caption{\textbf{Exact (store-scoped) deletion on Shapes3D, implementations 2 and 3, bands not
+ shared.} Seeds and configurations are separate fields; the nine legs of row 3 are 3 configurations
+-$\times$ 3 seeds.}
++$\times$ 3 seeds. Implementation 2's band is five orders coarser than the maze store's
++(Table~\ref{tab:impl-maze}).}
+ \label{tab:impl}
+ \setlength{\tabcolsep}{2.4pt}
+ \begin{adjustbox}{max width=\linewidth}\begin{tabular}{p{3.6cm}cccp{5.2cm}}
+@@ -1210,8 +1275,7 @@
+ implementation & seeds & configs & scored runs & band \\
+ \midrule
+ % SRCBLOCK: w13-seeds-and-tables/TABLES.md
+-1. maze store (CMAZE-2, TEST) & 3 & 1 & 3 & \sci{7.522}{-16} .. \sci{8.826}{-16} on the statistic; projector exactly 0.000 \\
+-2. Shapes3D downdate build (TEST), assertion battery & 3 & 1 & 0 & \sci{2.842}{-14} .. \sci{1.126}{-09}, five orders coarser \\
++2. Shapes3D downdate build (TEST), assertion battery & 3 & 1 & 0 & \sci{2.842}{-14} .. \sci{1.126}{-09} \\
+ 3. Shapes3D single-design candidates (TEST), assertion battery & 3 & 3 & 0 & worst 0.094 atom ulp / 0.0251 subspace ulp over nine legs \\
+ % ENDSRC
+ \bottomrule
+@@ -1325,18 +1389,19 @@
+ \centering\small
+ \caption{\textbf{Deletion cost for the rivals, value scope (red; 1,352 of 16,384 fit rows), % SRC: w12-deletion-baselines/FINDINGS.md
+ seed 0.} Data rows read and bytes rewritten are seed-invariant. ``Forget $-$ retain'' is the
+-feature-MSE gap of the exact retrain, 3-seed mean. The store's own line (Table~\ref{tab:del}):
++feature-MSE gap of the exact retrain, 3-seed mean; the seeds column gives the count for the
++seconds and for the gap. The store's own line (Table~\ref{tab:del}):
+ 0 rows read, no refit.}
+ \label{tab:rivals-del}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccccc}
+ \toprule
+-rival, retrain without & seconds & data rows read & bytes rewritten & forget $-$ retain (exact) \\
++rival, retrain without & seeds (s / gap) & seconds & data rows read & bytes rewritten & forget $-$ retain (exact) \\
+ \midrule
+ % SRCBLOCK: w12-deletion-baselines/FINDINGS.md
+-MLP & 8.86 & 15,032 & 522,056 & +0.03661 \\
+-continuous MLP & 8.87 & 15,032 & 527,564 & +0.03817 \\
+-transformer & 34.62 & 15,032 & 521,732 & +0.06057 \\
+-LSTM & 15.99 & 15,032 & 522,884 & +0.04111 \\
++MLP & 1 / 3 & 8.86 & 15,032 & 522,056 & +0.03661 \\
++continuous MLP & 1 / 3 & 8.87 & 15,032 & 527,564 & +0.03817 \\
++transformer & 1 / 3 & 34.62 & 15,032 & 521,732 & +0.06057 \\
++LSTM & 1 / 3 & 15.99 & 15,032 & 522,884 & +0.04111 \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -1347,30 +1412,30 @@
+ All rows are measured on the fit pool of the value hold-out condition (16,384 rows); no held-out corner % SRC: w12-deletion-baselines/FINDINGS.md
+ and no scored request was read. Forget minus retain is the feature-MSE gap of the deleted region
+ over the survivors (3-seed mean); a higher value means more forgetting. Approximate unlearning of a
+-rival's head, dropped from paper rows by ruling, is printed here.
++rival's head, not a scored row of this study, is printed here.
+ 
+ \begin{table}[h]
+ \centering\small
+ \caption{\textbf{Forget minus retain, 3-seed means.} Exact reference = retrain without.}
+ \label{tab:unlearn}
+ \setlength{\tabcolsep}{3pt}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{llcccc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{llccccc}
+ \toprule
+-scope & arm & as trained & retrain without (exact) & NegGrad+ & fine-tune on retained \\
++scope & arm & as trained & retrain without (exact) & NegGrad+ & fine-tune on retained & seeds \\
+ \midrule
+ % SRCBLOCK: w12-deletion-baselines/FINDINGS.md
+-value (red; 1,352 rows) & MLP & $-0.00189$ & +0.03661 & +0.51518 & +0.00740 \\
+- & continuous MLP & +0.00935 & +0.03817 & +0.35688 & +0.03832 \\
+- & transformer & $-0.00054$ & +0.06057 & +1.26223 & +0.01394 \\
+- & LSTM & $-0.00101$ & +0.04111 & +0.63285 & +0.01174 \\
+-red sphere (667 rows) & MLP & $-0.00914$ & $-0.00289$ & +0.48965 & +0.00128 \\
+- & continuous MLP & +0.00750 & +0.01907 & +0.33962 & +0.01459 \\
+- & transformer & $-0.00708$ & $-0.00179$ & +1.33207 & +0.00243 \\
+- & LSTM & $-0.00649$ & $-0.00026$ & +0.59847 & +0.00168 \\
+-item (1\%; 164 rows) & MLP & $-0.00227$ & $-0.00210$ & +0.26322 & $-0.00243$ \\
+- & continuous MLP & +0.00292 & +0.00304 & +0.08767 & +0.00385 \\
+- & transformer & $-0.00222$ & $-0.00208$ & +0.83286 & $-0.00237$ \\
+- & LSTM & $-0.00172$ & $-0.00152$ & +0.37437 & $-0.00115$ \\
++value (red; 1,352 rows) & MLP & $-0.00189$ & +0.03661 & +0.51518 & +0.00740 & 3 \\
++ & continuous MLP & +0.00935 & +0.03817 & +0.35688 & +0.03832 & 3 \\
++ & transformer & $-0.00054$ & +0.06057 & +1.26223 & +0.01394 & 3 \\
++ & LSTM & $-0.00101$ & +0.04111 & +0.63285 & +0.01174 & 3 \\
++red sphere (667 rows) & MLP & $-0.00914$ & $-0.00289$ & +0.48965 & +0.00128 & 3 \\
++ & continuous MLP & +0.00750 & +0.01907 & +0.33962 & +0.01459 & 3 \\
++ & transformer & $-0.00708$ & $-0.00179$ & +1.33207 & +0.00243 & 3 \\
++ & LSTM & $-0.00649$ & $-0.00026$ & +0.59847 & +0.00168 & 3 \\
++item (1\%; 164 rows) & MLP & $-0.00227$ & $-0.00210$ & +0.26322 & $-0.00243$ & 3 \\
++ & continuous MLP & +0.00292 & +0.00304 & +0.08767 & +0.00385 & 3 \\
++ & transformer & $-0.00222$ & $-0.00208$ & +0.83286 & $-0.00237$ & 3 \\
++ & LSTM & $-0.00172$ & $-0.00152$ & +0.37437 & $-0.00115$ & 3 \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -1441,19 +1506,19 @@
+ tuples per corner; composition-only store in each encoder arm.}
+ \label{tab:encloop}
+ \setlength{\tabcolsep}{3pt}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccc}
+ \toprule
+-quantity (seeds 0 / 1 / 2) & row 3 (60 corners) & row 4 (49 corners) \\ % SRC: w13-seeds-and-tables/TABLES.md
++quantity (seeds 0 / 1 / 2) & seeds & row 3 (60 corners) & row 4 (49 corners) \\ % SRC: w13-seeds-and-tables/TABLES.md
+ \midrule
+ % SRCBLOCK: w13-seeds-and-tables/TABLES.md
+-encoder alone & 17.450 / 8.067 / 10.733 & 33.510 / 18.102 / 22.449 \\
+-unfrozen, no swap loss & 11.483 / 5.450 / 8.450 & 34.163 / 13.265 / 19.000 \\
+-unfrozen, swap loss (the arm) & 10.683 / 7.817 / 12.433 & 32.796 / 18.959 / 26.388 \\
+-$A'$ (unfreeze) & $-5.967$ / $-2.617$ / $-2.283$ & +0.653 / $-4.837$ / $-3.449$ \\
+-$A''$ (swap loss) & $-0.800$ / +2.367 / +3.983 & $-1.367$ / +5.694 / +7.388 \\
+-$A$ (net) & $-6.767$ / $-0.250$ / +1.700 & $-0.714$ / +0.857 / +3.939 \\
+-$A$, CI95 low & $-8.717$ / $-1.600$ / $-0.050$ & $-3.694$ / $-1.796$ / +0.714 \\
+-margin over matched learner, alone $\to$ arm & +12.078 $\to$ +10.311 & +24.687 $\to$ +26.048 \\
++encoder alone & 3 & 17.450 / 8.067 / 10.733 & 33.510 / 18.102 / 22.449 \\
++unfrozen, no swap loss & 3 & 11.483 / 5.450 / 8.450 & 34.163 / 13.265 / 19.000 \\
++unfrozen, swap loss (the arm) & 3 & 10.683 / 7.817 / 12.433 & 32.796 / 18.959 / 26.388 \\
++$A'$ (unfreeze) & 3 & $-5.967$ / $-2.617$ / $-2.283$ & +0.653 / $-4.837$ / $-3.449$ \\
++$A''$ (swap loss) & 3 & $-0.800$ / +2.367 / +3.983 & $-1.367$ / +5.694 / +7.388 \\
++$A$ (net) & 3 & $-6.767$ / $-0.250$ / +1.700 & $-0.714$ / +0.857 / +3.939 \\
++$A$, CI95 low & 3 & $-8.717$ / $-1.600$ / $-0.050$ & $-3.694$ / $-1.796$ / +0.714 \\
++margin over matched learner, alone $\to$ arm & 3 & +12.078 $\to$ +10.311 & +24.687 $\to$ +26.048 \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -1475,7 +1540,7 @@
+ \texttt{loop\_swap}), 3 seeds, its own table; it may show no growth.}
+ 
+ % ---------------------------------------------------------------------------------------
+-\section{CMAZE-2 in full (w9 request layer, TEST, 3 of 3 scored seeds)}
++\section{CMAZE-2 in full (original request layer, TEST, 3 of 3 scored seeds)}
+ \label{app:cmaze2}
+ 
+ Pins: 8 wells, 31 atoms, ridge 0.01, autoencoder 12,000 steps, baselines 4,000 steps, latent width
+@@ -1485,19 +1550,19 @@
+ \begin{table}[h]
+ \centering\scriptsize
+ \caption{\textbf{CMAZE-2 result rows, validity under the exact judge, mean (seed 0 / 1 / 2).} No
+-row is claimed for the store: the charter controls do not collapse.}
++row is claimed for the store: the pre-declared landscape controls do not collapse.}
+ \label{tab:cmaze2}
+ \setlength{\tabcolsep}{1.8pt}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccccccc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccccccccc}
+ \toprule
+-row & store & MLP & LSTM & transformer & lookup (floor) & \texttt{lscape\_shuffled} & \texttt{random\_atoms} & \texttt{lscape\_removed} \\
++row & seeds & store & MLP & LSTM & transformer & lookup (floor) & \texttt{lscape\_shuffled} & \texttt{random\_atoms} & \texttt{lscape\_removed} \\
+ \midrule
+ % SRCBLOCK: w13-seeds-and-tables/TABLES.md
+-seen & 1.0000 & 0.9118 & 0.6930 & 0.9865 & 1.0000 & 0.9509 & 0.9601 & 0.0000 \\
+-unseen pair & 0.1279 (0.1590 / 0.0597 / 0.1651) & 0.1300 & 0.1450 & 0.1840 & 0.1565 & 0.1383 & 0.1414 & 0.0000 \\
+-$n$-way, conjunction & 0.0284 (0.0383 / 0.0469 / 0.0000) & 0.0196 & 0.0493 & 0.0442 & 0.0159 & 0.0319 & 0.0195 & 0.0000 \\
+-$n$-way, per route & 0.0852 & 0.1120 & 0.1140 & 0.1246 & 0.0946 & 0.0908 & 0.0693 & 0.0000 \\
+-budget interpolation & 0.0996 & 0.1183 & 0.1229 & 0.1430 & 0.1122 & 0.1071 & 0.0905 & 0.0000 \\
++seen & 3 & 1.0000 & 0.9118 & 0.6930 & 0.9865 & 1.0000 & 0.9509 & 0.9601 & 0.0000 \\
++unseen pair & 3 & 0.1279 (0.1590 / 0.0597 / 0.1651) & 0.1300 & 0.1450 & 0.1840 & 0.1565 & 0.1383 & 0.1414 & 0.0000 \\
++$n$-way, conjunction & 3 & 0.0284 (0.0383 / 0.0469 / 0.0000) & 0.0196 & 0.0493 & 0.0442 & 0.0159 & 0.0319 & 0.0195 & 0.0000 \\
++$n$-way, per route & 3 & 0.0852 & 0.1120 & 0.1140 & 0.1246 & 0.0946 & 0.0908 & 0.0693 & 0.0000 \\
++budget interpolation & 3 & 0.0996 & 0.1183 & 0.1229 & 0.1430 & 0.1122 & 0.1071 & 0.0905 & 0.0000 \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -1541,20 +1606,20 @@
+ matched at about 60,000 parameters.} A different environment and a different budget from % SRC: w13-seeds-and-tables/TABLES.md
+ Table~\ref{tab:cmaze2}. No store.}
+ \label{tab:cmaze1}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccc}
+ \toprule
+-row & validity (exact judge) & legal prefix / optimal \\
++row & seeds & validity (exact judge) & legal prefix / optimal \\
+ \midrule
+ % SRCBLOCK: w13-seeds-and-tables/TABLES.md
+-MLP (60,047) & 0.0050 (0.0050 / 0.0000 / 0.0100) & 0.4226 \\
+-LSTM (59,965) & 0.0017 (0.0000 / 0.0000 / 0.0050) & 0.2319 \\
+-transformer (59,819) & 0.0000 & 0.1997 \\
+-table floor (raw state) & 0.0000 & 0.1664 \\
+-ORACLE & 1.0000 & 1.0000 \\
+-BLIND-A / BLIND-B & 0.1400 / 0.0000 & 0.3706 / 0.2225 \\
+-BLIND-COLOUR / BLIND-FACTOR & 0.0933 / 0.2350 & 0.3070 / 0.4609 \\
+-BLIND-SEQUENTIAL & 0.5317 (0.5550 / 0.5300 / 0.5100) & 0.5433 \\
+-FRAGMENT-LOOKUP $r=1$ / $r=2$ & 0.0000 / 0.0000 & 0.3231 / 0.0392 \\
++MLP (60,047) & 3 & 0.0050 (0.0050 / 0.0000 / 0.0100) & 0.4226 \\
++LSTM (59,965) & 3 & 0.0017 (0.0000 / 0.0000 / 0.0050) & 0.2319 \\
++transformer (59,819) & 3 & 0.0000 & 0.1997 \\
++table floor (raw state) & 3 & 0.0000 & 0.1664 \\
++ORACLE & 3 & 1.0000 & 1.0000 \\
++BLIND-A / BLIND-B & 3 & 0.1400 / 0.0000 & 0.3706 / 0.2225 \\
++BLIND-COLOUR / BLIND-FACTOR & 3 & 0.0933 / 0.2350 & 0.3070 / 0.4609 \\
++BLIND-SEQUENTIAL & 3 & 0.5317 (0.5550 / 0.5300 / 0.5100) & 0.5433 \\
++FRAGMENT-LOOKUP $r=1$ / $r=2$ & 3 & 0.0000 / 0.0000 & 0.3231 / 0.0392 \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -1568,7 +1633,8 @@
+ \section{The read verb in full (CMAZE-2b)}
+ \label{app:verb}
+ 
+-\figslot{fig_maze_requestlayer}{\textbf{The request-layer fix.} Key-count histogram and blind-sequential validity before (CMAZE-2) and after (CMAZE-2b) the one acceptance rule.}{fig:reqlayer}
++% fig_maze_requestlayer (both request-layer environments on one figure) removed under REFEREE-v2 M5;
++% re-insert only as two single-environment figures drawn by the figures owner.
+ 
+ 
+ The fix lands below 0.4980, not at it, and that is where it should land. The value 0.4980 is a
+@@ -1584,33 +1650,56 @@
+ 
+ \figslot{fig_maze_readverb}{\textbf{The read verb on CMAZE-2b.} \texttt{AVG} against \texttt{MERGE}
+ per arm and seed on the unseen-pair row, with the single-decode pipeline ceiling and the
+-within-maze lookup floor. Placeholder figure drawn from wave-14 data; wave 18 % (no result number on this line: wave labels / file names only)
+-regenerates.}{fig:verb}
++within-maze lookup floor. Placeholder figure.}{fig:verb}
+ 
+ \figslot{fig_maze_wm}{\textbf{CMAZE-T rollout validity and post-deletion composition
+-(placeholder).} Pending wave 16; drawn as a marked placeholder from wave-14 data until then. It % (no result number on this line: wave labels / file names only)
++(placeholder).} Pending; drawn as a marked placeholder until its rows land. It
+ may show a store win, a tie, or a declared negative.}{fig:maze-wm}
+ 
+ 
+ \begin{table}[h]
+ \centering\small
+-\caption{\textbf{The request-layer fix. CMAZE-2 (before) and CMAZE-2b (after) are different
+-environments; this table is the only place they appear side by side, as the before/after of one
+-acceptance rule, and no result row of either appears in it.} Validity under the exact judge;
+-SLACK10 is every kept pair at CMAZE-1's own budget rule.}
++\caption{\textbf{CMAZE-2 request-layer audit (the original request layer, before the one
++acceptance rule), seed 0.} Validity under the exact judge; SLACK10 is every kept pair at % SRC: w14-request-layer-fix/FINAL-REPORT.md
++CMAZE-1's own budget rule. An audit, not a result row. CMAZE-2b is audited in its own table
++(Table~\ref{tab:req2b}); the before/after contrast is stated in prose (\S\ref{sec:req-layer}).}
+ \label{tab:req}
+ \setlength{\tabcolsep}{3pt}
+ \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcc}
+ \toprule
+-quantity & before (w9 layer) & after (seeds 0 / 1 / 2) \\
++quantity & seeds & CMAZE-2 \\
+ \midrule
+ % SRCBLOCK: w14-request-layer-fix/FINAL-REPORT.md
+-routes by keys: 1 / 2 / 3 / 4 & 1242 / 198 / 9 / --- (of 1449) & 0 / 3825 / 751 / 35 (of 4611) \\
+-fraction of routes needing $\ge2$ keys & 0.1428 & 1.0000 \\
+-BLIND-SEQUENTIAL, SLACK10, all pairs & 0.8295 & 0.1810 / 0.1553 / 0.1068 \\
+-BLIND-SEQUENTIAL, unseen pair, test & 0.9077 & 0.2344 / 0.2000 / 0.1818 \\
+-ORACLE & 1.0000 & 1.0000 \\
+-cross-maze fragment lookup, $r=1$ / $r=2$ & 0.0000 / 0.0000 & 0.0000 / 0.0000 \\
++routes by keys: 1 / 2 / 3 / 4 & 1 & 1242 / 198 / 9 / --- (of 1449) \\
++fraction of routes needing $\ge2$ keys & 1 & 0.1428 \\
++BLIND-SEQUENTIAL, SLACK10, all pairs & 1 & 0.8295 \\
++BLIND-SEQUENTIAL, unseen pair, test & 1 & 0.9077 \\
++ORACLE & 1 & 1.0000 \\
++cross-maze fragment lookup, $r=1$ / $r=2$ & 1 & 0.0000 / 0.0000 \\
++% ENDSRC
++\bottomrule
++\end{tabular}\end{adjustbox}
++\end{table}
++
++\begin{table}[h]
++\centering\small
++\caption{\textbf{CMAZE-2b request-layer audit (after the one acceptance rule), seeds 0 / 1 / 2.} % SRC: w14-request-layer-fix/FINAL-REPORT.md
++Validity under the exact judge; SLACK10 is every kept pair at CMAZE-1's own budget rule. The
++key-count histogram is pooled over the three seeds. An audit, not a result row. CMAZE-2 is
++audited in its own table (Table~\ref{tab:req}).}
++\label{tab:req2b}
++\setlength{\tabcolsep}{3pt}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcc}
++\toprule
++quantity & seeds & CMAZE-2b (seeds 0 / 1 / 2, or pooled) \\
++\midrule
++% SRCBLOCK: w14-request-layer-fix/FINAL-REPORT.md
++routes by keys: 1 / 2 / 3 / 4 & 3 & 0 / 3825 / 751 / 35 (of 4611) \\
++fraction of routes needing $\ge2$ keys & 3 & 1.0000 \\
++BLIND-SEQUENTIAL, SLACK10, all pairs & 3 & 0.1810 / 0.1553 / 0.1068 \\
++BLIND-SEQUENTIAL, unseen pair, test & 3 & 0.2344 / 0.2000 / 0.1818 \\
++ORACLE & 3 & 1.0000 \\
++cross-maze fragment lookup, $r=1$ / $r=2$ & 3 & 0.0000 / 0.0000 \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -1630,10 +1719,10 @@
+ 410,920 / 409,846 / 405,776 parameters; no tolerance used anywhere. The rule-B bend fraction on the
+ unseen-pair row is 0.9296 / 0.9545 / 0.9712. % SRC: w14-read-verb/FINAL-REPORT.md
+ 
+-\paragraph{The bars.} BAR 1 (store \texttt{MERGE}$-$\texttt{AVG} $\ge+0.10$) passes on all seeds.
+-BAR 2 (store gain minus transformer gain $\ge+0.05$) passes its arithmetic ($+0.2111$ / $+0.2424$
++\paragraph{The pre-registered criteria.} Criterion 1 (store \texttt{MERGE}$-$\texttt{AVG} $\ge+0.10$) passes on all seeds.
++Criterion 2 (store gain minus transformer gain $\ge+0.05$) passes its arithmetic ($+0.2111$ / $+0.2424$
+ / $+0.1442$) but fails the claim it was written to protect, because the lookup's gain is larger
+-still. BAR 3 (controls at most half the store on the seen row) fails on every seed. BAR 5 (store
++still. Criterion 3 (controls at most half the store on the seen row) fails on every seed. Criterion 5 (store
+ \texttt{MERGE} above the lookup's) fails: 0.5126 / 0.6667 / 0.5769 against 0.9648 / 0.9646 /
+ 0.9808. Under \texttt{MERGE}, the transformer reads 0.2965 / 0.3990 / 0.4279, below both the store
+ and the ceiling, and the lookup on $n$-way reads 0.9674 / 0.9626 / 0.9683, exceeding the
+@@ -1727,22 +1816,22 @@
+ $\times$ 3 seeds, 192,975 rows, store pinned at 524,288 B.} Rung-3 theory, not a result row.} % SRC: w10-physics-section-evidence/EVIDENCE.md
+ \label{tab:crr}
+ \setlength{\tabcolsep}{3pt}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{llccc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lclccc}
+ \toprule
+-bar & statistic & seed 0 & seed 1 & seed 2 \\
++bar & seeds & statistic & seed 0 & seed 1 & seed 2 \\
+ \midrule
+ % SRCBLOCK: w10-physics-section-evidence/EVIDENCE.md
+-B1 & median $\lvert\log_{10} n_{\text{meas}}/n_{\text{pred}}\rvert\le0.10$ & 0.0433 & 0.0435 & 0.0431 \\
+-B2 & mean paired $\Delta$ vs the fitted form ($<0$) & $-0.5968$ & $-0.5796$ & $-0.5982$ \\
+-B2 & corners better than the fitted form ($\ge40/49$) & 49 & 49 & 49 \\
+-B3 & underdamped $\lvert d\log n/d\log\mu^2\rvert\le0.10$, median over $\gamma$ & 0.0357 & 0.0282 & 0.0343 \\
+-B3 & \ldots max over $\gamma$ (printed, not moved) & 59.1158 & 0.1612 & 1883.2934 \\
+-B3 & floor law $\lvert\log_{10} n_{\text{meas}}/(2\ln2/{-\ln(1-\gamma)})\rvert\le0.10$ & 0.0378 & 0.0378 & 0.0348 \\
+-B4 & V-curve argmin $/\gamma_{\text{crit}}$ within $\times2$ & 0.3362 & 0.3301 & 0.3520 \\
+-B4 & \ldots against the exact inversion & 0.3782 & 0.3784 & 0.3834 \\
+-B5 & overdamped slope, mean $\lvert$meas$-$derived$\rvert$ & 0.0038 & 0.0042 & 0.0040 \\
+-B5 & \ldots mean $\lvert$meas$-$naive $+1\rvert$ & 0.1436 & 0.1430 & 0.1436 \\
+-B6 & Hessian finite difference $\le10^{-9}$ & \sci{3.519}{-11} & \sci{1.202}{-10} & \sci{2.699}{-11} \\
++B1 & 3 & median $\lvert\log_{10} n_{\text{meas}}/n_{\text{pred}}\rvert\le0.10$ & 0.0433 & 0.0435 & 0.0431 \\
++B2 & 3 & mean paired $\Delta$ vs the fitted form ($<0$) & $-0.5968$ & $-0.5796$ & $-0.5982$ \\
++B2 & 3 & corners better than the fitted form ($\ge40/49$) & 49 & 49 & 49 \\
++B3 & 3 & underdamped $\lvert d\log n/d\log\mu^2\rvert\le0.10$, median over $\gamma$ & 0.0357 & 0.0282 & 0.0343 \\
++B3 & 3 & \ldots max over $\gamma$ (printed, not moved) & 59.1158 & 0.1612 & 1883.2934 \\
++B3 & 3 & floor law $\lvert\log_{10} n_{\text{meas}}/(2\ln2/{-\ln(1-\gamma)})\rvert\le0.10$ & 0.0378 & 0.0378 & 0.0348 \\
++B4 & 3 & V-curve argmin $/\gamma_{\text{crit}}$ within $\times2$ & 0.3362 & 0.3301 & 0.3520 \\
++B4 & 3 & \ldots against the exact inversion & 0.3782 & 0.3784 & 0.3834 \\
++B5 & 3 & overdamped slope, mean $\lvert$meas$-$derived$\rvert$ & 0.0038 & 0.0042 & 0.0040 \\
++B5 & 3 & \ldots mean $\lvert$meas$-$naive $+1\rvert$ & 0.1436 & 0.1430 & 0.1436 \\
++B6 & 3 & Hessian finite difference $\le10^{-9}$ & \sci{3.519}{-11} & \sci{1.202}{-10} & \sci{2.699}{-11} \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -1909,7 +1998,7 @@
+ \end{enumerate}
+ 
+ % ---------------------------------------------------------------------------------------
+-\section{Maze world-model rows (pending wave 16)} % (no result number on this line: wave labels / file names only)
++\section{Maze world-model rows (pending)}
+ \label{app:mazewm}
+ 
+ \paragraph{The harness smokes.} \PLACEHOLDER{w15 \texttt{cmaze-t-harness} and
+@@ -1920,33 +2009,56 @@
+ 
+ \begin{table}[h]
+ \centering\scriptsize
+-\caption{\textbf{Maze world-model rows, pending wave 16: CMAZE-T (transition generation) and % (no result number on this line: wave labels / file names only)
+-CMAZE-O (observation generation).} Store against MLP / LSTM / transformer (and, on CMAZE-O, a
+-continuous MLP) at matched parameters on the same frozen encoder, 3 seeds, bars pre-registered.
+-CMAZE-T: given the grid state and an action, generate the next state; a rollout is valid iff every
+-generated step is legal and the goal is reached within budget. CMAZE-O: generate the grid state for
+-a request of colours, object cells and layout; exact placement and legality. Deletion rows: delete
++\caption{\textbf{Maze world-model rows, pending: CMAZE-T (transition generation).} Store against MLP / LSTM / transformer at matched parameters on
++the same frozen encoder, 3 seeds, bars pre-registered. CMAZE-T: given the grid state and an action, generate the next state; a rollout is valid iff every
++generated step is legal and the goal is reached within budget. Deletion rows: delete
+ colour $c$ (value) or colour $c$ $\wedge$ tinted floor (conjunction); post-deletion composition on
+ the other colours against rival retrain-without and as-trained, cost printed. \emph{Every cell may
+ be filled by a result or by a declared negative with its failing link.}}
+-\label{tab:cmazet}\label{tab:cmaze-del}\label{tab:cmazeo}
++\label{tab:cmazet}\label{tab:cmaze-del}
+ \setlength{\tabcolsep}{2pt}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{p{1.9cm}p{5.6cm}p{5.6cm}}
+-\toprule
+-row & CMAZE-T & CMAZE-O \\
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{p{1.9cm}p{1.2cm}p{10.0cm}}
++\toprule
++row & seeds & CMAZE-T \\
+ \midrule
+-seen & \PLACEHOLDER{w16 CMAZE-T seen row, 3 seeds, or a declared negative} & \PLACEHOLDER{w16 CMAZE-O seen row, 3 seeds, or a declared negative} \\
+-unseen 2-way & \PLACEHOLDER{w16 CMAZE-T 2-way composition: store vs rivals, or a declared negative with its failing link} & \PLACEHOLDER{w16 CMAZE-O 2-way composition: store vs rivals, or a declared negative with its failing link} \\
+-unseen $n$-way & \PLACEHOLDER{w16 CMAZE-T $n$-way composition, or a declared negative with its failing link} & \PLACEHOLDER{w16 CMAZE-O $n$-way composition, or a declared negative with its failing link} \\
+-rollout validity & \PLACEHOLDER{w16 CMAZE-T rollout validity over chained generated states, or a declared negative} & (no rollouts) \\
+-value hold-out & \PLACEHOLDER{w16 CMAZE-T never-seen colour (scored, no refusal display), or a declared negative} & \PLACEHOLDER{w16 CMAZE-O never-seen colour, or a declared negative} \\
+-controls, floors & \PLACEHOLDER{w16 CMAZE-T charter-C controls (must collapse for a store row), within- and cross-maze lookup floors, BLIND columns; else interface row or nothing} & \PLACEHOLDER{w16 CMAZE-O controls, lookup floor, BLIND columns; else interface row or nothing} \\
+-deletion, value & \PLACEHOLDER{w16 CMAZE-T value deletion: exactness, post-deletion composition vs retrain-without, cost; or a declared negative} & \PLACEHOLDER{w16 CMAZE-O value deletion, same columns; or a declared negative} \\
+-deletion, conj. & \PLACEHOLDER{w16 CMAZE-T conjunction deletion, same columns; or a declared negative} & \PLACEHOLDER{w16 CMAZE-O conjunction deletion, same columns; or a declared negative} \\
++seen & pending & \PLACEHOLDER{w16 CMAZE-T seen row, 3 seeds, or a declared negative} \\
++unseen 2-way & pending & \PLACEHOLDER{w16 CMAZE-T 2-way composition: store vs rivals, or a declared negative with its failing link} \\
++unseen $n$-way & pending & \PLACEHOLDER{w16 CMAZE-T $n$-way composition, or a declared negative with its failing link} \\
++rollout validity & pending & \PLACEHOLDER{w16 CMAZE-T rollout validity over chained generated states, or a declared negative} \\
++value hold-out & pending & \PLACEHOLDER{w16 CMAZE-T never-seen colour (scored, no refusal display), or a declared negative} \\
++controls, floors & pending & \PLACEHOLDER{w16 CMAZE-T charter-C controls (must collapse for a store row), within- and cross-maze lookup floors, BLIND columns; else interface row or nothing} \\
++deletion, value & pending & \PLACEHOLDER{w16 CMAZE-T value deletion: exactness, post-deletion composition vs retrain-without, cost; or a declared negative} \\
++deletion, conj. & pending & \PLACEHOLDER{w16 CMAZE-T conjunction deletion, same columns; or a declared negative} \\
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+ \end{table}
+ 
++\begin{table}[h]
++\centering\scriptsize
++\caption{\textbf{Maze world-model rows, pending: CMAZE-O (observation generation).} Store against MLP / LSTM / transformer / continuous MLP at matched parameters on
++the same frozen encoder, 3 seeds, bars pre-registered. CMAZE-O: generate the grid state for
++a request of colours, object cells and layout; exact placement and legality. Deletion rows: delete
++colour $c$ (value) or colour $c$ $\wedge$ tinted floor (conjunction); post-deletion composition on
++the other colours against rival retrain-without and as-trained, cost printed. \emph{Every cell may
++be filled by a result or by a declared negative with its failing link.}}
++\label{tab:cmazeo}
++\setlength{\tabcolsep}{2pt}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{p{1.9cm}p{1.2cm}p{10.0cm}}
++\toprule
++row & seeds & CMAZE-O \\
++\midrule
++seen & pending & \PLACEHOLDER{w16 CMAZE-O seen row, 3 seeds, or a declared negative} \\
++unseen 2-way & pending & \PLACEHOLDER{w16 CMAZE-O 2-way composition: store vs rivals, or a declared negative with its failing link} \\
++unseen $n$-way & pending & \PLACEHOLDER{w16 CMAZE-O $n$-way composition, or a declared negative with its failing link} \\
++rollout validity & --- & (no rollouts) \\
++value hold-out & pending & \PLACEHOLDER{w16 CMAZE-O never-seen colour, or a declared negative} \\
++controls, floors & pending & \PLACEHOLDER{w16 CMAZE-O controls, lookup floor, BLIND columns; else interface row or nothing} \\
++deletion, value & pending & \PLACEHOLDER{w16 CMAZE-O value deletion, same columns; or a declared negative} \\
++deletion, conj. & pending & \PLACEHOLDER{w16 CMAZE-O conjunction deletion, same columns; or a declared negative} \\
++\bottomrule
++\end{tabular}\end{adjustbox}
++\end{table}
++
+ \noindent\PLACEHOLDER{w16 \texttt{maze-wm} configuration ladder and budget: which configuration
+ (the Shapes recipe unchanged; the same with the task-shaped interface given to every rival; a
+ $K$/rank re-sweep on the maze latent with item and field-store ablations) passed validation and
+@@ -2070,14 +2182,14 @@
+ \label{app:placeholders}
+ 
+ Every pending row is marked in the text by a red \textsc{placeholder} whose argument names the row
+-and states that it may land as a negative. Wave-15 rows: the coverage control % (no result number on this line: wave labels / file names only)
++and states that it may land as a negative. Pending Shapes3D and maze rows: the coverage control
+ (\S\ref{sec:ladder}); the single-design deletion rows at seeds 1--2 and their rival cost line
+-(\S\ref{sec:shapes-del}, Appendix~\ref{app:delbase}); BAR D and its decomposition paragraph
++(\S\ref{sec:shapes-del}, Appendix~\ref{app:delbase}); Criterion D and its decomposition paragraph
+ (Appendices~\ref{app:encoder-main} and~\ref{app:encloop}); LACE and PoE rows and the generation-table run
+ (\S\ref{sec:adapt}, Table~\ref{tab:t7}); the crossover seeds (Appendix~\ref{app:kcurve}); the CMAZE-2b
+ deletion replication (\S\ref{sec:maze-del}); the CMAZE-T and CMAZE-O harness smokes
+-(Appendix~\ref{app:mazewm}). Wave-16 rows: every cell of Table~\ref{tab:cmazet}; the configuration ladder and budget; the fallback route task; the declared % (no result number on this line: wave labels / file names only)
+-negatives (Appendix~\ref{app:mazewm}). Figure slots are drawn by the figures spoke and are marked as
++(Appendix~\ref{app:mazewm}). Pending maze world-model rows: every cell of Tables~\ref{tab:cmazet} and~\ref{tab:cmazeo}; the configuration ladder and budget; the fallback route task; the declared
++negatives (Appendix~\ref{app:mazewm}). Figure slots are marked as
+ placeholders where they depend on pending rows.
+ 
+ % ---------------------------------------------------------------------------------------
+@@ -2111,6 +2223,10 @@
+ \end{itemize}
+ 
+ % ---------------------------------------------------------------------------------------
++% REFEREE-v2 M7(e): the "Corrections absorbed" appendix corrects earlier internal write-ups a
++% reader has never seen. It is held OUT of the submission PDF by \iffalse and kept in the
++% source for the record (provenance comments unchanged).
++\iffalse
+ \section{Corrections absorbed}
+ \label{app:corrections}
+ 
+@@ -2138,4 +2254,6 @@
+ tautological.
+ % ENDSRC
+ 
++\fi
++
+ \end{document}
