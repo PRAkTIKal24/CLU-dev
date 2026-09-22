@@ -351,3 +351,36 @@ controls, on all three seeds — **computed by the verifier, not quoted from the
 Artefacts: `FINAL-REPORT.md`, `TABLES.md`, `PREREG-w14-read-verb-1.md`, `LOG.md`,
 `runs/` (3 scored + 3 val JSONs + 4 cached encoders), `artefacts/` (4 overlay-reference
 JSONs + `VERIFY.txt`), `pool/` (3 shards, 270 sites), `logs/` (incl. `PIDS.txt`).
+
+## 08:25Z — THE BUNDLE, AND A CLEAN-CLONE REPLICATION
+
+```
+git bundle create /c/chlu/outputs/w14-read-verb/w14-read-verb.bundle w14/read-verb
+```
+⛔ **That branch only — never `--all`.**
+
+```
+$ git bundle verify  w14-read-verb.bundle
+C:/chlu/outputs/w14-read-verb/w14-read-verb.bundle is okay
+The bundle contains this ref:
+8437142526cd3f92284974581a2382282420be45 refs/heads/w14/read-verb
+The bundle records a complete history.
+$ git bundle list-heads w14-read-verb.bundle | wc -l
+1
+```
+⭐ **Exactly ONE ref**, complete history, 7,486,263 B.
+
+⭐⭐ **Replicated from a clean clone of the bundle itself** (not from the worktree):
+`git clone -b w14/read-verb <bundle> replica` → `python -m w14_read_verb.tables` on the
+replica's own artefacts regenerates **`TABLES.md` BYTE-IDENTICAL** to the shipped one
+(`diff` empty), and `python -m w14_read_verb.verify` from the replica returns the
+**identical** verdicts — every PASS, and the same **six** pre-registered BAR-3 control
+failures. ⛔ **The negative is reproduced, not just the positive.**
+
+## 08:25Z — END
+`END_UTC.txt` = **2026-09-22T08:24:58Z**. Window **07:15:51Z → 08:24:58Z ≈ 1 h 09 m**.
+⭐ **Scored spend 3/3 on `read-verb`.** ⛔ ZERO GPU; local CPU only, 3 cores, at most 3
+concurrent processes throughout. ⛔ No other agent's session, worktree, output dir or
+process touched; ⛔ no box-wide kill — this hub's own PIDs are in `logs/PIDS.txt`.
+⛔ `/c/chlu/evidence/` was read-only throughout. `/c/chlu/SCORED-LEDGER.md` was appended
+to, additively, and nothing above the three new rows changed.
