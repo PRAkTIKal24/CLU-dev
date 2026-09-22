@@ -16,9 +16,9 @@ Checks:
   4  the judge's file on disk still has the sha256 the readiness file recorded, and the
      judge object is ``w8_envscout.maze_colour.judge`` itself;
   5  ``tolerance_used`` is null everywhere it appears in the file;
-  6  every agent/target word of an AFTER site lies in the door-free component the layer
-     says it does, and the two components differ -- the door is load-bearing for every
-     kept pair by construction, not by hope.
+  6  for every kept pair the doors are LOAD-BEARING -- the target is unreachable with no
+     key at all -- and the agent word and the target word never share a door-free
+     component of the site's OWN grid (which on a walled site carries the seal).
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ import os
 import pickle
 import sys
 
-from w8_envscout.maze_colour import judge
+from w8_envscout.maze_colour import _reachable_without_keys, judge
 from w8_envscout.screen import key_order_of
 from w9_maze.task import door_free_components
 
@@ -96,18 +96,23 @@ def main(out_dir):
         if "after" in meta["path"]:
             check("%s: no route uses fewer than 2 keys" % name, minkeys >= 2,
                   "min keys = %d" % minkeys)
-        # 6 -- the words sit in two different door-free components
-        if "after" in meta["path"]:
-            bad = 0
-            for st in sites:
-                comps = door_free_components(st.grid, st.door)
-                comp_of = {c: idx for idx, comp in enumerate(comps) for c in comp}
-                ca = {comp_of.get(c, -1) for c in st.agents}
-                ct = {comp_of.get(c, -1) for c in st.targets}
-                if len(ca) != 1 or len(ct) != 1 or ca == ct:
-                    bad += 1
-            check("%s: agents in ONE component, targets in ANOTHER" % name, bad == 0,
-                  "%d sites violate" % bad)
+        # 6 -- the doors are load-bearing for every kept pair, and the pair's two words
+        #      never share a door-free component of the site's OWN (possibly sealed) grid.
+        #      NB the components must be recomputed on ``st.grid``: on a site with a
+        #      walled target that grid carries the seal, so it is not ``generate()``'s.
+        bad_reach = bad_comp = 0
+        for st in sites:
+            comps = door_free_components(st.grid, st.door)
+            comp_of = {c: idx for idx, comp in enumerate(comps) for c in comp}
+            for (i, j) in st.pairs:
+                if _reachable_without_keys(st.instance(i, j, 10 ** 9)):
+                    bad_reach += 1
+                if comp_of.get(st.agents[i], -1) == comp_of.get(st.targets[j], -2):
+                    bad_comp += 1
+        check("%s: the doors are load-bearing for every kept pair" % name,
+              bad_reach == 0, "%d pairs reachable with no key" % bad_reach)
+        check("%s: agent and target never share a door-free component" % name,
+              bad_comp == 0, "%d pairs violate" % bad_comp)
         # 1 -- histogram agreement (summed over banks of the same kind is checked below)
         meta["_hist"] = hist
 
