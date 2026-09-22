@@ -119,23 +119,27 @@ because it occurs **0** times in the base (`✦` w10, `⌖` w12r, `⊛` w13, `�
 
 ---
 
-## Step 12 — the bundle record (appended after `END_UTC.txt`; the clock is not restated)
+## Step 12 — the bundle, and the ordering problem stated rather than fudged
 
-**Commit:** `fad34d6` *"w14/refusal-displays-closeout: the maze refusal displays are RETIRED, with the
-number"* on `w14/refusal-displays-closeout`, parent `6699665` (`base/iter8`).
+⚠⚠ **A bundle cannot contain its own hash.** A first cut was taken at `fad34d6`, then the record
+commit was made, which moved the tip — so that cut was **no longer the branch**. ⛔ Rather than ship a
+bundle that is one commit behind, or record a hash that is not the shipped file's, the order is fixed:
+
+1. this LOG entry is committed **first**, describing the procedure and naming no hash it cannot know;
+2. the bundle is cut **last**, at the tip this commit creates, with ⛔ **that branch only, never
+   `--all`**;
+3. the bundle's own **size, md5 and `list-heads` output** are recorded in
+   `/c/chlu/outputs/w14-refusal-displays-closeout/LOG.md` and in `FINDINGS.md` — **outside the
+   branch**, which is the only place they can be true.
+
+⭐ **Therefore the in-branch copy of this file ends here, and the output-directory copy carries the
+bundle's own numbers below.** ⛔ That divergence is deliberate and is stated in both copies.
 
 ```
-git bundle create /c/chlu/outputs/w14-refusal-displays-closeout/w14-refusal-displays-closeout.bundle \
-                  w14/refusal-displays-closeout
+git bundle create /c/chlu/outputs/w14-refusal-displays-closeout/w14-refusal-displays-closeout.bundle                   w14/refusal-displays-closeout
+git bundle verify    <bundle>
+git bundle list-heads <bundle>   # must print EXACTLY ONE ref
 ```
-⛔ **That branch only. `--all` was never used.**
-
-- `git bundle verify` → **"is okay"**, *"The bundle records a complete history"*, hash algorithm
-  **sha1**.
-- `git bundle list-heads` → **exactly ONE ref**:
-  `fad34d606152bd9293e6363ebbb6749921eff845  refs/heads/w14/refusal-displays-closeout`
-  (`| wc -l` = **1**).
-- Bundle **7,172,848 B**, md5 **65bf0a2621f653bf1e4cb6b1b9a93d4f**.
 
 ⭐ **FINAL EVIDENCE md5 RE-CHECK — byte-identical to arrival, all four files:**
 `negative_results.md` **c3597411aa834304be27110dab115673** ·
