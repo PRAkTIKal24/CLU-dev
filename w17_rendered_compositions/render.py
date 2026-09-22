@@ -34,7 +34,13 @@ from .same_decoder import OneDecoder, assert_same_decoder
 REPO = Path(__file__).resolve().parents[1]
 OUT = Path(os.environ.get("W17_RC_OUT", "/Users/batmac/clu/outputs/w17-paper/figures/rendered"))
 SPOKE_OUT = Path("/Users/batmac/clu/outputs/w17-rendered-compositions")
-STAGE = Path(os.environ.get("W17_RC_STAGE", "/Users/batmac/clu/staged/chlu-outputs"))
+_STAGE_ROOT = Path(os.environ.get("W17_RC_STAGE", "/Users/batmac/clu/stage"))
+#: the ThinkPad's C:/chlu/outputs tree, as the Hub mirrored it (<W17_RC_STAGE>/outputs/)
+STAGE = _STAGE_ROOT / "outputs" if (_STAGE_ROOT / "outputs").is_dir() else _STAGE_ROOT
+#: the comparators' .rival.eqx were staged WITHOUT their .rival.json manifests (those are in
+#: the evidence base); load_rival wants both side by side, so they are joined here by
+#: symlink -- nothing is copied or rewritten.
+ASSEMBLED = SPOKE_OUT / "_assembled_comparators"
 
 FIG = {
     "set1": "rc_set1_clu_composes_rivals_fail",
@@ -180,14 +186,33 @@ def preflight(seed: int = S.RENDER_SEED) -> list:
         / "features.npy",
     ]
     croot = STAGE / "w12-deletion-baselines" / "comparators" / f"seed_{seed}"
+    eroot = S.EVIDENCE / "w12-deletion-baselines" / "comparators" / f"seed_{seed}"
     for f, _, _ in DELETION_ARMS:
         for v in ("as_trained", f"retrain_without__{CONJ}"):
-            need += [croot / f"{f}__{v}.rival.json", croot / f"{f}__{v}.rival.eqx"]
+            need += [eroot / f"{f}__{v}.rival.json", croot / f"{f}__{v}.rival.eqx"]
     return [(str(p), p.exists()) for p in need]
 
 
-def _setenv():
+def assemble_comparators(seed: int) -> Path:
+    """<ASSEMBLED>/seed_N/{name}.rival.json -> evidence, {name}.rival.eqx -> stage."""
+    d = ASSEMBLED / f"seed_{seed}"
+    d.mkdir(parents=True, exist_ok=True)
+    croot = STAGE / "w12-deletion-baselines" / "comparators" / f"seed_{seed}"
+    eroot = S.EVIDENCE / "w12-deletion-baselines" / "comparators" / f"seed_{seed}"
+    for eqx in sorted(croot.glob("*.rival.eqx")):
+        js = eroot / eqx.name.replace(".rival.eqx", ".rival.json")
+        for src in (eqx, js):
+            dst = d / src.name
+            if dst.is_symlink() or dst.exists():
+                dst.unlink()
+            dst.symlink_to(src)
+    return ASSEMBLED
+
+
+def _setenv(skip_deletion: bool = False):
     miss = [p for p, ok in preflight() if not ok]
+    if skip_deletion:
+        miss = [p for p in miss if not p.endswith("features.npy")]
     if miss:
         log(f"--render REFUSED: {len(miss)} staged file(s) missing under W17_RC_STAGE={STAGE}: "
             + "; ".join(miss))
@@ -211,7 +236,7 @@ def _label(grid, vals_row) -> str:
         if name == "shape":
             parts.append(SHAPE_NAMES[int(round(v))])
         else:
-            parts.append(f"{FACTOR_SHORT.get(name, name)} {v:g}")
+            parts.append(f"{FACTOR_SHORT.get(name, name)} {v:.3g}")
     return "\n".join([", ".join(parts[i:i + 2]) for i in range(0, len(parts), 2)])
 
 
@@ -228,7 +253,7 @@ def _load_arms(seed, grid, pool_vals):
     objs = {S.CLU: {"arm": S.CLU, "read": "tensor", "kind": "span", "store": saved["store"],
                     "basis": saved["basis"], "address": saved["address"], "protos": None,
                     "head_bytes": {"head_bytes": 0}}}
-    croot = STAGE / "w12-deletion-baselines" / "comparators"
+    croot = assemble_comparators(seed)
     for a in S.OTHERS:
         rv = (w4_api.load_rival(seed, "table", root=STAGE / "spoke-a-rivals" / "rivals")
               if a == "table" else load_comparator(seed, a, root=croot))
@@ -276,8 +301,8 @@ def _pick(vals, res, pattern, k):
     return hit[:k]
 
 
-def render(scan_nway_all_fail: bool = True) -> dict:
-    _setenv()
+def render(scan_nway_all_fail: bool = True, skip_deletion: bool = False) -> dict:
+    _setenv(skip_deletion)
     from chlu.experiments import exp_gen_factor_wells as fw
 
     seed = S.RENDER_SEED
@@ -313,7 +338,9 @@ def render(scan_nway_all_fail: bool = True) -> dict:
         for cid, vrow, rid, res, i, prov in rows:
             imgs.append([res[a]["imgs"][i] for a in order])
             verd.append([bool(res[a]["valid"][i]) for a in order])
-            rl.append(_label(grid, vrow))
+            fam = {"pair": "held-out 2-way corner", "nway": "held-out 6-factor box"}.get(
+                corners[cid]["family"] if cid in corners else "", prov)
+            rl.append(fam + "\n" + _label(grid, vrow))
             for a in order:
                 stamps.append(res[a]["stamps"][i])
             requests.append({
@@ -366,36 +393,53 @@ def render(scan_nway_all_fail: bool = True) -> dict:
         figs[sk] = draw_grid(OUT / FIG[sk], labels, colours, rl, imgs, verd, title=titles[sk])
 
     # set 2 ------------------------------------------------------------------------------
-    rows2 = []
-    for cid in sel["set2_all_arms_succeed"]["candidate_corners_per_seed"][str(seed)]:
+    # Every held-out corner is scanned (the counts' candidate corners are necessary, not
+    # sufficient).  MEASURED (diag/covalid_scan.json): no held-out request at seed 0, 1 or
+    # 2 is valid for all six columns, and every 5-of-6 request fails only the continuous
+    # MLP.  So the all-six set is DECLARED, and the figure shows the nearest pattern with
+    # the continuous MLP's cross left in place -- never a SEEN row passed off as held-out.
+    order_c = sorted(corners, key=lambda c: (corners[c]["family"] != "pair", c))
+    six = []
+    for cid in order_c:
         vals, res = corner(cid)
-        for i in _pick(vals, res, patterns["set2"], k):
+        six += [(cid, i) for i in _pick(vals, res, patterns["set2"], 1 << 30)]
+    set2_pattern = "all six columns valid"
+    if not six:
+        n_req = sum(len(corners[c]["rows"]) for c in order_c)
+        declared["set2_all_six"] = (
+            f"DECLARED NOT BUILDABLE: 0 of {n_req} held-out requests at seed {seed} are "
+            "valid for every column (all six arms). Shown instead: the nearest pattern, "
+            "every arm EXCEPT the continuous MLP valid, with its cross shown. Seeds 1 and 2 "
+            "were scanned too (diag/covalid_scan.json): 0 all-six there either.")
+        patterns["set2"] = lambda a: a != "cont_mlp__as_trained"
+        set2_pattern = "every column valid EXCEPT the continuous MLP (all-six set is empty)"
+        titles["set2"] = ("Set 2 -- every arm succeeds except the continuous MLP\n"
+                          "(no held-out request succeeds for all six)")
+    rows2 = []
+    for cid in order_c:
+        if len(rows2) >= 2 * k:
+            break
+        vals, res = corner(cid)
+        hit = _pick(vals, res, patterns["set2"], 1)
+        if hit.size:
+            i = int(hit[0])
             rows2.append((cid, vals[i], corners[cid]["rows"][i], res, i, "held-out test corner"))
-    if not rows2:
-        declared["set2_heldout"] = ("no held-out request at seed 0 is valid for EVERY arm "
-                                    "(checked on every candidate corner); falling back to SEEN "
-                                    "fit-split requests, labelled SEEN")
-        train = np.asarray(cond["train_rows"], np.int64)
-        rng = np.random.default_rng(20260923)
-        probe = {"corner_id": "SEEN", "family": "seen",
-                 "rows": np.sort(rng.choice(train, 512, replace=False))}
-        vals, res = _read_corner(objs, od, probe, grid, bitmap)
-        for i in _pick(vals, res, patterns["set2"], 2 * k):
-            rows2.append(("SEEN", vals[i], probe["rows"][i], res, i,
-                          "SEEN fit-split request -- NOT held-out"))
+    declared["set2_pattern_shown"] = set2_pattern
     if rows2:
         imgs, verd, rl = emit("set2", rows2)
-        if rows2[0][0] == "SEEN":
-            rl = [r + "\n(SEEN, not held-out)" for r in rl]
         figs["set2"] = draw_grid(OUT / FIG["set2"], labels, colours, rl, imgs, verd,
                                  title=titles["set2"])
     else:
-        declared["set2"] = ("DECLARED NOT BUILDABLE: no held-out and no sampled seen request "
-                            "is valid for every arm at seed 0")
+        declared["set2"] = "DECLARED NOT BUILDABLE: no held-out request meets either pattern"
 
     # deletion ---------------------------------------------------------------------------
-    figs["deletion"], del_info = deletion_panel(objs, saved, od, grid, cond, bitmap, stamps,
-                                                requests)
+    if skip_deletion:
+        del_info = {"STATUS": "NOT RENDERED IN THIS PASS (--skip-deletion): features.npy "
+                              "not yet staged"}
+        declared["deletion"] = del_info["STATUS"]
+    else:
+        figs["deletion"], del_info = deletion_panel(objs, saved, od, grid, cond, bitmap,
+                                                    stamps, requests)
 
     same = assert_same_decoder(stamps, winner, seed)
     same["positive_control"] = pos
@@ -425,6 +469,17 @@ def deletion_panel(objs, saved, od, grid, cond, bitmap, stamps, requests):
     seed = S.RENDER_SEED
     L.PART_TEST = str(STAGE / "hub-factor-wells" / "run" / "partitions.npz")
     man = assert_generation2(seed)
+    # the staged cache must be byte-identical to the one the deletion rows were run on
+    import hashlib
+    fp = fw.features_seed_dir(seed) / "features.npy"
+    h = hashlib.sha256()
+    with open(fp, "rb") as fh:
+        for blk in iter(lambda: fh.read(1 << 24), b""):
+            h.update(blk)
+    want_sha = fw.feature_cache_manifest(seed)["features_sha256"]
+    if h.hexdigest() != want_sha:
+        raise SystemExit(f"{fp} sha256 {h.hexdigest()[:16]} != manifest {want_sha[:16]}")
+    man["features_sha256_verified"] = want_sha
     _z, _dead, pool = L.load_partition("test")
     cards = [int(c) for c in grid.cardinalities]
     idx = factor_indices(pool, cards)
@@ -450,7 +505,24 @@ def deletion_panel(objs, saved, od, grid, cond, bitmap, stamps, requests):
     clu_after = dict(objs[S.CLU], store=st2, basis=U_post_raw, address=addr2,
                      arm="cov_tensor_after_conjunction_live")
 
-    croot = STAGE / "w12-deletion-baselines" / "comparators"
+    # the downdated CLU must reproduce the banked AFTER counts (deletion.json) on the
+    # corners this figure already shows, or the after-panel is not the scored object
+    corners = {c["corner_id"]: c for c in fw.pair_subcorners(cond) + fw.nway_corners(cond)}
+    banked = {c["corner_id"]: int(c["n_valid"])
+              for c in ev["scopes"]["conjunction_live"]["after"]["per_corner"]}
+    del_repro = {}
+    for cid in S.select(seed)["set1_clu_composes_rivals_fail"]["corners"]:
+        cv = fw._request_values_from_rows(grid, corners[cid]["rows"])
+        ft, oo = R.arm_features(clu_after, cv, grid)
+        ac = fw.accept_rule(cv, oo, np.zeros(cv.shape[0], bool), bitmap, grid)
+        im, _st = od.render(ft, arm="__after_repro__")
+        ok, _ = od.verdict(cv, ac, im, grid)
+        del_repro[cid] = {"n_valid_rendered": int(ok.sum()), "n_valid_banked": banked[cid]}
+        if int(ok.sum()) != banked[cid]:
+            raise SystemExit(f"DOWNDATE REPRODUCTION FAILED on {cid}: {int(ok.sum())} != "
+                             f"deletion.json after {banked[cid]}")
+
+    croot = assemble_comparators(seed)
     before = [objs[S.CLU]] + [objs[f"{f}__as_trained"] for f, _, _ in DELETION_ARMS]
     after = [clu_after] + [
         {"arm": f"{f}__retrain_without__{CONJ}", "read": "rival",
@@ -464,7 +536,9 @@ def deletion_panel(objs, saved, od, grid, cond, bitmap, stamps, requests):
                                 "carry": {k: (v if not isinstance(v, np.ndarray) else v.tolist())
                                           for k, v in (carry or {}).items()}
                                 if isinstance(carry, dict) else str(carry),
-                                "verdicts": {}}
+                                "verdicts": {},
+                                "after_downdate_reproduction": del_repro,
+                                "source": str(S.EVIDENCE / S.DELETION)}
     for tag, objs_row in (("before", before), ("after", after)):
         ri, rv = [], []
         for o in objs_row:
@@ -489,7 +563,7 @@ def deletion_panel(objs, saved, od, grid, cond, bitmap, stamps, requests):
         OUT / FIG["deletion"], dl, dc,
         ["before deletion\n(CLU; rival as trained)",
          "after deletion\n(CLU downdate;\nrival retrained without)"],
-        imgs, verd, title="Request: " + _label(grid, vals[0]).replace("\n", ", "))
+        imgs, verd, title="Deleted fit row (red sphere): " + _label(grid, vals[0]).replace("\n", ", "))
     return paths, info
 
 
@@ -499,9 +573,10 @@ def main(argv=None) -> int:
     g.add_argument("--placeholder", action="store_true")
     g.add_argument("--render", action="store_true")
     ap.add_argument("--no-nway-scan", action="store_true")
+    ap.add_argument("--skip-deletion", action="store_true")
     a = ap.parse_args(argv)
     OUT.mkdir(parents=True, exist_ok=True)
-    st = placeholder() if a.placeholder else render(not a.no_nway_scan)
+    st = placeholder() if a.placeholder else render(not a.no_nway_scan, a.skip_deletion)
     print(json.dumps(st, indent=2, default=str))
     return 0
 

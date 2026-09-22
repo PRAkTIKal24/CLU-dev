@@ -118,9 +118,11 @@ def select(seed: int = RENDER_SEED) -> dict:
             "candidate_corners_per_seed": {str(k): v for k, v in set2.items()},
             "counts_n_valid_of_n": {str(s): {c: _counts(per_corner(s), c) for c in v}
                                     for s, v in set2.items()},
-            "fallback_if_empty": "SEEN (fit-split) requests where every arm is valid, labelled "
-                                 "SEEN, never passed off as held-out; if that is empty too the "
-                                 "set is DECLARED NOT BUILDABLE with the counts",
+            "render_rule": "render scans EVERY held-out corner (pair first, then n-way, "
+                           "scorer order) for requests valid in all six columns; if there "
+                           "are none, the all-six set is DECLARED NOT BUILDABLE with the "
+                           "count and the figure shows the nearest pattern (every column "
+                           "except the continuous MLP), one request per corner, first 4",
         },
         "set3_all_arms_fail": {
             "rule": "every rival + floor n_valid == 0 AND CLU n_valid < n_requests (seed %d), "
