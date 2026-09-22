@@ -116,3 +116,30 @@ because it occurs **0** times in the base (`✦` w10, `⌖` w12r, `⊛` w13, `�
 `w14_refusal_displays_closeout/` in the worktree, commit, and
 `git bundle create .../w14-refusal-displays-closeout.bundle w14/refusal-displays-closeout` —
 ⛔ **that branch only, never `--all`** — verified, with `list-heads` showing **exactly one ref**.
+
+---
+
+## Step 12 — the bundle record (appended after `END_UTC.txt`; the clock is not restated)
+
+**Commit:** `fad34d6` *"w14/refusal-displays-closeout: the maze refusal displays are RETIRED, with the
+number"* on `w14/refusal-displays-closeout`, parent `6699665` (`base/iter8`).
+
+```
+git bundle create /c/chlu/outputs/w14-refusal-displays-closeout/w14-refusal-displays-closeout.bundle \
+                  w14/refusal-displays-closeout
+```
+⛔ **That branch only. `--all` was never used.**
+
+- `git bundle verify` → **"is okay"**, *"The bundle records a complete history"*, hash algorithm
+  **sha1**.
+- `git bundle list-heads` → **exactly ONE ref**:
+  `fad34d606152bd9293e6363ebbb6749921eff845  refs/heads/w14/refusal-displays-closeout`
+  (`| wc -l` = **1**).
+- Bundle **7,172,848 B**, md5 **65bf0a2621f653bf1e4cb6b1b9a93d4f**.
+
+⭐ **FINAL EVIDENCE md5 RE-CHECK — byte-identical to arrival, all four files:**
+`negative_results.md` **c3597411aa834304be27110dab115673** ·
+`claims_matrix.md` **39be4b5f1d8f29c5058c5a0bef935243** ·
+`outputs/w13-registry-fold/negative_results.md` **835fad9331b77f8fe6f6b5136e9d4ef5** ·
+`outputs/w13-registry-fold/claims_matrix.md` **8d8faa2fcbc92c79d97324acde744778**.
+⛔ **`/c/chlu/evidence/` was never written.**
