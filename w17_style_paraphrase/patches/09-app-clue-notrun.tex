@@ -1,0 +1,39 @@
+@@@ 1696 1713
+\paragraph{The four conditions.} (C1) The store's energy is the distance to the atom span, the
+atoms forming a basis: under an atoms-as-points energy on the same content, the settle moves
+(relative displacement median 1.7244, max 2.6682 on a synthetic check). (C2) The address lies in
+the span: pushed off the span by $\delta=0.10$, the settle moves by exactly $\delta/(1+\beta)$,
+measured at 0.050000 against the closed form 0.050000. (C3) The state is carried in span
+coordinates; the same energy in channel coordinates drifts by \sci{7.447}{-08} relative, which is
+float32 rounding, so the paper says ``identical'' of the channel form and ``bit-identical'' only
+of the span form. (C4) There is no cross-well term: at $\lambda=0$ the displacement is exactly 0.0,
+and at $\lambda=10^{-4}$, $10^{-2}$, $0.05$, $0.2$ it is \sci{7.875}{-05}, \sci{7.882}{-03},
+\sci{3.971}{-02}, \sci{1.720}{-01}. Two wells of the deployed store were full rank, where an in-well
+settle is trivially a no-op. The coercivity certificate reproduces from first principles:
+$\lambda^\star=0.25000000$ and a certificate minimum eigenvalue of $-1.50000000$ at the declared
+$\lambda=1$, so the landscape is unbounded below at the declared strength, and the strength used is
+0.225000. % SRC: w12-clue-theorist/CLUE.md
+The identity holds in-well only; a $\lambda=0$, steps$>0$ arm was never run on the deployed store
+(the synthetic check covers steps 0 / 1 / 10 / 1000); and the \sci{1.9}{-7} off-span residual is the
+renderer's float32 rounding, of the same size for the static store that never moves.
+% SRC: w12-clue-theorist/CLUE.md
+@@@ 1715 1731
+\paragraph{Provenance of the retention law.} Re-derived from the raw result files, the law's
+headline reproduces: 0.043256 / 0.043516 / 0.043102 and $-0.596831$ / $-0.579639$ / $-0.598172$,
+49 of 49 on every seed; the integrator is the theory's map to \sci{1.884682}{-08}; the byte pin is
+524,288 B on every seed; and a finite-difference Hessian check reads \sci{3.519263}{-11} /
+\sci{1.202332}{-10} / \sci{2.699430}{-11}. % SRC: w12-clue-theorist/CLUE.md
+Its sharpest constant, however, does not reproduce: the overdamped slope pair ``$+1.1385$ derived
+against $+1.1368$ measured'' appears only in prose logs and in no machine-readable artefact,
+because the per-cell fit windows were not saved, and $1+\gamma/(2-\gamma)=1.1385$ sits at
+$\gamma=0.243303$, which is not a grid point. The law's qualitative content (the overdamped slope
+exceeds $+1$ at every finite $\gamma$) is verified over the whole band, and $1+\gamma/(2-\gamma)$ is
+the exact log-derivative (numeric $+1.138526$ against $+1.138500$). The underdamped slope is
+confirmed on the theory's own testbeds ($-1.0020\pm0.0003$) but inconclusive on this store (measured
+$-1.1090$ against derived $-1.0050$, margin 0.0049 / 0.0047 / 0.0043 over the naive $-1$). In that
+branch the slow multiplier is exactly $\sqrt{1-\gamma}$, so a measured floor slope has one degree of
+freedom, $\gamma$, and one recorded row of the underdamped fit window would settle it. A tautological
+residual field in the artefacts (\texttt{d14\_confinement}, exactly 0.0 on 60 cells by construction)
+is never quoted; the finite-difference check above is. % SRC: w12-clue-theorist/CLUE.md; w10-physics-section-evidence/EVIDENCE.md
+@@@ 2097 2097
+Each row that was not run is declared with its reason and is never printed as a blank or a zero.

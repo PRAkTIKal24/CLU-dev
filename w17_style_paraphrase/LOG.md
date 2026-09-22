@@ -1,0 +1,12 @@
+# w17 style-paraphrase LOG
+- 2026-09-22T22:24:55Z START. Read AMENDMENT-1, COMMON, style-paraphrase.md.
+- Gate check: w17-paper/DRAFT-v2.tex (146893 B, 00:20) + w17-draft-v2/END_UTC.txt present -> GATE MET.
+- Read style PDF (via gs txtwrite -> style.txt; RULES applied, thesis/HEP persona ignored) and DRAFT-v2.tex (2151 lines) in full.
+- METHOD (decision): output built mechanically = DRAFT-v2.tex with ONLY declared prose line-ranges replaced (patch specs in patches/, applied by apply_patches.py). Floats (tables, figslots incl. captions), headings/labels, preamble, every % SRC / SRCBLOCK / ENDSRC comment, every \PLACEHOLDER and \TODO kept byte-identical. Rationale: paraphrase constraint (no content moved/changed) dominates; captions are number-dense. Bold run-in list heads -> \emph (style: bold only for new core concepts); definitions of core concepts keep bold.
+- 2026-09-22T22:34:50Z tooling written (texnum.py, apply_patches.py); patch 01 (header, abstract, intro) applies clean
+- 2026-09-22T22:36:04Z patches 02 (sec 2), 03-04 (sec 3) written
+- 2026-09-22T22:37:05Z patches 05 (sec 4), 06 (sec 5-6, statements) written
+- 2026-09-22T22:39:22Z patches 07 (App A-H), 08 (App I-V) written
+- 2026-09-22T22:46:08Z full build OK (31pp); main text fits <=12pp after 4 succinctness passes (tighten*.py; ~66 phrase-level cuts, all conservation-checked); STYLE-DIFF-CHECK all empty; provenance identical to DRAFT-v2 (1824 tokens, 0 new mismatches)
+- 2026-09-22T22:47:29Z installed DRAFT-v2-style.tex + STYLE-DIFF-CHECK.md in w17-paper/ (sha256 in SHA256.txt; built from DRAFT-v2.tex sha above, unchanged since gate)
+- 2026-09-22T22:48:00Z FINDINGS.md written; committing w17_style_paraphrase/ (tex, check, patches, scripts, provenance outputs, source copy) + bundling
