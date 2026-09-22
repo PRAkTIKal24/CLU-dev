@@ -281,6 +281,55 @@ def main(argv=None) -> int:
                                     / max(m_["opponent_Kstar_params_mean"], 1.0))
     rep["seed_matched_K5_vs_Kstar"] = matched
 
+    # ⭐ THE DECOMPOSITION THE BRIDGE BUYS.  Going from the ladder's K = 5 arm to the K*
+    # arm changes TWO things, so the total swing is split into the two steps rather than
+    # attributed to K wholesale:
+    #     ladder K=5  ->  bridge K=5   = the CONSTRUCTION step (partition rule, store
+    #                                    class, covariance convention).  K is held at 5.
+    #     bridge K=5  ->  K* = 32      = the K step.  The construction is held fixed.
+    # ⛔ Only seeds carrying all THREE numbers are used.
+    decomp = {}
+    for rung in RUNGS:
+        rr = rep["legs"][rung]
+        common = [str(x) for x in SEEDS
+                  if all(isinstance(rr[c][str(x)]["margin"], float)
+                         for c in ("ladder_K5", "bridge_K5", "kstar_K32"))]
+        if not common:
+            decomp[rung] = {"seeds": [], "status": NOT_RUN + ": no seed carries all "
+                            "three of ladder K=5, bridge K=5 and K* = 32"}
+            continue
+        a = float(S.fmean([rr["ladder_K5"][x]["margin"] for x in common]))
+        b = float(S.fmean([rr["bridge_K5"][x]["margin"] for x in common]))
+        c_ = float(S.fmean([rr["kstar_K32"][x]["margin"] for x in common]))
+        tot = c_ - a
+        decomp[rung] = {
+            "seeds": [int(x) for x in common], "n_seeds": len(common),
+            "margin_ladder_K5": a, "margin_bridge_K5": b, "margin_kstar_K32": c_,
+            "total_swing": tot,
+            "construction_step": b - a, "K_step": c_ - b,
+            "construction_share": (b - a) / tot if tot else None,
+            "K_share": (c_ - b) / tot if tot else None,
+            "store_ladder_K5": float(S.fmean(
+                [rr["ladder_K5"][x]["store"] for x in common])),
+            "store_bridge_K5": float(S.fmean(
+                [rr["bridge_K5"][x]["store"] for x in common])),
+            "store_kstar_K32": float(S.fmean(
+                [rr["kstar_K32"][x]["store"] for x in common])),
+            "opponent_params": {
+                "ladder_K5": float(S.fmean(
+                    [float(rr["ladder_K5"][x]["learned_1x_params"]) for x in common])),
+                "bridge_K5": float(S.fmean(
+                    [float(rr["bridge_K5"][x]["learned_1x_params"]) for x in common])),
+                "kstar_K32": float(S.fmean(
+                    [float(rr["kstar_K32"][x]["learned_1x_params"]) for x in common])),
+            },
+            "why": ("⛔ without the bridge the WHOLE swing would have been charged to K. "
+                    "The construction step is the partition rule, the store class and "
+                    "the covariance convention changing together; the K step is the only "
+                    "one the Head's ruling is about."),
+        }
+    rep["margin_swing_decomposed"] = decomp
+
     v5, vk = rep["verdict"]["ladder_K5"], rep["verdict"]["kstar_K32"]
     flipped = [r for r in RUNGS if matched[r].get("sign_flipped")]
     rep["SIGN_FLIPPED_AT_RUNGS"] = flipped
@@ -355,6 +404,26 @@ def main(argv=None) -> int:
                     fmt(m_["ladder_K5_margin_mean"], 3),
                     fmt(m_["kstar_K32_margin_mean"], 3),
                     "YES" if m_["sign_flipped"] else "no"))
+
+    L.append("\n## ⭐ THE SWING, DECOMPOSED — what the bridge column buys\n")
+    L.append("| rung | seeds | margin: ladder K=5 → bridge K=5 → K\\* | CONSTRUCTION step "
+             "| K step | total | K's share |")
+    L.append("|---|---|---|---|---|---|---|")
+    for rung in RUNGS:
+        d_ = decomp[rung]
+        if not d_.get("seeds"):
+            L.append("| n=%s | — | %s | | | | |" % (rung, d_["status"]))
+            continue
+        L.append("| n=%s | %s | %s → %s → %s | **%+.3f** | **%+.3f** | %+.3f | %s |"
+                 % (rung, d_["seeds"], fmt(d_["margin_ladder_K5"], 3),
+                    fmt(d_["margin_bridge_K5"], 3), fmt(d_["margin_kstar_K32"], 3),
+                    d_["construction_step"], d_["K_step"], d_["total_swing"],
+                    ("%.0f%%" % (100 * d_["K_share"])) if d_["K_share"] is not None
+                    else "n/a"))
+    L.append("\n⛔ Without the bridge the WHOLE swing would have been charged to K. The "
+             "construction step is the partition rule, the store class and the covariance "
+             "convention moving together; only the K step is what the Head's ruling is "
+             "about.\n")
 
     L.append("\n## Verdict\n```\n"
              + json.dumps({"SIGN_FLIPPED_AT_RUNGS": rep["SIGN_FLIPPED_AT_RUNGS"],
