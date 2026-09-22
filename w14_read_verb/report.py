@@ -57,11 +57,12 @@ def header(res):
     for row in ("unseen_pair", "nway"):
         b = env.get(row, {}).get("blind", {})
         if b:
-            seq = [v for k, v in b.items() if k.startswith("BLIND-SEQUENTIAL")
-                   and not k.endswith(("_bend", "_nobend"))]
-            print("  env %-12s ORACLE %.4f  BLIND-SEQUENTIAL %s  (this hub's OWN split)"
-                  % (row, b.get("ORACLE", float("nan")),
-                     " ".join("%.4f" % s for s in seq)))
+            cells = ["%s %.4f" % (k, v["validity"]) for k, v in sorted(b.items())]
+            print("  env %-12s (THIS HUB'S OWN SPLIT, CMAZE-2b): %s"
+                  % (row, "  ".join(cells)))
+            bd = env.get(row, {}).get("bend", {})
+            if bd:
+                print("       bend stats: %s" % json.dumps(bd, default=float)[:200])
 
 
 def table(res, row):
@@ -110,16 +111,24 @@ def bars(runs, row="unseen_pair"):
         ok2 &= b2
         ok3 &= b3
         ok5 &= b5
-        print("  seed %d: clu MERGE %.4f  AVG %.4f  delta %+.4f | transformer delta %s"
+        f = lambda x: ("%.4f" % x) if x is not None else "--"        # noqa: E731
+        print("  seed %d: clu MERGE %s  AVG %s  delta %s | transformer delta %s"
               " | BAR1 %s BAR2 %s BAR3 %s BAR5 %s"
-              % (res["seed"], m or -1, a or -1, d_clu if d_clu is not None else 0,
-                 ("%+.4f" % d_tr) if d_tr is not None else "-",
+              % (res["seed"], f(m), f(a),
+                 ("%+.4f" % d_clu) if d_clu is not None else "--",
+                 ("%+.4f" % d_tr) if d_tr is not None else "--",
                  "PASS" if b1 else "FAIL", "PASS" if b2 else "FAIL",
                  "PASS" if b3 else "FAIL", "PASS" if b5 else "FAIL"))
-        print("       seen: clu %.4f  landscape_shuffled %.4f  random_atoms %.4f  "
-              "landscape_removed %.4f"
-              % (cs or -1, sh or -1, ra or -1,
-                 val(res, "seen", "landscape_removed", "MERGE_target_wins") or -1))
+        print("       MERGE on seen: clu %s  landscape_shuffled %s  random_atoms %s  "
+              "landscape_removed %s"
+              % (f(cs), f(sh), f(ra),
+                 f(val(res, "seen", "landscape_removed", "MERGE_target_wins"))))
+        print("       MERGE on %s: clu %s  lookup_matched %s  landscape_removed %s"
+              % (row, f(m), f(lk), f(lr)))
+        print("       ALL ARMS' MERGE-AVG on %s: %s" % (row, ", ".join(
+            "%s %+.4f" % (aa, val(res, row, aa, "MERGE_target_wins")
+                          - val(res, row, aa, "AVG"))
+            for aa in ARMS if aa in res["table"].get(row, {}))))
     print("  ALL THREE SEEDS: BAR1 %s  BAR2 %s  BAR3 %s  BAR5 %s"
           % tuple("PASS" if x else "FAIL" for x in (ok1, ok2, ok3, ok5)))
 

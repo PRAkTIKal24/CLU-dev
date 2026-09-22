@@ -1,0 +1,34 @@
+w14 hub/read-verb -- INDEPENDENT VERIFY
+out_dir = C:/chlu/outputs/w14-read-verb
+PASS   1a gate status ready  -- ready
+PASS   1b gate ACCEPTANCE all pass  -- 1__a_large_majority_of_routes_require_2_or_more_keys=True, 2__blind_sequential_falls_back_toward_the_published_0.4980=True, 3__ORACLE_stays_1.0000=True, 4__the_exact_integer_judge_does_not_move=True
+PASS   1c gate spent no scored run
+PASS   1d gate closed (END_UTC present)
+PASS   1e refusal closeout present and closed
+PASS   2a judge file sha256 == the gate's  -- 9eacdda17d87cac0ad5ced6ccbb6fa43ebc1508c0460d0cc183e545d066beaac
+PASS   2b tolerance_used is null in EVERY leg  -- 6 legs (a vacuous pass is a FAIL: at least one leg must exist)
+PASS   3a exactly three scored TEST legs  -- 3 found: ['scored1_seed0_test.json', 'scored2_seed1_test.json', 'scored3_seed2_test.json']
+PASS   3b three DISTINCT seeds  -- [0, 1, 2]
+PASS   3c a ledger row per scored leg, target read-verb  -- 3 rows
+PASS   3d ledger names tag scored1
+PASS   3d ledger names tag scored2
+PASS   3d ledger names tag scored3
+PASS   4 seed 0: every arm carries every verb on every row  -- 11 arms; missing []
+     seed 0 MERGE-AVG  unseen_pair: {'clu': 0.4422, 'clu_lowrank': 0.0, 'clu_nopair': 0.0, 'landscape_removed': 0.0, 'landscape_shuffled': 0.2462, 'lookup_full': 0.8392, 'lookup_matched': 0.8392, 'lstm': 0.0352, 'mlp': 0.1457, 'random_atoms': 0.2864, 'transformer': 0.2312}
+FAIL   6 seed 0: landscape_shuffled collapses (<= 0.5 x clu)  -- 0.5111 vs clu 0.7212
+FAIL   6 seed 0: random_atoms collapses (<= 0.5 x clu)  -- 0.5395 vs clu 0.7212
+PASS   6 seed 0: landscape_removed collapses (<= 0.5 x clu)  -- 0.0000 vs clu 0.7212
+PASS   4 seed 1: every arm carries every verb on every row  -- 11 arms; missing []
+     seed 1 MERGE-AVG  unseen_pair: {'clu': 0.5354, 'clu_lowrank': 0.0, 'clu_nopair': 0.0, 'landscape_removed': 0.0, 'landscape_shuffled': 0.4747, 'lookup_full': 0.8333, 'lookup_matched': 0.8333, 'lstm': 0.1818, 'mlp': 0.1818, 'random_atoms': 0.4394, 'transformer': 0.2929}
+FAIL   6 seed 1: landscape_shuffled collapses (<= 0.5 x clu)  -- 0.5552 vs clu 0.6909
+FAIL   6 seed 1: random_atoms collapses (<= 0.5 x clu)  -- 0.5650 vs clu 0.6909
+PASS   6 seed 1: landscape_removed collapses (<= 0.5 x clu)  -- 0.0000 vs clu 0.6909
+PASS   4 seed 2: every arm carries every verb on every row  -- 11 arms; missing []
+     seed 2 MERGE-AVG  unseen_pair: {'clu': 0.4471, 'clu_lowrank': 0.0, 'clu_nopair': 0.0096, 'landscape_removed': 0.0, 'landscape_shuffled': 0.3413, 'lookup_full': 0.8173, 'lookup_matched': 0.8173, 'lstm': 0.1971, 'mlp': 0.2212, 'random_atoms': 0.3413, 'transformer': 0.3029}
+FAIL   6 seed 2: landscape_shuffled collapses (<= 0.5 x clu)  -- 0.5727 vs clu 0.7016
+FAIL   6 seed 2: random_atoms collapses (<= 0.5 x clu)  -- 0.5858 vs clu 0.7016
+PASS   6 seed 2: landscape_removed collapses (<= 0.5 x clu)  -- 0.0000 vs clu 0.7016
+PASS   7 half-addresses are 7/7 of the FULL design's 11 columns  -- full=11 A=7 B=7
+PASS   8 no CMAZE-1 token in any result file  -- []
+
+6 checks failed: 6 seed 0: landscape_shuffled collapses (<= 0.5 x clu), 6 seed 0: random_atoms collapses (<= 0.5 x clu), 6 seed 1: landscape_shuffled collapses (<= 0.5 x clu), 6 seed 1: random_atoms collapses (<= 0.5 x clu), 6 seed 2: landscape_shuffled collapses (<= 0.5 x clu), 6 seed 2: random_atoms collapses (<= 0.5 x clu)

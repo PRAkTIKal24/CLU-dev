@@ -84,8 +84,9 @@ def main(out_dir):
         if r.get("which") == "test":
             scored.append(r)
     check("2b tolerance_used is null in EVERY leg",
-          all(json.load(open(p)).get("tolerance_used") is None for p in runs),
-          "%d legs" % len(runs))
+          bool(runs) and all(json.load(open(p)).get("tolerance_used") is None
+                             for p in runs),
+          "%d legs (a vacuous pass is a FAIL: at least one leg must exist)" % len(runs))
 
     # 3 -- three scored legs, three distinct seeds ------------------------
     check("3a exactly three scored TEST legs", len(scored) == 3,
