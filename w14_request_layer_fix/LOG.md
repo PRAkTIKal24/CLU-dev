@@ -307,3 +307,12 @@ committed, bundled to `w14-request-layer-fix.bundle` (this branch only, never `-
 **Scored runs spent: 0 of 0.** No GPU, no cluster. ⛔ No box-wide kill was ever issued; the
 only process stopped was my own duplicate `before 0` build (PID 33752), verified by its full
 command line. `logs/PIDS.txt` carries every PID I launched.
+
+## 07:22Z Bundle
+
+`git bundle create /c/chlu/outputs/w14-request-layer-fix/w14-request-layer-fix.bundle
+w14/request-layer-fix` — ⛔ **that branch only, never `--all`.** `git bundle verify` reports
+*"is okay"* and *"records a complete history"*; `git bundle list-heads` prints **exactly one
+ref**, `refs/heads/w14/request-layer-fix`. The bundle is regenerated after this commit, so the
+ref it carries is this file's own commit; ⚠ the copy of this LOG inside the repo is therefore
+one commit behind the bundle's tip by construction, and that is stated rather than papered over.
