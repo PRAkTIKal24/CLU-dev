@@ -1,0 +1,65 @@
+==============================================================================
+1. ADDITIVITY — difflib.SequenceMatcher over base vs new, per line
+==============================================================================
+
+negative_results.md : 5733 -> 5974 lines
+  lines  equal=5733 insert=241 replace=0 delete=0
+  blocks equal=3 insert=3 replace=0 delete=0
+
+claims_matrix.md : 1512 -> 1625 lines
+  lines  equal=1511 insert=113 replace=1 delete=0
+  blocks equal=1 insert=1 replace=1 delete=0
+    !! replace base[0:1] -> new[0:1]
+       - # Claims-Consistency Matrix (M2/P4) — **v2.20 (the WAVE-12 FOLD — `w13 spoke/registry-fold`, `doc-curator`, 20
+
+==============================================================================
+2. claims_matrix.md — every line but line 1 byte-identical; prior title preserved
+==============================================================================
+  lines 2..1512 identical : True
+  new title endswith prior title : True
+  title chars 17371 -> 19153
+  appended lines : 113
+
+==============================================================================
+3. NUMBER INTEGRITY — no N renumbered, N337 new and unique, one ### per N
+==============================================================================
+  base entry headings : 349
+  new  entry headings : 350
+  added               : ['N337']
+  removed             : []
+  duplicate headings in new : NONE
+  'N337' occurrences base=0 new=13
+  fold symbol U+2299 base=0 new=15
+  base CM rows : 31 ; new CM rows : 33
+  added CM     : ['CM-W14-1', 'CM-W14-2']
+  removed CM   : []
+  duplicate CM rows in new : NONE
+
+==============================================================================
+4. THE RETIRED ROWS ARE STILL THERE — never deleted
+==============================================================================
+  ### N323               present=True  count=1
+  ### N-I8-19            present=True  count=1
+  ### **CM-R12-3**       present=True  count=1
+  ### N-I8-6             present=True  count=1
+  ### N332               present=True  count=1
+  ### N334               present=True  count=1
+
+==============================================================================
+5. EVIDENCE UNTOUCHED — md5 re-checked at close
+==============================================================================
+  c3597411aa834304be27110dab115673  C:\chlu\evidence\negative_results.md
+  39be4b5f1d8f29c5058c5a0bef935243  C:\chlu\evidence\claims_matrix.md
+  835fad9331b77f8fe6f6b5136e9d4ef5  C:\chlu\evidence\outputs\w13-registry-fold\negative_results.md
+  8d8faa2fcbc92c79d97324acde744778  C:\chlu\evidence\outputs\w13-registry-fold\claims_matrix.md
+
+==============================================================================
+6. THE ARITHMETIC THIS PASS DECLARED — re-run from the artefacts
+==============================================================================
+  budget_infeasible    seeds 0.971429 / 0.969231 / 0.939655  mean 0.960105  vs LOG 0.9601  match4dp=True
+  walled               seeds 0.960573 / 0.984634 / 0.995221  mean 0.980143  vs LOG 0.9801  match4dp=True
+  mt_unseen            seeds 0.972077 / 0.979401 / 0.982919  mean 0.978132  vs LOG 0.9781  match4dp=True
+  grounded_possible    seeds 0.797945 / 0.855960 / 0.800633  mean 0.818179  vs LOG 0.8182  match4dp=True
+  ridge AUC (possible vs all impossible), 6 runs : min 0.4822 max 0.5518 ; n_test set [200]
+  runs above 0.50 : 3 of 6
+  budget scalar alone : min 0.3840 max 0.4589 ; runs >= 0.50 : 0
