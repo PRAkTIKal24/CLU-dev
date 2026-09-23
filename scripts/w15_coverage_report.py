@@ -168,6 +168,17 @@ def main() -> int:
                    "bit-identical to A_test's (same pool draw from the same train index; the "
                    "pool recomputation reproduces w12's test pools, asserted per seed), so "
                    "C_test - A_test would be the scoring-mask effect alone."),
+        "C_test_DERIVED_not_measured": {
+            "value": ms([t["n3_seed%d" % s]["store"] for s in SEEDS]),
+            "why": ("identity, IDENTITY-CHECK.txt: (1) pool(train_3) is rung-3's pool; "
+                    "(2) acceptance 1.0 under either rung's bitmap; (3) judge_valid demands "
+                    "all six factors == the request, so every valid tuple is a held-out "
+                    "corner tuple and novel under either mask (0 mismatches in 3,600 test "
+                    "rows); (4) the corner rows are identical. Confirmed empirically on val: "
+                    "C == A on every seed."),
+            "coverage_B_minus_C_test": ms([t["n6_seed%d" % s]["store"] - t["n3_seed%d" % s]["store"]
+                                           for s in SEEDS]),
+            "coverage_share_test": 1.0},
         "per_leg": t}
     with open(OUT / "COVERAGE-CONTROL.json", "w", encoding="utf-8") as fh:
         json.dump(res, fh, indent=1)
