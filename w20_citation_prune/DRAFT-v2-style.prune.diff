@@ -1,0 +1,95 @@
+--- /Users/batmac/clu/outputs/w20-citation-prune/before-20260923T181535Z/DRAFT-v2-style.tex	2026-09-23 20:15:35
++++ /Users/batmac/clu/outputs/w17-paper/DRAFT-v2-style.tex	2026-09-23 20:20:24
+@@ -137,7 +137,7 @@
+ diffusion and physics-informed variants of an MLP, are out of scope by definition; we cite each
+ in one sentence below and state the unit/system distinction.
+ 
+-Generating held-out combinations of factors is a long-standing and active problem~\citep{du2020compositional,liu2022compositional,du2023reduce,okawa2023compositional}. The multilinear line (Tenenbaum and Freeman, 2000\nocite{tenenbaum2000separating}; TensorFaces,
++Generating held-out combinations of factors is a long-standing and active problem~\citep{du2020compositional,liu2022compositional}. The multilinear line (Tenenbaum and Freeman, 2000\nocite{tenenbaum2000separating}; TensorFaces,
+ Vasilescu and Terzopoulos, 2002\nocite{vasilescu2002tensorfaces}; Vlasic et al., 2005\nocite{vlasic2005face}; MLC-VAE, 2020~\citep{georgopoulos2020multilinear}) factorises a data tensor
+ indexed by every label combination and renders linearly. The frozen-generator line (GANSpace,
+ 2020~\citep{harkonen2020ganspace}; TCA, 2021~\citep{oldfield2021tensor}; PandA, 2023~\citep{oldfield2023panda}, and its 2024 journal version~\citep{oldfield2024bilinear}) identifies editable directions in a
+@@ -146,7 +146,7 @@
+ tensor head, tensor-product label conditioning, or the downdate primitive; the latter follows
+ in one line from the summation form of Cao and Yang (2015)\nocite{cao2015towards}, since a covariance is a summation.
+ 
+-Exact unlearning is likewise established~\citep{nguyen2025survey}: for $k$-means (Ginart et al., 2019\nocite{ginart2019making}), for bilinear
++Exact unlearning is likewise established: for $k$-means (Ginart et al., 2019\nocite{ginart2019making}), for bilinear
+ matrix completion~\citep{xu2023netflix}, and for ridge heads on frozen backbones~\citep{quan2026exact}, where the most recent work
+ explicitly restricts itself to ridge regression and excludes principal-component,
+ eigendecomposition and generative models. The closest generative attempts are approximate~\citep{kong2022approximate}.
+@@ -175,18 +175,18 @@
+ exactly unlearnable by splitting its data into shards and retraining the unit on the shard that
+ held the deleted rows, reading that shard's retained data, and we compare with the unit it wraps,
+ whose only exact route is the retrain of \S\ref{sec:del-comparators}.
+-Compartmentalized diffusion models (Golatkar, Achille, Swaminathan and Soatto) are a system that
++Compartmentalized diffusion models (Golatkar, Achille, Swaminathan and Soatto\nocite{golatkar2023training}) are a system that
+ trains separate diffusion models on separate data sources, composes them at inference and forgets a
+ source by dropping its model; what they compose is models of data sources, not held-out
+ combinations of factor values within one unit.
+-% cite-tagger: bib entry needed -- Golatkar, Achille, Swaminathan, Soatto, "Training Data Protection with Compositional Diffusion Models", arXiv:2308.01937 (not in references.bib)
++% cite-tagger: bib entry added by w20 citation-prune -- golatkar2023training (Golatkar, Achille, Swaminathan, Soatto, "Training Data Protection with Compositional Diffusion Models", arXiv:2308.01937)
+ Physics-informed variants of an MLP, such as physics-informed neural networks (Raissi, Perdikaris
+-and Karniadakis, 2019) and Hamiltonian neural networks (Greydanus, Dzamba and Yosinski, 2019), are
++and Karniadakis, 2019\nocite{raissi2019physics}) and Hamiltonian neural networks (Greydanus, Dzamba and Yosinski, 2019\nocite{greydanus2019hamiltonian}), are
+ systems that add a physical loss or structure to an MLP unit; our rival is the plain MLP unit.
+-% cite-tagger: bib entries needed -- Raissi, Perdikaris, Karniadakis, "Physics-informed neural networks", J. Comput. Phys. (2019); Greydanus, Dzamba, Yosinski, "Hamiltonian Neural Networks", NeurIPS 2019 (neither in references.bib)
++% cite-tagger: bib entries added by w20 citation-prune -- raissi2019physics (Raissi, Perdikaris, Karniadakis, "Physics-informed neural networks", J. Comput. Phys. 378, 2019); greydanus2019hamiltonian (Greydanus, Dzamba, Yosinski, "Hamiltonian Neural Networks", NeurIPS 2019)
+ 
+ One distinction is ours and merits a sentence. The decremental-PCA
+-line (Hall, Marshall and Martin, 2002\nocite{hall2002adding,hall1999adding}, and successors~\citep{jin2014evd,lee2021fast}) subtracts \emph{deflated} eigenspaces;
++line (Hall, Marshall and Martin, 2002\nocite{hall2002adding}, and successors~\citep{jin2014evd,lee2021fast}) subtracts \emph{deflated} eigenspaces;
+ its authors describe the result as an approximation to the refit, report that the subtraction
+ tends to instability, and give no rigorous error analysis. Our route is exact for the opposite
+ reason: \emph{downdate the statistic, not the truncated factors}. We downdate the full,
+@@ -196,19 +196,19 @@
+ \subsection{Why the three properties matter: world models need all three at once}
+ \label{sec:why}
+ 
+-A world model~\citep{ha2018world,hafner2019dream,hafner2025mastering,schrittwieser2020mastering} is useful to the extent that it can be queried for states and transitions it has
+-not seen~\citep{micheli2023transformers,alonso2024diffusion,valevski2025diffusion,bruce2024genie}, and its answers trusted. We name three properties and use them throughout:
++A world model~\citep{ha2018world,hafner2025mastering} is useful to the extent that it can be queried for states and transitions it has
++not seen~\citep{valevski2025diffusion}, and its answers trusted. We name three properties and use them throughout:
+ \begin{itemize}[leftmargin=*,nosep]
+ \item \textbf{Rule validity}: an output is valid if an \emph{exact} judge, integer arithmetic
+   with no tolerance, accepts it~\citep{vafa2024evaluating}; approximate similarity to a training item does not count.
+ \item \textbf{Composition}: the model produces valid outputs for held-out combinations of
+-  factor values that it has seen only separately~\citep{kipf2020contrastive,zhao2022toward}.
++  factor values that it has seen only separately~\citep{zhao2022toward}.
+ \item \textbf{Exact deletion}: after a set of training rows is deleted, the deletable object
+   equals, to floating-point roundoff, the object fitted without those rows.
+ \end{itemize}
+ However, the three pull against each other: a lookup table deletes exactly but
+ composes nothing it has not stored; a learned generator composes but can delete exactly only by
+-retraining (the whole model, or a shard of it~\citep{bourtoule2021machine}); and approximate unlearning~\citep{guo2020certified,izzo2021approximate,golatkar2020eternal} misses the exact answer in either direction
++retraining (the whole model, or a shard of it~\citep{bourtoule2021machine}); and approximate unlearning~\citep{guo2020certified,golatkar2020eternal} misses the exact answer in either direction
+ (\S\ref{sec:del-comparators}). The object we study therefore makes them properties of one store, and we measure, row by row, where each holds and where it does not.
+ 
+ \subsection{What we show, and at what thickness}
+@@ -346,7 +346,7 @@
+ continuous-input MLP) are fitted from the same frozen features and matched to the
+ \emph{read path} of the store. At $\Kstar$ the fitted rivals carry 130,433 to 131,891 parameters.
+ % SRC: w13-seeds-and-tables/TABLES.md
+-The ledger is memory, not a read-path parameter: it is printed, never matched~\citep{borgeaud2021improving,khandelwal2020generalization,lample2019large,wu2022memorizing,berges2024memory}. A lookup table
++The ledger is memory, not a read-path parameter: it is printed, never matched~\citep{borgeaud2021improving,khandelwal2020generalization,lample2019large}. A lookup table
+ of written items is a printed \emph{floor}, never a rival. Before any row is claimed for the
+ store, four controls, which we call the \emph{pre-declared landscape controls} throughout (\texttt{landscape\_removed}, \texttt{landscape\_shuffled},
+ \texttt{landscape\_shuffled\_across\_wells}, \texttt{random\_atoms}) must collapse; if they do
+@@ -2335,7 +2335,7 @@
+ six statistics and byte equality 1.0000, under three stated conditions (budget at least the number
+ of cells, zero leak, priority- or attribute-based eviction; recency-based eviction is excluded as
+ intrinsically history-dependent). % SRC: shorts-evidence-inventory.md
+-The placement rule is the Blelloch--Golovin stable-matching table with a global priority order;
++The placement rule is the Blelloch--Golovin stable-matching table~\citep{blelloch2007strongly} with a global priority order;
+ the theorems follow from theirs, and the fix-up cascade is theirs. Its scoping is the one this
+ paper adopts in \S\ref{sec:object}: a store-level guarantee only, with the frozen encoder and any
+ residue of past writes in a learned landscape as separate channels, and no certified
+@@ -2379,7 +2379,7 @@
+   / 56 / 69 map-steps for three recurrent families; the emergent unit 263 steps, bounded 0.35 rad).
+   Rider: a per-step compute factor of 6.2 against an LSTM inverts retention per unit of compute, so
+   no ``longer'' claim is made on compute. % SRC: shorts-evidence-inventory.md
+-\item \emph{GMOR on trained checkpoints.} With a linear ambient spurion, the three objects satisfy
++\item \emph{GMOR~\citep{gellmann1968behavior} on trained checkpoints.} With a linear ambient spurion, the three objects satisfy
+   $\mu^2F^2=\delta\Sigma$ to a maximum absolute deviation of \sci{1.33}{-15} on 8 trained SO(2)
+   checkpoints. Rider: designed SO(2), probe-only, float64. % SRC: shorts-evidence-inventory.md
+ \item \emph{Erosion law and anchor cure.} Contrastive wake--sleep training inverts a designed
