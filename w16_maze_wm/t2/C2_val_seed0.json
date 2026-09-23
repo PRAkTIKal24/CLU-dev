@@ -1,0 +1,905 @@
+{
+ "seed": 0,
+ "leg": "val",
+ "tag": "C2",
+ "config": {
+  "K": 2,
+  "n_atoms": 32,
+  "ridge": 1.0,
+  "pair_block": true,
+  "space": "latent",
+  "dim": 128,
+  "partition": "ward_balanced"
+ },
+ "scored_run": false,
+ "tolerance_used": null,
+ "test_receipt": null,
+ "disjointness_val": true,
+ "clu_ledger": {
+  "read_floats": 138304,
+  "store_atom_floats": 4096,
+  "head_floats": 134208,
+  "deployed_bytes_float32": 553216,
+  "byte_convention": "DEPLOYED BYTES = 4 * (atom floats + address-book floats), float32; this is what turns nine words into a latent",
+  "statistic_floats_float64": 4290,
+  "statistic_bytes_float64": 34320,
+  "statistic_convention": "the float64 sufficient statistic S,t,n plus the head's A,Mx is what buys EXACT deletion; it is declared BESIDE the deployed bytes, never netted into them, and is never matched to a rival",
+  "K": 2,
+  "n_atoms": 32,
+  "dim": 128,
+  "design_width": 2097,
+  "dead_channels": 0,
+  "deployed_rank_per_well": [
+   31,
+   31
+  ],
+  "span_fraction": 0.484375
+ },
+ "rank_over_width_printed": 0.484375,
+ "request_only": {
+  "read_signature": [
+   "heads",
+   "store",
+   "Phi"
+  ],
+  "feature_argument_present": false,
+  "bitwise_stable_under_feature_perturbation": true,
+  "n_checked": 8,
+  "statement": "the read's only inputs are the head, the store and the request design; no feature tensor enters launch, settle or read (charter section B.3)"
+ },
+ "across_wells_derangement": [
+  1,
+  0
+ ],
+ "lookup_ledger": {
+  "items_held": 1080,
+  "read_floats": 138240,
+  "deployed_bytes_float32": 552960,
+  "byte_convention": "4 * (items held x latent width), float32"
+ },
+ "rivals": {
+  "mlp": {
+   "kind": "mlp",
+   "width": 285,
+   "params": 138068,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 552272,
+   "fit_seconds": 13.970096349716187
+  },
+  "cont_mlp": {
+   "kind": "cont_mlp",
+   "width": 305,
+   "params": 138293,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 553172,
+   "fit_seconds": 13.033876657485962
+  },
+  "lstm": {
+   "kind": "lstm",
+   "width": 123,
+   "params": 139118,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 556472,
+   "fit_seconds": 51.38593339920044
+  },
+  "transformer": {
+   "kind": "transformer",
+   "width": 88,
+   "params": 138552,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 554208,
+   "fit_seconds": 72.09028387069702
+  }
+ },
+ "ROWS": {
+  "seen": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 600,
+    "valid": 0.575,
+    "legal": 0.9666666666666667
+   },
+   "LOOKUP (printed floor)": {
+    "n": 600,
+    "valid": 0.07833333333333334,
+    "legal": 0.89
+   },
+   "CLU": {
+    "n": 600,
+    "valid": 0.23666666666666666,
+    "legal": 0.865
+   },
+   "CTRL:landscape_removed": {
+    "n": 600,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 600,
+    "valid": 0.23666666666666666,
+    "legal": 0.865
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 600,
+    "valid": 0.02,
+    "legal": 0.6883333333333334
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 600,
+    "valid": 0.04833333333333333,
+    "legal": 0.755
+   },
+   "CTRL:random_atoms": {
+    "n": 600,
+    "valid": 0.023333333333333334,
+    "legal": 0.7366666666666667
+   },
+   "RIVAL:mlp": {
+    "n": 600,
+    "valid": 0.055,
+    "legal": 0.8266666666666667
+   },
+   "RIVAL:cont_mlp": {
+    "n": 600,
+    "valid": 0.0,
+    "legal": 0.7266666666666667
+   },
+   "RIVAL:lstm": {
+    "n": 600,
+    "valid": 0.0016666666666666668,
+    "legal": 0.8416666666666667
+   },
+   "RIVAL:transformer": {
+    "n": 600,
+    "valid": 0.06833333333333333,
+    "legal": 0.795
+   },
+   "BLIND-layout-free-cells": {
+    "n": 600,
+    "valid": 0.055
+   },
+   "BLIND-colour-marginal": {
+    "n": 600,
+    "valid": 0.0033333333333333335
+   },
+   "BLIND-marginal": {
+    "n": 600,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 600,
+    "valid": 0.10666666666666667
+   },
+   "RANDOM": {
+    "n": 600,
+    "valid": 0.0
+   }
+  },
+  "unseen_2way": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 396,
+    "valid": 0.2474747474747475,
+    "legal": 0.8838383838383839
+   },
+   "LOOKUP (printed floor)": {
+    "n": 396,
+    "valid": 0.0,
+    "legal": 0.8762626262626263
+   },
+   "CLU": {
+    "n": 396,
+    "valid": 0.04040404040404041,
+    "legal": 0.8434343434343434
+   },
+   "CTRL:landscape_removed": {
+    "n": 396,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 396,
+    "valid": 0.04040404040404041,
+    "legal": 0.8434343434343434
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 396,
+    "valid": 0.012626262626262626,
+    "legal": 0.696969696969697
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 396,
+    "valid": 0.005050505050505051,
+    "legal": 0.7297979797979798
+   },
+   "CTRL:random_atoms": {
+    "n": 396,
+    "valid": 0.005050505050505051,
+    "legal": 0.7222222222222222
+   },
+   "RIVAL:mlp": {
+    "n": 396,
+    "valid": 0.015151515151515152,
+    "legal": 0.8181818181818182
+   },
+   "RIVAL:cont_mlp": {
+    "n": 396,
+    "valid": 0.0,
+    "legal": 0.7070707070707071
+   },
+   "RIVAL:lstm": {
+    "n": 396,
+    "valid": 0.0,
+    "legal": 0.7727272727272727
+   },
+   "RIVAL:transformer": {
+    "n": 396,
+    "valid": 0.020202020202020204,
+    "legal": 0.76010101010101
+   },
+   "BLIND-layout-free-cells": {
+    "n": 396,
+    "valid": 0.045454545454545456
+   },
+   "BLIND-colour-marginal": {
+    "n": 396,
+    "valid": 0.005050505050505051
+   },
+   "BLIND-marginal": {
+    "n": 396,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 396,
+    "valid": 0.045454545454545456
+   },
+   "RANDOM": {
+    "n": 396,
+    "valid": 0.0
+   }
+  },
+  "unseen_nway": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 400,
+    "valid": 0.3425,
+    "legal": 0.9125
+   },
+   "LOOKUP (printed floor)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.88
+   },
+   "CLU": {
+    "n": 400,
+    "valid": 0.0875,
+    "legal": 0.8625
+   },
+   "CTRL:landscape_removed": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 400,
+    "valid": 0.0875,
+    "legal": 0.8625
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 400,
+    "valid": 0.0275,
+    "legal": 0.6625
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 400,
+    "valid": 0.0125,
+    "legal": 0.6875
+   },
+   "CTRL:random_atoms": {
+    "n": 400,
+    "valid": 0.0075,
+    "legal": 0.7
+   },
+   "RIVAL:mlp": {
+    "n": 400,
+    "valid": 0.0075,
+    "legal": 0.8125
+   },
+   "RIVAL:cont_mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.735
+   },
+   "RIVAL:lstm": {
+    "n": 400,
+    "valid": 0.0025,
+    "legal": 0.89
+   },
+   "RIVAL:transformer": {
+    "n": 400,
+    "valid": 0.0225,
+    "legal": 0.7475
+   },
+   "BLIND-layout-free-cells": {
+    "n": 400,
+    "valid": 0.0275
+   },
+   "BLIND-colour-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 400,
+    "valid": 0.0075
+   },
+   "RANDOM": {
+    "n": 400,
+    "valid": 0.0
+   }
+  },
+  "value_holdout": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8925
+   },
+   "LOOKUP (printed floor)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.86
+   },
+   "CLU": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8375
+   },
+   "CTRL:landscape_removed": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8375
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.705
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.72
+   },
+   "CTRL:random_atoms": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.66
+   },
+   "RIVAL:mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.81
+   },
+   "RIVAL:cont_mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.755
+   },
+   "RIVAL:lstm": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.7725
+   },
+   "RIVAL:transformer": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.7575
+   },
+   "BLIND-layout-free-cells": {
+    "n": 400,
+    "valid": 0.06
+   },
+   "BLIND-colour-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 400,
+    "valid": 0.0925
+   },
+   "RANDOM": {
+    "n": 400,
+    "valid": 0.0
+   }
+  },
+  "value_slot_holdout": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 400,
+    "valid": 0.01,
+    "legal": 0.9475
+   },
+   "LOOKUP (printed floor)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8675
+   },
+   "CLU": {
+    "n": 400,
+    "valid": 0.0025,
+    "legal": 0.8325
+   },
+   "CTRL:landscape_removed": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 400,
+    "valid": 0.0025,
+    "legal": 0.8325
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.695
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.685
+   },
+   "CTRL:random_atoms": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.6575
+   },
+   "RIVAL:mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8025
+   },
+   "RIVAL:cont_mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.7425
+   },
+   "RIVAL:lstm": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.85
+   },
+   "RIVAL:transformer": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8
+   },
+   "BLIND-layout-free-cells": {
+    "n": 400,
+    "valid": 0.0475
+   },
+   "BLIND-colour-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 400,
+    "valid": 0.0725
+   },
+   "RANDOM": {
+    "n": 400,
+    "valid": 0.0
+   }
+  }
+ },
+ "DELETION": {
+  "delete_colour": 2,
+  "n_train": 8000,
+  "rival_used": "matched-parameter MLP",
+  "as_trained_rival_fit_seconds": 15.692954301834106,
+  "frozen_encoder_decoder": "declared OUTSIDE the deletable object; trained on the whole training pool and NOT re-trained for either arm after deletion",
+  "deletions": {
+   "value": {
+    "n_deleted": 5530,
+    "fraction_of_train": 0.69125,
+    "store_scoped_exactness": {
+     "max_abs_diff_S": 2.0372681319713593e-10,
+     "max_abs_diff_t": 0.0,
+     "max_abs_diff_n": 0,
+     "max_abs_diff_atoms": 0.0,
+     "S_scale": 74807.90723483836,
+     "relative_S_gap": 2.7233326091798418e-15,
+     "note": "store after deletion vs a store fitted from scratch WITHOUT the deleted rows, on the SAME partition; atoms are eigenvectors and are sign-ambiguous, so the atom gap is reported but the claim rests on S, t, n"
+    },
+    "receipt": {
+     "op": "delete_rows",
+     "n_rows_removed": 5530,
+     "n_before": [
+      8000,
+      8000
+     ],
+     "n_after": [
+      2470,
+      2470
+     ],
+     "refit": false,
+     "passes_over_retained_data": 0,
+     "items_kept": false,
+     "basis_change_shapes": [
+      [
+       32,
+       32
+      ],
+      [
+       32,
+       32
+      ]
+     ],
+     "basis_change_bytes_deployed": 0,
+     "mechanism": "S_k -= x x^T, t_k -= x, n_k -= 1; the atoms are re-derived from the statistic and the address book is carried across the basis change by W_k <- W_k R_k, R_k = U_k^T U'_k. The pool is never touched.",
+     "head_statistic_downdated": true,
+     "head_mechanism": "A -= Phi_d^T Phi_d, Mx -= Phi_d^T X_d, then the same closed form is re-solved; the pool is never touched"
+    },
+    "adaptation": {
+     "CLU_adaptation_seconds": 5.806610584259033,
+     "CLU_adaptation_is_data_free": true,
+     "CLU_adaptation_mechanism": "S,t,n and the head's A,Mx are downdated by the deleted rows' own contribution and the same closed form is re-solved; no pool row is read and no item is kept -- light and data-free, NOT 'no changes'",
+     "CLU_refit_from_scratch_seconds": 5.751073122024536,
+     "rival_retrain_without_seconds": 15.592741012573242,
+     "speedup_vs_rival_retrain": 2.685342987326055
+    },
+    "post_deletion_composition": {
+     "seen": {
+      "other_colours": {
+       "CLU_as_trained": {
+        "n": 190,
+        "valid": 0.4105263157894737
+       },
+       "CLU_after_deletion": {
+        "n": 190,
+        "valid": 0.4421052631578947
+       },
+       "CLU_refit_without": {
+        "n": 190,
+        "valid": 0.4421052631578947
+       },
+       "MLP_as_trained": {
+        "n": 190,
+        "valid": 0.12631578947368421
+       },
+       "MLP_retrain_without": {
+        "n": 190,
+        "valid": 0.14736842105263157
+       }
+      },
+      "deleted_colour": {
+       "CLU_as_trained": {
+        "n": 410,
+        "valid": 0.15609756097560976
+       },
+       "CLU_after_deletion": {
+        "n": 410,
+        "valid": 0.0
+       },
+       "CLU_refit_without": {
+        "n": 410,
+        "valid": 0.0
+       },
+       "MLP_as_trained": {
+        "n": 410,
+        "valid": 0.02195121951219512
+       },
+       "MLP_retrain_without": {
+        "n": 410,
+        "valid": 0.0
+       }
+      }
+     },
+     "unseen_2way": {
+      "other_colours": {
+       "CLU_as_trained": {
+        "n": 116,
+        "valid": 0.06896551724137931
+       },
+       "CLU_after_deletion": {
+        "n": 116,
+        "valid": 0.05172413793103448
+       },
+       "CLU_refit_without": {
+        "n": 116,
+        "valid": 0.05172413793103448
+       },
+       "MLP_as_trained": {
+        "n": 116,
+        "valid": 0.05172413793103448
+       },
+       "MLP_retrain_without": {
+        "n": 116,
+        "valid": 0.034482758620689655
+       }
+      },
+      "deleted_colour": {
+       "CLU_as_trained": {
+        "n": 280,
+        "valid": 0.02857142857142857
+       },
+       "CLU_after_deletion": {
+        "n": 280,
+        "valid": 0.0035714285714285713
+       },
+       "CLU_refit_without": {
+        "n": 280,
+        "valid": 0.0035714285714285713
+       },
+       "MLP_as_trained": {
+        "n": 280,
+        "valid": 0.0
+       },
+       "MLP_retrain_without": {
+        "n": 280,
+        "valid": 0.0
+       }
+      }
+     },
+     "unseen_nway": {
+      "other_colours": {
+       "CLU_as_trained": {
+        "n": 211,
+        "valid": 0.13744075829383887
+       },
+       "CLU_after_deletion": {
+        "n": 211,
+        "valid": 0.061611374407582936
+       },
+       "CLU_refit_without": {
+        "n": 211,
+        "valid": 0.061611374407582936
+       },
+       "MLP_as_trained": {
+        "n": 211,
+        "valid": 0.014218009478672985
+       },
+       "MLP_retrain_without": {
+        "n": 211,
+        "valid": 0.018957345971563982
+       }
+      },
+      "deleted_colour": {
+       "CLU_as_trained": {
+        "n": 189,
+        "valid": 0.031746031746031744
+       },
+       "CLU_after_deletion": {
+        "n": 189,
+        "valid": 0.0
+       },
+       "CLU_refit_without": {
+        "n": 189,
+        "valid": 0.0
+       },
+       "MLP_as_trained": {
+        "n": 189,
+        "valid": 0.0
+       },
+       "MLP_retrain_without": {
+        "n": 189,
+        "valid": 0.0
+       }
+      }
+     }
+    }
+   },
+   "conjunction": {
+    "n_deleted": 2240,
+    "fraction_of_train": 0.28,
+    "store_scoped_exactness": {
+     "max_abs_diff_S": 1.1641532182693481e-10,
+     "max_abs_diff_t": 0.0,
+     "max_abs_diff_n": 0,
+     "max_abs_diff_atoms": 0.0,
+     "S_scale": 197052.51814804823,
+     "relative_S_gap": 5.907832232799501e-16,
+     "note": "store after deletion vs a store fitted from scratch WITHOUT the deleted rows, on the SAME partition; atoms are eigenvectors and are sign-ambiguous, so the atom gap is reported but the claim rests on S, t, n"
+    },
+    "receipt": {
+     "op": "delete_rows",
+     "n_rows_removed": 2240,
+     "n_before": [
+      8000,
+      8000
+     ],
+     "n_after": [
+      5760,
+      5760
+     ],
+     "refit": false,
+     "passes_over_retained_data": 0,
+     "items_kept": false,
+     "basis_change_shapes": [
+      [
+       32,
+       32
+      ],
+      [
+       32,
+       32
+      ]
+     ],
+     "basis_change_bytes_deployed": 0,
+     "mechanism": "S_k -= x x^T, t_k -= x, n_k -= 1; the atoms are re-derived from the statistic and the address book is carried across the basis change by W_k <- W_k R_k, R_k = U_k^T U'_k. The pool is never touched.",
+     "head_statistic_downdated": true,
+     "head_mechanism": "A -= Phi_d^T Phi_d, Mx -= Phi_d^T X_d, then the same closed form is re-solved; the pool is never touched"
+    },
+    "adaptation": {
+     "CLU_adaptation_seconds": 4.935215711593628,
+     "CLU_adaptation_is_data_free": true,
+     "CLU_adaptation_mechanism": "S,t,n and the head's A,Mx are downdated by the deleted rows' own contribution and the same closed form is re-solved; no pool row is read and no item is kept -- light and data-free, NOT 'no changes'",
+     "CLU_refit_from_scratch_seconds": 6.477110147476196,
+     "rival_retrain_without_seconds": 16.273669004440308,
+     "speedup_vs_rival_retrain": 3.2974585014006177
+    },
+    "post_deletion_composition": {
+     "seen": {
+      "other_colours": {
+       "CLU_as_trained": {
+        "n": 441,
+        "valid": 0.3219954648526077
+       },
+       "CLU_after_deletion": {
+        "n": 441,
+        "valid": 0.3469387755102041
+       },
+       "CLU_refit_without": {
+        "n": 441,
+        "valid": 0.3469387755102041
+       },
+       "MLP_as_trained": {
+        "n": 441,
+        "valid": 0.07482993197278912
+       },
+       "MLP_retrain_without": {
+        "n": 441,
+        "valid": 0.08163265306122448
+       }
+      },
+      "deleted_colour": {
+       "CLU_as_trained": {
+        "n": 159,
+        "valid": 0.0
+       },
+       "CLU_after_deletion": {
+        "n": 159,
+        "valid": 0.0
+       },
+       "CLU_refit_without": {
+        "n": 159,
+        "valid": 0.0
+       },
+       "MLP_as_trained": {
+        "n": 159,
+        "valid": 0.0
+       },
+       "MLP_retrain_without": {
+        "n": 159,
+        "valid": 0.0
+       }
+      }
+     },
+     "unseen_2way": {
+      "other_colours": {
+       "CLU_as_trained": {
+        "n": 317,
+        "valid": 0.050473186119873815
+       },
+       "CLU_after_deletion": {
+        "n": 317,
+        "valid": 0.050473186119873815
+       },
+       "CLU_refit_without": {
+        "n": 317,
+        "valid": 0.050473186119873815
+       },
+       "MLP_as_trained": {
+        "n": 317,
+        "valid": 0.01892744479495268
+       },
+       "MLP_retrain_without": {
+        "n": 317,
+        "valid": 0.01892744479495268
+       }
+      },
+      "deleted_colour": {
+       "CLU_as_trained": {
+        "n": 79,
+        "valid": 0.0
+       },
+       "CLU_after_deletion": {
+        "n": 79,
+        "valid": 0.0
+       },
+       "CLU_refit_without": {
+        "n": 79,
+        "valid": 0.0
+       },
+       "MLP_as_trained": {
+        "n": 79,
+        "valid": 0.0
+       },
+       "MLP_retrain_without": {
+        "n": 79,
+        "valid": 0.0
+       }
+      }
+     },
+     "unseen_nway": {
+      "other_colours": {
+       "CLU_as_trained": {
+        "n": 350,
+        "valid": 0.1
+       },
+       "CLU_after_deletion": {
+        "n": 350,
+        "valid": 0.07428571428571429
+       },
+       "CLU_refit_without": {
+        "n": 350,
+        "valid": 0.07428571428571429
+       },
+       "MLP_as_trained": {
+        "n": 350,
+        "valid": 0.008571428571428572
+       },
+       "MLP_retrain_without": {
+        "n": 350,
+        "valid": 0.02
+       }
+      },
+      "deleted_colour": {
+       "CLU_as_trained": {
+        "n": 50,
+        "valid": 0.0
+       },
+       "CLU_after_deletion": {
+        "n": 50,
+        "valid": 0.0
+       },
+       "CLU_refit_without": {
+        "n": 50,
+        "valid": 0.0
+       },
+       "MLP_as_trained": {
+        "n": 50,
+        "valid": 0.0
+       },
+       "MLP_retrain_without": {
+        "n": 50,
+        "valid": 0.0
+       }
+      }
+     }
+    }
+   }
+  },
+  "tolerance_used": null
+ },
+ "seconds": 521.0044884681702
+}

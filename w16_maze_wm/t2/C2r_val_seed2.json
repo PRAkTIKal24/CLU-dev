@@ -1,0 +1,516 @@
+{
+ "seed": 2,
+ "leg": "val",
+ "tag": "C2r",
+ "config": {
+  "K": 2,
+  "n_atoms": 32,
+  "ridge": 1.0,
+  "pair_block": true,
+  "space": "latent",
+  "dim": 128,
+  "partition": "ward_balanced"
+ },
+ "rival_steps": 30000,
+ "scored_run": false,
+ "tolerance_used": null,
+ "test_receipt": null,
+ "disjointness_val": true,
+ "clu_ledger": {
+  "read_floats": 138304,
+  "store_atom_floats": 4096,
+  "head_floats": 134208,
+  "deployed_bytes_float32": 553216,
+  "byte_convention": "DEPLOYED BYTES = 4 * (atom floats + address-book floats), float32; this is what turns nine words into a latent",
+  "statistic_floats_float64": 4290,
+  "statistic_bytes_float64": 34320,
+  "statistic_convention": "the float64 sufficient statistic S,t,n plus the head's A,Mx is what buys EXACT deletion; it is declared BESIDE the deployed bytes, never netted into them, and is never matched to a rival",
+  "K": 2,
+  "n_atoms": 32,
+  "dim": 128,
+  "design_width": 2097,
+  "dead_channels": 0,
+  "deployed_rank_per_well": [
+   31,
+   31
+  ],
+  "span_fraction": 0.484375
+ },
+ "rank_over_width_printed": 0.484375,
+ "request_only": {
+  "read_signature": [
+   "heads",
+   "store",
+   "Phi"
+  ],
+  "feature_argument_present": false,
+  "bitwise_stable_under_feature_perturbation": true,
+  "n_checked": 8,
+  "statement": "the read's only inputs are the head, the store and the request design; no feature tensor enters launch, settle or read (charter section B.3)"
+ },
+ "across_wells_derangement": [
+  1,
+  0
+ ],
+ "lookup_ledger": {
+  "items_held": 1080,
+  "read_floats": 138240,
+  "deployed_bytes_float32": 552960,
+  "byte_convention": "4 * (items held x latent width), float32"
+ },
+ "rivals": {
+  "mlp": {
+   "kind": "mlp",
+   "width": 285,
+   "params": 138068,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 552272,
+   "fit_seconds": 169.0332477092743
+  },
+  "cont_mlp": {
+   "kind": "cont_mlp",
+   "width": 305,
+   "params": 138293,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 553172,
+   "fit_seconds": 135.99700331687927
+  },
+  "lstm": {
+   "kind": "lstm",
+   "width": 123,
+   "params": 139118,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 556472,
+   "fit_seconds": 520.8160614967346
+  },
+  "transformer": {
+   "kind": "transformer",
+   "width": 88,
+   "params": 138552,
+   "target_params": 138304,
+   "matched_within_2pct": true,
+   "byte_convention": "parameters x 4 bytes, float32",
+   "deployed_bytes_float32": 554208,
+   "fit_seconds": 709.7130846977234
+  }
+ },
+ "ROWS": {
+  "seen": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 600,
+    "valid": 0.9283333333333333,
+    "legal": 0.9833333333333333
+   },
+   "LOOKUP (printed floor)": {
+    "n": 600,
+    "valid": 0.11833333333333333,
+    "legal": 0.9216666666666666
+   },
+   "CLU": {
+    "n": 600,
+    "valid": 0.4083333333333333,
+    "legal": 0.8766666666666667
+   },
+   "CTRL:landscape_removed": {
+    "n": 600,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 600,
+    "valid": 0.4083333333333333,
+    "legal": 0.8766666666666667
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 600,
+    "valid": 0.03333333333333333,
+    "legal": 0.72
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 600,
+    "valid": 0.035,
+    "legal": 0.6983333333333334
+   },
+   "CTRL:random_atoms": {
+    "n": 600,
+    "valid": 0.03833333333333333,
+    "legal": 0.705
+   },
+   "RIVAL:mlp": {
+    "n": 600,
+    "valid": 0.905,
+    "legal": 0.975
+   },
+   "RIVAL:cont_mlp": {
+    "n": 600,
+    "valid": 0.035,
+    "legal": 0.8166666666666667
+   },
+   "RIVAL:lstm": {
+    "n": 600,
+    "valid": 0.7066666666666667,
+    "legal": 0.9216666666666666
+   },
+   "RIVAL:transformer": {
+    "n": 600,
+    "valid": 0.8983333333333333,
+    "legal": 0.9766666666666667
+   },
+   "BLIND-layout-free-cells": {
+    "n": 600,
+    "valid": 0.065
+   },
+   "BLIND-colour-marginal": {
+    "n": 600,
+    "valid": 0.015
+   },
+   "BLIND-marginal": {
+    "n": 600,
+    "valid": 0.0033333333333333335
+   },
+   "BLIND-no-layout": {
+    "n": 600,
+    "valid": 0.11
+   },
+   "RANDOM": {
+    "n": 600,
+    "valid": 0.0
+   }
+  },
+  "unseen_2way": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 396,
+    "valid": 0.2777777777777778,
+    "legal": 0.7853535353535354
+   },
+   "LOOKUP (printed floor)": {
+    "n": 396,
+    "valid": 0.0,
+    "legal": 0.9015151515151515
+   },
+   "CLU": {
+    "n": 396,
+    "valid": 0.06060606060606061,
+    "legal": 0.76010101010101
+   },
+   "CTRL:landscape_removed": {
+    "n": 396,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 396,
+    "valid": 0.06060606060606061,
+    "legal": 0.76010101010101
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 396,
+    "valid": 0.005050505050505051,
+    "legal": 0.6186868686868687
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 396,
+    "valid": 0.005050505050505051,
+    "legal": 0.6237373737373737
+   },
+   "CTRL:random_atoms": {
+    "n": 396,
+    "valid": 0.0025252525252525255,
+    "legal": 0.6616161616161617
+   },
+   "RIVAL:mlp": {
+    "n": 396,
+    "valid": 0.2222222222222222,
+    "legal": 0.8333333333333334
+   },
+   "RIVAL:cont_mlp": {
+    "n": 396,
+    "valid": 0.0,
+    "legal": 0.8055555555555556
+   },
+   "RIVAL:lstm": {
+    "n": 396,
+    "valid": 0.10858585858585859,
+    "legal": 0.7777777777777778
+   },
+   "RIVAL:transformer": {
+    "n": 396,
+    "valid": 0.1994949494949495,
+    "legal": 0.7449494949494949
+   },
+   "BLIND-layout-free-cells": {
+    "n": 396,
+    "valid": 0.027777777777777776
+   },
+   "BLIND-colour-marginal": {
+    "n": 396,
+    "valid": 0.005050505050505051
+   },
+   "BLIND-marginal": {
+    "n": 396,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 396,
+    "valid": 0.05555555555555555
+   },
+   "RANDOM": {
+    "n": 396,
+    "valid": 0.0
+   }
+  },
+  "unseen_nway": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 400,
+    "valid": 0.575,
+    "legal": 0.935
+   },
+   "LOOKUP (printed floor)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.895
+   },
+   "CLU": {
+    "n": 400,
+    "valid": 0.1725,
+    "legal": 0.8425
+   },
+   "CTRL:landscape_removed": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 400,
+    "valid": 0.1725,
+    "legal": 0.8425
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 400,
+    "valid": 0.025,
+    "legal": 0.66
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 400,
+    "valid": 0.0225,
+    "legal": 0.74
+   },
+   "CTRL:random_atoms": {
+    "n": 400,
+    "valid": 0.015,
+    "legal": 0.7075
+   },
+   "RIVAL:mlp": {
+    "n": 400,
+    "valid": 0.4625,
+    "legal": 0.9025
+   },
+   "RIVAL:cont_mlp": {
+    "n": 400,
+    "valid": 0.0125,
+    "legal": 0.75
+   },
+   "RIVAL:lstm": {
+    "n": 400,
+    "valid": 0.255,
+    "legal": 0.8875
+   },
+   "RIVAL:transformer": {
+    "n": 400,
+    "valid": 0.4575,
+    "legal": 0.9125
+   },
+   "BLIND-layout-free-cells": {
+    "n": 400,
+    "valid": 0.08
+   },
+   "BLIND-colour-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 400,
+    "valid": 0.005
+   },
+   "RANDOM": {
+    "n": 400,
+    "valid": 0.0
+   }
+  },
+  "value_holdout": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8275
+   },
+   "LOOKUP (printed floor)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.885
+   },
+   "CLU": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.85
+   },
+   "CTRL:landscape_removed": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.85
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.6575
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.6575
+   },
+   "CTRL:random_atoms": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.7075
+   },
+   "RIVAL:mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.89
+   },
+   "RIVAL:cont_mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.705
+   },
+   "RIVAL:lstm": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.8375
+   },
+   "RIVAL:transformer": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.765
+   },
+   "BLIND-layout-free-cells": {
+    "n": 400,
+    "valid": 0.0675
+   },
+   "BLIND-colour-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 400,
+    "valid": 0.1125
+   },
+   "RANDOM": {
+    "n": 400,
+    "valid": 0.0
+   }
+  },
+  "value_slot_holdout": {
+   "PIPELINE CEILING (true item through this space's decode)": {
+    "n": 400,
+    "valid": 0.0075,
+    "legal": 0.8825
+   },
+   "LOOKUP (printed floor)": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.9
+   },
+   "CLU": {
+    "n": 400,
+    "valid": 0.0025,
+    "legal": 0.7975
+   },
+   "CTRL:landscape_removed": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.0
+   },
+   "CTRL:landscape_shuffled": {
+    "n": 400,
+    "valid": 0.0025,
+    "legal": 0.7975
+   },
+   "CTRL:landscape_shuffled_channels": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.69
+   },
+   "CTRL:landscape_shuffled_across_wells": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.6075
+   },
+   "CTRL:random_atoms": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.6575
+   },
+   "RIVAL:mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.885
+   },
+   "RIVAL:cont_mlp": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.7875
+   },
+   "RIVAL:lstm": {
+    "n": 400,
+    "valid": 0.0,
+    "legal": 0.76
+   },
+   "RIVAL:transformer": {
+    "n": 400,
+    "valid": 0.0025,
+    "legal": 0.8475
+   },
+   "BLIND-layout-free-cells": {
+    "n": 400,
+    "valid": 0.0525
+   },
+   "BLIND-colour-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-marginal": {
+    "n": 400,
+    "valid": 0.0
+   },
+   "BLIND-no-layout": {
+    "n": 400,
+    "valid": 0.085
+   },
+   "RANDOM": {
+    "n": 400,
+    "valid": 0.0
+   }
+  }
+ },
+ "seconds": 1850.828409910202
+}

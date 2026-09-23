@@ -1,0 +1,381 @@
+{
+ "artefact": "MAZE-WM.json",
+ "hub": "w16 hub/maze-wm",
+ "branch": "w16/maze-wm",
+ "tolerance_used": null,
+ "n_seeds_every_row": 3,
+ "budget": {
+  "total": 18,
+  "spent": [
+   {
+    "runs": "1-3/18",
+    "task": "T1 CMAZE-T",
+    "config": "A1",
+    "verdict": "WIN: STORE row on unseen n-way",
+    "artefact": "t1/BARS-A1-test.json",
+    "prereg": "PREREG-w16-maze-wm-T1.md (+AM1)"
+   },
+   {
+    "runs": "4-6/18",
+    "task": "T2 CMAZE-O",
+    "config": "C (C-field)",
+    "verdict": "WIN by the pre-registered rule; rival margin WITHDRAWN by the VAL training-budget diagnostic (matched MLP at 10x steps 0.99 vs CLU 0.70); store gate holds (controls 0.000); INTERFACE finding",
+    "artefact": "t2/BARS-C-test.json",
+    "prereg": "PREREG-w16-maze-wm-T2.md (+AM1,AM2; AM4 re-label)"
+   },
+   {
+    "runs": "7-9/18",
+    "task": "T1 CMAZE-T",
+    "config": "C-512 vs 80k-step rivals",
+    "verdict": "WIN: STORE row on unseen n-way (replication of A1; seed-1 random_atoms 0.464 vs CLU 0.567)",
+    "artefact": "t1/BARS-C512-test.json",
+    "prereg": "PREREG-w16-maze-wm-T1.md (+AM1-4)"
+   }
+  ],
+  "declared_not_run": [
+   {
+    "runs": "10-12/18",
+    "reason": "Task 2 cap remainder: no CMAZE-O config passes VAL against converged rivals (A: VB0 0.021; C2: VB1 0.137 vs 0.397; any field config would need n-way >= 1.02 to beat the 0.99 MLP by 0.03). Seeding a VAL-failing config is forbidden."
+   },
+   {
+    "runs": "13-18/18",
+    "reason": "Task 3 (CMAZE-2b route) is opened by the brief ONLY if Tasks 1-2 yield no win; Task 1 yielded a store win that survives the training-budget objection. Task 1 is at its 6-run cap."
+   }
+  ]
+ },
+ "configs": [
+  {
+   "task": "T1 CMAZE-T",
+   "config": "A (pre-amendment)",
+   "selection": {
+    "K_star": 2,
+    "config": {
+     "latent": 128,
+     "K": 2,
+     "n_atoms": 6,
+     "span": 0.09375,
+     "read_floats": 4584.0
+    },
+    "eligibility": "STORE-gate eligible"
+   },
+   "val": {
+    "verdict_by_prereg_rule": "WIN: STORE row on nway",
+    "ALL_PASS": true,
+    "bars": {
+     "1_composition": true,
+     "2_store_gate": true,
+     "3_falsifier": true,
+     "4_floor": true
+    },
+    "artefact": "t1/BARS-A-val.json"
+   },
+   "verdict": "SUPERSEDED by AMENDMENT 1 (across-wells control was the identity on seeds 0,1)",
+   "scored_runs": 0
+  },
+  {
+   "task": "T1 CMAZE-T",
+   "config": "A1",
+   "selection": {
+    "K_star": 2,
+    "config": {
+     "latent": 128,
+     "K": 2,
+     "n_atoms": 6,
+     "span": 0.09375,
+     "read_floats": 4584.0
+    },
+    "eligibility": "STORE-gate eligible"
+   },
+   "val": {
+    "verdict_by_prereg_rule": "WIN: STORE row on nway",
+    "ALL_PASS": true,
+    "bars": {
+     "1_composition": true,
+     "2_store_gate": true,
+     "3_falsifier": true,
+     "4_floor": true
+    },
+    "artefact": "t1/BARS-A1-val.json"
+   },
+   "test": {
+    "verdict_by_prereg_rule": "WIN: STORE row on nway",
+    "ALL_PASS": true,
+    "bars": {
+     "1_composition": true,
+     "2_store_gate": true,
+     "3_falsifier": true,
+     "4_floor": true
+    },
+    "artefact": "t1/BARS-A1-test.json"
+   },
+   "scored_runs": 3,
+   "ledger_rows": [
+    "1/18",
+    "2/18",
+    "3/18"
+   ],
+   "prereg": "PREREG-w16-maze-wm-T1.md (+AM1)"
+  },
+  {
+   "task": "T1 CMAZE-T",
+   "config": "B (match-bit interface)",
+   "selection": {
+    "K_star": 2,
+    "config": {
+     "latent": 64,
+     "K": 2,
+     "n_atoms": 6,
+     "span": 0.1875,
+     "read_floats": 5592.0
+    },
+    "eligibility": "STORE-gate eligible"
+   },
+   "val": {
+    "verdict_by_prereg_rule": "FAIL",
+    "ALL_PASS": false,
+    "bars": {
+     "1_composition": true,
+     "2_store_gate": true,
+     "3_falsifier": false,
+     "4_floor": true
+    },
+    "artefact": "t1/BARS-B-val.json"
+   },
+   "verdict": "FAILS VAL (VB3)",
+   "scored_runs": 0
+  },
+  {
+   "task": "T1 CMAZE-T",
+   "config": "C (C-code item store + latent-512 re-sweep)",
+   "selection": {
+    "K_star": 2,
+    "config": {
+     "latent": 512,
+     "K": 2,
+     "n_atoms": 8,
+     "span": 0.03125,
+     "read_floats": 9184.0
+    },
+    "eligibility": "STORE-gate eligible"
+   },
+   "scored_runs": 0
+  },
+  {
+   "task": "T2 CMAZE-O",
+   "config": "A",
+   "selection": {
+    "K_star": 2,
+    "config": {
+     "K": 2,
+     "n_atoms": 16,
+     "span": 0.25,
+     "read_floats": 69152
+    },
+    "eligibility": "STORE-gate eligible"
+   },
+   "verdict": "FAILS VAL (VB0 viability)",
+   "scored_runs": 0
+  },
+  {
+   "task": "T2 CMAZE-O",
+   "config": "C (C-field)",
+   "selection": {
+    "K_star": 8,
+    "config": {
+     "K": 8,
+     "n_atoms": 64,
+     "span": 0.20711974110032363,
+     "read_floats": 1232064
+    },
+    "eligibility": "STORE-gate eligible"
+   },
+   "val": {
+    "verdict_by_prereg_rule": "WIN: STORE row on unseen_nway",
+    "ALL_PASS": true,
+    "bars": {
+     "0_viability": true,
+     "1_composition": true,
+     "2_store_gate": true,
+     "3_blind": true,
+     "4_floor": true
+    },
+    "artefact": "t2/BARS-C-val.json"
+   },
+   "test": {
+    "verdict_by_prereg_rule": "WIN: STORE row on unseen_nway",
+    "ALL_PASS": true,
+    "bars": {
+     "0_viability": true,
+     "1_composition": true,
+     "2_store_gate": true,
+     "3_blind": true,
+     "4_floor": true
+    },
+    "artefact": "t2/BARS-C-test.json"
+   },
+   "scored_runs": 3,
+   "ledger_rows": [
+    "4/18",
+    "5/18",
+    "6/18"
+   ],
+   "prereg": "PREREG-w16-maze-wm-T2.md (+AM1, AM2)"
+  },
+  {
+   "task": "T2 CMAZE-O",
+   "config": "C2 (latent above 0.30), recipe rivals",
+   "selection": {
+    "K_star": 2,
+    "config": {
+     "K": 2,
+     "n_atoms": 32,
+     "span": 0.5,
+     "read_floats": 138304
+    },
+    "eligibility": "STORE-gate eligible"
+   },
+   "val": {
+    "verdict_by_prereg_rule": "WIN: STORE row on unseen_nway",
+    "ALL_PASS": true,
+    "bars": {
+     "0_viability": true,
+     "1_composition": true,
+     "2_store_gate": true,
+     "3_blind": true,
+     "4_floor": true
+    },
+    "artefact": "t2/BARS-C2-val.json"
+   },
+   "verdict": "not accepted (AMENDMENT 4: rivals under-trained)",
+   "scored_runs": 0
+  },
+  {
+   "task": "T2 CMAZE-O",
+   "config": "C2r (C2 vs 30k-step rivals)",
+   "val": {
+    "verdict_by_prereg_rule": "FAIL",
+    "ALL_PASS": false,
+    "bars": {
+     "0_viability": true,
+     "1_composition": false,
+     "2_store_gate": true,
+     "3_blind": true,
+     "4_floor": true
+    },
+    "artefact": "t2/BARS-C2r-val.json"
+   },
+   "scored_runs": 0
+  }
+ ],
+ "training_budget_diagnostics_VAL": {
+  "CMAZE-T A1": {
+   "diagnostic: mlp at matched, 10x steps": {
+    "nway_per_seed": {
+     "0": 0.39228723404255317,
+     "1": 0.0,
+     "2": 0.36916548797736914
+    },
+    "nway_mean_over_available_seeds": 0.2538175740066408,
+    "n_seeds": 3
+   },
+   "diagnostic: lstm at matched, 10x steps": {
+    "nway_per_seed": {
+     "0": 0.0013297872340425532,
+     "1": 0.01037037037037037,
+     "2": 0.3521923620933522
+    },
+    "nway_mean_over_available_seeds": 0.1212975065659217,
+    "n_seeds": 3
+   },
+   "diagnostic: transformer at matched, 10x steps": {
+    "nway_per_seed": {
+     "0": 0.4175531914893617,
+     "1": 0.38814814814814813,
+     "2": 0.38896746817538896
+    },
+    "nway_mean_over_available_seeds": 0.39822293593763297,
+    "n_seeds": 3
+   },
+   "diagnostic: mlp at 10x read floats, 10x steps": {
+    "nway_per_seed": {
+     "0": 0.4321808510638298,
+     "1": 0.3762962962962963,
+     "2": 0.4512022630834512
+    },
+    "nway_mean_over_available_seeds": 0.4198931368145258,
+    "n_seeds": 3
+   },
+   "diagnostic: lstm at 10x read floats, 10x steps": {
+    "nway_per_seed": {
+     "0": 0.4148936170212766,
+     "1": 0.43703703703703706,
+     "2": 0.4596888260254597
+    },
+    "nway_mean_over_available_seeds": 0.4372064933612578,
+    "n_seeds": 3
+   },
+   "diagnostic: transformer at 10x read floats, 10x steps": {
+    "nway_per_seed": {
+     "0": 0.45478723404255317,
+     "1": 0.41185185185185186,
+     "2": 0.45403111739745405
+    },
+    "nway_mean_over_available_seeds": 0.44022340109728636,
+    "n_seeds": 3
+   }
+  },
+  "CMAZE-O C-field": {
+   "mlp": {
+    "nway_per_seed": {
+     "0": 0.9875,
+     "1": 0.99,
+     "2": 0.99
+    },
+    "nway_mean_over_available_seeds": 0.9891666666666667,
+    "n_seeds": 3
+   },
+   "cont_mlp": {
+    "nway_per_seed": {
+     "0": 0.215,
+     "1": 0.22,
+     "2": 0.255
+    },
+    "nway_mean_over_available_seeds": 0.22999999999999998,
+    "n_seeds": 3
+   },
+   "lstm": {
+    "nway_per_seed": {
+     "0": 0.47,
+     "1": 0.4825,
+     "2": 0.4175
+    },
+    "nway_mean_over_available_seeds": 0.4566666666666666,
+    "n_seeds": 3
+   },
+   "transformer": {
+    "nway_per_seed": {
+     "0": 0.7475,
+     "1": 0.6425,
+     "2": 0.6275
+    },
+    "nway_mean_over_available_seeds": 0.6725,
+    "n_seeds": 3
+   }
+  }
+ },
+ "control_gate_per_claimed_row": {
+  "T1 A1 TEST nway": "PASS on means and on every seed (worst per seed 0.415/0.209/0.319 vs CLU 0.800/0.566/0.808); across-wells deranged (AMENDMENT 1)",
+  "T1 C-512 TEST nway": "PASS on means (max 0.448 vs bar 0.575); per seed: seed 1 random_atoms 0.464 vs CLU 0.567 (margin 0.103)",
+  "T2 C-field TEST unseen_nway": "PASS: all four controls 0.000 on every seed; the STORE is load-bearing, but the composition-over-rivals claim is withdrawn",
+  "T1 pair / value rows": "NOTHING claimed: learned BLIND-SEQUENTIAL >= CLU (pair 0.557 vs 0.410 for A1)"
+ },
+ "failing_links": {
+  "T1 pair": "interface",
+  "T1 value": "content",
+  "T1 rollout": "read",
+  "T1 Config B": "interface",
+  "T2 Config A": "content/read",
+  "T2 C-field vs converged rivals": "interface",
+  "T2 C2": "read"
+ }
+}

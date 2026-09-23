@@ -1,0 +1,97 @@
+{
+ "seed": 1,
+ "steps": 30000,
+ "recipe_steps": 3000,
+ "target_floats": 1232064,
+ "WHAT_THIS_IS": "CMAZE-O C-field TRAINING-BUDGET DIAGNOSTIC (VAL only, never a matched rival row).\n\n    python scripts/w16_cmaze_o_rivaldiag.py <seed> <cache_dir> <out_dir> [steps]\n\nThe matched rivals under C-field are trained with the w15 recipe (3,000 steps).  The\nsequence rivals then read ~0.003 on unseen_nway, which invites the objection that they\nwere under-trained rather than out-composed.  This re-trains the SAME four rivals, at the\nSAME matched parameter count and the SAME field output, for 10x the gradient steps, and\nprints their VAL rows.  \u26d4 NOT a rival row, NOT part of any bar: a diagnostic.\n",
+ "rivals": {
+  "mlp": {
+   "params": 1231290,
+   "fit_seconds": 328.54358434677124,
+   "heldin_val_mse": 0.00017237759311683476,
+   "rows": {
+    "seen": {
+     "n": 600,
+     "valid": 0.9966666666666667,
+     "legal": 1.0
+    },
+    "unseen_2way": {
+     "n": 396,
+     "valid": 0.6742424242424242,
+     "legal": 0.9797979797979798
+    },
+    "unseen_nway": {
+     "n": 400,
+     "valid": 0.99,
+     "legal": 1.0
+    }
+   }
+  },
+  "cont_mlp": {
+   "params": 1233449,
+   "fit_seconds": 356.21965527534485,
+   "heldin_val_mse": 0.0018622423522174358,
+   "rows": {
+    "seen": {
+     "n": 600,
+     "valid": 0.395,
+     "legal": 0.8133333333333334
+    },
+    "unseen_2way": {
+     "n": 396,
+     "valid": 0.05303030303030303,
+     "legal": 0.7777777777777778
+    },
+    "unseen_nway": {
+     "n": 400,
+     "valid": 0.22,
+     "legal": 0.7225
+    }
+   }
+  },
+  "lstm": {
+   "params": 1231661,
+   "fit_seconds": 1201.113540649414,
+   "heldin_val_mse": 0.00045905524166300893,
+   "rows": {
+    "seen": {
+     "n": 600,
+     "valid": 0.7116666666666667,
+     "legal": 0.9416666666666667
+    },
+    "unseen_2way": {
+     "n": 396,
+     "valid": 0.2474747474747475,
+     "legal": 0.7954545454545454
+    },
+    "unseen_nway": {
+     "n": 400,
+     "valid": 0.4825,
+     "legal": 0.8925
+    }
+   }
+  },
+  "transformer": {
+   "params": 1217195,
+   "fit_seconds": 1320.192054271698,
+   "heldin_val_mse": 0.0004475246532820165,
+   "rows": {
+    "seen": {
+     "n": 600,
+     "valid": 0.76,
+     "legal": 0.945
+    },
+    "unseen_2way": {
+     "n": 396,
+     "valid": 0.35858585858585856,
+     "legal": 0.7323232323232324
+    },
+    "unseen_nway": {
+     "n": 400,
+     "valid": 0.6425,
+     "legal": 0.9375
+    }
+   }
+  }
+ }
+}
