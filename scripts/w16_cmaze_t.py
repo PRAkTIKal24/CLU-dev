@@ -174,7 +174,7 @@ def sc(insts, rows, em):
 
 
 # ================================================================== SWEEP
-def sweep(seed_index, out_dir, iface="none", codec_steps=2500):
+def sweep(seed_index, out_dir, iface="none", codec_steps=2500, configC=False):
     t0 = time.time()
     IF = Iface(iface)
     base, ev_base, (tr_insts, tr_rows, tr_nat, tr_meta), \
@@ -195,21 +195,35 @@ def sweep(seed_index, out_dir, iface="none", codec_steps=2500):
            "n_train_rows": len(train_rows), "grid": []}
     log("[sweep seed %d iface %s] train %d rows, val %s"
         % (seed_index, iface, len(train_rows), res["n_val_rows"]))
-    for lat in SWEEP_LATENT:
-        codec, crep = A.train_codec(Ccodec, K_COLOURS, latent=lat, steps=codec_steps,
-                                    seed=seed_index)
-        Ztr = A.codec_encode(codec, Ctr)
+    #: Config C: "code" = the ITEM store -- fitted directly in the 21-dim next-state CODE
+    #: space and decoded by the parameterless per-block argmax (no codec in the read
+    #: path); plus a latent-512 re-sweep.  (PREREG-T1 AMENDMENT 3.)
+    spaces = ([("code", None), (512, None)] if configC else [(L, None) for L in SWEEP_LATENT])
+    for lat, _ in spaces:
+        if lat == "code":
+            dim = int(Ctr.shape[1])
+            Ztr = Ctr.astype(np.float32)
+            dec = lambda Zr: T.decode_codes(K_COLOURS, np.asarray(Zr))
+            Ks, ATs = (2, 3, 4, 7), (1, 2, 3)
+        else:
+            dim = lat
+            codec, crep = A.train_codec(Ccodec, K_COLOURS, latent=lat, steps=codec_steps,
+                                        seed=seed_index)
+            Ztr = A.codec_encode(codec, Ctr)
+            dec = (lambda c: (lambda Zr: T.decode_codes(K_COLOURS, A.codec_decode(c, Zr))))(codec)
+            Ks, ATs = SWEEP_K, SWEEP_ATOMS + ((12, 16) if configC else ())
 
         def ev(obj, wf):
-            return {n: sc(va_insts, va_split[n],
-                          T.decode_codes(K_COLOURS, A.codec_decode(codec, obj.read(wf(W)))))
+            return {n: sc(va_insts, va_split[n], dec(obj.read(wf(W))))
                     for n, W in Wva.items()}
-        for K in SWEEP_K:
-            for na in SWEEP_ATOMS:
-                span = na / (lat / K)
+        for K in Ks:
+            for na in ATs:
+                span = na / (dim / K)
                 if span > SPAN_CAP + 1e-9:
                     continue
                 cfg = dict(latent=lat, K=K, n_atoms=na, ridge=1.0)
+                if lat == "code":
+                    cfg["latent"] = "code"
                 try:
                     clu = A.TransitionClu(Ztr, Wtr, grids, K=K, n_atoms=na, ridge=1.0,
                                           seed=seed_index)
@@ -233,13 +247,14 @@ def sweep(seed_index, out_dir, iface="none", codec_steps=2500):
                 res["grid"].append(row)
                 log("  lat %3d K %2d at %d span %.3f rf %6d | CLU seen %.3f pair %.3f "
                     "nway %.3f value %.3f | worst ctl nway %.3f | bseq nway %.3f"
-                    % (lat, K, na, span, row["read_floats"], row["CLU"].get("seen", -1),
+                    % (dim, K, na, span, row["read_floats"], row["CLU"].get("seen", -1),
                        row["CLU"].get("pair", -1), row["CLU"].get("nway", -1),
                        row["CLU"].get("value", -1),
                        max(v.get("nway", -1) for v in row["controls"].values()),
                        row["blind_seq"].get("nway", -1)))
     res["seconds"] = time.time() - t0
-    p = os.path.join(out_dir, "sweep_%s_am1_seed%d.json" % (iface, seed_index))
+    p = os.path.join(out_dir, "sweep_%s_am1%s_seed%d.json"
+                     % (iface, "_C" if configC else "", seed_index))
     with open(p, "w") as fh:
         json.dump(res, fh, indent=1, default=R._json_default)
     log("wrote %s [%.1fs]" % (p, res["seconds"]))
@@ -492,6 +507,8 @@ if __name__ == "__main__":
     os.makedirs(od, exist_ok=True)
     if mode == "sweep":
         sweep(si, od, iface=kw.get("iface", "none"))
+    elif mode == "sweepC":
+        sweep(si, od, configC=True)
     else:
         full(si, od, kw["leg"], int(kw["latent"]), int(kw["K"]), int(kw["atoms"]),
              float(kw.get("ridge", 1.0)), kw.get("iface", "none"), kw.get("tag", "A"))
