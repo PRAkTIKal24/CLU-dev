@@ -1,5 +1,14 @@
 # CLU Negative-Results Registry
 
+> ◈◈◈ **WAVE-18 THIRD PASS — `N358`–`N365` (2026-09-23, `w18 spoke/registry-fold`, `doc-curator`, fold symbol **◈**, pass 3).**
+> ⭐ **Read `◈.8` first.** Wave 15 is complete (9 of 9): `bar-d-score` (`N358`: BAR D-GPU **MIXED** on rows 3 and 4 ⇒ **no claim either way**; `N359`:
+> the w8 scorer never loaded the refit baseline), `lace-poe-rows` (`N360`: LACE / PoE do not beat the CLU, ⛔ **scoped to this feature space at their own
+> budgets, not a refutation of LACE**; `N361`: gen-table run 3/3, **the store claim stands, "beats the shipped read" does not**), and `coverage-control`
+> (`N362`: for n ≥ 3 the rise is coverage **by construction**; the test cell is DERIVED; val **NO RISE**). Wave 19: `N363` ⭐⭐ **the CMAZE-T per-arm panels
+> are not buildable: a pipeline that cannot re-render its own figures did not persist enough**; `N364` rival-succeeds / CLU-fails requests exist at every
+> seed; `N365` ⚠⚠ **the "bibtex never succeeded / 226 undefined" claim is DISPUTED on the primary record**. The process rule is kept. ⛔ **FOURTH PASS
+> REQUIRED** for w19 `maze-t-symmetric` (`◈.11`). **M1 and M3 stay OPEN.** ⛔ Nothing renumbered. ⚠ All `◈` tiers are CURATOR-PROPOSED.
+
 > ◈◈ **WAVE-18 SECOND PASS — `N345`–`N357` (2026-09-23, `w18 spoke/registry-fold`, `doc-curator`, fold
 > symbol **◈**, pass 2; commissioned by `tasks/w18/launch-registry-fold-pass2.txt`).** ⭐ **Read `◈.4` first.**
 > Folds wave 16 from its PRIMARY record: the failed VAL configs B / A / C2 (`N345`–`N347`); C-field, where the
@@ -4774,6 +4783,10 @@ the agent that built them.** Recorded because **the pattern is the reusable part
   instrument itself zeroed is a **manufactured positive**, which charter §C forbids. ⚠ **Stronger than
   PREREG §3 anticipated**: §3 declared the absolutes incomparable; the deviation also makes the
   CLU-vs-baseline comparison incomparable.
+  ⟲ **PASS 3 (2026-09-23, ◈): the zero's ATTRIBUTION is NOT ESTABLISHED — see `N359`.** w15 `bar-d-score` found that the
+  w8 scorer never loaded the refit baseline: it loaded spoke A's **frozen-feature** rival from the default root. The CPU leg's
+  `rival_mlp_180k` = 0.000 rows are that rival, so *"the 400-step decoder pins the baseline to 0.000"* is not shown. **CPU BAR D is
+  UNMEASURED**, not VOID-by-decoder (`w15-bar-d-score/FINDINGS.md` §4). ⛔ The bullet above is kept verbatim.
 - ⛔ **BAR E is a NULL.** An **UNTRAINED** encoder scores **0.962–0.972** aggregate linear-probe accuracy on
   Shapes3D and **no store arm beats it** (`loop_nosw` is below on all three seeds). The floor leaves only
   **0.033** of headroom ⇒ ⭐ **the honest reading is "the probe cannot separate these arms", not "the store
@@ -5109,6 +5122,10 @@ BAR D = `pca_tensor@X − rival_mlp_180k@X` computed **within** each arm X, and 
 from `alone` to `loop_swap`. ⭐ If it does not grow, the features are better **for everyone** — a finding
 about the encoder, ⛔ **not about the store** (`outputs/w8-BAR-D-fold.md` §2).
 
+⟲ **PASS 3 (2026-09-23, ◈): SCORED ON GPU — see `N358`.** w15 `bar-d-score` scored the GPU leg (TEST, 3 seeds, pins 4000 / 32768 /
+dec 1800). The swap-loss half **survives, and gets stronger**: A″ > 0 in **6/6** cells. The "unfreezing hurts" half is **NOT REPRODUCED**:
+A′ < 0 in **2/6** (rule: ≥ 4/6). BAR D-GPU is **MIXED** on rows 3 and 4, so no claim either way. ⛔ The GPU and CPU blocks are never merged.
+
 ### N322 — ⛔⛔ **BAR C.2 FAILS ON ALL THREE GPU SEEDS: the equal-SECONDS control received 6–12 % LESS compute than the treatment, so it is biased IN THE TREATMENT'S FAVOUR** · tier A (CURATOR-PROPOSED ⌖) · all (control design; ⭐ cause and one-line fix both recorded)
 
 The PREREG requires `alone_wc.train_seconds ≥ loop_swap.train_seconds`. ⛔ **It is short every time**
@@ -5432,6 +5449,10 @@ in-place pointer notes were written where a wave-12 entry changes how an older o
 ⭐ **Placement is already ruled and travels with the object:** *"APPENDIX — the K-sweep's ENDPOINT at K = 5. NOT main text. The main text carries ONE K, K\*, and never both"* (Head, 2026-09-21T12:38:07Z, `outputs/w12-composition-ladder/HEAD-RULING-K.md`; `LADDER.json:placement`). ⚠ **That label's own wording is `N333`'s exhibit.**
 
 ---
+
+⟲ **PASS 3 (2026-09-23, ◈): CONFIRMED AND SHARPENED — see `N362`.** w15 `coverage-control` shows that "n = 6 at n = 3's fit pool" **is**
+rung n = 3 by construction (same pool draw, acceptance, novelty mask and corner rows; `IDENTITY-CHECK.txt`). The coverage share is **1.00 on every
+seed**. ⛔ The test cell is DERIVED, not measured, and the val bar verdict is "NO RISE TO DECOMPOSE ON VAL".
 
 ### N328 — ⭐⭐ **`single_design_K5` IS BIT-IDENTICAL TO `pca_tensor` AT EVERY RUNG AND EVERY SEED, AT ~1/18th OF THE BYTES. At K = 5 the four-part ledger buys DELETION, NOT COMPOSITION** · tier A (CURATOR-PROPOSED ⊛) · memory-architecture / unlearning (w12 `hub/composition-ladder`; ⭐ **the cleanest available statement of what the bytes are for**, and the wave's task falsifier #2 firing in its strongest form)
 
@@ -6113,6 +6134,8 @@ value deletion: **11,044** rows, fraction **0.084259**); `w12b-nr6-and-kstar/KST
   margin (data pool) has now withdrawn a scored result (training budget). Both are the rival being given less than
   the store. ⛔ The curator does not rule. The matrix carries the recurrence at `CM-W17-5`.
 
+- ⟲ **PASS 3 (2026-09-23): STILL OPEN, HELD for the Head and the Advisor.** No ruling is on batmac at this pass. ⚠ The w15 `coverage-control` inference note (*"We beat the naive fair rivals at every n"*) is carried from the published tables, is not re-verified (`N362`), and is exactly the phrase M1 puts in question. The matrix carries it at `CM-W17-6`.
+
 ### N340 — ⛔⛔ **"EXACT DELETION" IS OVER-SCOPED IN THE DRAFT: the address book is fitted WITH the deleted rows and only rotated at delete time, so the post-deletion object is NOT the object fitted without them** · tier A (CURATOR-PROPOSED ◈) · unlearning / claims hygiene (w17 `referee-3` M3; ⭐ **the registry already held the evidence — `N335` — the draft dropped the qualifier**)
 
 **Source:** `~/clu/outputs/w17-paper/REFEREE-v2.md` §2 M3; `w17-advisor-report.md` §2, §7 item 2.
@@ -6142,6 +6165,8 @@ are FITTED ON THE POOL"*).
     book (`N356`).
 
   The matrix carries this at `CM-W15-1` and `CM-W17-5`.
+
+- ⟲ **PASS 3 (2026-09-23): STILL OPEN, HELD for the Head and the Advisor.** No ruling is on batmac at this pass. w15 adds nothing to M3 at this pass. `N359` and `N363` are instrument and persistence entries, not deletion scope. The matrix carries it at `CM-W17-6`.
 
 ### N341 — ⛔ **THE POSITIONING SENTENCE "THE INTERSECTION WITH EXACT DELETION IS EMPTY" IS CONTRADICTED BY UNCITED WORK — SISA (exact unlearning by shard retrain) and Compartmentalized Diffusion Models (arXiv:2308.01937)** · tier A (CURATOR-PROPOSED ◈) · positioning (w17 `referee-3` M4)
 
@@ -6794,6 +6819,9 @@ and l.1925 (`DECLARED_NOT_RUN`).
 
 ## ◈.7 ⛔ STILL AWAITING — THIRD PASS REQUIRED (exactly what is missing)
 
+> ⟲ **PASS 3 (2026-09-23): SUPERSEDED as the awaiting list by `◈.11`.** All three rows below are now folded: `bar-d-score` →
+> `N358` / `N359`; `lace-poe-rows` → `N360` / `N361`; `coverage-control` → `N362` (ledger `◈.10`). ⛔ **Still awaiting: w19 `maze-t-symmetric`** (fourth pass).
+
 These are still running on the other box. ⛔ Nothing below was guessed, and ⛔ no number from them appears anywhere in this file.
 
 | w15 spoke | what the third pass must fold | table / placeholder it feeds (per `~/clu/outputs/w18-seeds-and-tables/TABLES.md` §6.1) |
@@ -6816,4 +6844,324 @@ Head and the Advisor.
 | ⛔ editing `w16-advisor-report.md` (the l.72 residual, `N351`), `w14-read-verb/FINAL-REPORT.md` (`N343`), `w9-maze/LOG.md` (`N356`) or `w15-maze-deletion-2b/TABLE.md` (`N356`) | read-only evidence |
 | ⛔ editing any draft (23.5117, +0.012731, MF14(i)) | AMENDMENT-1 plus ownership. The grep results are recorded only |
 | ⛔ adjudicating w12's 0.0093 against 0.0127 (`N354`) | both are superseded at n = 3. Which K = 5 reference each used is a re-derivation |
+| ⛔ writing `~/clu/evidence/` | read-only by standing rule |
+
+## ◈.8 WHAT CHANGED SINCE THE SECOND PASS, AND WHAT THIS PASS READ
+
+**Commissioned by** the w18 `registry-fold` third-pass launch (2026-09-23). **Base:** this file's own pass 2 (`N345`–`N357`,
+`◈.4`–`◈.7`). ⛔ Pass-1 and pass-2 entries are **not edited**. The only change to them is **inserted** `⟲ PASS 3` lines at
+`N-I8-21`, `N321`, `N327`, `N339`, `N340` and `◈.7`. Nothing was replaced or renumbered. This block adds **`N358`–`N365`**.
+
+**Wave 15 is complete (9 of 9).** The three spokes pass 2 declared awaiting are now staged, and each was read from its own artefact
+(unprefixed paths are relative to `~/clu/evidence/outputs/`):
+- **`w15-bar-d-score/`** (END `2026-09-23T16:59:44Z`): `FINDINGS.md` in full; `BAR-D.json` → `BAR_D_GPU.{r4_comp_nway,r3_comp_2way}`
+  (`VERDICT`, `n_seeds_void`, `growths`, `growth_ci95_lows`, `charter_C_collapse_all_seeds`), `DESCRIPTIVE_not_a_bar` and `ORDERING`;
+  `PREREG-w15-bar-d.md` l.60–70 (the MIXED / VOID rule).
+- **`w15-lace-poe-rows/`** (END `2026-09-23T17:03:00Z`): `FINDINGS.md` in full; `GENTABLE-KSTAR.md` PART A and the bars block.
+- **`w15-coverage-control/`** (END `2026-09-23T12:13:32Z`): `FINDINGS.md` in full; `COVERAGE-CONTROL.json` → `bars`, `summary_val`,
+  `test_context`; `IDENTITY-CHECK.txt`; `LOG.md` l.8 (the exhaustion decision).
+
+**Wave 19, the three visual spokes, landed.** ⚠ **They are NOT under `evidence/outputs/`.** They were read at `~/clu/outputs/`:
+- **`w19-success-failure-panels/`** (END `2026-09-23T16:50:04Z`): `REPORT.md`, `NEEDS-ARTEFACTS.json`; and the rendered
+  `~/clu/outputs/w17-paper/figures/rendered/README-w19.md` l.14–47.
+- **`w19-draft-figure-slots/`** (END `2026-09-23T16:58:40Z`): `FIGURE-SLOTS.md`, `LOG.md`, `compile-baseline/DRAFT-v2.log`,
+  `compile-DRAFT-v2{,-style}.{log,blg}`.
+- **`w19-task-figures/`** (END `2026-09-23T16:39:34Z`): `TASK-FIGURES.md` (declared not-done, l.96–100). It carries no result by design.
+- ⭐ **Checked against the primary record for `N365`:** `~/clu/outputs/w17-paper/compile-v2.log` and `compile-v2-style.log`
+  (the w17 compile logs), plus one curator reproduction of bibtex in the scratchpad. This is not a scored run and wrote nothing
+  under `~/clu/`.
+
+**Still NOT landed, so NOT folded:** the w19 hub **`maze-t-symmetric`**. It is still running, and batmac holds no output directory for it
+(`~/clu/tasks/w19/maze-t-symmetric.md` is the design only). ⛔ **FOURTH PASS REQUIRED for it** (`◈.11`).
+
+⛔ **Rules this pass kept:**
+- No number was rounded or re-derived. The only operations were quoting, reading JSON fields, and the `grep` / `awk` counts marked in `N365`.
+- AMENDMENT-1 (`tasks/w17/AMENDMENT-1.md`) still binds **drafts**. No entry below authorises a number in a draft.
+- ⚠ Every `◈` tier is **CURATOR-PROPOSED**.
+
+## ◈.9 ⭐ THE ENTRIES — `N358`–`N365`
+
+### N358 — ⛔⛔ **w15 `bar-d-score`: BAR D-GPU IS MIXED ON ROW 4 AND ON ROW 3 BY THE PRE-DECLARED RULE ⇒ NO CLAIM EITHER WAY. Charter C's controls collapse on every scored leg, but the store-minus-baseline margin is ~0, so NO STORE CLAIM IS MADE IN EITHER DIRECTION. `loop_swap` saturates (descriptive, not a bar). The CPU "unfreezing hurts" ordering is NOT REPRODUCED on GPU.** · tier A (CURATOR-PROPOSED ◈) · memory-architecture / encoder-loop (w15, target `encoder-loop`, spend 2/3, TEST, 3 seeds)
+
+**Source:** `w15-bar-d-score/FINDINGS.md` §0–§6; `w15-bar-d-score/BAR-D.json` → `BAR_D_GPU.*.VERDICT`; `PREREG-w15-bar-d.md` l.68–70.
+
+- ⛔⛔ **The two legs are two separate blocks, never merged.** GPU pins are **joint_steps 4000 / n_train 32768 / dec_refit_steps 1800 /
+  warm_steps 4000**, and CPU pins are 400 / 8192 / 400 / 1500. The module's own rule (`exp_w8_encoder_loop.apply_compute_overrides`):
+  *"a run at one budget and a run at another do not share a table."* (FINDINGS header; `BAR-D.json` → `NEVER_SHARES_A_TABLE_WITH_W8_CPU`.)
+  ⛔ No GPU cell and no CPU cell may be pooled, averaged or printed in one column.
+- **The verdict.** M(X) is the mean paired Δ `pca_tensor@X − rival_mlp_180k@X` in novel tuples per corner. Growth is
+  M(loop_swap) − M(alone), with a 10,000-draw bootstrap (FINDINGS §2):
+
+  | row | growth s0 / s1 / s2 | growth CI95 lows | VERDICT | VOID seeds |
+  |---|---|---|---|---|
+  | r4 (49 corners) | **−0.918 / +0.347 / +0.918** | −3.245 / −1.163 / −2.163 | **MIXED** | **0** |
+  | r3 (60 corners) | **+0.733 / −0.883 / +3.967** | −0.950 / −2.133 / +1.983 | **MIXED** | **0** |
+
+  MIXED means growth > 0 on 2/3 seeds, which is not all 3, and ≤ 0 on 1/3, which is not ≥ 2. Per PREREG l.68: *"reported as such; ⛔ no claim
+  either way."* The margin sits **inside ±1 novel tuple/corner in all six arm-seed cells on row 4**, and every row-4 growth CI95 spans 0 (§0 item 1).
+- ⛔⛔ **Charter C, and why it licenses nothing here.** All three controls **collapse on every scored `alone` and `loop_swap` leg, on both
+  rows** (`charter_C_collapse_all_seeds: true`, both rows). `landscape_removed` is 0.000 everywhere, `landscape_shuffled` ≤ 0.020, and
+  `random_refit` ≤ **0.490** (s1 `alone`). `lookup_argmax` is a printed FLOOR, never a rival, at 0.000 everywhere. *"The store reads what is in
+  its atoms. But BAR D's margin is ~0, so this licenses **no store-over-baseline claim**"* (§2). ⇒ **A NEGATIVE in both directions:** there is
+  neither "the store shapes a representation the store itself exploits" nor "it does not".
+- **Descriptive, NOT a bar: `loop_swap` saturates.** `pca_tensor` reaches 1.000 / 0.995 / 0.998 of the row-4 ceiling (72) and the rival
+  1.000 / 0.991 / 0.997 (`BAR-D.json` → `DESCRIPTIVE_not_a_bar`). With both at the ceiling, M(loop_swap) ≈ 0 by construction. The
+  alone→loop_swap gains are near-identical for store and baseline (row 4: **+33.47 vs +34.39, +7.18 vs +6.84, +32.59 vs +31.67**).
+  *"Better features help everyone"*: per PREREG §1 that is a finding **about the ENCODER, not about the store**. ⛔ The ceiling bounds what
+  BAR D could show at all (threat (i), §6).
+- ⭐ **ORDERING NOT REPRODUCED (a negative, and it is the result).** The rule (PREREG §4.2) is REPRODUCED iff, on GPU, A′ < 0 in ≥ 4/6 cells
+  AND A″ > 0 in ≥ 4/6.
+  - **GPU block** (4000 / 32768 / dec 1800): A′ < 0 in **2/6**, A″ > 0 in **6/6** (the CI excludes 0 in 5/6).
+  - **CPU block** (400 / 8192 / dec 400): A′ < 0 in 5/6, A″ > 0 in 4/6.
+  - ⛔ **"Unfreezing hurts" must not be stated as a general finding.** At the GPU pins it is a property of one seed's well-trained `alone`
+    control. Seed 1 is the only seed where `alone`'s probe margin over random init is positive (**+0.0242**) and its row-4 score is high (**64.4**),
+    and it is exactly the seed where A′ < 0 (§3). What the evidence supports at both pins is **"the swap loss helps"**.
+- **Secondary, never the headline:** BAR A (`loop_swap − alone`) row 4 = +33.469 / +7.184 / +32.592, which PASSES. ⛔ **This is not a store
+  result:** BAR D shows the baseline gains the same, and BAR C.2 (equal seconds) fails on all three GPU seeds (`N322`). Only equal **steps** holds.
+- **DECLARED NOT-RUN** (§5): val on seeds 1 and 2 (the gate reads seed 0 only); `frozen` / `alone_wc` scoring; controls on `loop_nosw`;
+  `landscape_shuffled_across_wells` (not implemented for `pca_tensor`); rivals other than `mlp_180k`; the BAR F cross-judge; and
+  ⭐ **the CPU leg re-scored with the repaired rival** (it would be `encoder-loop`'s last run, 3/3, under its own PREREG). ⇒ **CPU BAR D is
+  UNMEASURED** (`N359`).
+- **Feeds:** `tab:bard` (⛔ never `tab:encloop`); P11, P31. The decomposition paragraph (`N321`, `N-I8-4`) must carry the ordering negative.
+  ⚠ Per `w19-draft-figure-slots/FIGURE-SLOTS.md`, `bar-d-score` owns **two** `\PLACEHOLDER{}`s in each draft. They are untouched.
+- **Matrix row:** `CM-W15-2`.
+
+### N359 — ⛔⛔ **(instrument defect, found by w15 `bar-d-score`) THE w8 SCORING PATH NEVER LOADED THE REFIT BASELINE: `exp_gen_read.py` loaded spoke A's FROZEN-feature rival from the default root. ⇒ The w8 CPU leg's `rival_mlp_180k` = 0.000 rows are NOT a measurement of the refit baseline, and w8's attribution of that zero to "the 400-step decoder" is NOT ESTABLISHED.** · tier A (CURATOR-PROPOSED ◈; curator-added beyond the launch's items, declared) · instrument integrity (w15 `bar-d-score` PREREG AMENDMENT 1; affects w8 `encoder-loop` and `N-I8-21`(b))
+
+**Source:** `w15-bar-d-score/FINDINGS.md` §4 and §0 item 4.
+- **Symptom.** On the first val pass at seed 0, `rival_mlp_180k` read **0.000** in both arms, while `pca_tensor` read 40.958 / 71.750
+  (`score/*/val_seed0/STALE_rival_mlp_180k_spokeA/READ-TABLE.pre-repair.json`).
+- **Cause, measured.** `load_rival(seed, name)` was called with no `root`, so it read `w4_api.DEFAULT_ROOT`
+  (`C:/chlu/outputs/spoke-a-rivals/rivals`). `$CHLU_RIVALS_ROOT` was honoured only for the metadata JSON. The default-root rival's
+  `features_sha256` is `ef6359a4…` (frozen features), and the arm's refit rival's is `95206c71…`. *"The scored 'baseline' was a model from
+  another feature space, rendered through this arm's decoder."*
+- **Repair** (on the w15 branch, before any test number): `load_rival(..., root=$CHLU_RIVALS_ROOT)`, plus a hard refusal when the rival's
+  `features_sha256` ≠ the scored cache's. After the repair the rival reads **40.083** / **71.875**, and the gate passes (`VAL-GATE.json`).
+- ⛔⛔ **Consequence for the registry.** `N-I8-21`(b) records *"BAR D is VOID … the 400-step `w8_v1_short` decoder pins the MSE-regression
+  baseline to exactly 0.000"*. The w8 CPU leg used the same scorer, so **its 0.000 rows are spoke A's frozen-feature rival, not the refit
+  one.** The decoder attribution is **not established**, and CPU BAR D is **UNMEASURED**, not "VOID because the baseline scores 0". A
+  `⟲ PASS 3` line is inserted at `N-I8-21`. ⛔ The entry itself is not edited. `CPU-LEG-BAR-D-under-w15-rules.json` (VOID 3/3 on row 4) records
+  what the pre-repair wiring produces, **for the record only**.
+- **Not affected:** w13 `encoder-adapt` passes `root=` explicitly (`scripts/w13_score_leg.py:309`). The w5 legs never set `CHLU_RIVALS_ROOT`,
+  so they correctly score spoke A's rivals on frozen features.
+- ⭐ **The reusable rule:** *a rival that loads from a default path when an override is set only for its metadata is a rival from another
+  feature space.* Assert the rival's feature hash against the scored cache, and refuse on mismatch.
+
+### N360 — ⛔ **w15 `lace-poe-rows`: LACE AND PoE DO NOT BEAT THE CLU ON SHAPES ROWS 3–4, NOR ON ANY LADDER RUNG. ⛔⛔ STANDING SCOPE: this is LACE / PoE AS INSTANTIATED IN THIS FEATURE SPACE AT THEIR OWN DECLARED BUDGETS, NOT A REFUTATION OF LACE IN GENERAL.** · tier B (CURATOR-PROPOSED ◈) · baselines / claims hygiene (w15, rows 3–4 and rungs k = 2–6, 3 seeds)
+
+**Source:** `w15-lace-poe-rows/FINDINGS.md` §0 item 2, §2, §3; `GENTABLE-KSTAR.json` → `PART_B_rows_3_4`, `PART_B_ladder`.
+
+- **Rows 3–4** (`distinct_valid_novel_tuples` per corner, the mean over 109 corners, 3 seeds; §2):
+
+  | arm | s0 | s1 | s2 |
+  |---|---|---|---|
+  | K\* store | **47.495** | **47.404** | **49.119** |
+  | LACE (own budget) | 0.165 | 0.073 | 0.229 |
+  | PoE (own budget) | 0.009 | 0.000 | 0.000 |
+
+  Paired Δ (rival − K\*): LACE **−47.33 / −47.33 / −48.89**, PoE **−47.49 / −47.40 / −49.12**. *"K\* wins **109/109 corners, 0 ties, on every
+  seed, against both.**"* On every rung k = 2…6 the store also wins every corner against each, on every seed (60/60 at k = 2; 120/120 at k = 3–6; §3).
+- ⛔⛔ **THE SPOKE'S OWN SCOPING, VERBATIM. It is a standing caveat and travels with every quotation of this result** (§0 item 2):
+  > *"This is not a headline negative. ⚠ It is also not flattering evidence: both rivals render **zero exact-match** requests on the shipped
+  > cell too (§1c) — they fail this metric's "all six factors valid" requirement in this feature space at their own budgets, and a reader
+  > should weigh the result as "LACE/PoE, as re-implemented at these budgets, do not produce valid full tuples here", not as "the CLU
+  > out-composes LACE in general"."*
+
+  ⛔ **FORBIDDEN:** "the CLU out-composes LACE", "the CLU beats energy-based composition", or any generalisation beyond **this feature space,
+  these budgets, this metric**.
+- **Their own budgets** (§2; per leg in `rows_*.json:summary.budget`): LACE **4,073,663** classifier parameters = **31.08×** the 524,288 B
+  reference (**63.10×** counting the whitening + mean), 32,256 fit / 512 val rows, 36-trial selection, 50 epochs. PoE has 6 experts,
+  **3,556,665** parameters = **27.13×** the reference, the same rows, 20 epochs, a 36-trial SGLD grid. ⛔ Neither is byte-matched.
+- ⛔ **LACE and PoE were ADDED; nothing was replaced** (§0 item 3). MLP / LSTM / transformer / continuous MLP and the table floor stay beside them.
+- ⚠ **Instrument caveats carried from the ladder, not introduced here** (§3): rungs k = 3–6 probe the identical 120 corners (`N327`, `N362`),
+  and the `@ ref` learned columns are rung-independent.
+- `REFEREE-v2.md` **S6** (the case where LACE/PoE win, `~/clu/outputs/w17-paper/REFEREE-v2.md` l.203) **does not fire**.
+- **DECLARED NOT-RUN** (§4): LACE's `ld_published` / `ld_corrected` samplers on rows 3–4 and the rungs (primary `ode` only); PoE once per
+  (rung, seed); the 1×-matched learned rival on rows 3–4; `landscape_shuffled_across_wells` on the rungs.
+- **Feeds:** `tab:t7`, `tab:ladder`; P3, P7. ⚠ `lace-poe-rows` owns **two** `\PLACEHOLDER{}`s in each draft (`FIGURE-SLOTS.md`), which are untouched.
+- **Matrix row:** `CM-W15-3`.
+
+### N361 — ⛔⛔ **w15 `lace-poe-rows`, `generation-table` RUN 3/3 (the last): THE K\* SINGLE DESIGN SCORED, THE STORE CLAIM STANDS (S1 PASS), BUT "BEATS THE SHIPPED READ" DOES NOT: S2 FAILS on seed 0 (−0.0185) and the PREREG's own falsification clause fires. It also LOSES to `knn_proto` (S3).** · tier A (CURATOR-PROPOSED ◈) · claims hygiene / generation table (w15, scored run 3/3, TEST, 3 seeds)
+
+**Source:** `w15-lace-poe-rows/FINDINGS.md` §0 item 1, §1c, §1d; `GENTABLE-KSTAR.md` PART A and bars; ledger row `2026-09-23T09:14:17Z`.
+
+| bar (PREREG §1b) | per-seed Δ (K\* − other) | verdict |
+|---|---|---|
+| **S1**: all four controls collapse (Δ ≥ 0.10 every seed) | min over controls +0.4236 / +0.7454 / +0.4028 | **PASS**: the store is load-bearing on this table |
+| **S2**: vs `clu` (shipped read), ≥ +0.020 on EVERY seed | **−0.0185** / +0.3912 / +0.0926 (mean +0.1551) | ⛔ **FAIL** (seed 0). The falsification clause fires |
+| **S3**: vs `knn_proto`, mean, margin 0.020 | −0.2870 / +0.1435 / −0.2014 (mean −0.1150) | ⛔ **LOSE** |
+| S4: vs `lace` / `ebm_compose` (PoE), mean | mean +0.4468 / +0.5532 | WIN (scoped by `N360`) |
+
+- ⭐ **Two statements, never one.** *"All four charter-C controls collapse on every seed (S1 PASS): **the store claim stands, the 'beats the
+  shipped read' claim does not.**"* (§0 item 1).
+- ⛔ **FORBIDDEN:** "the K\* design beats the shipped CLU read" (on the table or in prose), and the seed mean **0.7500 vs 0.5949** quoted without
+  S2's per-seed failure. K\*'s seed sd is **0.1807**, against `clu`'s 0.0082.
+- ⚠ K\* costs **2,145,738 / 2,153,018 / 2,155,618 B**, four-part and never netted, which is **4.09–4.11×** the 524,288 B reference. ⛔ **No K\* row is matched-bytes.**
+- ⚠ **Observation, not a bar, not claimed** (§1d): on exact match K\* beats `knn_proto` on every seed (0.50 / 0.99 / 0.50 against 0.17 / 0.14 / 0.29).
+- ⚠ A label disagreement, not of substance: `GENTABLE-KSTAR.md` prints S2's verdict as `"LOSES / MIXED"`, and FINDINGS prints **FAIL**. Both
+  record the same per-seed Δ and the same failing seed (`§I8.15` flag).
+- **DECLARED NOT-RUN** (§4): `dynread` / `x0` not re-run in run 3/3 (their Mac rows stand); generation-1 cell seeds 1–2 STOPPED by the no-extension
+  launcher (shortfall 32,395 rows). The scored run used generation 2 (AMENDMENT 1).
+- ⛔ **`generation-table` is now EXHAUSTED (3/3).**
+- **Matrix row:** `CM-W15-3`.
+
+### N362 — ⭐⭐ **w15 `coverage-control`: FOR n ≥ 3 THE LADDER'S RISE IS COVERAGE, AND CAN ONLY BE COVERAGE. "n = 6 at n = 3's fit pool" IS rung n = 3 BY CONSTRUCTION (coverage share 1.00 on every seed). ⛔ Its test cell is DERIVED, NOT MEASURED, and the val verdict is "NO RISE TO DECOMPOSE ON VAL". `composition` was already EXHAUSTED: 0 runs spent, a NOTE row written.** · tier A (CURATOR-PROPOSED ◈) · benchmark design / claims hygiene (w15, VAL only, 0 scored runs)
+
+**Source:** `w15-coverage-control/FINDINGS.md` §0–§8; `COVERAGE-CONTROL.json` → `bars`, `summary_val`, `test_context`; `IDENTITY-CHECK.txt`.
+
+- **The identity** (§3; `IDENTITY-CHECK.txt`). Restricting n = 6's fit pool to n = 3's train index gives the same pool draw
+  (`pool_rng_seed` 20260919, seed-independent; `pool(train_3) == w12 rung-3 pool: True`), acceptance **1.000000** under either bitmap,
+  `distinct_valid == distinct_valid_novel` in **3,600 / 3,600** test rows and **1,800 / 1,800** val rows, and the identical **8,640** corner
+  rows. ⇒ *"The only thing that separates rung 3 from rung 6 is the store's fit pool."*
+- **Test, K\* = 32, 3 seeds** (`COVERAGE-CONTROL.json` → `test_context`, from w12b):
+
+  | cell | per seed | mean | how obtained |
+  |---|---|---|---|
+  | n = 3 | 60.150 / 62.783 / 61.908 | **61.614** | published |
+  | **n = 6 at n = 3's coverage** | = n = 3 | **61.614** | ⛔ **DERIVED, not measured** |
+  | n = 6 | 65.908 / 66.250 / 67.650 | **66.603** | published |
+
+  The whole n = 3 → n = 6 rise, **+5.758 / +3.467 / +5.742 (mean +4.989)**, is fit-pool coverage. It is DERIVED.
+- **Val, measured** (`summary_val`): C = A to every printed decimal on every seed, for the store and for `learned_1x`. Coverage B − C =
+  +1.200 / +0.567 / +0.367, mask C − A = **0.000 / 0.000 / 0.000**, coverage share s = **1.00 / 1.00 / 1.00**.
+- ⛔⛔ **The val verdict is "NO RISE"** (`bars.VERDICT`: *"NO RISE TO DECOMPOSE ON VAL (B - A <= 1.0 on some seed)"*). The rise bar needs
+  B − A > 1.0 on every seed, and it is +1.200 / +0.567 / +0.367. The COVERAGE bar is therefore not met, and the DEPTH bar is not evaluated.
+  ⚠ The spoke's reading: val is near its 24-tuple ceiling (A is at 0.949 of it). *"The decisive evidence is the identity in §3, not the val
+  magnitude."* ⛔ **FORBIDDEN:** "val measured the coverage effect" as a passed bar. It measured C = A, and the bar verdict is NO RISE.
+- ⛔ **The test C cell is DERIVED.** A new configuration on test would be a scored run. The derivation assumes a refit of the same pool reproduces
+  the same store and address book. That is shown within a process on val, but **not re-verified across processes on test** (§3 ⚠).
+- **Budget** (§1). **`composition` is DECLARED EXHAUSTED**: 5 spends since 2026-09-16 against a cap of 3, where the "2/3" reading comes from a
+  count restarted at w5 that *"no written rule authorises"*. **0 runs spent.** A **NOTE row (0 runs)** was appended to the ledger at
+  `2026-09-23T07:13:25Z`, before any number. ⚠ If the Head rules the w5 restart valid, 1 run remains, and it would buy only a re-measurement of an
+  identity (`§I8.15` flag).
+- **The inference note, verbatim, for the paper** (§0): *"We beat the naive fair rivals at every n; the CLU's own 2-way → 6-way rise is not to
+  be inferred, because rungs 3–6 share corners and differ in coverage."* ⚠ Its first clause is carried from the published tables and was
+  **not re-verified** by this spoke (§7). It also sits under **M1** (`N339`): "naive fair rivals" is the phrase M1 puts in question.
+- **n = 2 vs n = 6** is the only depth contrast, and it changes the corner. Ceiling-normalised it is **0.907** against **0.925** (the spoke's
+  arithmetic, §4). ⛔ An n = 2 coverage control is not defined by this instrument.
+- **One failed launch, disclosed** (§5): the first val geometry (width-2 band) read 0.0000 everywhere because it removed the object hues from
+  train. It was an instrument fault, archived in `val_INVALID_amend0_width2/`. AMENDMENT 1 changed only the band width.
+- **DECLARED NOT-RUN** (§7): the test C cell; `pca_tensor` / the K = 5 store; the stronger `random_atoms`; the naive fair rivals on val;
+  seeds 3–4; an n = 2 coverage control.
+- **Confirms and sharpens `N327` / `CM-W12-2`**: *"for n ≥ 3, fit-pool coverage is the only thing that differs."* A `⟲ PASS 3` line is inserted at `N327`.
+- **Feeds:** one control row in `tab:ladder` (appendix). ⛔ *"The paper's ladder table is unchanged."* P4.
+- **Matrix row:** `CM-W15-4`.
+
+### N363 — ⛔⛔⭐ **REPRODUCIBILITY NEGATIVE (w19 `success-failure-panels`): THE CMAZE-T PER-ARM PANELS ARE NOT BUILDABLE FROM WAVE 16'S RECORD. `w16_cmaze_t.py::full` trains the codec, state encoder, store, controls, blind arms and rivals IN-PROCESS and never writes them to disk. Only aggregate scores survive. THE RULE: A PIPELINE THAT CANNOT RE-RENDER ITS OWN FIGURES DID NOT PERSIST ENOUGH.** · tier A (CURATOR-PROPOSED ◈) · process / reproducibility (w19 `success-failure-panels`; the defect is in w16 `hub/maze-wm`; ⭐ **an entry in its own right**)
+
+**Source:** `~/clu/outputs/w19-success-failure-panels/NEEDS-ARTEFACTS.json` (`why`, `what_would_unblock`, `paths_needed`) and `REPORT.md`
+("DECLARED NOT-DONE").
+- **What the record says** (`NEEDS-ARTEFACTS.json` → `why`, verbatim): *"w16 maze-wm (scripts/w16_cmaze_t.py::full, branch w16/maze-wm 9f80f59)
+  trains the frozen codec, frozen state encoder, CLU store, controls, blind arms and matched rivals IN-PROCESS and never writes any of them to
+  disk. The primary record w16-maze-wm/t1/A1_test_seed{0,1,2}.json holds aggregate scores only, with no per-transition prediction. So these
+  objects do NOT exist on the ThinkPad either … Re-training here would be a new TEST-leg run with a new codec, and the task forbids both."*
+- **Consequence in the paper.** The three CMAZE-T figures (`rc_w19_cmazet_{families,door_then_tint,deletion}`) are **ENGINE-ONLY**: $s_t$ +
+  action and the true $s_{t+1}$, with every arm column hatched and DECLARED. That covers the CLU, each rival, and the post-deletion arms (CLU
+  before/after the downdate, and rivals retrained without colour 1). Three `\PLACEHOLDER`-class slots in the captions of Figs. 12–14 say so
+  (`FIGURE-SLOTS.md`, placeholders 1–3). ⛔ **No CMAZE-T arm output is drawn anywhere.**
+- **What would unblock it** (`what_would_unblock`): a **persistence-only re-run** of the scored A1 config, patched to write the objects (or the
+  lighter `predictions.npz`: per-transition emitted codes for every arm). It must reproduce `A1_test_seed<N>.json` **to every digit** first, or it is
+  not the scored object. ⛔ That re-executes the TEST leg, **so it is a Hub / ledger decision**, and this curator does not make it.
+- ⭐⭐ **THE REUSABLE RULE: a pipeline that cannot re-render its own figures did not persist enough.** Every scored leg writes, beside its
+  aggregate JSON, either the fitted objects with param hashes or the per-item predictions keyed by split index. A scored result whose per-item
+  outputs are gone can be re-quoted but never re-inspected. Its failures cannot be shown, so *"one success and one failure per arm"*
+  becomes unbuildable after the fact. Companion: `N351` (a paraphrase is not a source). This one says *an aggregate is not a record*.
+- ⚠ Also recorded by the same spoke (`REPORT.md`, finding 2): the CMAZE-T family `rule_a` has **0 / 0 / 1** TEST n-way rows at seeds 0 / 1 / 2,
+  so *"the five-family n-way row is effectively four families."*
+- **Matrix row:** `CM-W19-1`.
+
+### N364 — ⭐ **REQUESTS WHERE A RIVAL SUCCEEDS AND THE CLU FAILS EXIST AT EVERY SEED: 30 / 24 / 30 of 5,688 held-out T7 requests at seeds 0 / 1 / 2. It is printed in the paper (caption of Fig. 4).** · tier B (CURATOR-PROPOSED ◈) · claims hygiene (w19 `success-failure-panels`; the data are w≤14 evidence)
+
+**Source:** `~/clu/outputs/w17-paper/figures/rendered/README-w19.md` l.17–26 (`REQUESTS-w19.json` → `t7.counts_per_seed`);
+`~/clu/outputs/w19-success-failure-panels/REPORT.md`; `~/clu/outputs/w19-draft-figure-slots/FIGURE-SLOTS.md` (the ⭐ paragraph).
+
+| seed | MLP | LSTM | Transformer | Continuous MLP | **any rival** | CLU valid (of 5,688) | (lookup floor, not a rival) |
+|---|---|---|---|---|---|---|---|
+| 0 | 26 | 13 | 2 | 0 | **30** | 5,177 | 67 |
+| 1 | 11 | 13 | 3 | 1 | **24** | 5,167 | 26 |
+| 2 | 3 | 25 | 6 | 0 | **30** | 5,354 | 46 |
+
+- **The counts** cover every held-out T7 test request, where the rival is valid and the CLU invalid. The scan covers 3 seeds × 109 corners ×
+  5,688 requests, and every per-corner per-arm n_valid reproduces `scored.json` (0 mismatches). ⚠ These are *"w≤14 evidence"*, from a re-render
+  of the w12/w12b T7 legs.
+- ⛔ **FORBIDDEN:** "the CLU is valid wherever a rival is", "no rival ever succeeds where the CLU fails", or any per-request dominance
+  wording. The corner-level 109/109 wins (e.g. `N360`) are **corner means**, not per-request dominance.
+- ⭐ **It is printed:** Fig. 4's caption (`fig:t7-rival-wins`) carries the per-seed breakdown, and Fig. 3 shows the store's own failure row
+  (`FIGURE-SLOTS.md`).
+- **Matrix row:** `CM-W19-1`.
+
+### N365 — ⚠⚠ **(process, DISPUTED ON THE PRIMARY RECORD) THE CLAIM "bibtex had NEVER succeeded; every w17 compile carried 226 undefined citations while being reported as a clean compile" IS NOT SUPPORTED BY THE w17 COMPILE LOG ON DISK. "226" is a raw `grep -c undefined` across all four passes of a multi-pass log, and 164 of those hits come BEFORE bibtex runs. What IS supported: the w19 baseline compile exited 0 with 61 undefined citations in its final log, and w19's final compiles resolve every citation. THE RULES: an exit code is not a resolved bibliography, and a grep count over a multi-pass log is not a count of unresolved citations.** · tier B (CURATOR-PROPOSED ◈) · process / provenance (w19 `draft-figure-slots`; the claim is in its `FIGURE-SLOTS.md` l.46 and the third-pass launch; ⭐ **the same family as `N351`**)
+
+**The claim, as made.** `~/clu/outputs/w19-draft-figure-slots/FIGURE-SLOTS.md` l.46: *"⚠ **Pre-existing, not introduced by me:** the w17
+`compile-v2*.log` files have 226 undefined citations. bibtex had never succeeded, because `\bibliographystyle{iclr2027/iclr2027_conference}` is
+not found without `BSTINPUTS`. With it set, every citation resolves."* The third-pass launch restates it as *"every w17 compile carried 226
+undefined citations while being reported as a clean compile. Fixed in w19 (0 undefined)."*
+
+**What the primary record says** (all curator-checked at this pass):
+1. **`~/clu/outputs/w17-paper/compile-v2.log`** (header: `2026-09-22T23:17:51Z host=batmac cwd=/Users/batmac/clu/outputs/w17-cite-tagger/build`)
+   runs pdflatex → **bibtex** → pdflatex ×3. At l.969–974 bibtex reads `The style file: iclr2027/iclr2027_conference.bst` and ends `### EXIT: 0`.
+   The embedded `.blg` (l.2351 on) says **"You've used 62 entries"**. The log's own closing block (l.2398–2399) reads *"warnings in final DRAFT-v2.log ----
+   (no undefined citations/references, no errors)"*. ⇒ **In the build this log records, bibtex succeeded and the final pass was clean.**
+2. **Where "226" comes from.** `grep -c undefined compile-v2.log` = **226**, and for `compile-v2-style.log` it is **228**. By pass (curator `awk` over
+   the `### RUN` line numbers of `compile-v2.log`): **164** hits in pass 1 (before bibtex, where undefined citations are expected), **61** in pass 2,
+   **0** in passes 3 and 4, and **1** that is the summary line *"(no undefined citations/references …)"* itself. Distinct cited keys in
+   `Citation … undefined` warnings: **62**, equal to the .blg's 62 entries.
+3. **The w19 baseline.** `~/clu/outputs/w19-draft-figure-slots/compile-baseline/DRAFT-v2.log` (the pre-edit compile; `FIGURE-SLOTS.md`: *"both
+   compiled, exit 0"*) has **61** lines matching `Citation.*undefined`, and no `.blg` was saved beside it. ⇒ **This compile exited 0 with
+   unresolved citations.** The rule holds on it.
+4. **The w19 final compiles** (`compile-DRAFT-v2{,-style}.log`) have **0** `undefined`, and their `.blg` reads "You've used 63 entries". ✔ Fixed as claimed.
+5. **Curator reproduction** (scratchpad only). In a directory holding `iclr2027/`, `references.bib` and the baseline `.aux`, bibtex with **no**
+   `BSTINPUTS` found `iclr2027/iclr2027_conference.bst`, exited 0 and used **63** entries. ⇒ *"not found without `BSTINPUTS`"* is **not
+   reproduced** as a general fact. It may hold for the w19 spoke's own invocation, whose command is not in its LOG.
+
+**Reading.** The in-place compile that w19 baselined did not resolve citations while exiting 0. That is a real process defect, and it is fixed.
+⛔ But *"bibtex had NEVER succeeded"* and *"every w17 compile carried 226 undefined citations while being reported as clean"* are contradicted by
+the w17 log on disk: its bibtex exited 0 with 62 entries, and its last pass was clean. The 226 is a count of **warning lines across four passes**.
+⚠ The curator cannot tell from the record which compile produced `w17-paper/DRAFT-v2.pdf`, whether that was the cite-tagger `build/` or an in-place compile.
+⛔ **Not adjudicated beyond the record.**
+
+⭐⭐ **THE RULES (reusable, and they survive the dispute):**
+1. **A compiler that exits 0 is not a compiler that resolved your citations.** Gate on the **final pass's** log having 0 `Citation … undefined`
+   and 0 `Reference … undefined`, and on a `.blg` existing with a non-zero entry count.
+2. **A grep count over a multi-pass log is not a count of unresolved citations.** Pass-1 warnings are expected. Count on the final pass only, or count distinct keys.
+3. ⭐ **And `N351`'s rule applied to this very item:** the brief's figure was a paraphrase of a spoke's paraphrase. Read against the primary, it fails.
+
+- ⛔ **FORBIDDEN:** "every w17 compile had 226 undefined citations", and "bibtex never succeeded in w17", in any report or draft.
+- **Matrix row:** `CM-W19-2`. Open flag `§I8.15` item 3.
+
+## ◈.10 ⭐ THE FOLD-IN LEDGER, PASS 3 — every item the third-pass launch named, and where it now lives
+
+| launch item | status | where |
+|---|---|---|
+| 1. **bar-d-score**: BAR D-GPU MIXED on rows 3 and 4 ⇒ no claim; charter C collapses but margin ~0 ⇒ no store claim either way; 0 VOID; `loop_swap` saturates (descriptive); GPU and CPU two blocks | ⭐ **FOLDED as a NEGATIVE** from `BAR-D.json` and FINDINGS | `N358`; matrix `CM-W15-2` |
+| *(curator-added)* the rival wiring bug and its consequence for w8's CPU BAR D | ⭐ FOLDED | `N359`; `⟲ PASS 3` at `N-I8-21` |
+| 2. **lace-poe-rows**: LACE / PoE do not beat the CLU on rows 3–4 or any rung, with the **spoke's own scoping verbatim** as a standing caveat | ⭐ **FOLDED** | `N360`; matrix `CM-W15-3` |
+| 2b. generation-table run 3/3: the store claim stands, "beats the shipped read" does NOT | ⭐ **FOLDED** | `N361`; matrix `CM-W15-3` |
+| 3. **coverage-control**: n ≥ 3 rise is coverage by construction; test cell DERIVED; val NO RISE; `composition` EXHAUSTED, 0 runs, NOTE row | ⭐ **FOLDED** | `N362`; `⟲ PASS 3` at `N327`; matrix `CM-W15-4` |
+| 4a. ⭐⭐ CMAZE-T per-arm panels NOT BUILDABLE: a reproducibility negative | ⭐ **FOLDED as an entry in its own right** | `N363`; matrix `CM-W19-1` |
+| 4b. ⭐ rival-succeeds / CLU-fails requests exist at every seed (30 / 24 / 30 of 5,688) | ⭐ **FOLDED** | `N364`; matrix `CM-W19-1` |
+| 4c. ⭐⭐ "bibtex had NEVER succeeded; 226 undefined citations in every w17 compile" | ⚠⚠ **FOLDED AS DISPUTED.** The w17 log on disk contradicts the claim as stated (bibtex exit 0, 62 entries, final pass clean). The process rule is recorded, together with the evidence that does support it (the w19 baseline: exit 0, 61 undefined) | `N365`; matrix `CM-W19-2`; flag `§I8.15` item 3 |
+| 5. **M1 and M3 carried forward OPEN** (HELD for the Head and the Advisor) | ⭐ **carried, OPEN** | `⟲ PASS 3` at `N339` and `N340`; matrix `CM-W17-6` |
+
+## ◈.11 ⛔ STILL AWAITING — FOURTH PASS REQUIRED (exactly what is missing)
+
+⛔ Nothing below was guessed, and ⛔ no number from it appears anywhere in this file.
+
+| spoke | state at this pass | what the fourth pass must fold |
+|---|---|---|
+| **w19 hub `maze-t-symmetric`** | **still running**; no output directory on batmac; design at `~/clu/tasks/w19/maze-t-symmetric.md` | Table 27 (`tab:cmaze-sym`), one row each per `FIGURE-SLOTS.md` placeholders 4–10: WORDS-MAIN, WORDS-FULL, OBS (with extractor accuracy and the extractor-appended rival row), BOTH (val; scored only if runs remain), the rival budget + 10× diagnostic, deletion on the winning condition, and rollout validity printed once. Also every declared not-run and every VAL failure, from its own artefact |
+
+**Carried open (awaiting a ruling, not an artefact):** **M1** (`N339`) and **M3** (`N340`), both HELD for the Head and the Advisor.
+**Awaiting a Hub / ledger decision, not an artefact:** the persistence-only CMAZE-T re-run (`N363`), and the w5 count-restart question (`N362`).
+
+## ⛔ DECLARED NOT-RUNs — the ◈ pass 3
+
+| not run | reason |
+|---|---|
+| ⛔ any scored run, compute or GPU | ZERO scored runs. The one bibtex invocation (`N365` item 5) ran in the scratchpad, wrote nothing under `~/clu/`, and is a check, not a result |
+| ⛔ folding w19 `maze-t-symmetric` | still running (`◈.11`); ⛔ nothing guessed |
+| ⛔ recording the bibtex item as briefed | the primary record contradicts it (`N365`). Recorded as DISPUTED, with both sides |
+| ⛔ re-deriving or rounding any statistic | numbers are quoted from JSON or FINDINGS with a path. The only curator operations are the `grep` / `awk` counts in `N365`, marked there |
+| ⛔ ruling M1 or M3, the w5 count restart, or the persistence re-run | the Head's, the Advisor's, or the ledger's |
+| ⛔ editing any draft, placeholder, figure or evidence file (including `N-I8-21`'s body and `FIGURE-SLOTS.md` l.46) | AMENDMENT-1, ownership, and the read-only evidence rule. The registry annotates with `⟲` lines only |
 | ⛔ writing `~/clu/evidence/` | read-only by standing rule |

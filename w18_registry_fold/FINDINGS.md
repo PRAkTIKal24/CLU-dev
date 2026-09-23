@@ -1,3 +1,68 @@
+# w18 spoke/registry-fold — FINDINGS (THIRD PASS; ⛔ FOURTH PASS REQUIRED for w19 `maze-t-symmetric` only)
+
+**Agent:** `doc-curator`. **Branch:** `w18/registry-fold`. **Machine:** batmac.
+**Commissioned by:** the w18 registry-fold third-pass launch (2026-09-23).
+**Scored runs: NONE. Compute: NONE. Background jobs: NONE. Sub-agents: NONE.** tmux was not touched and no process was killed.
+There was one scratchpad `bibtex` invocation, to check a claim (`N365`); it wrote nothing under `~/clu/`.
+⛔ `~/clu/evidence/` was not written. The base md5s are unchanged (registry `5568a6f2…`, matrix `6b8042dd…`).
+
+## 0. WHAT SHIPPED IN PASS 3
+
+| file | pass 2 → pass 3 | what pass 3 adds |
+|---|---|---|
+| `negative_results.md` | 6,819 → **7,167** lines | **`N358`–`N365`**, `◈.8`–`◈.11`, a header note, and inserted `⟲ PASS 3` lines at `N-I8-21`, `N321`, `N327`, `N339`, `N340` and `◈.7` |
+| `claims_matrix.md` | 1,899 → **2,019** lines, **v2.24 (PROPOSED)** | **`§I8.14`**: `CM-W15-2`, `CM-W15-3`, `CM-W15-4`, `CM-W19-1`, `CM-W19-2`, `CM-W17-6`. **`§I8.15`**: 10 open flags. Also `⟲` lines at the `§I8.12` note and at `§I8.13` flag 1 |
+
+**Additivity was checked with difflib against the pass-2 files:**
+- Registry: 348 lines inserted, **0 replaced, 0 deleted**.
+- Matrix: 120 inserted. Line 1 (the title) is the only replaced line, and the prior title is kept verbatim as its tail (`endswith` True).
+- The registry now has **357** `### N` headings with **zero duplicate numbers**, and each of N358–N365 appears exactly once. The 50 `CM-` row headings have no duplicates.
+
+**Number audit.** Every decimal and every token of four or more digits in the new text was checked mechanically against the sources read at this pass. That was 127 tokens in the registry block and 40 in the matrix block. All were found verbatim, except the log line numbers 2398/2399 (observed directly) and the section id `§I8.14`.
+
+## 1. THE LAUNCH ITEMS
+
+| # | item | entry | result (the primary record's numbers) |
+|---|---|---|---|
+| 1 | **bar-d-score** | `N358`, `CM-W15-2` | BAR D-GPU **MIXED on row 4 and on row 3** ⇒ **no claim either way** (`BAR-D.json` VERDICT). **0 VOID** seeds. Charter C collapses on every scored leg (`charter_C_collapse_all_seeds: true`), but the margin is ~0, so there is **no store claim in either direction**. `loop_swap` saturates: descriptive, not a bar. GPU and CPU are two blocks, never merged. ⭐ **Ordering NOT REPRODUCED** on GPU (A′ < 0 in 2/6) |
+| — | *(curator-added)* | `N359` | ⛔⛔ The w8 scorer **never loaded the refit baseline**; it loaded spoke A's frozen-feature rival. ⇒ w8's CPU `rival_mlp_180k` = 0.000 rows are not the refit baseline. **CPU BAR D is UNMEASURED.** `⟲` at `N-I8-21` |
+| 2 | **lace-poe-rows** | `N360`, `CM-W15-3` | Store 47.495 / 47.404 / 49.119 against LACE 0.165 / 0.073 / 0.229 and PoE 0.009 / 0.000 / 0.000. 109/109 corners against each, every seed, every rung. ⛔⛔ **The spoke's scoping is recorded verbatim as a standing caveat:** LACE/PoE *"as re-implemented at these budgets"*, *"not as 'the CLU out-composes LACE in general'"* |
+| 2b | generation-table run 3/3 | `N361`, `CM-W15-3` | **The store claim STANDS** (S1 PASS). **"Beats the shipped read" does NOT stand**: S2 FAILS on seed 0 (−0.0185), and S3 loses to `knn_proto`. `generation-table` is exhausted |
+| 3 | **coverage-control** | `N362`, `CM-W15-4` | For n ≥ 3 the rise is coverage **by construction**, with coverage share 1.00 on every seed. The test cell (61.614) is **DERIVED, not measured**. The val verdict is **"NO RISE TO DECOMPOSE ON VAL"**. `composition` is EXHAUSTED: 0 runs spent and a NOTE row written. `⟲` at `N327` |
+| 4a | ⭐⭐ CMAZE-T panels not buildable | `N363`, `CM-W19-1` | `w16_cmaze_t.py::full` trains everything in-process and writes nothing, so only aggregates survive. **A pipeline that cannot re-render its own figures did not persist enough.** Unblocking needs a TEST-leg persistence re-run, which is a Hub / ledger decision |
+| 4b | ⭐ rival succeeds / CLU fails | `N364`, `CM-W19-1` | **30 / 24 / 30 of 5,688** at seeds 0 / 1 / 2. This is printed in Fig. 4's caption |
+| 4c | ⭐⭐ bibtex | `N365`, `CM-W19-2` | ⚠⚠ **DISPUTED — see §2.** The process rule is recorded; the claim as briefed is **not** |
+| 5 | M1, M3 | `⟲` at `N339`/`N340`; `CM-W17-6` | **OPEN, HELD for the Head and the Advisor** |
+
+## 2. ⚠⚠ ONE LAUNCH ITEM DID NOT SURVIVE THE PRIMARY RECORD
+
+The launch (and `w19-draft-figure-slots/FIGURE-SLOTS.md` l.46) says *"bibtex had NEVER succeeded: every w17 compile carried 226 undefined citations while being reported as a clean compile."*
+The w17 log on disk, `~/clu/outputs/w17-paper/compile-v2.log`, says otherwise:
+- **bibtex ran and exited 0** (l.969–974), and its `.blg` reads *"You've used 62 entries"*.
+- Its final pass reports *"(no undefined citations/references, no errors)"* (l.2399).
+- The **226** is `grep -c undefined` over all four passes: **164** hits before bibtex, **61** in pass 2, **0** in passes 3–4, and **1** that is the summary line itself. The style log has **228**.
+- A scratchpad reproduction with no `BSTINPUTS` found the `.bst` and resolved **63** entries.
+
+**What is supported:** the w19 **baseline** compile exited 0 with **61** undefined citations in its log, and w19's final compiles have 0. So the rule *"an exit code is not a resolved bibliography"* stands, and it is recorded as binding (`CM-W19-2`), alongside a second rule: *a grep count over a multi-pass log is not a count of unresolved citations*.
+The specific claim is recorded as **DISPUTED** and is forbidden in reports. This is `N351`'s rule applied to the brief itself.
+Open question for the Hub (`§I8.15` item 3): which compile produced the w17 PDF that was reported as clean.
+
+## 3. ⛔ WHAT DID NOT RUN — FOURTH PASS REQUIRED
+
+- **w19 hub `maze-t-symmetric` is still running.** batmac has no output directory for it, so it is **NOT FOLDED and nothing is guessed** (registry `◈.11`). It feeds Table 27 `tab:cmaze-sym`, placeholders 4–10: WORDS-MAIN, WORDS-FULL, OBS, BOTH, the rival budget + 10× diagnostic, deletion, and rollout.
+- **Not done by design:**
+  - any draft, placeholder, figure or evidence edit (the four bar-d / lace-poe `\PLACEHOLDER`s are now fillable, and they belong to `placeholder-fill`);
+  - any ruling on M1, M3, the w5 `composition` count restart, or the CMAZE-T persistence re-run;
+  - editing `N-I8-21`'s body (it is annotated by `⟲` only);
+  - re-deriving or rounding any number.
+- **Path note:** the w19 spokes are at `~/clu/outputs/w19-*`, **not** `evidence/outputs/` (`§I8.15` item 2).
+
+## 4. OPEN FLAGS — `claims_matrix.md` §I8.15 (10 items). Tiers and v2.24 are CURATOR-PROPOSED.
+
+---
+
+# PASS 2 (kept verbatim below, for the record)
+
 # w18 spoke/registry-fold — FINDINGS (SECOND PASS; ⛔ THIRD PASS REQUIRED for three w15 spokes)
 
 **Agent:** `doc-curator`. **Branch:** `w18/registry-fold`. **Machine:** batmac.
