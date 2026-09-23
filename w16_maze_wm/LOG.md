@@ -54,3 +54,4 @@
 - 09:40Z **SCORED RUNS 7-9/18 DONE — C512 TEST (t1/BARS-C512-test.json): WIN by the rule.** nway 0.7251 [0.800/0.567/0.808] vs 80k-step matched transformer 0.4533 (every seed ahead); controls 0.014/0.200/0.380/0.448 (bar 0.575) — ⚠ seed 1 random_atoms 0.464 vs CLU 0.567; blind-seq 0.414; WORDS 0.000. Deletion exact (≤1.5e-15), rival retrain 1,002-1,646 s at 80k steps.
 - Budget closes: 9 spent; T1 at its 6-run cap; T2 3 remaining DECLARED NOT-RUN (no config passes VAL vs converged rivals); Task 3 (6) DECLARED NOT-RUN (gated: Task 1 won).
 - 09:42Z FINDINGS.md, TABLES.md, MAZE-WM.json written and verified against the JSONs. Copying artefacts (no AE cache) into the branch under w16_maze_wm/, committing, bundling.
+- 09:42Z Branch committed (f5bd15c). Bundle created and verified below. END_UTC written. No PIDs of this hub remain alive.
