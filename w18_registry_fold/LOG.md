@@ -37,3 +37,4 @@
 - 2026-09-23T20:34:23Z number audit: 123 registry / 41 matrix tokens (decimals + ≥4-digit) all found verbatim in sources read this pass, except draft line no. 1082 (grep-observed) and sha256 prefixes (e49a6910c6740207, 82538ca0…)
 - 2026-09-23T20:34:54Z FINDINGS.md rewritten for pass 4 (pass-3 text, which contains passes 1–2, kept verbatim below). PIDS: none.
 - 2026-09-23T20:35:06Z END pass 4. Fifth pass required: w20 shapes-data-matched only.
+- 2026-09-23T20:35:11Z committed fafb2d3; bundle re-created + verified (complete history, head w18/registry-fold); files synced to ~/clu/outputs/w18-registry-fold/. END.
