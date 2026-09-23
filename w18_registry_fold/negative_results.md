@@ -1,5 +1,14 @@
 # CLU Negative-Results Registry
 
+> ◈◈◈◈ **WAVE-18 FOURTH PASS — `N366`–`N371` (2026-09-23, `w18 spoke/registry-fold`, `doc-curator`, fold symbol **◈**, pass 4).**
+> ⭐ **Read `◈.12` first.** w19 `maze-t-symmetric` has CLOSED. ⛔⛔ **Its verdict CONTRADICTS a wave-16 headline.** w16's CMAZE-T Config-A1 "STORE row on
+> unseen n-way" (CLU 0.7246 against a best matched rival of 0.4035) gave the CLU the words through a 318-wide `[bias|main|pair]` design, while every rival
+> read the observation. Under symmetric inputs, **all four conditions are LOSS** (`N366`). ⭐⭐ *"the pair block, not the store, carries the w16 margin"* (`N367`).
+> OBS loses on READ (`N368`). BOTH passed VAL on a knife-edge and **lost on TEST** (`N369`): 3 of 9 runs spent, 6 DECLARED NOT-RUN. The store gate survives
+> on WORDS-FULL, OBS and BOTH; ⚠ it does **not** survive on WORDS-MAIN (`N371` item 2). ⭐ **Positive:** w19 persisted 384 objects, which closes `N363`'s defect
+> class for w19; ⚠ only the manifests are on batmac (`N370`). ⟲ `PASS 4` lines are at `N339` (**M1: the same defect a third time**), `N348`, `N349`, `N363`
+> and `◈.11`. ⛔ **FIFTH PASS REQUIRED** for w20 `shapes-data-matched` (`◈.14`). **M1 and M3 stay OPEN.** ⛔ Nothing renumbered. ⚠ All `◈` tiers are CURATOR-PROPOSED.
+
 > ◈◈◈ **WAVE-18 THIRD PASS — `N358`–`N365` (2026-09-23, `w18 spoke/registry-fold`, `doc-curator`, fold symbol **◈**, pass 3).**
 > ⭐ **Read `◈.8` first.** Wave 15 is complete (9 of 9): `bar-d-score` (`N358`: BAR D-GPU **MIXED** on rows 3 and 4 ⇒ **no claim either way**; `N359`:
 > the w8 scorer never loaded the refit baseline), `lace-poe-rows` (`N360`: LACE / PoE do not beat the CLU, ⛔ **scoped to this feature space at their own
@@ -6136,6 +6145,20 @@ value deletion: **11,044** rows, fraction **0.084259**); `w12b-nr6-and-kstar/KST
 
 - ⟲ **PASS 3 (2026-09-23): STILL OPEN, HELD for the Head and the Advisor.** No ruling is on batmac at this pass. ⚠ The w15 `coverage-control` inference note (*"We beat the naive fair rivals at every n"*) is carried from the published tables, is not re-verified (`N362`), and is exactly the phrase M1 puts in question. The matrix carries it at `CM-W17-6`.
 
+- ⟲ **PASS 4 (2026-09-23): M1's DEFECT, A THIRD TIME, AND THIS TIME IT REVERSES A SCORED HEADLINE THAT HAD PASSED THE STEP CHECK. ⛔ STILL OPEN, HELD**
+  **for the Head and the Advisor.** In every instance the rival is given less than the store:
+  1. Table 1 on Shapes: the **data pool** (16,384 against 131,072 rows). This entry.
+  2. w16 CMAZE-O: the **training steps** (C-field withdrawn; C2 WIN → FAIL). `N347`, `N348`.
+  3. ⛔⛔ **w16 CMAZE-T: the INPUT.** The CLU read the words through the 318-wide pair design, and the rivals read the observation.
+     - Under symmetric inputs, all four w19 conditions are LOSS, and a matched transformer given the CLU's own design reads 0.7419822433104506
+       against the CLU's 0.7247150720644506 (`N366`, `N367`; `w19-maze-t-symmetric/val/BARS-WORDS-FULL-val.json`).
+     - The w16 row had already survived 80,000-step rivals. **Fixing one axis of the asymmetry did not fix the others.**
+
+  ⚠ The launch calls this *"now on the maze rather than on Shapes"*. Instance 2 was already on a maze. What is new is the **axis** (input, not rows
+  or steps), and that the reversed row was w16's **headline**. ⭐⭐ This strengthens the pass-2 reading: **the ruling is load-bearing.** A
+  "matched" comparison has to be matched on **data, steps and input**; matching on read-path floats alone has now failed on all three axes.
+  ⛔ The curator does not rule. ⭐ w20 `shapes-data-matched` (still running; `◈.14`) is the data-matched Shapes test itself. The matrix carries this at `CM-W17-7`.
+
 ### N340 — ⛔⛔ **"EXACT DELETION" IS OVER-SCOPED IN THE DRAFT: the address book is fitted WITH the deleted rows and only rotated at delete time, so the post-deletion object is NOT the object fitted without them** · tier A (CURATOR-PROPOSED ◈) · unlearning / claims hygiene (w17 `referee-3` M3; ⭐ **the registry already held the evidence — `N335` — the draft dropped the qualifier**)
 
 **Source:** `~/clu/outputs/w17-paper/REFEREE-v2.md` §2 M3; `w17-advisor-report.md` §2, §7 item 2.
@@ -6472,6 +6495,12 @@ rows and `t2/BARS-C-val.json` the VAL rows. `t2/C_rivaldiag_val_seed{0,1,2}.json
   On CMAZE-T the same diagnostic (80,000 steps, **Config A1 on VAL**, `t1/A1_rivaldiag_val_seed*.json`) left the margin
   intact (FINDINGS l.116–121), and the scored leg against 80k-step rivals is C-512 (FINDINGS l.145–172). ⇒ **The
   training-budget check is what separates the w16 result that stands from the one that does not.**
+- ⟲ **PASS 4 (2026-09-23): THE LAST SENTENCE ABOVE NO LONGER HOLDS.** The CMAZE-T result it calls the one that stands does **not** stand as a margin
+  over rivals once every arm gets the same input (`N366`). Budget is one axis, and input is another. The w16 ledger now reads:
+  - **No rival margin stands on either instrument.** C-field was withdrawn on steps, and A1 fails on input. C-512 was not re-run and is **exposed**.
+  - **Both store gates hold.** C-field's controls are 0.000, and A1's gate reproduces in w19 BOTH TEST.
+
+  ⛔ Do not quote *"CMAZE-T survives 10×-trained rivals"* as a store-over-rivals result. It is true, and it is not sufficient.
 
 ### N349 — ⛔ **THE WAVE-16 FAILING-LINK LEDGER: CMAZE-O has THREE failing links, not one (Config A content/read · C-field interface · C2 read), and CMAZE-T's rollout row fails on READ (validity 0.000 for the CLU and every matched rival; per-step 0.925).** · tier B (CURATOR-PROPOSED ◈) · benchmark design (w16 `hub/maze-wm`, T1 and T2)
 
@@ -6496,6 +6525,8 @@ rows and `t2/BARS-C-val.json` the VAL rows. `t2/C_rivaldiag_val_seed{0,1,2}.json
 - ⚠ **A ceiling on CMAZE-T that is not a failing link but binds every n-way number.** VAL n-way sits at **0.7247
   with the same per-seed triple for ~15 configs** (latent 64–512, K 2–16, rank/width 0.03–0.25). Seed 1 caps at
   0.569 everywhere. *"The ceiling is the request design, not the store"* (FINDINGS l.136–141).
+  ⟲ **PASS 4 (2026-09-23):** w19 WORDS-FULL extends this from the **ceiling** to the **margin**. A matched rival given the same request design
+  reaches the CLU (0.7419822433104506 against 0.7247150720644506). *"the pair block, not the store, carries the w16 margin"* (`N367`).
 - **Other w16 not-runs, from the record** (FINDINGS l.266–273):
   - Task 3 (runs 13–18), gated on *"no win in Tasks 1–2"*;
   - T2 runs 10–12;
@@ -7069,6 +7100,13 @@ Head and the Advisor.
 - ⚠ Also recorded by the same spoke (`REPORT.md`, finding 2): the CMAZE-T family `rule_a` has **0 / 0 / 1** TEST n-way rows at seeds 0 / 1 / 2,
   so *"the five-family n-way row is effectively four families."*
 - **Matrix row:** `CM-W19-1`.
+- ⟲ **PASS 4 (2026-09-23): CLOSED FOR w19, AND PARTLY UNBLOCKED FOR A1** (`N370`).
+  - w19 persisted 384 objects with param and file hashes.
+  - Its BOTH TEST CLU reproduces `A1_test_seed<N>.json`'s CLU and controls to every digit (0.724626907621842). That is this entry's own unblock condition,
+    met for the CLU side.
+  - ⛔ **w16's rivals are not recoverable.** The w19 BOTH rivals read a different input.
+  - ⚠ Only the manifests are on batmac.
+  - Whether the persistence-only re-run is now moot is the Hub's or the ledger's call.
 
 ### N364 — ⭐ **REQUESTS WHERE A RIVAL SUCCEEDS AND THE CLU FAILS EXIST AT EVERY SEED: 30 / 24 / 30 of 5,688 held-out T7 requests at seeds 0 / 1 / 2. It is printed in the paper (caption of Fig. 4).** · tier B (CURATOR-PROPOSED ◈) · claims hygiene (w19 `success-failure-panels`; the data are w≤14 evidence)
 
@@ -7147,6 +7185,10 @@ the w17 log on disk: its bibtex exited 0 with 62 entries, and its last pass was 
 
 ⛔ Nothing below was guessed, and ⛔ no number from it appears anywhere in this file.
 
+⟲ **PASS 4 (2026-09-23): FOLDED.** w19 `maze-t-symmetric` closed (END `2026-09-23T20:21:58Z`) and is folded at `N366`–`N371` (`◈.12`–`◈.14`).
+⛔ The row below is kept as the pass-3 record. The placeholder list it names (`tab:cmaze-sym`, placeholders 4–10) is now **fillable from `N366`–`N369`**. That
+is `placeholder-fill`'s job, and every w19 row fills as a **LOSS** or as a **declared not-run**. Still awaiting: w20 `shapes-data-matched` (`◈.14`).
+
 | spoke | state at this pass | what the fourth pass must fold |
 |---|---|---|
 | **w19 hub `maze-t-symmetric`** | **still running**; no output directory on batmac; design at `~/clu/tasks/w19/maze-t-symmetric.md` | Table 27 (`tab:cmaze-sym`), one row each per `FIGURE-SLOTS.md` placeholders 4–10: WORDS-MAIN, WORDS-FULL, OBS (with extractor accuracy and the extractor-appended rival row), BOTH (val; scored only if runs remain), the rival budget + 10× diagnostic, deletion on the winning condition, and rollout validity printed once. Also every declared not-run and every VAL failure, from its own artefact |
@@ -7165,3 +7207,260 @@ the w17 log on disk: its bibtex exited 0 with 62 entries, and its last pass was 
 | ⛔ ruling M1 or M3, the w5 count restart, or the persistence re-run | the Head's, the Advisor's, or the ledger's |
 | ⛔ editing any draft, placeholder, figure or evidence file (including `N-I8-21`'s body and `FIGURE-SLOTS.md` l.46) | AMENDMENT-1, ownership, and the read-only evidence rule. The registry annotates with `⟲` lines only |
 | ⛔ writing `~/clu/evidence/` | read-only by standing rule |
+
+## ◈.12 WHAT CHANGED SINCE THE THIRD PASS, AND WHAT THIS PASS READ
+
+**Commissioned by** the w18 `registry-fold` fourth-pass launch (2026-09-23; pre-authorised by the Head). **Base:** this file's own pass 3
+(`N358`–`N365`, `◈.8`–`◈.11`). ⛔ Pass-1, pass-2 and pass-3 entries are **not edited**. The only changes to them are **inserted**
+`⟲ PASS 4` lines at `N339`, `N348`, `N349`, `N363` and `◈.11`. Nothing was replaced or renumbered. This block adds **`N366`–`N371`**.
+
+**w19 hub `maze-t-symmetric` has CLOSED** (START `2026-09-23T16:24:02Z`, END `2026-09-23T20:21:58Z`) and is staged at
+`w19-maze-t-symmetric/` (unprefixed paths are relative to `~/clu/evidence/outputs/`). What the curator read:
+- `FINDINGS.md` in full (sha256 `64ce0bc350d7054f…`, 238 lines), `LOG.md` in full, and `PREREG-w19-maze-t-symmetric.md` with AMENDMENT 1
+  in full (sha256 `a96d626c8bcea5ce…`).
+- These JSONs were read directly, field by field, as `rows.nway` plus the row labels: `val/BARS-{WORDS-MAIN,WORDS-FULL,OBS,BOTH,OBS-X10}-val.json`
+  and `test/BARS-BOTH-test.json`. **Where the prose rounds a number, the value quoted here is the JSON's.**
+- `persist/*/*/MANIFEST.json`: all 18 were read, and their object entries counted (`N370`).
+- **The w16 side, re-read for this pass:** `w16-maze-wm/FINDINGS.md` l.70–125 and l.140–176; `t1/BARS-A1-test.json` (`rows.nway`, `verdict` l.908);
+  `PREREG-w16-maze-wm-T1.md` l.50–58 and AMENDMENT 4 (l.105–115).
+- **The live draft, grep only:** `~/clu/outputs/w17-paper/DRAFT-v2.tex` (sha256 `e49a6910c6740207…`) at L119–123, L1080–1086, L1106–1110 and L2616–2619.
+  ⛔ It was **not edited**.
+
+**Still NOT landed, so NOT folded:** w20 `shapes-data-matched`. Per the launch it is still running (ledger 1/3). batmac holds only its task file
+(`~/clu/tasks/w20/shapes-data-matched.md`); there is no output directory and no scored ledger here. ⛔ **FIFTH PASS REQUIRED for it** (`◈.14`).
+
+⛔ **Rules this pass kept:**
+- No number was rounded or re-derived. The only curator operations are the manifest count and the file arithmetic in `N370`, and the
+  greps of the live draft. Each is marked where it is used.
+- AMENDMENT-1 (`tasks/w17/AMENDMENT-1.md`) still binds **drafts**. No entry below authorises a number in a draft.
+- ⚠ Every `◈` tier is **CURATOR-PROPOSED**.
+
+## ◈.13 ⭐ THE ENTRIES — `N366`–`N371`
+
+**Reading key.** The four w19 conditions change **only the input**, and within a condition every arm gets the same input (PREREG l.16–22):
+- **WORDS-MAIN**: the 27 main-effect one-hots. The CLU is `[bias|main]`, which is w16's learned BLIND-SEQUENTIAL arm.
+- **WORDS-FULL**: the CLU's own 318-wide `[bias|main|pair]` design, given to every arm.
+- **OBS**: the w9 observation. The CLU reads it through a declared word extractor.
+- **BOTH**: the observation plus the 318-wide design for the rivals; the true words for the CLU.
+
+**R\*** is the best matched rival over every kind, every input variant and **both** budgets (8,000 and 80,000 steps). All values are VAL or TEST
+**unseen n-way**, `exact`, means over seeds 0 / 1 / 2.
+
+### N366 — ⛔⛔ **THE WAVE-16 CMAZE-T "STORE ROW" DOES NOT SURVIVE SYMMETRIC INPUTS. w16's Config A1 (CLU 0.7246 against a best matched rival of 0.4035 on unseen n-way) gave the CLU an input the rivals did not get. When every arm receives the same input, ALL FOUR conditions are LOSS by the pre-registered rule. The w16 row is WITHDRAWN AS A MARGIN OVER RIVALS; its store gate is a separate statement.** · tier A (CURATOR-PROPOSED ◈) · memory-architecture / benchmark design / claims hygiene (w19 `hub/maze-t-symmetric`: 3 of 9 scored runs spent (1–3/9, BOTH, TEST) and 6 DECLARED NOT-RUN; ⭐⭐ **this contradicts a wave-16 headline**)
+
+**Source:** `w19-maze-t-symmetric/FINDINGS.md` §0 (l.14–40), §1 (l.46–60) and §2 (l.75–85); `val/BARS-<cond>-val.json` and
+`test/BARS-BOTH-test.json` → `rows.nway`; `PREREG-w19-maze-t-symmetric.md` l.16–22 and l.33–35; `LOG.md` l.8–12.
+The w16 side: `w16-maze-wm/FINDINGS.md` l.83–84, l.97 and l.116–121; `t1/BARS-A1-test.json` (`"verdict": "WIN: STORE row on nway"`, l.908).
+
+- **The asymmetry, in w19's words** (`LOG.md` l.9–10, verbatim):
+  - *"w16 CLU: request = the 5 words -> `request_design` [bias 1 | main 27 | pair 290] = 318 wide."*
+  - *"w16 rivals: w9 observation = 5x5 conv-AE patch (300) + pooled global 5x5 (300) + 29 dyn scalars + action one-hot 5 = 634 wide. NOT the words."*
+  - ⚠ w19 measured the dynamics block at 31 wide, so the observation is 636 (FINDINGS l.72–73; see `N371` item 5).
+  - ⚠ **The asymmetry was not hidden in w16; it was not tested.** w16's PREREG-T1 states the identical-input rule explicitly for Config B's two
+    match bits (l.53–56). The live draft already names the pair block and marks the symmetric test *"pending"* (`DRAFT-v2.tex` L121–123 and
+    L1106–1109, grep).
+- **Only the rivals changed** (FINDINGS l.46–51, *"Instrument-unchanged check"*). BOTH's CLU on TEST n-way is **0.724626907621842**
+  (0.8002628120893561 / 0.5660377358490566 / 0.8075801749271136). That is **the same value, to every digit, as the CLU mean in w16's
+  `t1/BARS-A1-test.json`** (0.724626907621842). The four controls reproduce too: 0.0 / 0.2248352798231689 / 0.2435173246859834 /
+  0.1655204870377335 in both files.
+
+| condition | leg | CLU mean (seed 0 / 1 / 2) | R\* (`BARS` label) | R\* mean | margin | bars failed | verdict |
+|---|---|---|---|---|---|---|---|
+| WORDS-MAIN | VAL | 0.3343737955355819 (0.24202127659574468 / 0.31555555555555553 / 0.44554455445544555) | `rival@10x-steps: transformer` | 0.7473459065764733 | −0.4129721110408914 | VB1, VB2 | **LOSS** |
+| WORDS-FULL | VAL | 0.7247150720644506 (0.8018617021276596 / 0.5688888888888889 / 0.8033946251768034) | `rival: transformer` (8,000 steps) | 0.7419822433104506 | −0.017267171245999968 | VB1 | **LOSS** |
+| OBS | VAL | 0.3513038895074918 (0.24069148936170212 / 0.37333333333333335 / 0.43988684582743987) | `rival@10x-steps: transformer` (raw obs) | 0.45663721986855893 | −0.10533333036106712 | VB1, VB4 | **LOSS** |
+| BOTH | VAL | 0.7247150720644506 (same triple as WORDS-FULL) | `rival@10x-steps: lstm` | 0.6168149530251911 | +0.10790011903925956 | none | PASS → 3 scored runs |
+| **BOTH** | **TEST** | **0.724626907621842** (0.8002628120893561 / 0.5660377358490566 / 0.8075801749271136) | `rival@10x-steps: lstm` | 0.6257902235030398 | **+0.0988366841188022** | **SB1** | **LOSS** |
+| *OBS-X10 (diagnostic, AMENDMENT 1; never a bar)* | VAL | 0.44708633392890107 | `rival@10x-steps: transformer +extractor` | 0.46080381873040394 | −0.013717484801502866 | VB1, VB4 | *would read LOSS* |
+
+- ⛔⛔ **The consequence.** w16's headline, *"STORE row on CMAZE-T unseen n-way"* (w16 FINDINGS l.97), is a margin over rivals that
+  never received the words. w16 put the training-budget objection to it (80,000-step rivals, `t1/A1_rivaldiag_val_seed*.json`), and the
+  margin survived that: *"The CMAZE-T margin is not a starvation artefact"* (w16 FINDINGS l.121). That check was sound, but it tested
+  **steps, not input**. In w19, R\* already ranges over both budgets (PREREG l.33–35), and the margin is still gone.
+  ⇒ ***"survives 10×-trained rivals"* is TRUE and NOT SUFFICIENT.**
+- ⭐ **What survives. Two statements, never one** (the `CM-W16-1` pattern):
+  1. **The store gate.** `landscape_removed` is 0.0 on every condition (`controls_mean` in every BARS JSON). VB2/SB2 **PASS** on
+     WORDS-FULL, OBS, BOTH-VAL and BOTH-TEST. ⚠ **VB2 FAILS on WORDS-MAIN**: `landscape_shuffled` 0.18744092621014888 against a bar of
+     0.1843737955355819 (`B2_store_gate: false`). So the collapse is **not** universal (`N371` item 2).
+  2. **Store-scoped deletion exactness** on BOTH TEST (FINDINGS §5, l.177–194): relative ΔS_k 7.7e-16 … 1.1e-15, and the downdated read
+     equals the fitted-without read on 100 % of surviving-colour n-way rows.
+
+  ⛔ **Neither statement is a margin over rivals.** In w19's words (l.38–40): *"the store is load-bearing for the CLU's own read, but on this
+  task it is not better than a matched network given the same input."*
+- ⛔ **Config C-512**, w16's second STORE row, was **not re-run** (`t1/BARS-C512-test.json`: CLU 0.7251 against the 10×-trained transformer's
+  0.4533, w16 FINDINGS l.145–172). w19 FINDINGS l.205–207: *"C-512 would share the WORDS-FULL verdict mechanism. It is declared not-run,
+  not a loss."* ⇒ C-512 stands **unrefuted but exposed**, because its rivals read the same asymmetric observation.
+  ⛔ It may **not** be promoted to headline in A1's place.
+- ✔ **The control-integrity fix is in force.** `across_wells_derangement_per_seed` is `[[1, 0], [1, 0], [1, 0]]` in every BARS JSON (see `N350`).
+- **Matrix row:** `CM-W19-3`. ⟲ lines: `N339` (M1), `N348`, `N349`.
+
+### N367 — ⭐⭐ **WORDS-FULL: "THE PAIR BLOCK, NOT THE STORE, CARRIES THE w16 MARGIN." A matched transformer at 8,000 steps, given the CLU's own 318-wide design, reads 0.7419822433104506 against the CLU's 0.7247150720644506 on VAL n-way. It is ahead on seeds 0 and 2 and tied on seed 1.** · tier A (CURATOR-PROPOSED ◈) · memory-architecture / claims hygiene (w19 `hub/maze-t-symmetric`, VAL, 0 scored runs; ⭐ **the mechanism behind `N366`**)
+
+**Source:** `w19-maze-t-symmetric/val/BARS-WORDS-FULL-val.json` → `rows.nway`; `FINDINGS.md` l.22, l.87–99 and l.216–218; `LOG.md` l.32;
+`PREREG-w19-maze-t-symmetric.md` l.56–58.
+
+- **Per seed** (`best_matched_rival_per_seed` against `CLU_per_seed`): 0.8324468085106383 / 0.5688888888888889 / 0.8246110325318247 for the
+  rival, against 0.8018617021276596 / 0.5688888888888889 / 0.8033946251768034 for the CLU. `B1_composition: false`.
+- **The rival does not need more steps** (FINDINGS l.88–91). The 80k column is *lower*: 0.799 / 0.569 / 0.713. cont_mlp at 80k reads 0.814 /
+  0.436 / 0.782. *"More steps do not help the rival here, and it does not need them."*
+- **WORDS-MAIN shows the same thing from the other side** (FINDINGS l.93–97). A rival given only the 27 main-effect one-hots composes held-out
+  4-tuples (*"lstm 80k 0.923 on seed 0"*). A ridge head over the same main effects, which is the CLU in WORDS-MAIN, reads 0.3343737955355819.
+  *"That is what the pair block buys the CLU, and in WORDS-FULL a network given the same pair indicators does as well."*
+- **PREREG named this outcome in advance as the falsifier** (l.56–58): *"WORDS-FULL: a matched rival given the CLU's exact 318-wide design reaching the CLU on `nway` (the pair
+  block, not the store, carries the margin)."* It fired.
+- **This extends w16's own ceiling note** from the ceiling to the margin. w16 said *"The ceiling is the request design, not the store"* (w16
+  FINDINGS l.136–141; `N349`). w19 shows that the request design also carries the margin.
+- ⚠ **Seed 1 cannot separate arms.** VAL caps every strong arm at 0.5689, *"a data ceiling of that seed's hold-out, not a property of the store"*
+  (FINDINGS l.98–99). The seed-1 tie is that ceiling.
+- **Two statements, never one.**
+  1. The store is load-bearing for the CLU's read: VB2 PASS, with the max control 0.25041335862731834 against a bar of 0.5747150720644506.
+  2. The CLU's design, handed to a rival, does at least as well.
+
+  ⛔ **FORBIDDEN on CMAZE-T:** "the store composes where rivals cannot", or any wording that credits the store with the margin.
+- **Matrix row:** `CM-W19-3`.
+
+### N368 — ⛔ **OBS: ONCE THE CLU MUST READ ITS OWN REQUEST FROM THE OBSERVATION THE RIVALS GET, IT LOSES (0.3513038895074918 against 0.45663721986855893). The failing link is READ (the request). The declared extractor recovers the whole word tuple on only 0.065 / 0.224 / 0.191 of held-out n-way rows. The 10× extractor (AMENDMENT 1) does not rescue it.** · tier B (CURATOR-PROPOSED ◈) · memory-architecture / benchmark design (w19 `hub/maze-t-symmetric`, VAL, 0 scored runs)
+
+**Source:** `w19-maze-t-symmetric/val/BARS-OBS-val.json` and `BARS-OBS-X10-val.json` → `rows.nway`, `word_extractor_accuracy`; `FINDINGS.md` §4
+(l.152–175); PREREG AMENDMENT 1 (l.62–71); `LOG.md` l.30, l.34–35.
+
+- **The bars:** VB1 **FAILS** (margin −0.10533333036106712). VB4 **FAILS**: the extracted-words lookup floor reads 0.406588789578046
+  (`B4_floor: false`). VB2 and VB3 pass.
+- **The declared extractor** is 636 → 32 → 27, trained 6,000 steps on TRAIN (seen) rows only, 21,275 floats. Its floats are **added** to the
+  rivals' matched target (FINDINGS l.68, l.154). Whole-tuple accuracy (FINDINGS l.158–162):
+
+  | row | seeds 0 / 1 / 2 |
+  |---|---|
+  | TRAIN | 0.404 / 0.683 / 0.767 |
+  | `nway` | 0.065 / 0.224 / 0.191 (per-word mean for tint: **0.249**) |
+  | `pair` | 0.000 / 0.000 / 0.020 |
+  | `value` | 0.000 / 0.000 / 0.000 |
+
+  *"The tint and door words of the target cell are what the extractor fails to read on held-out combinations"* (l.170–171).
+- **AMENDMENT 1** was written at ~17:40Z, *"BEFORE any OBS row number exists"*, after the extractor was seen to under-fit its own TRAIN rows.
+  - It adds a 60,000-step extractor as a **diagnostic only**. *"The OBS verdict (VB1–VB4) is computed on the DECLARED extractor only"* (l.70–71).
+  - Even so, the diagnostic gives CLU 0.44708633392890107 against R\* 0.46080381873040394. Its n-way tuple accuracy is 0.148 / 0.296 / 0.328 (l.164–168).
+  - ⭐ This is the w16 lesson (*no margin against an under-trained arm*) applied to the **CLU's** side, and the curator records it as correct practice.
+- **The extractor is no private channel.** Rivals given the extractor output as an extra input do no better than on the raw observation:
+  0.452 against 0.457 at 80k (l.173–175).
+- ⚠ **Scope.** This LOSS sits **upstream of the store**: *"the request fails to compose before the store is reached"* (l.172–173). It shows that the
+  CLU cannot yet read its request from pixels. It is not a measurement of the store.
+  ⛔ **FORBIDDEN:** quoting OBS as "the store fails on observations".
+- **Matrix row:** `CM-W19-3`.
+
+### N369 — ⛔⛔ **BOTH: THE ONLY CONDITION TO CLEAR VAL DID SO BY A KNIFE-EDGE AND THEN LOST ON TEST. SB1's margin is +0.0988366841188022 < 0.10, and on seed 1 the CLU (0.5660377358490566) is BEHIND the matched 8k LSTM (0.5673854447439353). Scored runs 1–3/9 are SPENT ON A LOSS, and runs 4–9 are DECLARED NOT-RUN.** · tier A (CURATOR-PROPOSED ◈) · benchmark design / budget discipline (w19 `hub/maze-t-symmetric`, TEST, 3 scored runs)
+
+**Source:** `w19-maze-t-symmetric/val/BARS-BOTH-val.json` and `test/BARS-BOTH-test.json` → `rows.nway`; `FINDINGS.md` §3 (l.101–150), §5
+(l.177–194) and §6 (l.196–201); `LOG.md` l.32–33 and l.37–38.
+
+- **VAL PASS, knife-edge.**
+  - Margin +0.10790011903925956 over R\* (`rival@10x-steps: lstm`, 0.6168149530251911).
+  - The every-seed clause holds on seed 1 by 0.5688888888888889 against 0.5674074074074074 (*"seed-1 lead 0.0015 — knife edge"*, LOG l.32).
+  - ⚠ The launch's *"val PASS knife-edge (margin +0.099 < the 0.10 bar)"* mixes the two legs. +0.0988… is the **TEST** margin (`N371` item 1).
+- **TEST LOSS.**
+  - `B1_composition: false`. Per seed, the best matched rival reads 0.6268068331143233 / 0.5673854447439353 / 0.7842565597667639.
+  - On seed 1 that rival is the **8k** LSTM: *"0.5674 > CLU 0.5660"* (FINDINGS l.123–124; `logs/test_BOTH_seed1.log`, which is not staged on batmac).
+  - SB2, SB3 and SB4 PASS. **→ LOSS by the pre-registered rule** (PREREG l.43–45).
+- **Two further reasons for caution,** printed by w19 (l.134–137):
+  1. The BOTH rivals are matched to 4,584 floats on a 954-dim input, *"which leaves a 4-unit hidden layer"*. The VAL pass itself rests on that.
+  2. The 10×-read-floats transformer (never a bar) **passes the CLU on seed 0**: 0.830 against 0.800 on TEST, and 0.8284574468085106 against
+     0.8018617021276596 on VAL.
+- **Other TEST rows claim nothing** (l.141–145):
+  - `seen` 0.968 against 1.000;
+  - `pair` 0.410, where the learned blind arm reads 0.557 and the falsifier fires;
+  - `value` 0.465 against 0.585.
+- **Per-step exactness, CLU 0.925 against the best rival's 0.953** (mlp, 80k; l.147). In w16 the CLU led here (0.925 against the transformer's 0.818);
+  under symmetric input it does not.
+- **Rollout validity**, printed once as a limitation: the CLU reads 0.000, and the learned rivals ≤ 0.015 on TEST (l.149–150).
+- **Deletion on the scored condition** (§5): CLU adaptation takes 0.09–0.39 s, *"light and data-free"*. The rival deletes only by retrain-without, at
+  100–140 s and 8,000 gradient steps. Byte ledger (A1): 4,584 read floats, 18,336 B deployed (f32), 34,320 B statistic (f64).
+  *"Deletion is a property of the CLU's object; it is not a composition margin."*
+- **The budget** (§6), with the ledger rows written at `2026-09-23T18:43:46Z`, before launch (LOG l.33):
+  - runs **1–3/9**: BOTH, TEST — **SPENT, LOSS**;
+  - runs **4–9/9**: **DECLARED NOT-RUN**. WORDS-MAIN, WORDS-FULL and OBS each failed VAL, and *"No re-tuning was done to rescue any condition."*
+  - ⛔ The six not-runs are **not nulls**.
+  - ⚠ **Spending order.** BOTH was launched before OBS's VAL verdict. LOG l.33 records why the rule allowed it: *"Runs remain whatever OBS does
+    (9-0-0-<=3 >= 3)"*. The curator records this as declared and consistent with PREREG l.47–49.
+- **Matrix row:** `CM-W19-3`.
+
+### N370 — ⭐ **(POSITIVE, reproducibility) w19 PERSISTED EVERY TRAINED OBJECT: 384 objects across 18 condition × seed × leg directories, each with a `.sha256` (param hash + file hash) and a `MANIFEST.json` of rebuild args, with 0 hash mismatches. For w19 this closes the defect class of `N363`. ⚠ There are three limits, and the first is on this machine.** · tier B (CURATOR-PROPOSED ◈) · process / reproducibility (w19 `hub/maze-t-symmetric` §9; ⭐ **the `N363` rule, obeyed**)
+
+**Source:** `w19-maze-t-symmetric/FINDINGS.md` §9 (l.223–238); `LOG.md` l.28 and l.41; `persist/<cond>_seed<N>/<leg>/MANIFEST.json`. All 18 were
+read on batmac, and **the curator counted 384 object entries across them**.
+
+- **What was persisted** (l.224–232): `codec.eqx`; `state_encoder.eqx` (OBS / BOTH); `clu.pkl`; the four `control_*.pkl`; `blind_*.pkl`; every rival
+  (`rival_*.eqx` at 8k, `rival10xsteps_*`, `rival10xfloats_*`); `word_extractor.pkl` (OBS); and, on TEST, the deletion pair.
+  - Rebuild and param-hash round-trip are verified for a rival and the CLU.
+  - All 384 file hashes were re-verified by w19: 0 mismatches.
+  - This was a user request mid-wave, applied before any real run (LOG l.28).
+- ⚠ **"786" is a file count, not an object count.** The launch says w19 persisted *786 objects*. The manifests and FINDINGS (l.224, l.235) say
+  **384 objects**. The curator's arithmetic: 384 objects + 384 `.sha256` + 18 `MANIFEST.json` = 786 files. ⛔ **Quote 384 objects.** (`N371` item 4)
+- ⚠⚠ **Limit 1: on batmac only the manifests are staged.** `evidence/outputs/w19-maze-t-symmetric/persist/` holds the 18 `MANIFEST.json` files
+  (168K) and **no object or `.sha256` file**.
+  - ⇒ The 0-mismatch check is **w19's**, and could not be repeated here.
+  - ⇒ The per-arm figures can be built **where the objects are**, which is the ThinkPad (`/c/chlu/outputs/w19-maze-t-symmetric/persist/`).
+    On batmac they can be built only after a sync.
+- ⚠ **Limit 2: the pointers are stale.** The `persist_dir` field inside each result JSON names the **pre-move** path (`<leg>/persist/...`). The objects
+  were moved, not copied (l.236–238; LOG l.41).
+- ⭐ **Limit 3: scope against `N363`.** N363's unblock condition was a re-run that *"must reproduce `A1_test_seed<N>.json` **to every digit** first"*.
+  - **BOTH TEST meets it for the CLU side.** CLU 0.724626907621842, the four controls, and learned BLIND-SEQUENTIAL 0.3417619503252527 are
+    identical in w16's `t1/BARS-A1-test.json` and w19's `test/BARS-BOTH-test.json`.
+  - ⇒ Per-arm panels for **A1's CLU, controls, blind arms and deletion pair** can now be built from `persist/BOTH_seed<N>/test/`.
+  - ⛔ **w16's rivals are NOT among them.** The BOTH rivals read observation ⊕ design; w16's read the observation only.
+    ⇒ A panel labelled "w16 rival" is still **not buildable**. Rival panels must be labelled as the **w19 BOTH rivals**.
+  - ⚠ Whether this makes the N363 persistence-only re-run moot is a **Hub / ledger** decision. The curator does not make it (`§I8.17`).
+- **Matrix row:** `CM-W19-4`. ⟲ at `N363`.
+
+### N371 — ⚠ **(provenance) SIX PLACES WHERE THE LAUNCH OR w19's OWN PROSE DISAGREES WITH w19's PRIMARY RECORD. The artefact wins each one. This is `N351`'s rule ("a paraphrase is not a source") applied to this pass's own launch.** · tier C (CURATOR-PROPOSED ◈) · process / provenance (w19 `hub/maze-t-symmetric`; the fourth-pass launch)
+
+| # | the claim | where | what the primary record says |
+|---|---|---|---|
+| 1 | *"BOTH: val PASS knife-edge (margin +0.099 < the 0.10 bar)"* | fourth-pass launch | A VAL margin below 0.10 would **fail** VB1. The VAL margin is **+0.10790011903925956**, and `B1_composition` is `true` (`val/BARS-BOTH-val.json`). +0.0988366841188022 is the **TEST** margin (`test/BARS-BOTH-test.json`). The knife-edge on VAL is the **seed-1 lead**, 0.5688888888888889 against 0.5674074074074074 (LOG l.32) |
+| 2 | *"On every condition the four charter-C controls collapse relative to the CLU"* | w19 `FINDINGS.md` l.36–38 | **Contradicted by w19's own record.** WORDS-MAIN has `B2_store_gate: false`: `landscape_shuffled` 0.18744092621014888 against a bar of 0.1843737955355819. FINDINGS itself prints *"0.187 (bar 0.184)"* and *"LOSS (VB1, VB2)"* (l.79, l.21). ✔ *"landscape_removed = 0.000 everywhere"* holds. ⇒ The approved scope is: **the controls collapse on WORDS-FULL, OBS and BOTH; not on WORDS-MAIN** |
+| 3 | *"OBS: … The extractor recovers the whole word."* | fourth-pass launch | **The launch drops a qualifier, and that inverts the finding.** FINDINGS l.23: *"the extractor recovers the whole word tuple on **only 6–22 %** of held-out n-way rows"* (`N368`) |
+| 4 | *"w19 persisted 786 objects"* | fourth-pass launch | **384 objects** (FINDINGS l.224 and l.235; the 18 manifests, counted). 786 = the files including `.sha256` and manifests (curator arithmetic, `N370`) |
+| 5 | *"raw obs 634 = conv-AE patch+global ⊕ 29 dyn ⊕ action"* | w19 PREREG l.21; w19 LOG l.10 (describing w16) | Measured: `dyn_dim(4)` = 31, so obs = **636** (FINDINGS l.72–73; LOG l.27). The instrument itself is unchanged. The 634 / 29 wording is stale wherever it is quoted |
+| 6 | the `persist_dir` field in each result JSON | w19 result JSONs | It names the pre-move path (FINDINGS l.236–238) |
+
+- ⛔ **FORBIDDEN in reports:**
+  - claims 1, 3 and 4 as worded;
+  - claim 2 unscoped.
+- ⛔ The curator edits **no** evidence file, including w19's FINDINGS l.36–38. The fix is flagged for the Hub (`§I8.17`).
+- **Matrix row:** `CM-W19-3` (items 1–3), `CM-W19-4` (items 4 and 6).
+
+## ◈.14 ⭐ THE FOLD-IN LEDGER, PASS 4 — and what is STILL AWAITING (FIFTH PASS REQUIRED)
+
+| launch item | status | where |
+|---|---|---|
+| w19 `maze-t-symmetric`: all four conditions LOSS; budget 3 of 9 spent, 6 DECLARED NOT-RUN | ⭐ **FOLDED as a NEGATIVE that contradicts a w16 headline** | `N366`; matrix `CM-W19-3` |
+| WORDS-MAIN LOSS (VB1, VB2) | ⭐ FOLDED | `N366`, `N367` |
+| ⭐⭐ WORDS-FULL LOSS (VB1): *"the pair block, not the store, carries the w16 margin"* | ⭐ **FOLDED as an entry in its own right** | `N367` |
+| OBS LOSS (VB1, VB4), with extractor accuracy and the OBS-X10 diagnostic | ⭐ FOLDED, ⚠ with the launch's paraphrase corrected | `N368`; `N371` item 3 |
+| BOTH: VAL PASS knife-edge, then TEST LOSS (SB1) | ⭐ FOLDED, ⚠ with the launch's VAL margin corrected | `N369`; `N371` item 1 |
+| ⛔⛔ the consequence for w16's CMAZE-T Config-A1 STORE row | ⭐ **RECORDED.** The w16 entries are annotated, not edited | `⟲ PASS 4` at `N348` and `N349`; matrix `⟲` at `CM-W16-2` and `CM-W17-5` |
+| ⛔⛔ M1's defect a **third** time | ⭐ **RECORDED**; M1 still **OPEN** | `⟲ PASS 4` at `N339`; matrix `⟲` at `CM-W17-1`; `CM-W17-7` |
+| ⭐ persistence closes the `N363` reproducibility negative | ⭐ **FOLDED as a POSITIVE**, ⚠ with three limits (only the manifests are on batmac; 384 not 786; w16 rivals not included) | `N370`; `⟲ PASS 4` at `N363`; matrix `CM-W19-4` |
+| *(curator-added)* six disagreements between the launch or the w19 prose and the w19 record | ⭐ FOLDED | `N371` |
+
+**⛔ STILL AWAITING — FIFTH PASS REQUIRED.** Nothing below was guessed, and ⛔ no number from it appears anywhere in this file.
+
+| spoke | state at this pass | what the fifth pass must fold |
+|---|---|---|
+| **w20 `shapes-data-matched`** | **still running** per the launch (ledger 1/3). batmac holds only `~/clu/tasks/w20/shapes-data-matched.md`: no output directory and no scored ledger | its scored rows, every VAL failure and every declared not-run, from its own artefact. ⭐ It bears directly on **M1** (`N339`): it is the data-matched Shapes test that M1 asks for |
+
+**Carried open (awaiting a ruling, not an artefact):** **M1** (`N339`) and **M3** (`N340`), both HELD for the Head and the Advisor.
+**Awaiting a Hub / ledger decision:** whether `N370` makes the `N363` persistence-only re-run moot, and the w5 count restart (`N362`).
+
+## ⛔ DECLARED NOT-RUNs — the ◈ pass 4
+
+| not run | reason |
+|---|---|
+| ⛔ any scored run, compute, GPU or sub-agent | ZERO. The curator operations were reading files, reading JSON fields, counting manifest entries, and grepping the live draft |
+| ⛔ verifying the persisted objects' hashes, or rebuilding any object | the objects are not on batmac (`N370` limit 1) |
+| ⛔ reading `w19-maze-t-symmetric/logs/` | the directory is empty on batmac. The one log-sourced value (the seed-1 8k LSTM, 0.5674) is quoted from FINDINGS l.123–124 and matches `best_matched_rival_per_seed` in the TEST JSON |
+| ⛔ reading `TABLES.md` (921 lines) or `MAZE-T-SYMMETRIC.json` cell by cell | every number here comes from the BARS JSONs or from FINDINGS with a line pointer. The two aggregate files were hashed (TABLES sha256 `82538ca0b243eb27…`, JSON `25e7c8ba16bb1dd2…`), not re-audited |
+| ⛔ folding w20 `shapes-data-matched` | still running (`◈.14`); ⛔ nothing guessed |
+| ⛔ ruling on M1, M3, the N363 re-run or the w5 count restart | these belong to the Head, the Advisor or the ledger |
+| ⛔ editing any draft, placeholder, figure or evidence file (including w19 FINDINGS l.36–38, and `DRAFT-v2.tex` L121–122, L1082–1083, L2163 and L2618, which still carry the w16 A1 win) | AMENDMENT-1, ownership, and the read-only evidence rule. The registry annotates with `⟲` lines only |
+| ⛔ writing `~/clu/evidence/` | read-only by standing rule |
+| ⛔ re-deriving or rounding any statistic | JSON values are quoted at full precision, and FINDINGS values as printed, with pointers |

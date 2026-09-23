@@ -1,3 +1,85 @@
+# w18 spoke/registry-fold — FINDINGS (FOURTH PASS; ⛔ FIFTH PASS REQUIRED for w20 `shapes-data-matched` only)
+
+**Agent:** `doc-curator`. **Branch:** `w18/registry-fold`. **Machine:** batmac.
+**Commissioned by:** the w18 registry-fold fourth-pass launch (2026-09-23; pre-authorised by the Head).
+**Scored runs: NONE. Compute: NONE. Background jobs: NONE. Sub-agents: NONE.** tmux was not touched and no process was killed.
+⛔ `~/clu/evidence/` was not written, and no draft was edited. The base md5s are unchanged (registry `5568a6f2…`, matrix `6b8042dd…`).
+
+## 0. WHAT SHIPPED IN PASS 4
+
+| file | pass 3 → pass 4 | what pass 4 adds |
+|---|---|---|
+| `negative_results.md` | 7,167 → **7,466** lines | **`N366`–`N371`**; `◈.12`–`◈.14`; a pass-4 not-runs table; a header note; and inserted `⟲ PASS 4` lines at `N339` (M1), `N348`, `N349`, `N363` and `◈.11` |
+| `claims_matrix.md` | 2,019 → **2,131** lines, **v2.25 (PROPOSED)** | **`§I8.16`**: `CM-W19-3`, `CM-W19-4`, `CM-W17-7`. **`§I8.17`**: 9 open flags. Also `⟲ PASS 4` lines at `CM-W17-1`, `CM-W16-2`, `CM-W17-5`, the `§I8.14` note, `CM-W19-1`, and `§I8.15` flags 1 and 4 |
+
+**Additivity was checked with difflib against the pass-3 files:**
+- Registry: 299 lines inserted, **0 replaced, 0 deleted**. There are now **363** `### N` headings with **zero duplicate numbers**, and each of N366–N371 appears exactly once.
+- Matrix: 112 inserted. Line 1 (the title) is the only replaced line, and the prior title is kept verbatim as its tail (`endswith` True). The 53 `CM-` row headings have no duplicates.
+
+**Number audit.** Every decimal and every token of four or more digits in the new text was checked mechanically against the sources read at this pass: 123 tokens in the registry block and 41 in the matrix block. All were found verbatim, except draft line numbers observed by grep and sha256 prefixes.
+
+## 1. THE RESULT: w19 `maze-t-symmetric` CONTRADICTS A WAVE-16 HEADLINE
+
+**⛔⛔ All four conditions are LOSS.** Budget: **3 of 9** scored runs spent (BOTH, TEST); **6 DECLARED NOT-RUN**.
+
+| condition | CLU | R\* | margin | verdict | entry |
+|---|---|---|---|---|---|
+| WORDS-MAIN (VAL) | 0.3343737955355819 | 0.7473459065764733 (transformer, 80k) | −0.4129721110408914 | LOSS (VB1, VB2) | `N366`, `N367` |
+| **WORDS-FULL (VAL)** | 0.7247150720644506 | 0.7419822433104506 (transformer, **8k**) | −0.017267171245999968 | LOSS (VB1). ⭐⭐ *"the pair block, not the store, carries the w16 margin"* | **`N367`** |
+| OBS (VAL) | 0.3513038895074918 | 0.45663721986855893 (transformer, raw obs, 80k) | −0.10533333036106712 | LOSS (VB1, VB4); link **READ** | `N368` |
+| BOTH (VAL → TEST) | 0.7247150720644506 → **0.724626907621842** | 0.6168149530251911 → 0.6257902235030398 (lstm, 80k) | +0.10790011903925956 → **+0.0988366841188022** | VAL PASS (knife-edge on seed 1) → **TEST LOSS** (SB1; behind the 8k LSTM on seed 1) | `N369` |
+| *OBS-X10 (diagnostic)* | 0.44708633392890107 | 0.46080381873040394 | −0.013717484801502866 | *would read LOSS*; never a bar | `N368` |
+
+**⛔⛔ The consequence, recorded as the launch asked:**
+- **What was asymmetric.** w16's CMAZE-T Config-A1 "STORE row" (CLU 0.7246 against 0.4035) gave the CLU the five words through a 318-wide `[bias|main|pair]` design. Every rival read the observation instead.
+- **Only the rivals changed.** The CLU is the same object: BOTH TEST reproduces w16's `BARS-A1-test.json` CLU mean, **0.724626907621842, to every digit**, and its controls too.
+- **The margin does not survive symmetric inputs.** It had survived 80k-step rivals, but that check tested steps, not input.
+- **Where it is annotated.** ⟲ lines at `N348` and `N349` (the w16 entries that relied on the A1 row), and at `CM-W16-2` and `CM-W17-5` in the matrix. ⛔ The original entries are **not edited**.
+- **C-512**, w16's replication row, was not re-run. It is **exposed** to the same asymmetry and may not be promoted in A1's place.
+
+**What survives. Two statements, never one:**
+1. The **store gate**: `landscape_removed` is 0.000 on every condition, and the controls collapse on WORDS-FULL, OBS and BOTH. ⚠ **They do NOT collapse on WORDS-MAIN** (VB2 fails).
+2. **Store-scoped deletion exactness** on BOTH TEST.
+
+Neither is a margin over rivals.
+
+**⛔⛔ M1, a THIRD time** (`⟲ PASS 4` at `N339`; `CM-W17-7`). Each time, the rival was given less than the store:
+- the **data pool** in Table 1 (Shapes);
+- the **training steps** on w16 CMAZE-O;
+- the **input** on w16 CMAZE-T.
+
+⚠ The launch's "now on the maze rather than on Shapes" is imprecise, because instance 2 was already on a maze. What is new is the **axis**, and that it reverses the **headline**. **M1 and M3 remain OPEN and HELD. The curator does not rule.**
+
+**⭐ Positive** (`N370`, `CM-W19-4`): w19 persisted **384 objects**, each hashed and manifested with 0 mismatches. This closes `N363`'s defect class for w19, and the A1 CLU side is now recoverable. ⚠ Three limits:
+- **Only the 18 manifests are on batmac.** The objects are on the ThinkPad.
+- **w16's rivals are not recoverable**, because the BOTH rivals read a different input.
+- **The `persist_dir` pointers are stale** (pre-move paths).
+
+## 2. ⚠ WHERE THE LAUNCH (OR w19's PROSE) DISAGREED WITH THE PRIMARY RECORD — `N371`
+
+1. *"BOTH: val PASS knife-edge (margin +0.099 < the 0.10 bar)"*: the **VAL** margin is +0.10790011903925956 (a PASS). +0.0988… is **TEST**. The VAL knife-edge is the seed-1 lead (0.5688888888888889 against 0.5674074074074074).
+2. w19 FINDINGS l.36–38, *"On every condition the four charter-C controls collapse"*, is contradicted by w19's own `BARS-WORDS-MAIN-val.json` (`B2_store_gate: false`: 0.18744092621014888 against a bar of 0.1843737955355819).
+3. *"The extractor recovers the whole word"*: FINDINGS l.23 says **only 6–22 %** of held-out n-way tuples. The launch's wording drops that qualifier and inverts the finding.
+4. *"786 objects"*: it is **384 objects**. 786 is a file count (384 objects + 384 `.sha256` + 18 manifests).
+5. *"634 / 29 dyn"*: the measured values are **636 / 31** (w19 FINDINGS l.72–73).
+6. The `persist_dir` fields name pre-move paths.
+
+## 3. ⛔ WHAT DID NOT RUN — FIFTH PASS REQUIRED
+
+- **w20 `shapes-data-matched` is still running** (ledger 1/3, per the launch). batmac has only its task file: no output directory and no ledger. It is **NOT FOLDED, and nothing is guessed** (registry `◈.14`). ⭐ It is the data-matched Shapes test that M1 asks for.
+- **Not done, by design:**
+  - Verifying or rebuilding any persisted object: they are not on batmac.
+  - Reading `logs/`: it is empty on batmac.
+  - Auditing `TABLES.md` or `MAZE-T-SYMMETRIC.json` cell by cell: they were hashed only, and every number here comes from the BARS JSONs or from FINDINGS.
+  - Any draft or evidence edit. ⚠ The live `DRAFT-v2.tex` (`e49a6910…`) still carries the w16 A1 win at L121–122, L1082–1083, L2163 and L2618 (`§I8.17` item 1).
+  - Any ruling on M1, M3, the `N363` re-run, the C-512 re-run, or the w5 count restart.
+
+## 4. OPEN FLAGS — `claims_matrix.md` §I8.17 (9 items). Tiers and v2.25 are CURATOR-PROPOSED.
+
+---
+
+# PASS 3 (kept verbatim below, for the record)
+
 # w18 spoke/registry-fold — FINDINGS (THIRD PASS; ⛔ FOURTH PASS REQUIRED for w19 `maze-t-symmetric` only)
 
 **Agent:** `doc-curator`. **Branch:** `w18/registry-fold`. **Machine:** batmac.
