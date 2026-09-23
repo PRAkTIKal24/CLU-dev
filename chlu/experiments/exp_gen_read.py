@@ -409,8 +409,24 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
     if arm.startswith("rival_"):
         name = arm[len("rival_"):]
         from ..eval.rivals.w4_api import load_rival, available  # noqa: F401
+        # w15 REPAIR (declared): ``$CHLU_RIVALS_ROOT`` was honoured for the rival's
+        # METADATA below but not for the MODEL, so a caller that pointed it at a per-arm
+        # refit tree (w8 encoder-loop) was silently scored against spoke A's rival, fit
+        # in the FROZEN encoder's feature space.  Measured: seed-0 loop_swap default-root
+        # features_sha256 ef6359a4... vs the arm's own 95206c71....  Unset -> unchanged.
+        _rroot = os.environ.get("CHLU_RIVALS_ROOT")
+        _rroot = Path(_rroot) if _rroot else None
         try:
-            r = load_rival(int(fw.PINS["seed"]), name)
+            r = load_rival(int(fw.PINS["seed"]), name, root=_rroot)
+            if _rroot is not None:
+                _want = fw.feature_cache_manifest(int(fw.PINS["seed"])).get("features_sha256")
+                _got = (getattr(r, "meta", {}) or {}).get("features_sha256")
+                if _want and _got != _want:
+                    raise AssertionError(
+                        f"{arm}: rival fit on features {_got} but this leg scores features "
+                        f"{_want} -- a rival from another feature space is refused")
+        except AssertionError:
+            raise
         except Exception as exc:                       # RivalRefusal or not-yet-fitted
             obj = {"arm": arm, "read": "rival", "not_run": f"{type(exc).__name__}: {exc}",
                    "rival": None, "byte_ledger": {"deployed_bytes": 0,
@@ -432,7 +448,7 @@ def build_arm(arm: str, out_dir: Path, log: Callable = print) -> dict:
         # recorded per arm and printed in the caption.
         r_partial = None
         try:
-            r_partial = load_rival(int(fw.PINS["seed"]), f"{name}_dropout")
+            r_partial = load_rival(int(fw.PINS["seed"]), f"{name}_dropout", root=_rroot)
         except Exception:
             r_partial = None
         names = list(getattr(r, "names", grid.names))
