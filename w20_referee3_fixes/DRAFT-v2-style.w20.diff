@@ -1,0 +1,522 @@
+--- /Users/batmac/clu/outputs/w20-referee3-fixes/before-20260923T174636Z/DRAFT-v2-style.tex	2026-09-23 19:46:36
++++ /Users/batmac/clu/outputs/w17-paper/DRAFT-v2-style.tex	2026-09-23 19:55:17
+@@ -20,7 +20,7 @@
+ %     A number whose artefact could not be found is written \TODO{no artefact for ...}.
+ %   * w18 placeholder-fill (2026-09-23, two passes): the landed w15/w16 rows are written in, each
+ %     with its SRC comment; pass 2 filled bar-d-score x2 and lace-poe-rows x2 and closed the
+-%     coverage-control TODO. Ten PLACEHOLDERs remain, all w19 (w19-draft-figure-slots/FIGURE-SLOTS.md).
++%     coverage-control TODO. Eleven PLACEHOLDERs remain: ten w19 (w19-draft-figure-slots/FIGURE-SLOTS.md), one w20.
+ %     `grep -n PLACEHOLDER` finds every one; w18-placeholder-fill/FINDINGS.md lists them.
+ %   * No \cite{} command is used: cite-tagger inserts them. Citation slots are marked in
+ %     prose by the cited work's name; "[cite]" is never written.
+@@ -92,9 +92,10 @@
+ \begin{abstract}
+ A world model trusted with requests it has never seen needs three things at once: its outputs are \emph{valid} under an exact judge, it \emph{composes}
+ held-out combinations of factors from factors it has seen, and it can \emph{forget} specific
+-training rows exactly. Compositional generation is extensively studied and exact unlearning established; their intersection, however, is empty in a precise sense: a mechanical
+-screen of approximately 4,050 works finds no \emph{factor-compositional} generative model (one that generates held-out combinations of factor values) that deletes training rows
+-exactly while reading no data and retraining nothing. % SRC: _thinkpad/w8/w8-novelty/NOVELTY.md
++training rows exactly. Compositional generation is extensively studied and exact unlearning established. We work at the level of a single \emph{naive unit} and
++compare it only with other naive units (an MLP, an LSTM, a transformer and a continuous-input MLP).
++We do not claim the best compositional-generation or unlearning system, and systems built on top of
++units, such as sharded retraining or compositional diffusion, are out of scope.
+ We therefore study the simplest object with all three properties, the \emph{Naive CLU}: a
+ label-free store of per-well principal subspaces, computed on the latents of a frozen
+ encoder, read through a request-indexed address book and rendered by a frozen decoder; its
+@@ -121,13 +122,21 @@
+ \end{abstract}
+ 
+ % =======================================================================================
+-\section{Introduction: positioning, and why the intersection matters}
++\section{Introduction: a naive unit, and why its three properties matter}
+ \label{sec:intro}
+ % =======================================================================================
+ 
+-\subsection{Positioning: compositional generation is crowded; with data-free exact deletion it is empty}
++\subsection{Positioning: a naive unit, compared with naive units}
+ \label{sec:positioning}
+ 
++The Naive CLU is a \emph{naive AI unit}: one model with no system built around it, in the sense
++in which an MLP, an LSTM or a transformer is a unit. We therefore compare it only with other naive
++units: an MLP, an LSTM, a transformer and a continuous-input MLP, each matched on the read path
++(\S\ref{sec:object}). We claim neither the best compositional-generation system nor the best
++unlearning system. Systems built on top of units, such as sharded retraining, compositional
++diffusion and physics-informed variants of an MLP, are out of scope by definition; we cite each
++in one sentence below and state the unit/system distinction.
++
+ Generating held-out combinations of factors is a long-standing and active problem~\citep{du2020compositional,liu2022compositional,du2023reduce,okawa2023compositional}. The multilinear line (Tenenbaum and Freeman, 2000\nocite{tenenbaum2000separating}; TensorFaces,
+ Vasilescu and Terzopoulos, 2002\nocite{vasilescu2002tensorfaces}; Vlasic et al., 2005\nocite{vlasic2005face}; MLC-VAE, 2020~\citep{georgopoulos2020multilinear}) factorises a data tensor
+ indexed by every label combination and renders linearly. The frozen-generator line (GANSpace,
+@@ -145,7 +154,7 @@
+ fine-tunes the generator; data redaction from pretrained GANs~\citep{kong2023data} is stated to be a task different
+ from deletion; and GAN unlearning by substitution~\citep{sun2025generative} is approximate by construction.
+ 
+-However, on a systematic screen the intersection of the two literatures is empty. A
++A systematic screen of both literatures records what we could find. A
+ forward-citation crawl~\citep{priem2022openalex} over every title and abstract citing the canonical works of either side
+ screened approximately 4,050 unique works: 3,038 citing the generation-side anchors, 759 citing
+ the deletion-side anchors, 254 from 21 orthogonal queries that cite neither, and about 100 from
+@@ -158,24 +167,25 @@
+ The orthogonal query that poses the question directly, \emph{compositional} $\wedge$
+ \emph{generative} $\wedge$ \emph{exact deletion}, returns zero works on the screen.
+ % SRC: _thinkpad/w8/w8-novelty/NOVELTY.md
+-Two works outside the screen answer a broader reading of that query, and they fix the form of
+-our claim. SISA training~\citep{bourtoule2021machine} makes any learned model, a generator
+-included, exactly unlearnable by retraining the shard that held the deleted rows: the deletion is
+-exact, but it reads that shard's retained data and retrains. Compartmentalized diffusion models
+-(Golatkar, Achille, Swaminathan and Soatto) train separate diffusion models on separate data
+-sources and compose them at inference, which gives selective forgetting of a source by dropping
+-or retraining the model that saw it; ``compositional'' there means composing models of data
+-sources, not composing held-out combinations of factor values.
++These counts describe the screen; they do not claim that no such model exists. Abstract-level
++screening cannot see a match buried in a method section, and the indexing of preprints younger
++than about three months is incomplete (\S\ref{sec:limits}).
++Three families of systems built on top of units are out of scope, and we distinguish each in one sentence.
++SISA training~\citep{bourtoule2021machine} is a system: it makes any unit, a generator included,
++exactly unlearnable by splitting its data into shards and retraining the unit on the shard that
++held the deleted rows, reading that shard's retained data, and we compare with the unit it wraps,
++whose only exact route is the retrain of \S\ref{sec:del-comparators}.
++Compartmentalized diffusion models (Golatkar, Achille, Swaminathan and Soatto) are a system that
++trains separate diffusion models on separate data sources, composes them at inference and forgets a
++source by dropping its model; what they compose is models of data sources, not held-out
++combinations of factor values within one unit.
+ % cite-tagger: bib entry needed -- Golatkar, Achille, Swaminathan, Soatto, "Training Data Protection with Compositional Diffusion Models", arXiv:2308.01937 (not in references.bib)
+-Neither deletes without reading data and retraining, and neither generates held-out
+-combinations of factor values.
+-We therefore state the position only in the form that the screen and these two works support:
+-\emph{the intersection of factor-compositional generation with exact deletion that reads no data
+-and retrains nothing is empty} in the works we could screen. The residual risk is real, and \S\ref{sec:limits} states it: abstract-level screening
+-cannot see a match buried in a method section, and the indexing of preprints younger than about
+-three months is incomplete.
++Physics-informed variants of an MLP, such as physics-informed neural networks (Raissi, Perdikaris
++and Karniadakis, 2019) and Hamiltonian neural networks (Greydanus, Dzamba and Yosinski, 2019), are
++systems that add a physical loss or structure to an MLP unit; our rival is the plain MLP unit.
++% cite-tagger: bib entries needed -- Raissi, Perdikaris, Karniadakis, "Physics-informed neural networks", J. Comput. Phys. (2019); Greydanus, Dzamba, Yosinski, "Hamiltonian Neural Networks", NeurIPS 2019 (neither in references.bib)
+ 
+-One distinction within this intersection is ours and merits a sentence. The decremental-PCA
++One distinction is ours and merits a sentence. The decremental-PCA
+ line (Hall, Marshall and Martin, 2002\nocite{hall2002adding,hall1999adding}, and successors~\citep{jin2014evd,lee2021fast}) subtracts \emph{deflated} eigenspaces;
+ its authors describe the result as an approximation to the refit, report that the subtraction
+ tends to instability, and give no rigorous error analysis. Our route is exact for the opposite
+@@ -183,7 +193,7 @@
+ untruncated second-moment statistic by subtraction and re-eigendecompose the content
+ afterwards, so truncation error never enters the subtraction.
+ 
+-\subsection{Why the intersection matters: world models need all three at once}
++\subsection{Why the three properties matter: world models need all three at once}
+ \label{sec:why}
+ 
+ A world model~\citep{ha2018world,hafner2019dream,hafner2025mastering,schrittwieser2020mastering} is useful to the extent that it can be queried for states and transitions it has
+@@ -338,7 +348,7 @@
+ % SRC: w13-seeds-and-tables/TABLES.md
+ The ledger is memory, not a read-path parameter: it is printed, never matched~\citep{borgeaud2021improving,khandelwal2020generalization,lample2019large,wu2022memorizing,berges2024memory}. A lookup table
+ of written items is a printed \emph{floor}, never a rival. Before any row is claimed for the
+-store, the pre-declared landscape controls (\texttt{landscape\_removed}, \texttt{landscape\_shuffled},
++store, four controls, which we call the \emph{pre-declared landscape controls} throughout (\texttt{landscape\_removed}, \texttt{landscape\_shuffled},
+ \texttt{landscape\_shuffled\_across\_wells}, \texttt{random\_atoms}) must collapse; if they do
+ not, the row is an interface row or nothing.
+ 
+@@ -346,6 +356,9 @@
+ valid novel factor tuples per corner}, with ceilings of 36 (pair corners) and 72 (six-factor
+ corners). The estimand is paired over corners, with a margin of 1.0 tuple per corner declared
+ before any number. % SRC: w13-seeds-and-tables/TABLES.md
++Where an experiment was pre-registered, its success and falsification criteria were written before
++its first number; we refer to each as a \emph{pre-registered criterion}, labelled as in that
++pre-registration (for example, criterion D or criterion S1).
+ Seed count is a column of every table.
+ 
+ % =======================================================================================
+@@ -359,6 +372,14 @@
+ 0.02\}$, over $K\in\{5,8,10,12,16,20,24,28,32\}$. Every swept $K$ satisfied the rule; hence
+ $\Kstar=32$, the finest partition swept, and the sweep range was not extended to manufacture a
+ crossover. % SRC: w13-seeds-and-tables/TABLES.md
++This is the selection of the frozen rule; on three seeds, however, it cannot separate the plateau
++$K=5\ldots32$. The seed standard deviation of validation composition exceeds the rule's 0.02
++tolerance at $K=10$, 16, 20, 24 and 28 (0.0211, 0.0203, 0.0285, 0.0235, 0.0276) and at $\Kstar=32$ % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
++(0.0259); three seeds therefore do not distinguish $\Kstar$ from its neighbours. % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
++The finding is the plateau itself: composition is flat across $K$ to within its seed spread,
++while the honest four-part ledger falls to its minimum near $K=24$, at 2,094,130 / 2,080,090 / 2,085,810 B % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
++on seeds 0 / 1 / 2. This minimum is resolvable, with a seed band of 7,060 B against neighbour gaps of % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
++12,203 B and 30,507 B (Appendix~\ref{app:kcurve}, Table~\ref{tab:kcurve3}). % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
+ The main text carries this one $K$. The $K=5$ endpoint of the sweep is reported in
+ Appendix~\ref{app:k5}, labelled as the endpoint, with its sign stated as a property of $K=5$.
+ 
+@@ -412,7 +433,7 @@
+ % SRCBLOCK: w15-lace-poe-rows/FINDINGS.md
+ LACE (own budget, not matched) & 3 & 0.117 / 0.033 / 0.267 & 0.224 / 0.122 / 0.184 & rival $-$ store: $-47.33$ / $-47.33$ / $-48.89$ \\
+ PoE (own budget, not matched) & 3 & 0 / 0 / 0 & 0.020 / 0 / 0 & rival $-$ store: $-47.49$ / $-47.40$ / $-49.12$ \\
+-\multicolumn{5}{p{15cm}}{\emph{LACE and PoE (w15 \texttt{lace-poe-rows}) are added beside the rivals above, which are not replaced; each runs at its own declared budget (LACE 31.08$\times$, PoE 27.13$\times$ the 524,288 B reference, a parameter count against store-mode bytes), not on the read-path matching rule. Their $\Delta$ is printed as rival minus store, the artefact's sign; the store wins 109/109 corners against each, on every seed. Scope: \S\ref{sec:adapt}.}} \\
++\multicolumn{5}{p{15cm}}{\emph{LACE and PoE are added beside the rivals above, which are not replaced; each runs at its own declared budget (LACE 31.08$\times$, PoE 27.13$\times$ the 524,288 B reference, a parameter count against store-mode bytes), not on the read-path matching rule. Their $\Delta$ is printed as rival minus store, the artefact's sign; the store wins 109/109 corners against each, on every seed. Scope: \S\ref{sec:adapt}.}} \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -478,6 +499,17 @@
+ size, parameter count or schedule) causes the gap, and none pairs the $\Kstar$ store against the
+ earlier set with an interval; a refit of the earlier set on the value hold-out pool exists but is
+ scored in no artefact.}
++% SRCBLOCK: w12-deletion-baselines/FINDINGS.md; _thinkpad/w4/spoke-a-rivals/rivals/seed_0/mlp.rival.json; w13-seeds-and-tables/TABLES.md; ../../tasks/w20/shapes-data-matched.md
++\PLACEHOLDER{w20 \texttt{shapes-data-matched}: the one data-matched rival set that replaces both
++rival sets above. The two sets it replaces, and their fit pools: the headline rivals of
++Table~\ref{tab:t7}, fit on 16,384 rows (the deletion study's declared build/smoke scale, reused as
++the headline comparators), and the ladder's rivals of Table~\ref{tab:ladder}, fit on 32,256 rows of
++the combination-split pool; the store's own fit pool is 131,072 rows. Pending: the four naive units
++refit on the store's exact 131,072-row pool, and the store refit on the rivals' 16,384- and
++32,256-row pools, rows 3--4 and every ladder rung, 3 seeds, each rival with its convergence
++evidence; which of the two tables leads is not yet decided. May land as a NEGATIVE: against
++data-matched rivals the store's margin may shrink, vanish or reverse on some or all corners}
++% ENDSRC
+ 
+ \begin{table}[t]
+ \centering\small
+@@ -579,7 +611,7 @@
+ 
+ \paragraph{The coverage control.} A direct test of the inference note refits $n=6$ with the
+ fit pool restricted to the train index of $n=3$, holding depth at 6 and coverage at that of $n=3$.
+-\textbf{Result (w15 \texttt{coverage-control}).} For $n\ge3$ the ladder's rise is fit-pool
++\textbf{Result.} For $n\ge3$ the ladder's rise is fit-pool
+ coverage, and by construction it can only be coverage: rungs 3--6 probe the identical 120 corners, % SRC: w12-composition-ladder/FINDINGS.md
+ so $n=6$ refitted on $n=3$'s fit pool \emph{is} rung $n=3$. Its TEST cell is therefore
+ \emph{derived, not measured}: it is the $n=3$ store cell of Table~\ref{tab:ladder}, and no new
+@@ -809,7 +841,7 @@
+ store does not shape the representation. Appendix~\ref{app:encoder-main} reports both results,
+ with the pending scored row of pre-registered criterion D on the longer leg.
+ 
+-\paragraph{LACE and PoE, at their own budgets (w15 \texttt{lace-poe-rows}).}
++\paragraph{LACE and PoE, at their own budgets.}
+ LACE~\citep{nie2021controllable} and PoE~\citep{hinton2002training} were \emph{added} beside the
+ learned rivals on rows 3--4 (Table~\ref{tab:t7}) and on every ladder rung
+ (Table~\ref{tab:ladder}), 3 seeds; no learned-rival column was replaced. They do not beat the
+@@ -823,16 +855,16 @@
+ rows from the rung's own pool and 36 selection trials. % SRC: w15-lace-poe-rows/FINDINGS.md
+ \emph{This is LACE and PoE as instantiated in this feature space at their own declared budgets,
+ and it must be weighed that way; it is not a refutation of LACE in general.} Both render zero
+-exact-match requests on the generation table as well; in the lace-poe-rows spoke's own words, a
++exact-match requests on the generation table as well; in the words of that experiment's own record, a
+ reader should weigh the result as ``LACE/PoE, as re-implemented at these budgets, do not produce
+ valid full tuples here'', not as ``the CLU out-composes LACE in general''. % SRC: w15-lace-poe-rows/FINDINGS.md
+ 
+ \paragraph{The generation table, scored run 3 of 3, on the $\Kstar$ single design.}
+-The $\Kstar$ single design was added to the generation-table registry and scored once
++The $\Kstar$ single design was added to the arms of the generation table and scored once
+ (\texttt{generation-table} run 3 of 3, 3 seeds, nothing not-run; Table~\ref{tab:gentable-kstar}, % SRC: w15-lace-poe-rows/FINDINGS.md
+-Appendix~\ref{app:t7more}). All four landscape controls collapse on every seed (bar S1 % SRC: w15-lace-poe-rows/FINDINGS.md
+-\textsc{pass}), so the store claim stands on this table. The pre-declared bar against the shipped
+-read (every seed, margin 0.020) \textsc{fails} on seed 0 ($-0.0185$; mean $+0.1551$), and the % SRC: w15-lace-poe-rows/FINDINGS.md
++Appendix~\ref{app:t7more}). All four landscape controls collapse on every seed (pre-registered criterion S1, % SRC: w15-lace-poe-rows/FINDINGS.md
++\textsc{pass}), so the store claim stands on this table. Pre-registered criterion S2, against the shipped
++read (every seed, margin 0.020), \textsc{fails} on seed 0 ($-0.0185$; mean $+0.1551$), and the % SRC: w15-lace-poe-rows/FINDINGS.md
+ pre-registration's falsification clause fires: the claim that $\Kstar$ beats the shipped read is
+ \emph{not} made. $\Kstar$ also loses to the prototype ceiling \texttt{knn\_proto} on the mean % SRC: w15-lace-poe-rows/FINDINGS.md
+ ($-0.1150$, S3 \textsc{lose}) at 4.09--4.11$\times$ the reference bytes, and beats LACE % SRC: w15-lace-poe-rows/FINDINGS.md
+@@ -1016,7 +1048,7 @@
+ \emph{generate} a world model's transitions (CMAZE-T) and states (CMAZE-O) under the exact judge,
+ on random mazes never seen at test, so that the within-maze lookup floor cannot transfer and the
+ cross-maze fragment lookup is the floor. Rivals are matched on read floats; the pre-declared
+-landscape controls and blind columns are printed; bars were pre-registered before any number; every
++landscape controls and blind columns are printed; criteria were pre-registered before any number; every
+ row has three seeds; and the two instruments never share a table (Tables~\ref{tab:cmazet}
+ and~\ref{tab:cmazeo}, Appendix~\ref{app:mazewm}).
+ 
+@@ -1025,7 +1057,7 @@
+ latent 128, $K=2$, 6 atoms, rank/width 0.094, 4,584 read floats), three TEST seeds, scored runs
+ 1--3: the store generates held-out $n$-way transitions at 0.7246 (0.800 / 0.566 / 0.808) against
+ 0.4035 (0.394 / 0.395 / 0.421) for the best matched rival, a transformer, and is ahead on every
+-seed. All four charter-C controls collapse below the bar of 0.575 on every seed (landscape removed
++seed. All four pre-declared landscape controls collapse below the bar of 0.575 on every seed (landscape removed
+ 0.0000, shuffled 0.2248, shuffled across wells 0.2435, random atoms 0.1655), the learned
+ composition-blind arms fail (0.3418 and 0.0716 against a bar of 0.675), and the cross-maze lookup
+ floor reads 0.0000. The row survives rivals trained ten times longer: on validation, every rival
+@@ -1057,12 +1089,12 @@
+ \paragraph{CMAZE-O: the store gate holds; the rival margin is withdrawn.} With the store fitted in
+ the observation field (Config C-field: $K=8$, 64 atoms, 1,232,064 read floats; runs 4--6), the store
+ composes held-out $n$-way observations at 0.6933 against 0.1667 for the best rival trained on the
+-recipe's budget, a win by the pre-registered rule. \textbf{That rival margin is withdrawn by the
+-Hub.} The same matched MLP trained ten times longer (30,000 steps) reads 0.988 / 0.990 / 0.990 on
++recipe's budget, a win by the pre-registered rule. \textbf{We withdraw that rival
++margin.} The same matched MLP trained ten times longer (30,000 steps) reads 0.988 / 0.990 / 0.990 on
+ validation $n$-way against the store's 0.640 / 0.730 / 0.730, so no CMAZE-O configuration can pass
+ against a converged matched MLP, and runs 4--6 are attached to a composition-over-rivals claim that
+ does not stand. Two statements must be kept apart. What is withdrawn is \emph{composition over
+-rivals}. What holds is the \emph{store gate}: all four charter-C controls read 0.000 on every seed,
++rivals}. What holds is the \emph{store gate}: all four pre-declared landscape controls read 0.000 on every seed,
+ so the store is load-bearing relative to its own controls. The failing link of the rival claim is
+ the \emph{interface}: the field output space lifts a plain MLP further than it lifts the store. The
+ other two CMAZE-O configurations fail validation with their own links (the autoencoder latent at
+@@ -1155,14 +1187,14 @@
+ prediction is a \emph{time}, not a score. With nothing fitted, it predicts the settle half-life to
+ a median factor of 1.105 on 49 held-out corners and three seeds (bar 0.10 on the log error; 0.0433
+ / 0.0435 / 0.0431), and beats a one-parameter form fitted with sight of the held-out
+-measurements on 49 of 49 corners on every seed. One of six pre-registered bars (the V-curve
++measurements on 49 of 49 corners on every seed. One of six pre-registered criteria (the V-curve
+ argmin) misses on all three seeds; the law predicts where its simplest form stops.
+ % SRC: w10-physics-section-evidence/EVIDENCE.md
+ Deletion commutes with scheduled decay on a learned store, 0 bytes differing in a
+ 2,054,866-byte image. The stronger claim that the post-delete store equals the never-inserted one is \textsc{refuted} (65.17\% to 65.39\% of the image differs, 83.5\% of it because the
+ address book and coupling table are fitted on the pool). % SRC: w10-physics-section-evidence/EVIDENCE.md
+ \emph{These are dynamics results about our own store. They occupy no row of the evaluation, they
+-beat no model, and we make no capability claim from them}; no arm of ours fails the retention law, so it distinguishes nothing. Full statements, bars and misses: Appendix~\ref{app:physics}.
++beat no model, and we make no capability claim from them}; no arm of ours fails the retention law, so it distinguishes nothing. Full statements, criteria and misses: Appendix~\ref{app:physics}.
+ 
+ \subsection{Leaving note}
+ \label{sec:leaving}
+@@ -1265,7 +1297,7 @@
+ \caption{\textbf{The generation table, $\Kstar$ single design, \texttt{generation-table} scored run 3 of 3, % SRC: w15-lace-poe-rows/FINDINGS.md
+ generation-2 cache.} A separate instrument from Table~\ref{tab:t7}, never merged with it:
+ composition-B aggregate under the external classifier over 72 held-out requests, per seed. % SRC: w15-lace-poe-rows/FINDINGS.md
+-Byte figures name their convention; no $\Kstar$ row is matched-bytes. Pre-declared bars: S1
++Byte figures name their convention; no $\Kstar$ row is matched-bytes. Pre-registered criteria: S1
+ (controls collapse) \textsc{pass}; S2 (beats the shipped read on every seed) \textsc{fail}, seed 0;
+ S3 (against \texttt{knn\_proto}) \textsc{lose}; S4 (against LACE, PoE) \textsc{win}.}
+ \label{tab:gentable-kstar}
+@@ -1457,7 +1489,7 @@
+ \emph{validation} pin leg, distinct from the three TEST totals of Table~\ref{tab:ledger-kstar}. % SRC: w13-seeds-and-tables/TABLES.md; w13-referee-2/REFEREE-v1.md
+ On validation, the control gate at $\Kstar$ reads 0.0000 on all four controls on all three seeds.
+ % SRC: w13-seeds-and-tables/TABLES.md
+-\textbf{At three seeds (w15 \texttt{crossover-seeds}, 0 scored runs).} Table~\ref{tab:kcurve3} prints
++\textbf{At three seeds (0 scored runs).} Table~\ref{tab:kcurve3} prints
+ every $K$ at $n=3$ and supersedes the $n=1$ middle rows of Table~\ref{tab:kcurve}.
+ % SRCBLOCK: w15-crossover-seeds/CROSSOVER-3SEED.md; w15-crossover-seeds/FINDINGS.md; w13-seeds-and-tables/TABLES.md
+ The frozen rule, applied unchanged, still returns $\Kstar=32$ and no crossover: no $K$ drops more
+@@ -1473,9 +1505,9 @@
+ \texttt{landscape\_shuffled\_across\_wells} reads 0.0139 on seed 1 (worst of 24 corners; mean
+ 0.000579) against the arm's 0.9213, so no row may be claimed at $K=20$; the primary
+ \texttt{landscape\_shuffled} control collapses at every $K$. The across-wells control here is
+-w12's, a uniform permutation with only the identity rejected, so about one well in $K$ keeps its
++the ladder study's, a uniform permutation with only the identity rejected, so about one well in $K$ keeps its
+ own atoms; a derangement version is a declared not-run, kept non-deranged for comparability with
+-w12. Seeds 3 and 4 are a declared not-run.
++that study. Seeds 3 and 4 are a declared not-run.
+ % ENDSRC
+ 
+ \begin{table}[h]
+@@ -1558,7 +1590,7 @@
+ \sci{1.126}{-09} / \sci{7.105}{-15}; the negative control fired on every seed; and the artefact's
+ own worst-over-seeds figure is 0.009442 float32 ulp at unit scale. % SRC: w13-seeds-and-tables/TABLES.md
+ This leg is an assertion battery on the object at 0 scored runs, and its artefact reads ``no
+-scored run and no claim''. The gate file it cites records two caveats. First, the variance-share
++scored run and no claim''. The pre-registration record it cites holds two caveats. First, the variance-share
+ admission cut is marginal on all three seeds. Second, the separate subspace-level assertion on the
+ pre-cut store fails on seed 2 at 60.36282 ulp, below its own 66.11072-ulp floor; that failure is
+ therefore a property of the content, not of the downdate, and the top-level ``all assertions
+@@ -1757,20 +1789,20 @@
+ MLP in every cell). Equal steps (400) and images (25,600) in every arm-run.} % SRC: w13-encoder-adapt/CROSS-ARM.md
+ \label{tab:adapt}
+ \setlength{\tabcolsep}{3pt}
+-\begin{adjustbox}{max width=\linewidth}\begin{tabular}{llccccc}
++\begin{adjustbox}{max width=\linewidth}\begin{tabular}{lclccccc}
+ \toprule
+-seed & arm & enc. params trained & seconds & single design & best learned & margin \\
++seed & seeds & arm & enc. params trained & seconds & single design & best learned & margin \\
+ \midrule
+ % SRCBLOCK: w13-encoder-adapt/CROSS-ARM.md
+-0 & frozen & 0 & 2297.3 & 23.3119 & 22.7431 & +0.5688 \\
+-0 & adapter & 131,072 & 2368.3 & 22.0642 & 20.4404 & +1.6239 \\
+-0 & anchor & 428,576 & 2523.4 & 25.5688 & 24.2385 & +1.3303 \\
+-1 & frozen & 0 & 2291.2 & 11.2018 & 11.2294 & $-0.0275$ \\
+-1 & adapter & 131,072 & 2307.9 & 13.3486 & 12.9817 & +0.3670 \\
+-1 & anchor & 428,576 & 2309.0 & 11.1560 & 11.1651 & $-0.0092$ \\
+-2 & frozen & 0 & 2211.0 & 20.2936 & 19.1927 & +1.1009 \\
+-2 & adapter & 131,072 & 2047.0 & 18.2844 & 17.9817 & +0.3028 \\
+-2 & anchor & 428,576 & 1640.0 & 20.8165 & 19.5138 & +1.3028 \\
++0 & 1 & frozen & 0 & 2297.3 & 23.3119 & 22.7431 & +0.5688 \\
++0 & 1 & adapter & 131,072 & 2368.3 & 22.0642 & 20.4404 & +1.6239 \\
++0 & 1 & anchor & 428,576 & 2523.4 & 25.5688 & 24.2385 & +1.3303 \\
++1 & 1 & frozen & 0 & 2291.2 & 11.2018 & 11.2294 & $-0.0275$ \\
++1 & 1 & adapter & 131,072 & 2307.9 & 13.3486 & 12.9817 & +0.3670 \\
++1 & 1 & anchor & 428,576 & 2309.0 & 11.1560 & 11.1651 & $-0.0092$ \\
++2 & 1 & frozen & 0 & 2211.0 & 20.2936 & 19.1927 & +1.1009 \\
++2 & 1 & adapter & 131,072 & 2047.0 & 18.2844 & 17.9817 & +0.3028 \\
++2 & 1 & anchor & 428,576 & 1640.0 & 20.8165 & 19.5138 & +1.3028 \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -1828,7 +1860,7 @@
+ $+0.0075$ (consistent), and \texttt{alone} probes worse than an untrained encoder on two of three
+ seeds, the same instability that another harness found in its own encoder. Its scoring stages were
+ not run. % SRC: w8-BAR-D-fold.md
+-\paragraph{Criterion D on the longer leg, scored (w15 \texttt{bar-d-score}).} One
++\paragraph{Criterion D on the longer leg, scored.} One
+ \texttt{encoder-loop} scored run (2 of 3) under its own pre-registration and one amendment
+ written before any TEST number, 3 seeds, 0 \textsc{void} seeds, in its own table % SRC: w15-bar-d-score/FINDINGS.md
+ (Table~\ref{tab:bard-gpu}), never merged with Table~\ref{tab:encloop}. $M(X)$ is the mean paired
+@@ -1851,7 +1883,7 @@
+ \emph{A wiring defect, found and repaired before any TEST number.} The scoring path loaded a
+ rival fitted on the \emph{frozen} encoder's features instead of the arm's refitted learner; the
+ repair loads the arm's own learner and refuses a feature-hash mismatch. The same scorer served
+-the shortened-decoder leg of Table~\ref{tab:encloop}; by the bar-d-score artefact, that leg's
++the shortened-decoder leg of Table~\ref{tab:encloop}; by the criterion-D scoring record, that leg's
+ \texttt{rival\_mlp\_180k} rows at 0.000 are the frozen-feature rival, not a measurement of the
+ refitted baseline, so Criterion D on the shortened leg is \emph{unmeasured}, not void, and
+ re-scoring it (the last \texttt{encoder-loop} run) is a declared not-run. % SRC: w15-bar-d-score/FINDINGS.md
+@@ -2003,7 +2035,7 @@
+ within-maze lookup floor. CMAZE-2b only, 3 seeds.}{fig:verb}
+ 
+ \figslot{fig_maze_wm}{\textbf{CMAZE-T, Config A1, TEST, 3 seeds (Table~\ref{tab:cmazet}).} (a) Unseen
+-$n$-way: the store against the matched rivals, the four charter-C controls and the cross-maze
++$n$-way: the store against the matched rivals, the four pre-declared landscape controls and the cross-maze
+ lookup floor, per seed. (b) Rollout validity is zero for the store and every matched rival; the
+ per-step exactness that compounds over the chained steps is drawn beside it. (c) Post-deletion
+ composition on the surviving colours: the downdated store (equal to the store fitted without)
+@@ -2085,7 +2117,7 @@
+ \paragraph{Disclosures.} On the seen row the nearest-atom test classifies the read as a lookup
+ ($0.0445$ / $0.0412$ / $0.0420$, below 0.05), so that row's validity is a lookup verdict and not a
+ generalisation result; by construction, the seen row is identical on validation and TEST. The
+-scored budget condition departs from the gate file's declared primary; the encoder pool is built
++scored budget condition departs from the pre-registration's declared primary; the encoder pool is built
+ from two-key routes; and the split's two blocks are agent-index halves. \texttt{FULL} reproduces
+ the earlier read's band (0.1594 against 0.1590 on a validation leg) but is not a bit-level
+ replication. % SRC: w14-read-verb/FINAL-REPORT.md
+@@ -2217,13 +2249,13 @@
+ 
+ \begin{table}[h]
+ \centering\small
+-\caption{\textbf{Pre-registered bars of the retention law on the field store, 49 held-out corners % SRC: w10-physics-section-evidence/EVIDENCE.md
++\caption{\textbf{Pre-registered criteria of the retention law on the field store, 49 held-out corners % SRC: w10-physics-section-evidence/EVIDENCE.md
+ $\times$ 3 seeds, 192,975 rows, store pinned at 524,288 B.} Rung-3 theory, not a result row.} % SRC: w10-physics-section-evidence/EVIDENCE.md
+ \label{tab:crr}
+ \setlength{\tabcolsep}{3pt}
+ \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lclccc}
+ \toprule
+-bar & seeds & statistic & seed 0 & seed 1 & seed 2 \\
++criterion & seeds & statistic & seed 0 & seed 1 & seed 2 \\
+ \midrule
+ % SRCBLOCK: w10-physics-section-evidence/EVIDENCE.md
+ B1 & 3 & median $\lvert\log_{10} n_{\text{meas}}/n_{\text{pred}}\rvert\le0.10$ & 0.0433 & 0.0435 & 0.0431 \\
+@@ -2422,8 +2454,8 @@
+ % SRCBLOCK: w15-cmaze-o-harness/FINDINGS.md
+ \emph{CMAZE-O.} A second checker replays 105,408 judged states (35,136 per seed) with 0
+ disagreements and 0 layout-bank rebuild mismatches; 30,588 requests (10,196 per seed) are checked
+-and 0 are impossible. Its validation smoke says one thing against itself: the charter-C controls
+-do not collapse at the span fraction Config-A deploys (0.688), so the smoke is an interface claim,
++and 0 are impossible. Its validation smoke says one thing against itself: the pre-declared landscape
++controls do not collapse at the span fraction Config-A deploys (0.688), so the smoke is an interface claim,
+ not a store claim, and the interface there is 201,312 of 202,848 read floats (99.24\%).
+ % ENDSRC
+ % SRCBLOCK: w16-maze-wm/FINDINGS.md; w15-cmaze-t-harness/FINDINGS.md
+@@ -2464,7 +2496,7 @@
+ \quad budget diagnostic & 3 & validation, A1, every rival trained 80,000 steps, matched and at 10$\times$ read floats: all below the store's 0.802 / 0.569 / 0.803 on every seed (closest: seed 1, LSTM 0.437) \\
+ rollout validity & 3 & \textbf{declared negative}: 0.0000 for the store and every matched rival on every seed (45 rollouts per seed); per-step exactness store 0.9254 (0.930 / 0.917 / 0.928) against transformer 0.8180, compounding over 43 steps. Qualifier: the \emph{diagnostic} transformer at 10$\times$ read floats, not a matched rival, reads 0.0074 (0.000 / 0.000 / 0.022). Failing link: \emph{read} \\
+ value hold-out & 3 & \textbf{declared negative, nothing claimed}: store 0.4647 below transformer 0.5107 and learned BLIND-SEQUENTIAL 0.4848. Failing link: \emph{content} (a never-trained colour has no trained cells) \\
+-controls, floors & 3 & all four charter-C controls at most store $-$0.15 on every seed (bar 0.575): landscape removed 0.0000, shuffled 0.2248, shuffled across wells 0.2435, random atoms 0.1655. Learned BLIND-SEQUENTIAL 0.3418, BLIND-COLOUR 0.0716 (bar 0.675). Floors: cross-maze word lookup 0.0000, cross-maze raw lookup 0.0019, cross-maze fragment 0.0319, within-maze lookup 0.1030 (not transfer). Planner columns, rule-knowing relaxed oracles and never rivals: BLIND-SEQUENTIAL 0.9071, BLIND-COLOUR 0.5509, BLIND-FACTOR 0.6047 \\
++controls, floors & 3 & all four pre-declared landscape controls at most store $-$0.15 on every seed (bar 0.575): landscape removed 0.0000, shuffled 0.2248, shuffled across wells 0.2435, random atoms 0.1655. Learned BLIND-SEQUENTIAL 0.3418, BLIND-COLOUR 0.0716 (bar 0.675). Floors: cross-maze word lookup 0.0000, cross-maze raw lookup 0.0019, cross-maze fragment 0.0319, within-maze lookup 0.1030 (not transfer). Planner columns, rule-knowing relaxed oracles and never rivals: BLIND-SEQUENTIAL 0.9071, BLIND-COLOUR 0.5509, BLIND-FACTOR 0.6047 \\
+ deletion, value & 3 & colour 1; store-scoped exactness $S_k$ relative change \sci{7.80}{-16} / \sci{1.22}{-15} / \sci{1.09}{-15}, atoms change 0; downdated read equal to fitted-without: 0.4369 / 0.4253 / 0.6827, against rival retrain-without 0.3153 / 0.2329 / 0.1076 (as trained 0.2432 / 0.0000 / 0.0340); store adaptation 0.130 / 0.069 / 0.082 s, light and data-free, against rival retrain 14.3 / 14.1 / 14.9 s and 8,000 steps \\
+ deletion, conj. & 3 & $S_k$ relative change \sci{7.73}{-16} / \sci{1.04}{-15} / \sci{8.45}{-16}, atoms change 0; downdated read equal to fitted-without: 0.4369 / 0.4304 / 0.6827, against rival retrain-without 0.2252 / 0.2633 / 0.1020; store adaptation 0.033 / 0.043 / 0.038 s against rival retrain 13.8 / 13.8 / 14.7 s \\
+ ledger & 3 & 4,584 read floats (768 atom + 3,816 head); 18,336 B deployed (float32); 34,320 B statistic (float64); rank/width 0.094 per well; identical per seed \\
+@@ -2508,8 +2540,8 @@
+ % Table tab:cmazet (w16). Every row a PLACEHOLDER that names it and says it may land as a negative.
+ \begin{table}[h]
+ \centering\scriptsize
+-\caption{\textbf{CMAZE-T with symmetric inputs (wave 19, \texttt{maze-t-symmetric}): pending.} The % SRC: ../../tasks/w19/maze-t-symmetric.md
+-instrument, banks, hold-outs, bars, controls, floors and the store configuration are those of
++\caption{\textbf{CMAZE-T with symmetric inputs: pending.} The % SRC: ../../tasks/w19/maze-t-symmetric.md
++instrument, banks, hold-outs, criteria, controls, floors and the store configuration are those of
+ Table~\ref{tab:cmazet}; only the input changes, and within a condition every arm receives the
+ identical input. Every row is pending and may land as a negative; the table is printed in full
+ whatever the outcome. This table contains no row of Table~\ref{tab:cmazet} and no CMAZE-O,
+@@ -2537,7 +2569,7 @@
+ \begin{table}[h]
+ \centering\scriptsize
+ \caption{\textbf{Maze world-model rows: CMAZE-O (observation generation), TEST, Config C-field, 3 % SRC: w16-maze-wm/TABLES.md
+-seeds (scored runs 4--6). The rival margin is WITHDRAWN BY THE HUB; the store gate holds.} Generate
++seeds (scored runs 4--6). The rival margin is WITHDRAWN; the store gate holds.} Generate
+ the grid state for a request of colours, object cells and layout; exact placement and legality.
+ Store and head are fitted in the observation field ($K=8$, 64 atoms) and read out by a parameterless % SRC: w16-maze-wm/TABLES.md
+ decode, with no autoencoder in the read path; every rival regresses the identical field at matched
+@@ -2553,10 +2585,10 @@
+ % SRCBLOCK: w16-maze-wm/TABLES.md; w16-maze-wm/FINDINGS.md; w16-maze-wm/MAZE-WM.json
+ seen & 3 & store 0.7889 (0.787 / 0.767 / 0.813) against recipe-budget MLP 0.3378; lookup 0.0650 \\
+ unseen 2-way & 3 & store 0.5210 (0.755 / 0.386 / 0.422) against recipe-budget MLP 0.0993; across-wells and random-atoms controls 0.0000; lookup 0.0008. The rival comparison uses the withdrawn recipe budget \\
+-unseen $n$-way & 3 & \textbf{composition over rivals: WITHDRAWN BY THE HUB.} By the pre-registered rule a win, store 0.6933 (0.637 / 0.730 / 0.713) against recipe-budget MLP 0.1667; but the same matched MLP trained 30,000 steps reads 0.988 / 0.990 / 0.990 on validation $n$-way against the store's 0.640 / 0.730 / 0.730, so the store loses on every seed and runs 4--6 are attached to a claim that does not stand. Failing link: \emph{interface} (the field output lifts a converged MLP further than the store) \\
++unseen $n$-way & 3 & \textbf{composition over rivals: WITHDRAWN.} By the pre-registered rule a win, store 0.6933 (0.637 / 0.730 / 0.713) against recipe-budget MLP 0.1667; but the same matched MLP trained 30,000 steps reads 0.988 / 0.990 / 0.990 on validation $n$-way against the store's 0.640 / 0.730 / 0.730, so the store loses on every seed and runs 4--6 are attached to a claim that does not stand. Failing link: \emph{interface} (the field output lifts a converged MLP further than the store) \\
+ rollout validity & --- & (no rollouts) \\
+ value hold-out & 3 & 0.0000 for every arm, the store included (store 0.0000; pipeline ceiling 1.0000): a judge-integrity row, not a claim either way \\
+-controls, floors & 3 & \textbf{the store gate holds}: all four charter-C controls 0.0000 on every seed (landscape removed, shuffled channels, shuffled across wells, random atoms); the store is load-bearing relative to its controls. The atom-row \texttt{landscape\_shuffled} equals the store (0.6933) because it is a proved identity for a re-solved signed-span read: printed, never evidence. Lookup 0.0000; best BLIND column 0.0600; pipeline ceiling 1.0000; autoencoder-latent ceiling, for reference only, 0.4550 \\
++controls, floors & 3 & \textbf{the store gate holds}: all four pre-declared landscape controls 0.0000 on every seed (landscape removed, shuffled channels, shuffled across wells, random atoms); the store is load-bearing relative to its controls. The atom-row \texttt{landscape\_shuffled} equals the store (0.6933) because it is a proved identity for a re-solved signed-span read: printed, never evidence. Lookup 0.0000; best BLIND column 0.0600; pipeline ceiling 1.0000; autoencoder-latent ceiling, for reference only, 0.4550 \\
+ deletion, value & 3 & colour 2; 5530 / 5250 / 5959 rows deleted; relative change of the statistic 0.0 on every seed; after-deletion equal to refit-without in every cell. Deleted colour 0.6020 / 0.7483 / 0.7185 $\to$ 0.0000; other colours 0.6734 $\to$ 0.6231, 0.6792 $\to$ 0.7642, 0.6780 $\to$ 0.6610; store adaptation 2.92 / 3.07 / 3.28 s against recipe-budget MLP retrain-without 28.3 / 27.7 / 28.0 s \\
+ deletion, conj. & 3 & 2240 / 1435 / 2168 rows deleted; relative change 0.0; deleted side 0.5800 / 0.8000 / 0.7067 $\to$ 0.0000; other colours 0.6457 $\to$ 0.6343, 0.6880 $\to$ 0.6800, 0.7160 $\to$ 0.7680; adaptation 1.92 / 1.83 / 2.03 s against 29.3 / 28.9 / 29.0 s. Store-scoped exactness on an instrument where the rival claim does not stand \\
+ ledger & 3 & 1,232,064 read floats (158,400 atom + 1,073,664 head); 4,928,256 B deployed (float32); 3,092,584 B statistic (float64); rank/width 0.174 to 0.182; rivals within 2\% (MLP 1231290, continuous MLP 1233449, LSTM 1231661, transformer 1217195) \\
+@@ -2567,7 +2599,7 @@
+ 
+ % SRCBLOCK: w16-maze-wm/FINDINGS.md; w16-maze-wm/TABLES.md
+ \paragraph{Configuration ladder and budget.} Every configuration was measured on validation first,
+-and three scored seeds were spent only after its validation bars passed. \emph{CMAZE-T}: a sweep of
++and three scored seeds were spent only after its validation criteria passed. \emph{CMAZE-T}: a sweep of
+ 53 configurations on three seeds left 25/53 store-gate eligible, and the crossover rule picked
+ $\Kstar=2$, Config A1 (latent 128, 6 atoms, rank/width 0.094, 4,584 read floats), scored in runs
+ 1--3; Config C-512 (latent 512, 8 atoms, rank/width 0.031, 9,184 read floats), scored in runs 7--9
+@@ -2631,7 +2663,7 @@
+ the direction of the swap-loss ingredient on its probe margin, with $A''$ positive on all three
+ seeds ($+0.0100$ / $+0.0129$ / $+0.0075$); its equal-seconds control, however, is short by 41.2 /
+ 27.8 / 18.6 s and is biased toward the treatment. % SRC: w8-BAR-D-fold.md
+-\paragraph{The decomposition re-stated on the longer leg (w15 \texttt{bar-d-score}).} On the
++\paragraph{The decomposition re-stated on the longer leg.} On the
+ longer, full-decoder leg (Table~\ref{tab:bard-gpu}, a block of its own, never merged with the
+ shortened-decoder leg of Table~\ref{tab:encloop}) the ordering is \textbf{not reproduced} by its
+ pre-declared rule, which asks for $A'<0$ and $A''>0$ each in at least four of six cells: $A'$ is
+@@ -2666,7 +2698,7 @@
+ The law also predicts where its own simplest form stops: the median error is 0.0008 at $h/h^\star<0.1$
+ and 0.1482 in the one bucket straddling the exceptional point, where the $2\times2$ map is
+ defective. % SRC: w10-physics-section-evidence/EVIDENCE.md
+-One of the six pre-registered bars missed on all three seeds: the V-curve argmin sits at 0.3362 /
++One of the six pre-registered criteria missed on all three seeds: the V-curve argmin sits at 0.3362 /
+ 0.3301 / 0.3520 of $\gamma_{\text{crit}}$ against a factor-2 bar, a miss pre-registered with its
+ cause before the run. The stricter reading of a second bar, its maximum over $\gamma$, is
+ printed and not moved: 59.1158 / 0.1612 / 1883.2934 against 0.10.
+@@ -2713,12 +2745,12 @@
+ \section{Placeholder index}
+ \label{app:placeholders}
+ 
+-Ten rows remain pending, each marked in the text by a red \textsc{placeholder} whose argument names
+-the row and states that it may land as a negative or not at all; all ten await the w19 wave: the
++Eleven rows remain pending, each marked in the text by a red \textsc{placeholder} whose argument names
++the row and states that it may land as a negative or not at all, and each awaits a further run: the
++data-matched rival set that replaces both rival sets of \S\ref{sec:shapes-t7} (one); the
+ CMAZE-T per-arm generated states in Figures~\ref{fig:cmazet-families}, \ref{fig:cmazet-door-tint}
+-and~\ref{fig:cmazet-deletion} (three), and the seven rows of Table~\ref{tab:cmazet-sym}
+-(\texttt{maze-t-symmetric}). The rows that were pending when the w15 and w16 rows were first
+-written in are now written in from their artefacts: LACE and PoE with the generation-table run
++and~\ref{fig:cmazet-deletion} (three); and the seven rows of Table~\ref{tab:cmazet-sym}. Rows
++that were pending earlier are now written in from their artefacts: LACE and PoE with the generation-table run
+ (\S\ref{sec:adapt}, Tables~\ref{tab:t7}, \ref{tab:ladder} and~\ref{tab:gentable-kstar});
+ Criterion D and its decomposition paragraph (Appendices~\ref{app:encloop}
+ and~\ref{app:encoder-main}, Table~\ref{tab:bard-gpu}); and the coverage control
+@@ -2755,37 +2787,7 @@
+ \end{itemize}
+ 
+ % ---------------------------------------------------------------------------------------
+-% REFEREE-v2 M7(e): the "Corrections absorbed" appendix corrects earlier internal write-ups a
+-% reader has never seen. It is held OUT of the submission PDF by \iffalse and kept in the
+-% source for the record (provenance comments unchanged).
+-\iffalse
+-\section{Corrections absorbed}
+-\label{app:corrections}
++% "Corrections absorbed" is moved OUT of the submission source (REFEREE-v2 M7(e); w20 referee3-fixes
++% item (e)). The block is kept verbatim, provenance comments included, in CORRECTIONS-ABSORBED.tex.
+ 
+-Numbers that circulated in earlier write-ups and that the artefacts correct; this paper prints the
+-artefact's value in every case. % SRC: w13-draft-revise/DRAFT-v1.md; w13-seeds-and-tables/TABLES.md; w13-referee-2/REFEREE-v1.md
+-% SRCBLOCK: w13-draft-revise/DRAFT-v1.md; w13-seeds-and-tables/TABLES.md; w13-referee-2/REFEREE-v1.md; shorts-evidence-inventory.md; w12-clue-theorist/CLUE.md
+-(1) Blind-sequential on CMAZE-2 is 0.9077 / 0.8905 / 0.9128 (mean 0.9037), not a band to 0.9130.
+-(2) The deletion band on Shapes3D is \sci{2.842}{-14} to \sci{1.126}{-09} with a worst of 0.009442
+-float32 ulp, not ``1e-16 to 1e-14''. (3) The $n$-way conjunction row is never read against its
+-per-route ceiling. (4) Blind-sequential near 0.90 on CMAZE-2 is a request-layer property; CMAZE-1
+-reads 0.5317 at the harness tier. (5) The same-maze fragment lookup at $r=2$ is 0.5114 (unweighted)
+-or 0.51044 (pooled), never interchanged. (6) ``Nine seeds'' is three configurations times three seeds
+-in one of three implementations. (7) The byte curve ``7.48 to 2.07 times, monotone'' omits the
+-address book; the honest total is U-shaped (7.8545 to 3.9942 to 4.0877 times). (8) The parameter
+-match of the composition-only store is $-0.304$\% / $+0.495$\% / $+0.495$\%, not $-0.01$\%. (9) The
+-carry rewrite on the earlier $K=5$ object is 125,952 B, not 127,488 B, and is never quoted beside the
+-hole's one byte. (10) The ladder's $1\times$ opponent carried 3,131,564 to 3,260,030 parameters, not
+-1,029,508, which is the crossover construction's figure. (11) Seed 3, not only seed 4, lacks a
+-classifier. (12) The $\Kstar$ ledger ratio is per seed (4.0897 / 4.0768 / 4.0847), not one value;
+-4.0877 is the validation leg. (13) The four-part total of the downdate build is 24.5466 times the pin;
+-its statistic alone is 23.5117 times. (14) The deletion short's ``Guo et al.\ Def.~1/2'' does not
+-exist; the definitions quoted are Ginart Def.~A.5~\citep{ginart2019making} and Sekhari Def.~3. % SRC: shorts-evidence-inventory.md
+-(15) The overdamped slope pair $+1.1385$ / $+1.1368$ has no machine-readable trail; the underdamped % SRC: w12-clue-theorist/CLUE.md
+-slope on this store is inconclusive, not confirmed; the \texttt{d14\_confinement} residual is
+-tautological.
+-% ENDSRC
+-
+-\fi
+-
+ \end{document}
