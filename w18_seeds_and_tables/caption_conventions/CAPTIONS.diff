@@ -1,0 +1,52 @@
+--- /Users/batmac/clu/outputs/w17-paper/DRAFT-v2.tex	2026-09-23 01:45:20
++++ DRAFT-v2.captions.tex	2026-09-23 12:56:02
+@@ -626,7 +626,8 @@
+ parameters, 3 seeds), measured at the feature level on its own fit pool: first on its primary
+ request set, then with off-grid requests included, which a closed-vocabulary input cannot
+ represent. The two sides are not the same quantity and are not differenced; the head-to-head on
+-the same post-deletion requests is a declared not-run.}
++the same post-deletion requests is a declared not-run. Bytes rewritten: ours is one byte per hole in
++the 1,322 B coupling table; the comparator's is its whole parameter blob.}
+ \label{tab:hole}
+ \setlength{\tabcolsep}{3pt}
+ \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccccc}
+@@ -748,7 +749,7 @@
+ subspace, max projector residual & 3 & 0.000 / 0.000 / 0.000 \\
+ rows removed / kept & 3 & 216/992 $\cdot$ 226/975 $\cdot$ 193/1084 \\
+ refit $\cdot$ passes over retained data $\cdot$ items kept & 3 & False $\cdot$ 0 $\cdot$ False (every seed) \\
+-ledger: atoms $\cdot$ statistic (float64) $\cdot$ address book & 3 & 31,744 $\cdot$ 35,904 $\cdot$ 1,611,008 B \\
++ledger: atoms (float32) $\cdot$ statistic (float64) $\cdot$ address book (float32) & 3 & 31,744 $\cdot$ 35,904 $\cdot$ 1,611,008 B \\
+ statistic as a share of the 1,642,752 B deployed read & 3 & 2.19\% \\
+ coupling / hole table & 3 & declared not present \\
+ % ENDSRC
+@@ -807,7 +808,8 @@
+ judge, per seed. Upper block: the store. Lower block: the \texttt{MERGE}$-$\texttt{AVG} gain of
+ every arm on the unseen-pair row (3-seed mean). The single-decode pipeline ceiling on unseen
+ pairs is 0.6432 / 0.6869 / 0.7067. BLIND-SEQUENTIAL on this split: 0.1759 / 0.1566 / 0.1202 % SRC: w14-read-verb/FINAL-REPORT.md
+-(unseen pair).}
++(unseen pair). The lookup floor is matched to the store's read floats; at this configuration the
++match does not bind, and the floor is the whole training set.}
+ \label{tab:verb}
+ \setlength{\tabcolsep}{3pt}
+ \begin{adjustbox}{max width=\linewidth}\begin{tabular}{llcc}
+@@ -1162,7 +1164,9 @@
+ \begin{table}[h]
+ \centering\small
+ \caption{\textbf{$\Kstar$ replication against a $1\times$-total-bytes MLP (stress comparison),
+-3 seeds, held out, 0 scored runs.} Per-seed margins (seeds 0 / 1 / 2) and 3-seed mean.}
++3 seeds, held out, 0 scored runs.} Per-seed margins (seeds 0 / 1 / 2) and 3-seed mean. Opponent
++parameters are float32, matched to the object's own four-part total (symmetric-triangle float64
++statistic).}
+ \label{tab:1x}
+ \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccc}
+ \toprule
+@@ -1403,7 +1407,8 @@
+ \begin{table}[h]
+ \centering\small
+ \caption{\textbf{Deletion cost for the rivals, value scope (red; 1,352 of 16,384 fit rows), % SRC: w12-deletion-baselines/FINDINGS.md
+-seed 0.} Data rows read and bytes rewritten are seed-invariant. ``Forget $-$ retain'' is the
++seed 0.} Data rows read and bytes rewritten are seed-invariant; bytes rewritten is the rival's whole
++parameter blob. ``Forget $-$ retain'' is the
+ feature-MSE gap of the exact retrain, 3-seed mean; the seeds column gives the count for the
+ seconds and for the gap. The store's own line (Table~\ref{tab:del}):
+ 0 rows read, no refit.}

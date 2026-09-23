@@ -1,88 +1,106 @@
-# w18 spoke/seeds-and-tables: FINDINGS (first pass. ⛔ A SECOND PASS IS REQUIRED)
+# w18 spoke/seeds-and-tables: FINDINGS (SECOND PASS; supersedes the first pass)
 
-**Branch:** `w18/seeds-and-tables`. **Base:** `base/iter8 = 148f3b7`. **Machine:** batmac. **Scored runs: 0. Compute: 0.** No `.tex` file and no `\PLACEHOLDER{}` was touched.
-Every number in this file is a registered cell in `TABLES.md`, printed there with its `[file:line]`.
+**Branch:** `w18/seeds-and-tables`. **Machine:** batmac. **Scored runs: 0. Compute: 0** (apart from two LaTeX compiles of a draft *copy* in the scratchpad, §4).
+**No `.tex` file was edited and no `\PLACEHOLDER{}` was touched.** The live `outputs/w17-paper/DRAFT-v2.tex` md5 is `e7745f2c9ea99d932635e4b062755ae7` before and after this pass.
+Every number in `TABLES.md` is a build-verified cell: the value is verbatim on its cited `[file:line]`. A number in this file is either quoted from `TABLES.md`, with the section named, or carries its own `path:line`.
 
 ## 0. What shipped
 
 | file | what |
 |---|---|
-| `TABLES.md` | The fold specification: the environment register, the w16 CMAZE-T tables (W16-T1…T4), the w16 CMAZE-O tables (W16-O1…O3), the budget ledger and the CMAZE-2b fallback, a placeholder-by-placeholder map, the w15 awaiting and not-folded lists, the 1× bracket, and a seed-column and byte-convention audit of all 24 draft tables |
-| `TABLES-w18.json` | Machine-readable: 88 cells, each with its value, source file and line, a `verbatim_on_line: true` check, and the sha256 of each source file |
-| `build_tables.py`, `TABLES.template.md` | The table sources. `python build_tables.py` regenerates `TABLES.md` and **fails** if any cell is not verbatim on its cited line, or if any decimal or comma-grouped number enters without a cell. A negative test was run: one cell mutated (`0.693 vs 0.167` → `0.176`) plus one bare `0.7246` in the template. Both were caught, exit 1. Two consecutive builds gave byte-identical output |
+| `TABLES.md` | The fold specification, rebuilt. w16 is re-folded from the primary record (§2 CMAZE-T, §3 CMAZE-O, §4 budget). **§4b is the report-vs-artefact reconciliation.** The six landed w15 spokes are folded (§6.2). The three awaiting spokes are declared again (§6.1). The 1× bracket (§7) and the convention audit with its closures (§8) complete it |
+| `TABLES-w18.json` | Machine-readable: 507 cells, each with its value, source, line, `verbatim_on_line: true`, and the sha256 of every source file |
+| `build_tables.py`, `cells_pass2.py`, `TABLES.template.md` | The sources. Pass 2 adds row pointers `{{@ALIAS:LINE}}` and value-only cells `{{id:v}}`. A value-only cell **fails the build** unless it shares its template line with its own row pointer. It also adds an unrendered-token check, an id-shape check, and scientific notation in the bare-number guard. The first two closed a hole found during this pass: capitalised ids slipped past the token regex. The third closed another: `7.7e-16` slipped past the guard. A negative test (a mutated cell, an orphan value-only token, a bare number, a bad id) exits 1 with all four caught. The register is static. It was generated once from `gen_cells_spec.py` (kept for provenance; the build does not run it) and is re-verified on every build |
+| `caption_conventions/` | `apply_caption_conventions.py` (five guarded, idempotent caption / label edits), `CAPTIONS.diff`, and `DRAFT-v2.captions.tex` (the patched **copy**) |
 
-## 1. ⛔⛔ The most important finding: the six "landed" w15 spokes have NO artefact on batmac
+## 1. ⛔ Wave 16 re-folded from `w16-maze-wm/`. The Hub's report disagrees with the primary artefact in eight places, and THE ARTEFACT WINS in every one
 
-The launch says `table-fixes`, `crossover-seeds`, `single-design-seeds`, `cmaze-t-harness`, `cmaze-o-harness` and `maze-deletion-2b` have landed. On this machine:
-- `evidence/outputs/` has no `w15-*` directory.
-- `outputs/w15-table-fixes/` is empty.
-- Branch `w15/table-fixes` has no commit past `148f3b7`.
-- The harness merge commit `b1ca534`, named at `w16-advisor-report.md:3`, is not an object in this repository.
+The Hub re-derived nothing, but it paraphrased. Pass 1 folded that paraphrase. It was the only w16 source on batmac at the time. Pass 2 re-reads every cell from `w16-maze-wm/{FINDINGS.md, TABLES.md, MAZE-WM.json, PREREG-*-T2.md, t2/C2r_val_seed*.json}`. The full table with pointers is `TABLES.md` §4b. In short:
 
-The sibling `w18/registry-fold` reached the same result independently (its FINDINGS §2).
-⇒ **None of the six can be folded without guessing, and this spoke did not guess.** They are listed as **DECLARED NOT-FOLDED: artefact absent** (`TABLES.md` §6.2), with the exact table and row each will fill. The second pass needs their output directories copied into `~/clu/evidence/outputs/`. After that the work is mechanical: add cells, rebuild.
-The single w15 number a batmac artefact quotes is folded **as a secondary quote**: the `crossover-seeds` K\* sd **0.0259** against the **0.02** tolerance (`w17-advisor-report.md:199`).
+1. **The CMAZE-O "converged rivals" triples belong to Config C2 (latent), not to C-field.** The report (`w16-advisor-report.md:42`) puts "CLU n-way 0.088 / 0.150 / 0.173 vs best rival 0.315 / 0.413 / 0.463" under the C-field withdrawal. In the record they are the C2 VAL leg (`w16-maze-wm/FINDINGS.md:219–220`). C-field against its own 30k-step rivals is the MLP at 0.988 / 0.990 / 0.990 (`w16-maze-wm/FINDINGS.md:212`) against the CLU in the header of `w16-maze-wm/TABLES.md:1292`. ⛔ **Pass 1 printed the C2 triples as "the same comparison" as C-field. That row is withdrawn.**
+2. **"CMAZE-O yields no store row at any config"** (`w16-advisor-report.md:49`) contradicts the record. The C-field **store gate holds**, and what is withdrawn is the composition-over-rivals claim (`w16-maze-wm/MAZE-WM.json:369`). It is still not a win, and `TABLES.md` never prints it as one.
+3. **CMAZE-O has three failing links, not one.** The record gives Config A content/read, C-field vs converged rivals interface, and C2 read (`w16-maze-wm/MAZE-WM.json:377–379`).
+4. **The 80,000-step re-test is Config A1 on VAL** (`w16-maze-wm/TABLES.md:1281`), a diagnostic and not a TEST re-score. The scored leg against 80k-step rivals is C-512 on TEST (`TABLES.md` W16-T6).
+5. **"Relative ΔS = 0.0 on every seed" does not describe the CMAZE-T winner.** For A1 the statistic residual is 7.7e-16 … 1.2e-15 and only the atoms Δ is 0.0 (`w16-maze-wm/FINDINGS.md:110`, `TABLES.md:144–149`). The report's wording is the CMAZE-O C-field deletion's (`w16-maze-wm/FINDINGS.md:205`).
+6. **Rollout, "every learned arm".** This holds for the CLU and the matched rivals. The 10×-float *diagnostic* transformer reads a non-zero validity on seed 2 (`w16-maze-wm/TABLES.md:138`). The per-step comparison is CLU 0.925 against transformer 0.818 (`w16-maze-wm/FINDINGS.md:107–108`). ⛔ **Rollout validity 0.000 for every learned arm that is the CLU or a matched rival stays printed as a declared negative, link READ** (`TABLES.md` W16-T3).
+7. **The C-512 seed-1 caveat names both numbers**: random_atoms 0.464 against the CLU's 0.567 (`w16-maze-wm/FINDINGS.md:169`).
+8. **CMAZE-O deletion RAN**, on C-field TEST, both scopes, every seed (`w16-maze-wm/TABLES.md:877–888`). Pass 1 declared it not-run "by construction" from the report's silence. The declared not-runs are only B, C2 and C2r (`w16-maze-wm/FINDINGS.md:268–269`).
 
-## 2. Wave 16: folded from the Hub's report, because the primary record is not here
+**Also closed from the record:** the within-maze lookup (`TABLES.md` W16-T1), the seen, 2-way and value rows with their claim labels (W16-T2), both deletion scopes with composition and cost (W16-T4, W16-O3), the ledgers with the convention named (W16-T5, W16-O4), and seed ids rather than run indices. **Pass-1 flag 1** (A1 and C-512 agreeing to three places) is explained by the record: VAL n-way plateaus at one per-seed triple across about 15 configs, a ceiling set by the request design (`w16-maze-wm/FINDINGS.md:137–140`).
+**The CMAZE-O margin stays WITHDRAWN BY THE HUB** (`w16-maze-wm/MAZE-WM.json:22`). Runs 4–6 are attached to a claim that does not stand (`TABLES.md` W16-O1, §4).
 
-`w16-advisor-report.md` is the only w16 artefact on batmac. The primary record, `/c/chlu/outputs/w16-maze-wm/`, is on FORGIS_14. Everything the report prints is folded, and every row it does not print is marked **NOT FOLDABLE**.
-- **CMAZE-T** (W16-T1…T4). ENVIRONMENT CMAZE-T ONLY:
-  - The A1 store row at n = 3: CLU 0.7246 (0.800 / 0.566 / 0.808) vs the best rival at 0.4035. All four controls collapse, and the cross-maze lookup floor is 0.0000.
-  - The rivals re-tested at 80,000 steps.
-  - The C-512 replication at n = 3, carrying its seed-1 `random_atoms` caveat.
-  - Config B failed validation, and that is an interface finding.
-  - ⛔ **Rollout validity = 0.000 for every learned arm. Per-step 0.925, compounding over 43 steps. It is printed as a declared negative, link READ, and not omitted.**
-  - Deletion exactness on the winner: relative ΔS = 0.0 on every seed.
-- **CMAZE-O** (W16-O1…O3). ENVIRONMENT CMAZE-O ONLY, in a separate table:
-  - ⛔ **The 0.693 vs 0.167 margin is printed as WITHDRAWN BY THE HUB, never as a win.** Three scored runs (4–6) are attached to a claim that does not stand.
-  - Against converged 30k-step rivals, the CLU reads 0.088 / 0.150 / 0.173 and the best rival 0.315 / 0.413 / 0.463.
-  - Declared negative: no store row at any config, link INTERFACE.
-  - Configs A and C2 failed validation. Runs 10–12 are declared not-run.
-- **CMAZE-2b** Task 3 (runs 13–18): DECLARED NOT-RUN, in its own entry.
-- **CMAZE-1, CMAZE-2, CMAZE-2b, CMAZE-T and CMAZE-O never share a table.** The register is `TABLES.md` §1. CMAZE-2b's deletion transfer (`tab:maze-del-2b`, pending w15) is a separate table from `tab:verb`.
+## 2. The six landed w15 spokes, folded from their own artefacts (`TABLES.md` §6.2)
 
-## 3. ⚠ The 1× opponent: the BRACKET is printed, not one convention. Why
+- **`crossover-seeds` → `tab:kcurve`.** The seven middle rows are now at n = 3, with the convention in the table (`w15-crossover-seeds/CROSSOVER-3SEED.md:11–15, 21–29`). Three things must travel with the table:
+  - ⛔ **The frozen rule is not resolvable at n = 3.** The seed sd exceeds the tolerance at six of nine K (`CROSSOVER-3SEED.md:37–47`). This confirms, from the artefact, the one secondary quote pass 1 took from `w17-advisor-report.md:199`.
+  - ⛔ **K = 20 fails the strict control gate** (`CROSSOVER-3SEED.md:112, 123, 134`).
+  - ⛔ **Two draft sentences become false at n = 3.** The draft says "the largest drop anywhere is +0.012731 at K = 10" (`DRAFT-v2.tex:1247`), while the artefact says every drop is ≤ 0 (`w15-crossover-seeds/FINDINGS.md:130–131`). The draft prints the w12 n = 1 rows (`DRAFT-v2.tex:1230`), which the n = 3 rows supersede.
+  - The U-shape is confirmed, with its minimum at K = 24 on every seed (`CROSSOVER-3SEED.md:97–101`).
+- **`single-design-seeds` → `tab:del`, `tab:rivals-del`, `tab:hole`.**
+  - `tab:del`: seeds 1 and 2 on the value, red-sphere and item rows, with cos_min from each seed's `deletion.json`.
+  - `tab:rivals-del`: the seconds column goes to 3 seeds (`T7-3SEEDS.md:135–146`).
+  - `tab:hole`: our row goes to 3 seeds (`w15-single-design-seeds/FINDINGS.md:273–274`).
+  - T7 reproduces the draft: all 36 per-seed cells of the six arm and comparator rows (`T7-3SEEDS.md:15–34` against `DRAFT-v2.tex:358–366`) agree at the artefact's three decimals. This was checked by script and is not a registered cell.
+  - ⛔ **What travels:** the deleted red corners **still compose red at all three seeds** (`FINDINGS.md:290–292`). The deletion claim is store-scoped exactness plus a data-free adaptation cost, not capability erasure. ⚠ The draft's "every row rewrites 2,081,024 bytes" (`DRAFT-v2.tex:555`) is seed 0 only; the bytes differ per seed (`T7-3SEEDS.md:86–87`).
+- **`maze-deletion-2b` → new `tab:maze-del-2b`, CMAZE-2b only.**
+  - Exactness, adaptation cost and the rival's retrain-without are folded, with the convention in the table (`w15-maze-deletion-2b/FINDINGS.md:73–75`).
+  - ⛔ Deletion does **not** induce refusal (`FINDINGS.md:126–128`).
+  - ⚠ The artefact is internally inconsistent: TABLE.md prints "—" for the carry-path seconds, and FINDINGS §4 prints them (`FINDINGS.md:111`).
+- **`cmaze-t-harness`, `cmaze-o-harness` → P12.** The replay, impossible-example and VAL-smoke audits are folded (`TABLES.md` §6.2d).
+  - ⚠ The CMAZE-T harness shipped **three** warnings (`w15-cmaze-t-harness/HARNESS-READY.json:280, 289, 298`). The w16 report named one.
+  - ⚠ The w16 record's AMENDMENT 1 notes that this harness's across-wells control has a partial-identity risk at K = 4 and K = 8 (`w16-maze-wm/FINDINGS.md:65`). The w15 VAL smoke should carry that note.
+- **`table-fixes` → MF2, MF14(i).** Checked against `DRAFT-v2.tex`, not DRAFT-v1:
+  - ✘ **MF2:** the draft still carries the referee's rounding slip, 23.5117 (`DRAFT-v2.tex:1317, 2262`). w15 corrected it to 23.5121 in DRAFT-v1 (`w15-table-fixes/TABLE-FIXES.md:83–84`).
+  - ✘ **MF14(i):** the BLIND columns are in the prose after `tab:cmaze2` (`DRAFT-v2.tex:1591`), not in the table (`DRAFT-v2.tex:1573`).
+  - Both are edits for the Head or placeholder-fill. Neither touches a placeholder.
 
-The ladder (K = 5) sized its 1× opponent from the full-square Σ d_k² ledger. The crossover / K\* replication used the symmetric-triangle float64 four-part total. **The bracket 938,413–1,710,324 is printed wherever the K = 5 opponent appears, and the K\* opponent (536,270–536,972) is labelled symmetric-triangle float64.**
+## 3. ⚠ The 1× opponent: the BRACKET stays printed. The pass-1 judgement stands
 
-Why one convention was not applied:
-1. **Re-pricing is re-deriving.** Moving the ladder's opponent onto the triangle convention means recomputing ledgers from `well_sizes`, which this wave forbids.
-2. **No same-convention opponent exists at 3 seeds.** The only in-bracket opponent (1,029,776 params) is **n = 1**, a replication, not scored. Presenting it as the single convention would promote a 1-seed row to the table's standard.
-3. **The draft already prints the bracket** (`app:k5`) and drops the out-of-bracket rows. Keeping the bracket stays consistent with the draft and with referee-2's N1/N2.
+The ladder (K = 5) sized its 1× opponent from the full-square Σ d_k² ledger. The K\* replication used the symmetric-triangle float64 four-part total. **The bracket 938,413–1,710,324 (`w13-advisor-report.md:85`) is printed wherever the K = 5 opponent appears. The K\* opponent (536,270–536,972, `w12b-nr6-and-kstar/FINDINGS.md:33`) is labelled symmetric-triangle float64.** The three reasons are unchanged:
+1. **Re-pricing is re-deriving.** Moving the ladder's opponent onto the triangle convention would mean recomputing ledgers from `well_sizes`, which this wave forbids.
+2. **No same-convention opponent exists at 3 seeds.** The only in-bracket opponent (1,029,776 params, `w13-advisor-report.md:73`) is **n = 1**, a replication, not scored. Making it the convention would promote a 1-seed row to the table's standard.
+3. **The draft already prints the bracket** (`app:k5`) and drops the out-of-bracket rows. Keeping it stays consistent with the draft and with referee-2's N1/N2.
 
-Remaining gap: `tab:1x`'s caption does not name its convention. It is on the audit edit list (`TABLES.md` §8).
+Nothing in the w15 or w16 artefacts moves the bracket. w15 `single-design-seeds` restates the same limit: the 1× column is a declared not-run (`w15-single-design-seeds/FINDINGS.md:97–100`). `tab:1x`'s caption is now closed (§4).
 
-## 4. Seed column and byte conventions (the audit is `TABLES.md` §8)
+## 4. The four byte-bearing tables without a convention in the table: CLOSED
 
-- **All 24 draft tables carry a `seeds` column.** Single-seed rows print 1. No table prints "9/9 seeds".
-- ✘ Four byte-bearing tables do not name their convention **in the table**:
-  - `tab:hole`, `tab:rivals-del`: the source defines `bytes_rewritten` as the arm's whole parameter blob.
-  - `tab:verb`: the lookup's "matched bytes" is not named.
-  - `tab:1x`: the convention is in the prose, not the caption.
-- `tab:maze-del` names a dtype for the statistic only.
-- These are edits for placeholder-fill or the Head, because this spoke does not own the `.tex`.
-- ✔ The ladder's n ≥ 3 training-data note travels with `tab:ladder` (caption and the following paragraph). ⚠ It is only partial under `tab:k5`, which has the same rungs.
+Each convention is named from its own source (`TABLES.md` §8), as caption text in a guarded patch:
+- `tab:1x`: float32 opponent parameters matched to the object's four-part total, with a symmetric-triangle float64 statistic.
+- `tab:hole`: ours is one byte per hole in the coupling table; the comparator's is its whole parameter blob.
+- `tab:rivals-del`: the whole parameter blob.
+- `tab:verb`: the lookup floor is matched to the store's read floats; the match does not bind, and the floor is the whole training set.
 
-## 5. Flags for the second pass and the Hub. None of these is a correction, because the primary record is absent
+The partial `tab:maze-del` also gets (float32) on atoms and address book (`w13-seeds-and-tables/TABLES.md:162, 164`).
+**Verified on a copy:**
+- All five edits apply, and a second run is a no-op with byte-identical output.
+- The `\PLACEHOLDER` count is unchanged: 32 tokens, on 33 lines that mention it.
+- Base and patched copies both compile with pdflatex and bibtex: exit 0, 35 pages, the same warning count (102), 0 overfull boxes.
 
-1. The A1 mean `0.7246` and the C-512 figure `0.725 vs 0.453` agree to three places, although they come from different configs and run ranges. Check against `w16-maze-wm/`.
-2. The w16 deletion line does not say which scope it covers (value or conjunction), and it gives no post-deletion composition or cost. P19 and P20 are therefore only partially fillable.
-3. The rollout line gives no seed count, and the 80,000-step re-test line does not name the config.
-4. The w16 runs are indexed by run number, not seed id.
-5. ⚠ **Label collision:** in the draft, `tab:cmaze-del` labels the **CMAZE-T** table. The CMAZE-2b deletion transfer needs its own label (proposed `tab:maze-del-2b`).
-6. ⛔ **AMENDMENT-1 still binds:** no w15/w16 number enters a draft until the Head and the Advisor have discussed them. `TABLES.md` is the fold spec. Writing it into the `.tex` is not this spoke's decision.
+The diff is 10 insertions and 5 deletions, all in caption or label text (`caption_conventions/CAPTIONS.diff`).
+✔ The ladder's n ≥ 3 TRAINING-DATA note travels with `tab:ladder`. ⚠ It still should also travel to `tab:k5`, which has the same rungs. That is prose, not a convention, so it is on the Head's list and not in the patch.
 
-## 6. DECLARED NOT-DONE
+## 5. Why the caption patch was NOT applied to the live draft
 
-- **w15, AWAITING (three spokes), second pass required.** `bar-d-score` → a new `tab:bard` (never `tab:encloop`), P11 and P31. `coverage-control` → a new row in `tab:ladder`, n = 6 column, P4. `lace-poe-rows` → `tab:t7` LACE and PoE rows, plus LACE and PoE on every rung of `tab:ladder` and generation-table run 3, P3 and P7.
-- **w15, NOT FOLDED because the artefact is absent (six spokes):**
-  - `crossover-seeds` → `tab:kcurve`, K = 8…28 at seeds 1–2.
-  - `single-design-seeds` → `tab:del` and `tab:rivals-del`, seeds 1–2.
-  - `maze-deletion-2b` → the new `tab:maze-del-2b`.
-  - `cmaze-t-harness` and `cmaze-o-harness` → P12.
-  - `table-fixes` → MF2 and MF14(i).
-- **w16, NOT FOLDABLE, because the rows are not in any batmac artefact:**
-  - CMAZE-T: seen, 2-way and value hold-out; the within-maze lookup; the post-deletion composition and cost for both scopes; rival parameter counts and the store ledger.
-  - CMAZE-O: seen, 2-way and value hold-out; controls, lookup and BLIND columns.
-- **CMAZE-O deletion:** DECLARED NOT-RUN by construction, because there is no winner. The primary record should confirm this.
-- **Not attempted:** any `.tex` edit, any placeholder, any figure, and any rebuild of w13's `build_tables.py`/`verify_tables.py`. Those read `/c/chlu/outputs/...` on FORGIS_14, which does not exist here.
+1. `outputs/w17-paper/DRAFT-v2.tex` is not in this spoke's tree. It is the paper's working file, and `placeholder-fill` writes into the same file. A concurrent write from here could collide.
+2. The patch adds only banked conventions and no w15/w16 number, so AMENDMENT-1 does not block it. Applying it is still the owner's single command: `python w18_seeds_and_tables/caption_conventions/apply_caption_conventions.py outputs/w17-paper/DRAFT-v2.tex`. The script refuses to write if any anchor moved.
+
+## 6. New flags from the primary records. These are readings, not corrections
+
+- ⚠ **CMAZE-T "matched" rivals are up to +11.9 % (transformer) and −6.4 % (LSTM) off the CLU's read floats** (`w16-maze-wm/TABLES.md:155`). The record's "within 2 %" is stated for CMAZE-O only (`w16-maze-wm/FINDINGS.md:238`). The CMAZE-T caption should print the residuals.
+- ⚠ **CMAZE-O C-field has no AE in its read path** (`w16-maze-wm/FINDINGS.md:195`), but the draft's `tab:cmazeo` caption says "the same frozen encoder" (`DRAFT-v2.tex:2050–2051`).
+- ⚠ **The CMAZE-O atom-row `landscape_shuffled` equals the CLU on every row.** It is a declared identity (`w16-maze-wm/PREREG-w16-maze-wm-T2.md:21–23`) and must be labelled that way, never read as a control that failed to collapse.
+- The C2 per-seed values are 0.0875 / 0.15 / 0.1725 in the JSON (`t2/C2r_val_seed{0,1,2}.json:281`). FINDINGS rounds half-up and TABLES rounds half-to-even. Neither is wrong.
+- Pass-1 flag 5 (the `tab:cmaze-del` label collision) is **still open**.
+
+## 7. DECLARED NOT-DONE / what did NOT run
+
+- **w15, STILL AWAITING, NOT FOLDED** (running on the other box; `TABLES.md` §6.1):
+  - `bar-d-score` → a **new `tab:bard`**, never `tab:encloop`: the full-decoder GPU BAR D row for `alone` / `unfrozen` / `loop_swap`. **P11, P31.**
+  - `coverage-control` → **one new row in `tab:ladder`**, in the n = 6 column: store, n = 6, fit pool restricted to n = 3's train index. **P4.**
+  - `lace-poe-rows` → `tab:t7`'s "LACE, PoE" row split into separate LACE and PoE rows (row 3, row 4, paired Δ); LACE and PoE rows on **every rung of `tab:ladder`**; and generation-table **run 3**. **P3, P7.**
+- **Not done:** any `.tex` edit on the live draft; any `\PLACEHOLDER{}`; applying the caption patch to the live draft (§5); any figure (including OPEN-W15-1, the `fig1_cmaze2_main_scoreboard.png` mismatch); any rebuild of w13's `build_tables.py` / `verify_tables.py`; the `tab:k5` note; the MF2 and MF14(i) draft edits (§2); the `tab:cmaze-del` label fix.
+- **Not re-derived:** no w15 or w16 number was recomputed. Where a table printed a rounded value, the fold either used it as printed or cited the JSON line with the raw value.
+- **Pass-1 cells no longer used in `TABLES.md`**, kept in the register for audit: 69 report-sourced, plan and spare cells, listed under `cells_unused_in_template` in `TABLES-w18.json`.
+- **Background jobs: none. Sub-agents: none.** No process was killed.
+- ⛔ **AMENDMENT-1 still binds.** No w15 or w16 number enters a draft until the Head and the Advisor have discussed them. `TABLES.md` is the fold spec, not an edit.

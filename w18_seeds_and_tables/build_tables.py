@@ -1,6 +1,10 @@
 """w18 spoke/seeds-and-tables: render TABLES.md from TABLES.template.md and the cell register.
 
 Every `{{id}}` token in the template is replaced by a registered cell's value plus its pointer.
+Pass 2 adds two token forms for dense tables: `{{@ALIAS:LINE}}` prints a row's source pointer,
+and `{{id:v}}` prints a cell's value alone. The build FAILS unless a `{{id:v}}` token shares its
+template line with the `{{@ALIAS:LINE}}` pointer of that exact cell, so every number still
+travels with its file and line.
 A cell is registered as (source file under the evidence root, 1-indexed line, value) and the
 build FAILS unless the value occurs verbatim on that line. The build also fails if the template,
 outside tokens, carries a decimal number or a comma-grouped number: those may only enter
@@ -29,6 +33,9 @@ SRC = {
     "PLAN": "advisor-wave-plan-w15-w18.md",
     "W13T": "w13-seeds-and-tables/TABLES.md",
 }
+# Pass 2 sources (the six landed w15 spokes, the w16 primary record, and the draft itself).
+from cells_pass2 import SRC2, CELLS2  # noqa: E402
+SRC.update(SRC2)
 
 # id: (source alias, line, value). The value must occur verbatim on that line.
 CELLS = {
@@ -132,15 +139,27 @@ CELLS = {
     "ladder_note": ("PLAN", 26, "we beat the naive fair rivals at every n; the CLU's own 2-way→6-way rise is not to be inferred because rungs 3–6 share corners and differ in coverage"),
 }
 
-NUM_RE = re.compile(r"(?<![\w.§])(\d+\.\d+|\d{1,3}(?:,\d{3})+)(?![\w])")
-TOKEN_RE = re.compile(r"\{\{([a-z0-9_]+)\}\}")
+for _cid in CELLS2:
+    if _cid in CELLS:
+        raise SystemExit(f"duplicate cell id {_cid}")
+CELLS.update(CELLS2)
+
+NUM_RE = re.compile(r"(?<![\w.§])(\d+(?:\.\d+)?[eE][-+]?\d+|\d+\.\d+|\d{1,3}(?:,\d{3})+)(?![\w])")
+TOKEN_RE = re.compile(r"\{\{([a-z0-9_]+)(:v)?\}\}")
+PTR_RE = re.compile(r"\{\{@([A-Z0-9]+):(\d+)\}\}")
+ANY_RE = re.compile(r"\{\{[^}]*\}\}")
 HEADING_RE = re.compile(r"^#+\s+\d+(?:\.\d+)*")  # section numbers are not data
+
+
+def src_path(alias):
+    rel = SRC[alias]
+    return Path(rel) if rel.startswith("/") else EVIDENCE / rel
 
 
 def verify_cells():
     manifest, failures = {}, []
     for cid, (alias, line, value) in CELLS.items():
-        path = EVIDENCE / SRC[alias]
+        path = src_path(alias)
         lines = path.read_text(encoding="utf-8").splitlines()
         text = lines[line - 1] if 0 < line <= len(lines) else ""
         ok = value in text
@@ -153,26 +172,49 @@ def verify_cells():
 def main():
     manifest, failures = verify_cells()
     template = (HERE / "TABLES.template.md").read_text(encoding="utf-8")
-    used = set(TOKEN_RE.findall(template))
+    used = {m[0] for m in TOKEN_RE.findall(template)}
     unknown = sorted(used - set(CELLS))
     unused = sorted(set(CELLS) - used)
-    bare = [(i + 1, m.group(0)) for i, ln in enumerate(template.splitlines())
-            for m in NUM_RE.finditer(HEADING_RE.sub("", TOKEN_RE.sub("", ln)))]
-    if failures or unknown or bare:
+    tlines = template.splitlines()
+    bare = [(i + 1, m.group(0)) for i, ln in enumerate(tlines)
+            for m in NUM_RE.finditer(HEADING_RE.sub("", ANY_RE.sub("", ln)))]
+    # a value-only token must share its line with the pointer of that exact cell
+    orphans, bad_ptr = [], []
+    for i, ln in enumerate(tlines):
+        ptrs = {(a, int(n)) for a, n in PTR_RE.findall(ln)}
+        for a, n in ptrs:
+            if a not in SRC:
+                bad_ptr.append(f"template l.{i + 1}: unknown alias {a}")
+            elif not 0 < n <= len(src_path(a).read_text(encoding="utf-8").splitlines()):
+                bad_ptr.append(f"template l.{i + 1}: {a}:{n} out of range")
+        for cid, v in TOKEN_RE.findall(ln):
+            if v and cid in CELLS and (CELLS[cid][0], CELLS[cid][1]) not in ptrs:
+                orphans.append(f"template l.{i + 1}: {{{{{cid}:v}}}} has no pointer {CELLS[cid][0]}:{CELLS[cid][1]} on its line")
+    if failures or unknown or bare or orphans or bad_ptr:
         for f in failures:
             print("CELL FAIL", f)
         for u in unknown:
             print("UNKNOWN TOKEN", u)
         for ln, num in bare:
             print(f"UNSOURCED NUMBER template l.{ln}: {num}")
+        for o in orphans + bad_ptr:
+            print("POINTER FAIL", o)
         sys.exit(1)
 
     def render(m):
         alias, line, value = CELLS[m.group(1)]
-        return f"{value} `[{SRC[alias]}:{line}]`"
+        return value if m.group(2) else f"{value} `[{SRC[alias]}:{line}]`"
 
-    out = TOKEN_RE.sub(render, template)
-    src_hashes = {SRC[a]: hashlib.sha256((EVIDENCE / SRC[a]).read_bytes()).hexdigest() for a in SRC}
+    out = PTR_RE.sub(lambda m: f"`[{SRC[m.group(1)]}:{m.group(2)}]`", TOKEN_RE.sub(render, template))
+    leftover = [(i + 1, t) for i, ln in enumerate(out.splitlines()) for t in re.findall(r"\{\{[^}]*\}\}", ln)]
+    bad_ids = [cid for cid in CELLS if not re.fullmatch(r"[a-z0-9_]+", cid)]
+    if leftover or bad_ids:
+        for ln, t in leftover:
+            print(f"UNRENDERED TOKEN TABLES.md l.{ln}: {t}")
+        for cid in bad_ids:
+            print(f"BAD CELL ID (must be [a-z0-9_]+): {cid}")
+        sys.exit(1)
+    src_hashes = {SRC[a]: hashlib.sha256(src_path(a).read_bytes()).hexdigest() for a in SRC}
     (OUT / "TABLES.md").write_text(out, encoding="utf-8")
     (OUT / "TABLES-w18.json").write_text(json.dumps({
         "schema": "chlu-w18-seeds-and-tables/1",
