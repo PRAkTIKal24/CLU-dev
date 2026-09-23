@@ -1,0 +1,998 @@
+{
+ "artefact": "HARNESS-READY.json",
+ "spoke": "w15/cmaze-o-harness",
+ "stamp_utc": "2026-09-22T23:50:05Z",
+ "status": "ready",
+ "tolerance_used": null,
+ "scored_runs_spent": 0,
+ "one_line": "CMAZE-O -- the compositional OBSERVATION-GENERATION instrument over CMAZE-1.  Nine words (layout x agent/key/door/tint colour x agent/key/door/goal zone) name a grid state; the judge is exact placement of every object AND legality under the engine's rules, with no tolerance.  Engine, solver and legality are w8_envscout.maze_colour, imported unmodified.",
+ "provenance": {
+  "branch": "w15/cmaze-o-harness",
+  "head": "9fb108c3549fca4944387b5d61f6283e8208bcda",
+  "base": "base/iter8 = 148f3b7",
+  "worktree": "C:/chlu/worktrees/CHLU-w15-cmaze-o-harness",
+  "engine": {
+   "module": "w8_envscout.maze_colour",
+   "source_file": "w8_envscout/maze_colour.py",
+   "sha256": "9eacdda17d87cac0ad5ced6ccbb6fa43ebc1508c0460d0cc183e545d066beaac",
+   "imported_unmodified": true,
+   "functions_used": [
+    "_carve_maze",
+    "_braid",
+    "solve",
+    "_reachable_without_keys",
+    "Instance",
+    "MOVES",
+    "FLOOR",
+    "WALL"
+   ]
+  },
+  "instrument_modules": {
+   "exp_w15_cmaze_o_env.py": "2b453da1a652f5dad32772d862f48c6e81fa66619b85830cd086bb4b2650bafe",
+   "exp_w15_cmaze_o_splits.py": "a7da8d891ad2c2620880dc7733f338b3404d66ae6d62e13b7560fef54e0b5ad1",
+   "exp_w15_cmaze_o_encoder.py": "cf208f4b0c7fafe5f584588a5a425c93d1283d5540909c2f68bb9ce2fce329a1",
+   "exp_w15_cmaze_o_arms.py": "83a0cc2d56c31ec928844eae8f0c27756421239e827f3e259bcbaf2896d8d887",
+   "exp_w15_cmaze_o_pipeline.py": "0f0425d88f398c46e2e6898d0c609f066782349cb57ac6685c850e85252a5958",
+   "exp_w15_cmaze_o_deletion.py": "e783b4510c4204198b551fd3747cc9dff362f442e75bebdffc1f4ee571e48ca7",
+   "exp_w15_cmaze_o_verify.py": "c7e99ff6ca4a1e42c789d73e9abcc3fa0abe02448578b4a4b17312dac805ce17"
+  },
+  "declared_deviation_from_cmaze1": {
+   "braid": 0.08,
+   "cmaze1_adopted_braid": 0.4,
+   "door_cell": "balanced articulation point of the floor graph",
+   "why": "at braid 0.40 a door separates the agent from the goal in 2.1 % of requests and RULES A/B are wallpaper; at 0.08 it is 29.1 %.  CMAZE-1 adopted 0.40 for ROUTE multiplicity, which CMAZE-O does not use.  _braid is called with a different number; nothing in the engine is changed.",
+   "artefact": "artefacts/braid_probe.json"
+  },
+  "head_note": "the commit the artefacts in this document were produced at; the provenance-refresh commit that carries this file sits directly on top of it"
+ },
+ "vocabulary": {
+  "n_factors_jointly_composed": 9,
+  "factors": [
+   "layout",
+   "agent_colour",
+   "key_colour",
+   "door_colour",
+   "tint_colour",
+   "agent_zone",
+   "key_zone",
+   "door_zone",
+   "goal_zone"
+  ],
+  "cardinalities": [
+   12,
+   5,
+   5,
+   5,
+   5,
+   9,
+   9,
+   9,
+   9
+  ],
+  "K_wells": 8,
+  "value_holdout_colour": 5,
+  "agent_slot_holdout_colour": 4,
+  "note": "n = factors jointly composed; K = wells (COMMON.md notation)"
+ },
+ "judge": {
+  "function": "chlu.exp_w15_cmaze_o_env.judge_state",
+  "valid": "exact_objects AND legal",
+  "exact_objects": "the four object cells and the four colour words, compared as tuples of small integers",
+  "legal": "on_floor, door_on_corridor (>=2 FLOOR neighbours), distinct, tint_clear, colours_in_range, and FEASIBLE under RULES A+B as decided by w8_envscout.maze_colour.solve",
+  "tolerance_used": null
+ },
+ "controls": {
+  "as_run_in_the_VAL_smoke": [
+   "landscape_removed",
+   "landscape_shuffled",
+   "landscape_shuffled_across_wells",
+   "random_atoms"
+  ],
+  "shipped_by_the_harness": [
+   "landscape_removed",
+   "landscape_shuffled",
+   "landscape_shuffled_channels",
+   "landscape_shuffled_across_wells",
+   "random_atoms"
+  ],
+  "landscape_shuffled_is_a_proved_null": "permuting the atom ROWS of well k replaces G_k by P G_k; the ridge objective ||Phi W (P G) - X||^2 + lam||W||^2 is minimised by W* P^T because ||W P^T||_F = ||W||_F, so Phi (W* P^T)(P G) = Phi W* G and the read is bit-identical.  The VAL smoke measures exactly that.  A fifth control, landscape_shuffled_channels, permutes the CHANNELS inside the well instead, and is measured in SPAN-SWEEP.json."
+ },
+ "span_sweep": {
+  "artefact": "valsmoke/SPAN-SWEEP.json",
+  "seeds_completed": [
+   0,
+   1,
+   2
+  ],
+  "n_atoms_grid": [
+   2,
+   6,
+   12
+  ]
+ },
+ "ACCEPTANCE": {
+  "1__independent_replay_of_every_judged_state": {
+   "states_replayed": 105408,
+   "disagreements": 0,
+   "by_seed": {
+    "0": {
+     "states_replayed": 35136,
+     "disagreements": 0,
+     "valid_independent": 1659,
+     "valid_pipeline": 1659
+    },
+    "1": {
+     "states_replayed": 35136,
+     "disagreements": 0,
+     "valid_independent": 2252,
+     "valid_pipeline": 2252
+    },
+    "2": {
+     "states_replayed": 35136,
+     "disagreements": 0,
+     "valid_independent": 2567,
+     "valid_pipeline": 2567
+    }
+   },
+   "layout_bank_rebuild_mismatches": 0,
+   "checker": "chlu.exp_w15_cmaze_o_verify",
+   "independence": "imports neither judge_state nor legality nor render_state; re-derives the reference from the nine words and the verdict from w8_envscout.maze_colour directly",
+   "pass": true
+  },
+  "2__no_impossible_request_shown_to_a_non_refuser_arm": {
+   "requests_checked": 30588,
+   "impossible_shown": 0,
+   "by_seed": {
+    "0": {
+     "requests_checked": 10196,
+     "impossible_shown": 0
+    },
+    "1": {
+     "requests_checked": 10196,
+     "impossible_shown": 0
+    },
+    "2": {
+     "requests_checked": 10196,
+     "impossible_shown": 0
+    }
+   },
+   "how": "admissibility is a FILTER ON CONSTRUCTION: a request whose reference state is not legal under the engine is never put in any list; this count re-checks every request that was actually shown",
+   "pass": true
+  },
+  "3__holdout_disjointness_from_train_by_construction": {
+   "by_seed": {
+    "0": {
+     "pass": true,
+     "failures": [],
+     "n_train": 8000,
+     "duplicates_with_train": {
+      "unseen_2way": 0,
+      "unseen_nway": 0,
+      "value_holdout": 0,
+      "value_slot_holdout": 0
+     },
+     "value_holdout": {
+      "colour": 5,
+      "train_requests_carrying_it": 0,
+      "train_support_of_each_other_colour": {
+       "1": 8106,
+       "2": 8744,
+       "3": 8835,
+       "4": 6315
+      },
+      "row_requests": 400
+     },
+     "value_slot_holdout": {
+      "colour": 4,
+      "train_agents_carrying_it": 0,
+      "train_support_in_other_slots": {
+       "key_colour": 2096,
+       "door_colour": 2036,
+       "tint_colour": 2183
+      },
+      "train_support_of_agent_slot": {
+       "1": 2817,
+       "2": 2275,
+       "3": 2908
+      },
+      "row_requests": 400
+     },
+     "two_way": [
+      {
+       "pattern": [
+        0,
+        1,
+        5,
+        4
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 591,
+       "train_marginal_j": 853
+      },
+      {
+       "pattern": [
+        0,
+        4,
+        7,
+        3
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 595,
+       "train_marginal_j": 868
+      },
+      {
+       "pattern": [
+        5,
+        5,
+        8,
+        5
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 772,
+       "train_marginal_j": 822
+      },
+      {
+       "pattern": [
+        2,
+        3,
+        3,
+        1
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 1629,
+       "train_marginal_j": 1779
+      },
+      {
+       "pattern": [
+        1,
+        2,
+        4,
+        1
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 2275,
+       "train_marginal_j": 1380
+      },
+      {
+       "pattern": [
+        6,
+        7,
+        7,
+        7
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 797,
+       "train_marginal_j": 827
+      }
+     ],
+     "n_way_factors": [
+      0,
+      5,
+      2,
+      4
+     ],
+     "n_way_factor_set_cardinality": 1728,
+     "n_way_train_coverage_of_factor_set": 0.9739583333333334,
+     "n_way_held_out": [
+      {
+       "tuple": [
+        0,
+        0,
+        3,
+        4
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 50,
+        "drop_5": 35,
+        "drop_2": 16,
+        "drop_4": 12
+       }
+      },
+      {
+       "tuple": [
+        0,
+        2,
+        4,
+        3
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 74,
+        "drop_5": 52,
+        "drop_2": 15,
+        "drop_4": 14
+       }
+      },
+      {
+       "tuple": [
+        0,
+        3,
+        4,
+        2
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 64,
+        "drop_5": 48,
+        "drop_2": 18,
+        "drop_4": 11
+       }
+      },
+      {
+       "tuple": [
+        1,
+        2,
+        1,
+        1
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 32,
+        "drop_5": 22,
+        "drop_2": 5,
+        "drop_4": 23
+       }
+      },
+      {
+       "tuple": [
+        1,
+        2,
+        4,
+        4
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 47,
+        "drop_5": 22,
+        "drop_2": 18,
+        "drop_4": 16
+       }
+      },
+      {
+       "tuple": [
+        3,
+        5,
+        2,
+        1
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 34,
+        "drop_5": 28,
+        "drop_2": 10,
+        "drop_4": 13
+       }
+      },
+      {
+       "tuple": [
+        6,
+        6,
+        1,
+        1
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 29,
+        "drop_5": 20,
+        "drop_2": 11,
+        "drop_4": 22
+       }
+      },
+      {
+       "tuple": [
+        11,
+        3,
+        4,
+        1
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 48,
+        "drop_5": 30,
+        "drop_2": 10,
+        "drop_4": 25
+       }
+      }
+     ]
+    },
+    "1": {
+     "pass": true,
+     "failures": [],
+     "n_train": 8000,
+     "duplicates_with_train": {
+      "unseen_2way": 0,
+      "unseen_nway": 0,
+      "value_holdout": 0,
+      "value_slot_holdout": 0
+     },
+     "value_holdout": {
+      "colour": 5,
+      "train_requests_carrying_it": 0,
+      "train_support_of_each_other_colour": {
+       "1": 8091,
+       "2": 8199,
+       "3": 9224,
+       "4": 6486
+      },
+      "row_requests": 400
+     },
+     "value_slot_holdout": {
+      "colour": 4,
+      "train_agents_carrying_it": 0,
+      "train_support_in_other_slots": {
+       "key_colour": 2123,
+       "door_colour": 2125,
+       "tint_colour": 2238
+      },
+      "train_support_of_agent_slot": {
+       "1": 2152,
+       "2": 2908,
+       "3": 2940
+      },
+      "row_requests": 400
+     },
+     "two_way": [
+      {
+       "pattern": [
+        0,
+        5,
+        5,
+        6
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 621,
+       "train_marginal_j": 769
+      },
+      {
+       "pattern": [
+        0,
+        0,
+        7,
+        5
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 588,
+       "train_marginal_j": 817
+      },
+      {
+       "pattern": [
+        5,
+        8,
+        8,
+        3
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 836,
+       "train_marginal_j": 800
+      },
+      {
+       "pattern": [
+        2,
+        1,
+        3,
+        2
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 1689,
+       "train_marginal_j": 1730
+      },
+      {
+       "pattern": [
+        1,
+        1,
+        4,
+        2
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 2152,
+       "train_marginal_j": 1435
+      },
+      {
+       "pattern": [
+        6,
+        6,
+        7,
+        2
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 789,
+       "train_marginal_j": 818
+      }
+     ],
+     "n_way_factors": [
+      0,
+      5,
+      2,
+      4
+     ],
+     "n_way_factor_set_cardinality": 1728,
+     "n_way_train_coverage_of_factor_set": 0.9693287037037037,
+     "n_way_held_out": [
+      {
+       "tuple": [
+        5,
+        8,
+        4,
+        2
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 44,
+        "drop_5": 23,
+        "drop_2": 7,
+        "drop_4": 13
+       }
+      },
+      {
+       "tuple": [
+        6,
+        5,
+        1,
+        4
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 41,
+        "drop_5": 39,
+        "drop_2": 21,
+        "drop_4": 16
+       }
+      },
+      {
+       "tuple": [
+        7,
+        0,
+        1,
+        2
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 28,
+        "drop_5": 32,
+        "drop_2": 11,
+        "drop_4": 14
+       }
+      },
+      {
+       "tuple": [
+        8,
+        7,
+        3,
+        3
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 50,
+        "drop_5": 26,
+        "drop_2": 18,
+        "drop_4": 15
+       }
+      },
+      {
+       "tuple": [
+        9,
+        0,
+        4,
+        4
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 53,
+        "drop_5": 36,
+        "drop_2": 15,
+        "drop_4": 5
+       }
+      },
+      {
+       "tuple": [
+        9,
+        4,
+        2,
+        1
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 79,
+        "drop_5": 43,
+        "drop_2": 8,
+        "drop_4": 17
+       }
+      },
+      {
+       "tuple": [
+        10,
+        3,
+        2,
+        2
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 32,
+        "drop_5": 20,
+        "drop_2": 12,
+        "drop_4": 15
+       }
+      },
+      {
+       "tuple": [
+        11,
+        8,
+        4,
+        3
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 46,
+        "drop_5": 47,
+        "drop_2": 15,
+        "drop_4": 8
+       }
+      }
+     ]
+    },
+    "2": {
+     "pass": true,
+     "failures": [],
+     "n_train": 8000,
+     "duplicates_with_train": {
+      "unseen_2way": 0,
+      "unseen_nway": 0,
+      "value_holdout": 0,
+      "value_slot_holdout": 0
+     },
+     "value_holdout": {
+      "colour": 5,
+      "train_requests_carrying_it": 0,
+      "train_support_of_each_other_colour": {
+       "1": 6882,
+       "2": 9512,
+       "3": 9006,
+       "4": 6600
+      },
+      "row_requests": 400
+     },
+     "value_slot_holdout": {
+      "colour": 4,
+      "train_agents_carrying_it": 0,
+      "train_support_in_other_slots": {
+       "key_colour": 2256,
+       "door_colour": 2296,
+       "tint_colour": 2048
+      },
+      "train_support_of_agent_slot": {
+       "1": 2217,
+       "2": 2891,
+       "3": 2892
+      },
+      "row_requests": 400
+     },
+     "two_way": [
+      {
+       "pattern": [
+        0,
+        11,
+        5,
+        5
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 578,
+       "train_marginal_j": 799
+      },
+      {
+       "pattern": [
+        0,
+        0,
+        7,
+        2
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 653,
+       "train_marginal_j": 768
+      },
+      {
+       "pattern": [
+        5,
+        3,
+        8,
+        4
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 838,
+       "train_marginal_j": 767
+      },
+      {
+       "pattern": [
+        2,
+        1,
+        3,
+        1
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 1174,
+       "train_marginal_j": 1128
+      },
+      {
+       "pattern": [
+        1,
+        1,
+        4,
+        3
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 2217,
+       "train_marginal_j": 1421
+      },
+      {
+       "pattern": [
+        6,
+        5,
+        7,
+        7
+       ],
+       "train_joint_count": 0,
+       "train_marginal_i": 765,
+       "train_marginal_j": 819
+      }
+     ],
+     "n_way_factors": [
+      0,
+      5,
+      2,
+      4
+     ],
+     "n_way_factor_set_cardinality": 1728,
+     "n_way_train_coverage_of_factor_set": 0.9594907407407407,
+     "n_way_held_out": [
+      {
+       "tuple": [
+        1,
+        2,
+        2,
+        1
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 76,
+        "drop_5": 64,
+        "drop_2": 20,
+        "drop_4": 20
+       }
+      },
+      {
+       "tuple": [
+        1,
+        7,
+        3,
+        3
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 24,
+        "drop_5": 33,
+        "drop_2": 9,
+        "drop_4": 17
+       }
+      },
+      {
+       "tuple": [
+        2,
+        3,
+        1,
+        2
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 31,
+        "drop_5": 30,
+        "drop_2": 11,
+        "drop_4": 5
+       }
+      },
+      {
+       "tuple": [
+        3,
+        4,
+        4,
+        2
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 82,
+        "drop_5": 55,
+        "drop_2": 16,
+        "drop_4": 14
+       }
+      },
+      {
+       "tuple": [
+        5,
+        5,
+        3,
+        2
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 65,
+        "drop_5": 52,
+        "drop_2": 15,
+        "drop_4": 19
+       }
+      },
+      {
+       "tuple": [
+        9,
+        2,
+        1,
+        4
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 33,
+        "drop_5": 20,
+        "drop_2": 27,
+        "drop_4": 13
+       }
+      },
+      {
+       "tuple": [
+        10,
+        8,
+        1,
+        4
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 30,
+        "drop_5": 30,
+        "drop_2": 15,
+        "drop_4": 9
+       }
+      },
+      {
+       "tuple": [
+        11,
+        8,
+        2,
+        3
+       ],
+       "train_joint_count": 0,
+       "train_count_of_each_3way_subtuple": {
+        "drop_0": 53,
+        "drop_5": 30,
+        "drop_2": 11,
+        "drop_4": 20
+       }
+      }
+     ]
+    }
+   },
+   "proof_by_construction": "train is drawn uniformly and then FILTERED against every hold-out pattern, so no held-out pattern can enter it; each held-out row is drawn with its defining words fixed.  The printed checks are: joint count in train = 0 for every pattern; exact 9-word duplicates with train = 0 for every row; train support of every word and every (n-1)-way sub-tuple > 0; and the train coverage of the n-way factor set, which is what makes the held-out tuples special rather than absent by sampling accident.",
+   "pass": true
+  },
+  "4__tolerance_used_null_on_every_row": {
+   "tolerance_used_non_null_found": [],
+   "n_checked_keys": "all",
+   "statement": "every comparison in exp_w15_cmaze_o_env.judge_state is between integers or boolean masks; no float comparison and no threshold is fitted anywhere on the judged path",
+   "pass": true
+  },
+  "5__seeded_VAL_smoke_configA_vs_every_rival_3_seeds_all_rows": {
+   "seeds": [
+    0,
+    1,
+    2
+   ],
+   "n_seeds": 3,
+   "rows": [
+    "seen",
+    "unseen_2way",
+    "unseen_nway",
+    "value_holdout",
+    "value_slot_holdout"
+   ],
+   "arms": [
+    "AE-CEILING",
+    "BLIND-colour-marginal",
+    "BLIND-layout-free-cells",
+    "BLIND-marginal",
+    "BLIND-no-layout",
+    "CLU",
+    "CTRL:landscape_removed",
+    "CTRL:landscape_shuffled",
+    "CTRL:landscape_shuffled_across_wells",
+    "CTRL:random_atoms",
+    "LOOKUP",
+    "RANDOM",
+    "RIVAL:cont_mlp",
+    "RIVAL:lstm",
+    "RIVAL:mlp",
+    "RIVAL:transformer"
+   ],
+   "n_arms": 16,
+   "rivals_present": [
+    "RIVAL:cont_mlp",
+    "RIVAL:lstm",
+    "RIVAL:mlp",
+    "RIVAL:transformer"
+   ],
+   "controls_present": [
+    "CTRL:landscape_removed",
+    "CTRL:landscape_shuffled",
+    "CTRL:landscape_shuffled_across_wells",
+    "CTRL:random_atoms"
+   ],
+   "blind_columns_present": [
+    "BLIND-colour-marginal",
+    "BLIND-layout-free-cells",
+    "BLIND-marginal",
+    "BLIND-no-layout",
+    "RANDOM"
+   ],
+   "lookup_floor_present": true,
+   "ae_ceiling_present": true,
+   "all_rows_all_seeds": true,
+   "pass": true
+  },
+  "6__PREREG_with_bars_before_any_number": {
+   "path": "C:\\chlu\\outputs\\w15-cmaze-o-harness\\PREREG.md",
+   "exists": true,
+   "timestamp_utc": "2026-09-22T21:53:56Z",
+   "sha256": "fb0d8947f03f385b582152def00aab976b45535ec21d17775af1e06c39a402bd",
+   "pass": true
+  }
+ },
+ "instrument_warnings": [
+  {
+   "warning": "CHARTER_C_CONTROL_DID_NOT_COLLAPSE",
+   "control": "CTRL:landscape_shuffled",
+   "control_valid_seen": 0.2727777777777778,
+   "clu_valid_seen": 0.2727777777777778,
+   "means": "no store claim is available from this row; it is an INTERFACE claim or nothing."
+  },
+  {
+   "warning": "CHARTER_C_CONTROL_DID_NOT_COLLAPSE",
+   "control": "CTRL:landscape_shuffled_across_wells",
+   "control_valid_seen": 0.17333333333333334,
+   "clu_valid_seen": 0.2727777777777778,
+   "means": "no store claim is available from this row; it is an INTERFACE claim or nothing."
+  },
+  {
+   "warning": "CHARTER_C_CONTROL_DID_NOT_COLLAPSE",
+   "control": "CTRL:random_atoms",
+   "control_valid_seen": 0.15,
+   "clu_valid_seen": 0.2727777777777778,
+   "means": "no store claim is available from this row; it is an INTERFACE claim or nothing."
+  }
+ ],
+ "headline": {
+  "AE_CEILING_valid_seen": 0.7522222222222221,
+  "CLU_valid_seen": 0.2727777777777778,
+  "CLU_valid_unseen_2way": 0.06565656565656565,
+  "CLU_valid_unseen_nway": 0.11583333333333334,
+  "CLU_valid_value_holdout": 0.0,
+  "CLU_valid_value_slot_holdout": 0.0008333333333333334,
+  "LOOKUP_valid_unseen_nway": 0.0,
+  "table": "VAL-SMOKE.json -> table; FINDINGS.md carries the printed version"
+ },
+ "artefacts": {
+  "val_smoke": "valsmoke/VAL-SMOKE.json",
+  "verify": "valsmoke/VERIFY.json",
+  "per_seed": [
+   "valsmoke/seed0.json",
+   "valsmoke/seed1.json",
+   "valsmoke/seed2.json"
+  ],
+  "judged_states": [
+   "valsmoke/states_seed0.npz",
+   "valsmoke/states_seed1.npz",
+   "valsmoke/states_seed2.npz"
+  ],
+  "layout_banks": [
+   "valsmoke/bank_seed0.npz",
+   "valsmoke/bank_seed1.npz",
+   "valsmoke/bank_seed2.npz"
+  ],
+  "prereg": "PREREG.md",
+  "findings": "FINDINGS.md"
+ }
+}
