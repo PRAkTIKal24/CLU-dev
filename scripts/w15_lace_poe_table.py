@@ -243,7 +243,66 @@ def main() -> int:
     with open(OUT / "GENTABLE-KSTAR.json", "w", encoding="utf-8") as fh:
         json.dump(out, fh, indent=1, default=str)
     print("wrote", OUT / "GENTABLE-KSTAR.json")
+    with open(OUT / "GENTABLE-KSTAR.md", "w", encoding="utf-8") as fh:
+        fh.write(markdown(out))
+    print("wrote", OUT / "GENTABLE-KSTAR.md")
     return 0
+
+
+def _f(v, nd=4):
+    return "—" if v is None else (f"{v:.{nd}f}" if isinstance(v, float) else str(v))
+
+
+def budget_cell(row) -> str:
+    b = (row.get("budget_per_seed") or {})
+    b = next((v for v in b.values() if v), None)
+    if not b:
+        return ""
+    if "classifier_params" in b:
+        return (f"{b['classifier_params']:,} clf params = {b['x_store_reference_classifier_only']}x ref "
+                f"({b['x_store_reference_with_whitening']}x with whitening); fit {b['fit_rows']:,} rows, "
+                f"{b['epochs']} ep, {b['tuning_trials']} trials, ode")
+    return (f"{b['expert_params']:,} expert params = {b['x_store_reference']}x ref; fit "
+            f"{b['fit_rows']:,} rows, {b['epochs']} ep, {b['tuning_trials']} trials, SGLD")
+
+
+def markdown(out) -> str:
+    L = ["# GENTABLE-KSTAR — w15 spoke/lace-poe-rows", "",
+         "Every number below is read from the artefact named in `GENTABLE-KSTAR.json` beside it. "
+         "Seed count is a column. ⛔ LACE and PoE are ADDED rows; the learned-rival columns are intact.", ""]
+    A = out["PART_A_generation_table"]
+    L += ["## PART A — the generation table (`exp_gen_cell`), scored run 3/3, generation-2 cache", ""]
+    if A.get("status") != "RUN":
+        L += [f"DECLARED NOT-RUN: {A.get('why')}", ""]
+    else:
+        L += ["| arm | n seeds | composition-B aggregate (s0 / s1 / s2) | mean ± sd | in-corner balacc mean | distinct tuples on B (mean) | deployed bytes (convention) |",
+              "|---|---|---|---|---|---|---|"]
+        for arm, r in A["table"].items():
+            ps = r["per_seed"]
+            per = " / ".join(_f(ps[s]["B_aggregate"]) if s in ps else "—" for s in SEEDS)
+            bl = r["byte_ledger"] or {}
+            conv = ("four-part, never netted; " + str(bl.get("multiple_of_budget")) + "x ref"
+                    if arm.startswith("kstar") else str(bl.get("what", ""))[:40])
+            L.append(f"| `{arm}` | {r['n_seeds']} | {per} | {_f(r['B_aggregate']['mean'])} ± "
+                     f"{_f(r['B_aggregate']['std'])} | {_f(r['in_corner_balacc']['mean'])} | "
+                     f"{_f(r['distinct_tuples_B']['mean'], 1)} | {bl.get('deployed_bytes')} ({conv}) |")
+        L += ["", "### Pre-declared bars (PREREG §1b)", "", "```", json.dumps(A["bars"], indent=1), "```", ""]
+    for title, blk in [("Shapes rows 3–4 (60 pair + 49 n-way corners)", out["PART_B_rows_3_4"])] + \
+            [(f"ladder rung {k}", v) for k, v in out["PART_B_ladder"].items()]:
+        L += [f"## PART B — {title}", "",
+              "`distinct_valid_novel_tuples` per corner, mean over corners; seeds 0/1/2.", "",
+              "| arm | n seeds | s0 | s1 | s2 | mean | own budget (LACE/PoE) |", "|---|---|---|---|---|---|---|"]
+        for arm, r in blk["arms"].items():
+            ps = r["per_seed"]
+            cells = [(_f(ps[s]["all"], 3) if ps.get(s) else "—") for s in SEEDS]
+            L.append(f"| `{arm}` | {r['n_seeds']} | " + " | ".join(cells)
+                     + f" | {_f(r['mean_over_seeds'], 3)} | {budget_cell(r)} |")
+        L += ["", "Verdict (PREREG §2a):", ""]
+        for riv, v in blk["verdict"].items():
+            L.append(f"- **{riv}**: {v.get('verdict')} — per-seed paired Δ (rival − K\\*) "
+                     f"{[round(x, 3) for x in v.get('mean_paired_delta_rival_minus_kstar_per_seed', [])]}")
+        L.append("")
+    return "\n".join(L)
 
 
 if __name__ == "__main__":
