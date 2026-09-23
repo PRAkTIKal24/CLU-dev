@@ -362,6 +362,8 @@ def full(seed_index, out_dir, leg, latent, K, n_atoms, ridge=1.0, iface="none",
     if iface == "match":
         Xt = trajectory_with_match(tr_insts, tr_feats, tr_g, Xt, rng_seed=10_000 + seed_index)
     rivals, reps = {}, {}
+    out["rival_steps_matched"] = int(rival_steps)
+    out["rival_steps_10x_diagnostic"] = 8000
     for kind, (w, p, kw) in widths.items():
         rivals[kind], reps[kind] = R.train_rival(kind, w, kw, Xs, Ys, Ms, Xt, Yt, Mt,
                                                  seed_index, rival_steps, kind)
@@ -371,7 +373,7 @@ def full(seed_index, out_dir, leg, latent, K, n_atoms, ridge=1.0, iface="none",
     big = {}
     for kind, (w, p, kw) in big_widths.items():
         big[kind], _r = R.train_rival(kind, w, kw, Xs, Ys, Ms, Xt, Yt, Mt, seed_index,
-                                      rival_steps, "10x " + kind)
+                                      8000, "10x " + kind)
     out["capacity_diagnostic"] = {k: {"width": int(w), "params": int(p)}
                                   for k, (w, p, kw) in big_widths.items()}
 
@@ -511,4 +513,5 @@ if __name__ == "__main__":
         sweep(si, od, configC=True)
     else:
         full(si, od, kw["leg"], int(kw["latent"]), int(kw["K"]), int(kw["atoms"]),
-             float(kw.get("ridge", 1.0)), kw.get("iface", "none"), kw.get("tag", "A"))
+             float(kw.get("ridge", 1.0)), kw.get("iface", "none"), kw.get("tag", "A"),
+             rival_steps=int(kw.get("rival_steps", 8000)))
