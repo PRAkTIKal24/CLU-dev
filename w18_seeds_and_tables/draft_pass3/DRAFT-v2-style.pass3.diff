@@ -1,0 +1,102 @@
+--- /private/tmp/claude-501/-Users-batmac-clu-worktrees-CHLU-w18-seeds-and-tables/5d8da943-defa-4d67-bdbb-0b90bddbda42/scratchpad/pass3/DRAFT-v2-style.base.tex	2026-09-23 22:29:28
++++ /Users/batmac/clu/outputs/w17-paper/DRAFT-v2-style.tex	2026-09-23 22:31:06
+@@ -122,9 +122,10 @@
+ On a transition instrument over the same mazes the store reads 0.7246 on held-out $n$-way
+ transitions against 0.4035 for the best matched rival over three seeds, with every landscape % SRC: w16-maze-wm/FINDINGS.md
+ control collapsing; but the store reads a word request with a hand-built pair block that the
+-rivals, which read the observation, do not receive, so the row is scoped to that request until a
+-symmetric-input test is run, and no matched arm, the store included, yields a valid chained
+-rollout.
++rivals, which read the observation, do not receive; when every arm is given the identical input
++the margin does not survive, because a matched transformer given the store's own pair design
++matches or beats it, so the pair block, not the store, carries it; and no matched arm, the store % SRC: w19-maze-t-symmetric/FINDINGS.md
++included, yields a valid chained rollout.
+ We conclude with what the naive unit cannot do and with the one measured clue toward a
+ dynamical successor: the store is exactly the zero-dynamics limit of a settling unit, its zero-step arm bit-identical to the static read. % SRC: w12-clue-theorist/CLUE.md
+ \end{abstract}
+@@ -241,7 +242,8 @@
+   which we report as an \emph{interface} result because it lifts a matched-bytes lookup
+   floor more than it lifts the store (\S\ref{sec:maze}). On a transition instrument the store
+   carries a composition row with every landscape control collapsing, under a word request with a
+-  pair block that its rivals do not receive (a symmetric-input test is pending); on validation it
++  pair block that its rivals do not receive (given the identical input, matched rivals match or
++beat it, so that margin belongs to the pair block, not the store); on validation it % SRC: w19-maze-t-symmetric/FINDINGS.md
+   stays ahead of rivals trained ten times longer, and its scored replication against such rivals
+   keeps the margin while one landscape control misses its collapse bar on one seed; no matched
+   arm's chained rollout is valid; and on an observation
+@@ -1102,7 +1104,11 @@
+ load-bearing under this request, not that the store rather than its request design carries the
+ margin over the rivals; when a task-shaped interface was given to every arm (Config B, below), it
+ lifted the best matched rival more than the store. The symmetric-input test, in which every arm
+-receives the identical input, is pending (Table~\ref{tab:cmazet-sym}, Appendix~\ref{app:mazewm}).
++receives the identical input, has closed with no condition winning (Table~\ref{tab:cmazet-sym},
++Appendix~\ref{app:mazewm}): given the store's own pair design, a matched transformer matches or
++beats the store, so the pair block, not the store, carries this row's margin over the rivals. % SRC: w19-maze-t-symmetric/FINDINGS.md
++What stands on CMAZE-T is the store gate (every landscape control collapses) and exact deletion,
++not a margin over matched rivals.
+ Two further facts bound the row. First, the rule-knowing planner columns, relaxed oracles that are
+ handed the engine's rules and never trained, read 0.9071 for BLIND-SEQUENTIAL, above the store's
+ 0.7246, 0.5509 for BLIND-COLOUR and 0.6047 for BLIND-FACTOR. On CMAZE-2 the same kind of planner at
+@@ -1151,7 +1157,9 @@
+ % ENDSRC
+ 
+ The maze section therefore stands on deletion transfer (CMAZE-2 and CMAZE-2b), the verb as an
+-interface result (CMAZE-2b), the CMAZE-T store row, scoped to its pair-design request, with its declared negatives, and the CMAZE-O store
++interface result (CMAZE-2b), the CMAZE-T store gate and exact deletion, whose margin over matched
++rivals belongs to the pair-design request and does not survive symmetric inputs, with its % SRC: w19-maze-t-symmetric/FINDINGS.md
++declared negatives, and the CMAZE-O store
+ gate with its withdrawn margin. The budget, the configuration ladder, the fallback and every negative
+ with its link are in Appendix~\ref{app:mazewm}.
+ 
+@@ -1170,7 +1178,8 @@
+   not collapse (\texttt{landscape\_shuffled} 0.9509 and \texttt{random\_atoms} 0.9601 against
+   1.0000 on the seen row), so no row is claimed for the store (Appendix~\ref{app:cmaze2}). On CMAZE-2b they again fail to collapse (\S\ref{sec:verb}). % SRC: w13-seeds-and-tables/TABLES.md
+   On CMAZE-T the store row is scoped to a word request with a pair block that the rivals do not
+-  receive, and a symmetric-input test is pending (\S\ref{sec:maze-wm}).
++  receive; given the identical input no condition wins, and the pair block, not the store, carries
++  the margin (\S\ref{sec:maze-wm}, Table~\ref{tab:cmazet-sym}). % SRC: w19-maze-t-symmetric/FINDINGS.md
+ \item \emph{The value identity is not in the store at $\Kstar$.} Exact deletion of every red
+   row leaves the red-requesting corners at 32.2500 and judge accuracy at 0.8958
+   (\S\ref{sec:shapes-del}); there, only the store-scoped claim is demonstrated.
+@@ -1448,7 +1457,10 @@
+ \centering\small
+ \caption{\textbf{Ladder at $K=5$ (MI partition), 3 seeds, the sweep's endpoint.} Store
+ (bit-identical to \texttt{pca\_tensor} on every rung and seed), paired margin against the best
+-read-path rival with the rung's own corners, and the two pre-declared landscape controls as paired deltas.}
++read-path rival with the rung's own corners, and the two pre-declared landscape controls as paired deltas.
++$n=2$: 60 corners; $n\ge3$: the identical 120 corners. \emph{Inference note, as for % SRC: w12-composition-ladder/FINDINGS.md
++Table~\ref{tab:ladder}:} for $n\ge3$ the rungs differ in fit-pool coverage, not in composition
++depth, so the store's own rise from $n=2$ to $n=6$ is not to be inferred.}
+ \label{tab:k5}
+ \setlength{\tabcolsep}{2.4pt}
+ \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcccccc}
+@@ -1710,7 +1722,7 @@
+ 11,850,912 B (full square, this implementation's own convention) plus means and counts of 16,424
+ B; a request count table of 11,488 B; and coupling of 5,288 B plus 1,322 B of holes. The honest
+ total is 12,869,482 / 12,500,170 / 12,409,722 B, i.e.\ 24.5466 / 23.8422 / 23.6697 times the pin,
+-and the statistic alone is 23.5117 times; a residual of exactly 16,384 B between the serialised
++and the statistic alone is 23.5121 times; a residual of exactly 16,384 B between the serialised % SRC: w15-table-fixes/TABLE-FIXES.md
+ object and the honest total is declared, not netted. % SRC: w13-seeds-and-tables/TABLES.md; w13-referee-2/REFEREE-v1.md
+ 
+ \paragraph{The failure agreement.} The exactness assertion first failed on TEST seed 2, on the
+@@ -2588,7 +2600,10 @@
+ (one pre-registered scored run per seed).} Given the grid state and an action, generate the next
+ state; exact transition judge. The inputs are not symmetric: the store reads a \texttt{[bias | main |
+ pair]} word request, the learned blind arms reduced forms of it, and the rivals the observation
+-(\S\ref{sec:maze-wm}); the symmetric-input rows are Table~\ref{tab:cmazet-sym}. Config A1: latent 128, $K=2$, 6 atoms, one design pinned across seeds. % SRC: w16-maze-wm/TABLES.md
++(\S\ref{sec:maze-wm}); the symmetric-input rows are Table~\ref{tab:cmazet-sym}, where no condition
++wins: a matched transformer given the store's own pair design matches or beats the store, so the % SRC: w19-maze-t-symmetric/FINDINGS.md
++pair block, not the store, carries this table's $n$-way margin, and that row is a store row only
++under this asymmetric input, never an unqualified win. Config A1: latent 128, $K=2$, 6 atoms, one design pinned across seeds. % SRC: w16-maze-wm/TABLES.md
+ Rivals are matched on read floats (MLP 4,781, $+4.3\%$; LSTM 4,290, $-6.4\%$; transformer 5,129, % SRC: w16-maze-wm/TABLES.md
+ $+11.9\%$, against the store's 4,584). % SRC: w16-maze-wm/TABLES.md
+ Byte convention: deployed bytes $=4\times$(atom $+$
+@@ -2604,7 +2619,7 @@
+ % SRCBLOCK: w16-maze-wm/TABLES.md; w16-maze-wm/FINDINGS.md
+ seen & 3 & sanity and retrieval row, \emph{no claim}: store 0.9682 (0.967 / 0.973 / 0.965); transformer 0.7861; cross-maze word lookup 0.9988; within-maze lookup 0.2845 \\
+ unseen 2-way & 3 & \textbf{declared negative, nothing claimed}: store 0.4097 (0.214 / 0.456 / 0.559) against transformer 0.3611, but the learned BLIND-SEQUENTIAL arm reads 0.5567; across-wells control 0.2596 against a bar of 0.2597. Failing link: \emph{interface} (a held-out pair cell is untrained) \\
+-unseen $n$-way & 3 & \textbf{STORE row}: store 0.7246 (0.800 / 0.566 / 0.808) against the best matched rival, transformer 0.4035 (0.394 / 0.395 / 0.421); MLP 0.2194, LSTM 0.1413; ahead on every seed, margin 0.321. Ceiling set by the request design, not the store: validation $n$-way 0.7247 with the same per-seed triple across about 15 configurations \\
++unseen $n$-way & 3 & \textbf{STORE row under asymmetric inputs only} (the margin does not survive symmetric inputs, Table~\ref{tab:cmazet-sym}): store 0.7246 (0.800 / 0.566 / 0.808) against the best matched rival, transformer 0.4035 (0.394 / 0.395 / 0.421); MLP 0.2194, LSTM 0.1413; ahead on every seed, margin 0.321. Ceiling set by the request design, not the store: validation $n$-way 0.7247 with the same per-seed triple across about 15 configurations \\
+ \quad replication & 3 & Config C-512 (latent 512, 8 atoms; three further scored runs), rivals trained 80,000 steps: store 0.7251 (0.800 / 0.567 / 0.808) against transformer 0.4533 (0.468 / 0.430 / 0.462); caveat: on seed 1 random atoms reads 0.464 against the store's 0.567 (0.103 $<$ 0.15) \\
+ \quad budget diagnostic & 3 & validation, A1, every rival trained 80,000 steps, matched and at 10$\times$ read floats: all below the store's 0.802 / 0.569 / 0.803 on every seed (closest: seed 1, LSTM 0.437) \\
+ rollout validity & 3 & \textbf{declared negative}: 0.0000 for the store and every matched rival on every seed (45 rollouts per seed); per-step exactness store 0.9254 (0.930 / 0.917 / 0.928) against transformer 0.8180, compounding over 43 steps. Qualifier: the \emph{diagnostic} transformer at 10$\times$ read floats, not a matched rival, reads 0.0074 (0.000 / 0.000 / 0.022). Failing link: \emph{read} \\

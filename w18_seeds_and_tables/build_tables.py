@@ -36,6 +36,19 @@ SRC = {
 # Pass 2 sources (the six landed w15 spokes, the w16 primary record, and the draft itself).
 from cells_pass2 import SRC2, CELLS2  # noqa: E402
 SRC.update(SRC2)
+# Pass 3: w19 `maze-t-symmetric`, the drafts after pass 3, the Hub's corrected report.
+from cells_pass3 import SRC3, CELLS3  # noqa: E402
+SRC.update(SRC3)
+# The pass-2 draft cells describe DRAFT-v2.tex as it was at pass 2 (md5 e7745f2c). The live file has
+# since moved, so they are pinned to that exact text, reconstructed from the pass-2 patched copy
+# (caption_conventions/DRAFT-v2.captions.tex + `patch -R CAPTIONS.diff`; sha256 equals the pass-2 register).
+SRC["DRAFT"] = "@here/draft_pass3/DRAFT-v2.pass2-e7745f2c.tex"
+# The Hub CORRECTED w16-advisor-report.md after pass 2, from pass 2's own section 4b. Cells quoting the
+# report's earlier text can no longer be checked on the live file: they are checked against the committed
+# pass-2 manifest instead (same value, same line, verbatim_on_line true, at the sha256 recorded there),
+# and are rendered as HISTORICAL.
+PASS2 = json.loads((HERE / "draft_pass3" / "pass2-manifest.json").read_text(encoding="utf-8"))
+HISTORICAL = {"W16"}
 
 # id: (source alias, line, value). The value must occur verbatim on that line.
 CELLS = {
@@ -139,10 +152,12 @@ CELLS = {
     "ladder_note": ("PLAN", 26, "we beat the naive fair rivals at every n; the CLU's own 2-way→6-way rise is not to be inferred because rungs 3–6 share corners and differ in coverage"),
 }
 
-for _cid in CELLS2:
-    if _cid in CELLS:
-        raise SystemExit(f"duplicate cell id {_cid}")
-CELLS.update(CELLS2)
+for _reg in (CELLS2, CELLS3):
+    for _cid in _reg:
+        if _cid in CELLS:
+            raise SystemExit(f"duplicate cell id {_cid}")
+    CELLS.update(_reg)
+HIST_USED = set()
 
 NUM_RE = re.compile(r"(?<![\w.§])(\d+(?:\.\d+)?[eE][-+]?\d+|\d+\.\d+|\d{1,3}(?:,\d{3})+)(?![\w])")
 TOKEN_RE = re.compile(r"\{\{([a-z0-9_]+)(:v)?\}\}")
@@ -153,6 +168,8 @@ HEADING_RE = re.compile(r"^#+\s+\d+(?:\.\d+)*")  # section numbers are not data
 
 def src_path(alias):
     rel = SRC[alias]
+    if rel.startswith("@here/"):
+        return HERE / rel[len("@here/"):]
     return Path(rel) if rel.startswith("/") else EVIDENCE / rel
 
 
@@ -163,9 +180,18 @@ def verify_cells():
         lines = path.read_text(encoding="utf-8").splitlines()
         text = lines[line - 1] if 0 < line <= len(lines) else ""
         ok = value in text
+        entry = {"value": value, "source": SRC[alias], "line": line, "verbatim_on_line": ok}
+        if not ok and alias in HISTORICAL:
+            old = PASS2["cells"].get(cid, {})
+            if (old.get("value") == value and old.get("line") == line and old.get("verbatim_on_line")
+                    and old.get("source") == SRC[alias]):
+                ok = True
+                HIST_USED.add(cid)
+                entry.update(verbatim_on_line=False, historical=True,
+                             verified_against="pass-2 manifest", pass2_source_sha256=PASS2["source_sha256"][SRC[alias]])
         if not ok:
             failures.append(f"{cid}: {value!r} not on {SRC[alias]}:{line}")
-        manifest[cid] = {"value": value, "source": SRC[alias], "line": line, "verbatim_on_line": ok}
+        manifest[cid] = entry
     return manifest, failures
 
 
@@ -201,11 +227,19 @@ def main():
             print("POINTER FAIL", o)
         sys.exit(1)
 
-    def render(m):
-        alias, line, value = CELLS[m.group(1)]
-        return value if m.group(2) else f"{value} `[{SRC[alias]}:{line}]`"
+    def disp(alias):
+        rel = SRC[alias]
+        return rel[len("@here/"):] if rel.startswith("@here/") else rel
 
-    out = PTR_RE.sub(lambda m: f"`[{SRC[m.group(1)]}:{m.group(2)}]`", TOKEN_RE.sub(render, template))
+    def render(m):
+        cid = m.group(1)
+        alias, line, value = CELLS[cid]
+        if cid in HIST_USED:
+            sha = PASS2["source_sha256"][SRC[alias]][:8]
+            return value if m.group(2) else f"{value} `[{disp(alias)}:{line}, HISTORICAL: pass-2 text, sha256 {sha}…; since corrected by the Hub]`"
+        return value if m.group(2) else f"{value} `[{disp(alias)}:{line}]`"
+
+    out = PTR_RE.sub(lambda m: f"`[{disp(m.group(1))}:{m.group(2)}]`", TOKEN_RE.sub(render, template))
     leftover = [(i + 1, t) for i, ln in enumerate(out.splitlines()) for t in re.findall(r"\{\{[^}]*\}\}", ln)]
     bad_ids = [cid for cid in CELLS if not re.fullmatch(r"[a-z0-9_]+", cid)]
     if leftover or bad_ids:
@@ -222,9 +256,11 @@ def main():
         "source_sha256": src_hashes,
         "cells": manifest,
         "cells_unused_in_template": unused,
+        "cells_historical": sorted(HIST_USED),
     }, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"PASS: {len(CELLS)} cells verbatim-verified on their lines; "
-          f"{len(used)} used in TABLES.md; 0 unsourced numbers in the template; unused={unused}")
+          f"{len(used)} used in TABLES.md; {len(HIST_USED)} historical (pass-2 manifest); "
+          f"0 unsourced numbers in the template; unused={len(unused)}")
 
 
 if __name__ == "__main__":

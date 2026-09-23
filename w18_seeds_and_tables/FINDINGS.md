@@ -1,4 +1,72 @@
-# w18 spoke/seeds-and-tables: FINDINGS (SECOND PASS; supersedes the first pass)
+# w18 spoke/seeds-and-tables: FINDINGS (THIRD PASS; extends pass 2, which is kept below)
+
+**Branch:** `w18/seeds-and-tables`. **Machine:** batmac. **Scored runs: 0. Compute: 0**, apart from LaTeX compiles of the drafts in scratch build directories.
+**Pass 3 EDITED BOTH DRAFTS**, `outputs/w17-paper/DRAFT-v2.tex` and `DRAFT-v2-style.tex`, as the Head directed. **No `\PLACEHOLDER{}` was touched**: the ordered, byte-identical sequence was checked by the edit script and by the style-diff tool. **No w19 number entered either draft.**
+Every number in `TABLES.md` is a build-verified cell. A number in this file is quoted from `TABLES.md`, with the section named, or it carries its own `path:line`.
+
+## 0. What shipped (pass 3)
+
+| file | what |
+|---|---|
+| `TABLES.md` §9 | ⭐⭐ **w19 `maze-t-symmetric` folded IN FULL**, in its own tables W19-1 … W19-8 (CMAZE-T only, never a w16 row). The tables are: the condition table with every condition and the OBS-X10 diagnostic; BOTH TEST per arm and per seed; the other rows; per-step and rollout; the ledger, with the convention in the table; deletion; extractor accuracy; and the budget |
+| `TABLES.md` §10 | ⛔⛔ **The consequence for w16**, written where the two tables are presented, and the list of where it now sits in both drafts |
+| `TABLES.md` §11 | w20 `shapes-data-matched`: **awaiting, a fourth pass** |
+| `TABLES.md` W16-T1, §4b, §5, §6.2e, §8 | ⛔ PASS-3 lines. The w16 store row is qualified. §4b is closed by the Hub. MF2 and `tab:k5` are closed |
+| `draft_pass3/apply_pass3_edits.py` | The guarded, idempotent draft edit: 9 anchors per file. It refuses to write if an anchor is missing or ambiguous, if the `\PLACEHOLDER` sequence changes, or if 23.5117 survives |
+| `draft_pass3/DRAFT-v2{,-style}.pass3.diff`, `STYLE-DIFF-CHECK-pass3{,-baseline}.md`, `COMPILE.md`, `compile.sh` | The evidence for the edit |
+| `draft_pass3/DRAFT-v2.pass2-e7745f2c.tex`, `pass2-manifest.json` | The frozen pass-2 inputs (§4) |
+| `cells_pass3.py`, `gen_cells_pass3.py`, `build_tables.py` | 146 new cells. The build now also resolves `@here/` sources and checks HISTORICAL cells against the pass-2 manifest. **653 cells verified, 583 used, 29 historical.** Two builds are byte-identical. The negative test fails with exit 1 on a mutated w19 row, a wrong draft line, a bare number, an orphan value-only token and a tampered historical cell |
+
+## 1. ⭐⭐ w19: every condition LOST, and every condition is a printed row (`TABLES.md` §9)
+
+- **W19-1** prints all six rows of the record's condition table (`w19-maze-t-symmetric/TABLES.md:11–16`): WORDS-MAIN, WORDS-FULL, OBS, BOTH-VAL, BOTH-TEST, and OBS-X10. Each row has its seeds (3), its scored runs and its verdict. **The verdicts are WORDS-MAIN LOSS, WORDS-FULL LOSS, OBS LOSS, and BOTH LOSS** (VAL PASS, then TEST fails SB1). **OBS-X10 is labelled DIAGNOSTIC ONLY (AMENDMENT 1), never a bar.** It would read LOSS, and it cannot pass a condition or earn a run (`PREREG-w19-maze-t-symmetric.md:70–71`).
+- **Budget** (W19-8): 3 of 9 scored runs spent (BOTH, TEST) and 6 declared not-run (`w19-maze-t-symmetric/FINDINGS.md:200–201`). Config C-512 was not re-run. It is declared not-run, not a loss.
+- ⚠ **The launch brief's BOTH figure is the TEST margin.** The brief reads "val PASS knife-edge (+0.099 …)". The record's VAL margin is +0.108, a PASS (`TABLES.md:14`). The +0.099 is TEST, the SB1 FAIL (`TABLES.md:15`). The record's own §0 row sets "knife-edge" beside the TEST margin (`FINDINGS.md:24`). `TABLES.md` §9 prints the record.
+- ⚠ **"786 objects".** The record says 384 objects (`FINDINGS.md:224`). Summing the entries of the 18 `MANIFEST.json` files gives 384. Adding each object's `.sha256` file and the 18 manifests gives 786 files: **786 = 384 + 384 + 18.** ⚠ **Only the 18 manifests are staged on batmac** (168K in `persist/`). The objects themselves are not here, and nothing on this box re-verifies them.
+- ⚠ Two discrepancies that the record itself declares are printed rather than resolved. The observation is 634 wide in the PREREG and 636 as run (`PREREG…:21` against `FINDINGS.md:73`). Each result JSON's `persist_dir` names the path before the objects were moved (`FINDINGS.md:236–238`).
+
+## 2. ⛔⛔ The consequence for w16 (`TABLES.md` §10, W16-T1)
+
+**w16's CMAZE-T A1 n-way row was measured with the CLU reading a 318-wide `[bias|main|pair]` design that the rivals did not receive** (`w19-maze-t-symmetric/FINDINGS.md:29–30`). w19's WORDS-FULL condition gave every arm that design. In the record's own words, *"the pair block, not the store, carries the w16 margin"*: a matched transformer given the same design reads 0.742 against the CLU's 0.725 (`FINDINGS.md:22`). The PREREG had named exactly this outcome, in advance, as the proof of an input artefact (`PREREG…:57–58`).
+**What stands:** the store gate and exact store-scoped deletion (`FINDINGS.md:36`, `:194`). **What does not stand:** the claim of a margin over matched rivals.
+**Where it is stated:**
+- In `TABLES.md`, at W16-T1, where the w16 row is printed, and in §10.
+- In **both drafts**, in seven places, each replacing a "symmetric-input test is pending": the abstract, the contributions item, `sec:maze-wm`, the section summary, the limitations item, the `tab:cmazet` caption, and the `tab:cmazet` n-way row. The n-way row is now labelled "STORE row under asymmetric inputs only".
+The two tables stay separate. `tab:cmazet-sym`'s rows remain placeholder-fill's.
+
+## 3. The two open findings from pass 2: CLOSED in both drafts
+
+- **(a) MF2.** 23.5117 → **23.5121**, with `% SRC: w15-table-fixes/TABLE-FIXES.md`, at `DRAFT-v2.tex:1738` and `DRAFT-v2-style.tex:1725`.
+  - ⚠ The pass-2 locations (L1317, L2262) no longer exist. The draft moved after pass 2.
+  - The L2262 appendix had already been moved **verbatim** into `CORRECTIONS-ABSORBED.tex` by w20 referee3-fixes. That file is `\iffalse`, outside the submission, and **still reads 23.5117** (`CORRECTIONS-ABSORBED.tex:29`). It was not edited. It is a verbatim archive, and it is not one of the two drafts.
+  - **There is no `DRAFT-v1.tex` in `w17-paper/`.** "Both .tex files" was read as the two live drafts.
+- **(b) `tab:k5`.** The caption now carries the corner counts and the inference note ("for $n\ge3$ the rungs differ in fit-pool coverage, not in composition depth"), with `% SRC: w12-composition-ladder/FINDINGS.md`, the K = 5 ladder's own record (`DRAFT-v2.tex:1475–1477`).
+**Checks** (`draft_pass3/COMPILE.md`, `STYLE-DIFF-CHECK-pass3.md`):
+- Both drafts compile before and after (pdflatex → bibtex with `BIBINPUTS`/`BSTINPUTS` = `w17-paper/` → pdflatex ×3). Each gives exit 0, **0 undefined citations** (32 `\cite` each), 0 undefined references and 0 overfull boxes, at 47 and 48 pages.
+- **All four style diffs are EMPTY** (exit 0).
+- The edit ran on scratch copies first. A second run was a no-op, and the live files are byte-identical to the tested copies.
+- md5: `DRAFT-v2.tex` fab8ddcb… → bb489831…; `DRAFT-v2-style.tex` a77cdae5… → 70b7d89c….
+**Ownership check before editing:** there was no live session of placeholder-fill, referee3-fixes, citation-prune, referee4-fixes or draft-figure-slots (checked with `ps` and `tmux ls`), and each of those spokes' output directories has an `END_UTC.txt`. The only concurrent session is `w18-registry-fold`, which edits registry files only.
+
+## 4. ⚠ Why the pass-2 register broke, and how it was pinned (no number moved)
+
+1. **The Hub corrected `w16-advisor-report.md` after pass 2, using pass 2's §4b.** Its l.41 reads "CORRECTED 2026-09-23 against the primary record … by `w18/seeds-and-tables` pass 2". The report's old sentences are gone, so 29 cells quoting them could not be re-checked on the live file. They are now checked against the committed pass-2 manifest (`af7ec86`, copied to `draft_pass3/pass2-manifest.json`): same value, same line, `verbatim_on_line: true`. They print as **HISTORICAL**. §4b is marked **CLOSED BY THE HUB**.
+2. **The draft moved.** Placeholder-fill, referee3/4-fixes and figure-slots all wrote to it after pass 2, and then this pass edited it. The pass-2 draft cells describe the pass-2 text, which is **reconstructed exactly**: `caption_conventions/DRAFT-v2.captions.tex` + `patch -R CAPTIONS.diff` gives md5 `e7745f2c…` and sha256 `8e45fa98…`, the same as the pass-2 register. It is kept as `draft_pass3/DRAFT-v2.pass2-e7745f2c.tex`. Post-pass-3 facts about the drafts are separate cells against the live files.
+Rendered with the pass-3 build, the pass-2 template is **identical in content** to pass 2's `TABLES.md` once pointers are stripped.
+
+## 5. DECLARED NOT-DONE / what did NOT run (pass 3)
+
+- **w20 `shapes-data-matched`: STILL RUNNING and NOT FOLDED.** Its M-131k, M-16k and matched-deletion rows are a **fourth pass**. The only trace on batmac is the draft's `\PLACEHOLDER` (`DRAFT-v2.tex:512`). Nothing is guessed.
+- **`tab:cmazet-sym`'s seven `\PLACEHOLDER`s were not filled.** They belong to placeholder-fill, and §9 is their fill specification. ⚠ Until they are filled, that table's caption still says "pending", while `tab:cmazet`'s caption now says "no condition wins". The inconsistency is declared.
+- **Not edited:** `CORRECTIONS-ABSORBED.tex` (still 23.5117; archive); MF14(i) (the BLIND columns in `tab:cmaze2`); the pass-2 convention caption patch (§8, still unapplied); the `tab:cmaze-del` label collision; any figure.
+- **Not verified here:** the 384 persisted w19 objects, which are not on batmac.
+- **Not re-derived:** no w19 number was recomputed. Every cell is copied from the record.
+- **Background jobs:** one, the live-draft re-compile (PID 61442). It finished inside the turn, and `PIDS.txt` reads None. **Sub-agents: none.** No process was killed, and `tmux kill-server` was not used.
+- **The three w15 spokes that pass 2 declared AWAITING** (`bar-d-score`, `coverage-control`, `lace-poe-rows`, pass-2 §6.1) **have since landed.** Their artefacts are now staged at `evidence/outputs/w15-{bar-d-score,coverage-control,lace-poe-rows}/`. Per `DRAFT-v2.tex:17`, placeholder-fill pass 2 has already written them into the draft. ⚠ **This pass did NOT fold them into `TABLES.md`**, because they were outside this pass's brief. §6.1 still reads "awaiting" and is **stale**; for those three rows, placeholder-fill's record supersedes it. Folding them (and cross-checking the draft's cells against the artefacts) is left for the fourth pass.
+
+---
+
+# PASS 2 FINDINGS (retained verbatim; where pass 3 above says otherwise, pass 3 wins)
 
 **Branch:** `w18/seeds-and-tables`. **Machine:** batmac. **Scored runs: 0. Compute: 0** (apart from two LaTeX compiles of a draft *copy* in the scratchpad, §4).
 **No `.tex` file was edited and no `\PLACEHOLDER{}` was touched.** The live `outputs/w17-paper/DRAFT-v2.tex` md5 is `e7745f2c9ea99d932635e4b062755ae7` before and after this pass.
