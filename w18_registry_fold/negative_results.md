@@ -1,5 +1,15 @@
 # CLU Negative-Results Registry
 
+> ◈◈ **WAVE-18 SECOND PASS — `N345`–`N357` (2026-09-23, `w18 spoke/registry-fold`, `doc-curator`, fold
+> symbol **◈**, pass 2; commissioned by `tasks/w18/launch-registry-fold-pass2.txt`).** ⭐ **Read `◈.4` first.**
+> Folds wave 16 from its PRIMARY record: the failed VAL configs B / A / C2 (`N345`–`N347`); C-field, where the
+> **rival margin is WITHDRAWN but the store gate HOLDS** (`N348`); the failing-link ledger (`N349`); the control
+> defect (`N350`). Also folds the six landed w15 spokes (`N352`–`N357`). ⭐⭐ **`N351`: the Hub's w16 report
+> disagreed with the primary artefact in EIGHT places, and the artefact won all eight. A paraphrase is not a
+> source.** ⛔ **THIRD PASS REQUIRED** for `bar-d-score`, `coverage-control` and `lace-poe-rows` (`◈.7`). **M1 and
+> M3 stay OPEN.** M1 recurred live in w16 (`⟲` at `N339`). ⛔ Nothing renumbered. Pass-1 entries were annotated by
+> inserted `⟲ PASS 2` lines only. ⚠ All `◈` tiers are CURATOR-PROPOSED.
+
 > ◈◈ **WAVE-18 FIRST PASS — `N338`–`N344` (2026-09-23, `w18 spoke/registry-fold`, `doc-curator`,
 > fold symbol **◈**; commissioned by `tasks/w18/registry-fold.md`).** ⭐ **Read `◈.0` first.** Folds
 > wave 17 (`referee-3` must-fix items M1–M7, all OPEN) and the standing **w14 verb-vs-store** caveat
@@ -6089,6 +6099,19 @@ value deletion: **11,044** rows, fraction **0.084259**); `w12b-nr6-and-kstar/KST
   Advisor. `w18/referee-fixes` is working the draft side in parallel (in flight at this fold, not read as
   evidence).
 - **Matrix row:** `CM-W17-1`.
+- ⟲ **PASS 2 (2026-09-23): M1 RECURRED LIVE IN WAVE 16. ⛔ STILL OPEN, HELD for the Head and the Advisor**
+  (`~/clu/outputs/w18-referee-fixes/FINDINGS.md` l.4: *"HELD, not applied: M1 … the Head and the Advisor decide it"*).
+  In w16 a **recorded, pre-registered win was withdrawn purely because the rivals were under-trained**. The evidence:
+  - CMAZE-O C-field, scored runs 4–6. The CLU reads 0.6933 against the recipe MLP's 0.1667. The same matched MLP at 10× the steps reads
+    **0.9875 / 0.99 / 0.99** on VAL, against the CLU's 0.64 / 0.73 / 0.73 (`N348`; `w16-maze-wm/MAZE-WM.json` l.22).
+  - Config C2 shows a **WIN → FAIL flip on the rivals' budget alone**, with the CLU number unchanged (`N347`).
+  - The w15 `single-design-seeds` comparators are still fitted at **16,384** rows against the store's **131,072** (`N355`).
+
+  The Hub's own report says *"This is exactly referee M1 … It cost three scored runs on a claim that does not
+  stand, and it is the strongest argument yet that M1 needs a ruling"* (`w16-advisor-report.md`, corrected, l.51).
+  ⭐⭐ **This is evidence that the M1 ruling is load-bearing, not cosmetic.** The same defect that inflates Table 1's
+  margin (data pool) has now withdrawn a scored result (training budget). Both are the rival being given less than
+  the store. ⛔ The curator does not rule. The matrix carries the recurrence at `CM-W17-5`.
 
 ### N340 — ⛔⛔ **"EXACT DELETION" IS OVER-SCOPED IN THE DRAFT: the address book is fitted WITH the deleted rows and only rotated at delete time, so the post-deletion object is NOT the object fitted without them** · tier A (CURATOR-PROPOSED ◈) · unlearning / claims hygiene (w17 `referee-3` M3; ⭐ **the registry already held the evidence — `N335` — the draft dropped the qualifier**)
 
@@ -6111,6 +6134,14 @@ are FITTED ON THE POOL"*).
 - **Status: OPEN** — Advisor ruling asked (`w17-advisor-report.md` §7 item 2: *"exact on the store
   content; the address book is carried, not refit"*).
 - **Matrix row:** `CM-W17-2`, companion to `CM-W12-10`.
+- ⟲ **PASS 2 (2026-09-23): ⛔ STILL OPEN, HELD for the Head and the Advisor**
+  (`~/clu/outputs/w18-referee-fixes/FINDINGS.md` l.5: *"HELD, not applied: M3 … the Head and the Advisor decide it"*).
+  Wave 15 added two companion scopings, and both run in the same direction as M3:
+  - on Shapes, deletion is **not capability erasure**: the red corners still compose red at all three seeds (`N355`);
+  - on CMAZE-2b, deletion **does not induce refusal**, and the exact-head downdate changes every atom and ≈ 99.98 % of the address
+    book (`N356`).
+
+  The matrix carries this at `CM-W15-1` and `CM-W17-5`.
 
 ### N341 — ⛔ **THE POSITIONING SENTENCE "THE INTERSECTION WITH EXACT DELETION IS EMPTY" IS CONTRADICTED BY UNCITED WORK — SISA (exact unlearning by shard retrain) and Compartmentalized Diffusion Models (arXiv:2308.01937)** · tier A (CURATOR-PROPOSED ◈) · positioning (w17 `referee-3` M4)
 
@@ -6217,6 +6248,10 @@ l.462 *"8.0552e-16 (7.5217e-16 / 8.8265e-16 / 7.8176e-16)"*, from
 
 ## ◈.3 ⛔ AWAITING w15/w16 — SECOND PASS REQUIRED (exactly what is missing)
 
+> ⟲ **PASS 2 (2026-09-23): SUPERSEDED as the awaiting list by `◈.7`.** Six of the nine w15 rows below and all of wave 16 are
+> now folded (`N345`–`N357`, ledger `◈.6`). ⛔ **Still awaiting: `bar-d-score`, `coverage-control` and `lace-poe-rows`.** The
+> pass-1 table is kept verbatim as the record of what was missing at that fold.
+
 **Wave 15** (spokes per `advisor-wave-plan-w15-w18.md` §1; none has an artefact on batmac):
 
 | w15 spoke | what the second pass must fold |
@@ -6247,4 +6282,538 @@ and every declared negative.
 | ⛔ judging whether `w18/referee-fixes` has closed any must-fix item | that spoke is in flight at this fold; its draft edits are not evidence yet |
 | ⛔ editing `w14-read-verb/FINAL-REPORT.md` (`N343`) | read-only evidence |
 | ⛔ folding w13 `encoder-adapt`, w13 `seeds-and-tables`, w12b `nr6-and-kstar`, w14 `request-layer-fix` as entries of their own | outside this task's named items; ⚠ **the registry carries no entry citing `w13-encoder-adapt`, `w13-seeds-and-tables` or `w12b-nr6-and-kstar`** (mechanical grep) — flagged for the Hub |
+| ⛔ writing `~/clu/evidence/` | read-only by standing rule |
+
+
+---
+
+# ◈◈ THE WAVE-18 FOLD, SECOND PASS — `w18 spoke/registry-fold`, `doc-curator`, 2026-09-23, fold symbol **◈** (pass 2)
+
+## ◈.4 WHAT CHANGED SINCE THE FIRST PASS, AND WHAT THIS PASS READ
+
+**Commissioned by** `~/clu/tasks/w18/launch-registry-fold-pass2.txt` (and still `tasks/w18/registry-fold.md`).
+**Base:** this file's own first pass (`N338`–`N344`, `◈.0`–`◈.3`). ⛔ The pass-1 entries are **not edited**.
+The only change to them is **inserted** `⟲ PASS 2` lines at `N339`, `N340` and `◈.3`. Nothing was replaced or renumbered.
+This block adds **`N345`–`N357`**.
+
+**Staged since pass 1, and read for this pass** (unprefixed paths are relative to `~/clu/evidence/outputs/`):
+- **Wave 16, the primary record:** `w16-maze-wm/` (82 files). Read in full: `FINDINGS.md`,
+  `PREREG-w16-maze-wm-T1.md` and `-T2.md` (bars VB0–VB4 and AMENDMENTS 1–4), and
+  `MAZE-WM.json` l.20–24 and l.366–380. These JSONs were read directly: `t1/BARS-B-val.json`,
+  `t1/BARS-A-val.json`, `t2/BARS-{C,C2,C2r}-val.json`, `t2/BARS-C-test.json`, `t2/SELECT-A.json` and
+  `t2/C_rivaldiag_val_seed{0,1,2}.json`. **Where the prose rounds a number, the value quoted here is the JSON's.**
+- **Wave 16, the Hub's report:** `w16-advisor-report.md`. The file on disk is the **CORRECTED** version
+  (sha256 `a533a67c…`, 73 lines). It is used here **only as the object of `N351`**, never as a source for a number.
+- **Wave 18 pass 2 of seeds-and-tables**, which reconciled w16 against its primary record.
+  ⚠ **It is NOT under `evidence/outputs/`**, even though the launch file names it there. It is at
+  `~/clu/outputs/w18-seeds-and-tables/`. Files read: `FINDINGS.md`, `TABLES.md` (§2–§4b, §6.1) and `TABLES-w18.json`.
+  Its END_UTC is `2026-09-23T10:58:29Z`.
+- **Wave 15, the six landed spokes:** `w15-cmaze-t-harness`, `w15-cmaze-o-harness`, `w15-crossover-seeds`,
+  `w15-single-design-seeds`, `w15-table-fixes` and `w15-maze-deletion-2b`. For each, the curator read its
+  `FINDINGS.md`, plus `HARNESS-READY.json` or `TABLE.md` wherever FINDINGS cites them.
+- **Wave 18 `referee-fixes`, now finished** (`~/clu/outputs/w18-referee-fixes/FINDINGS.md`, END
+  `2026-09-22T23:47:25Z`). The live `~/clu/outputs/w17-paper/DRAFT-v2.tex` sha256 is `8e45fa98…`. That equals the
+  spoke's `post-SHA256.txt`, so its edits are the live draft. **Hash-verified.**
+
+**Still NOT on batmac, so NOT folded:** w15 `bar-d-score`, `coverage-control` and `lace-poe-rows`. They are
+still running on the other box. ⛔ **THIRD PASS REQUIRED** (`◈.7`).
+
+⛔ **Rules this pass kept:**
+- No number was rounded or re-derived. The only operations were quoting, reading JSON fields, and three `grep`s of the live draft. The greps are marked where they are used.
+- AMENDMENT-1 (`tasks/w17/AMENDMENT-1.md`) still binds **drafts**, and no entry below authorises a w15 or w16 number in a draft.
+- ⚠ Every `◈` tier is **CURATOR-PROPOSED**.
+
+## ◈.5 ⭐ THE ENTRIES — `N345`–`N357`
+
+**Reading key.** `T1` is CMAZE-T, the transition instrument. `T2` is CMAZE-O, the observation instrument.
+⛔ The two never share a table. A **failing link** is the w16 record's own label (`MAZE-WM.json` l.372–380).
+
+### N345 — ⛔ **CMAZE-T CONFIG B (match-bit interface) FAILED VAL on VB3: the learned BLIND-SEQUENTIAL arm reads 0.8782 against a bar of 0.8758. The interface lifts the best matched RIVAL +0.40 and the CLU +0.20.** · tier B (CURATOR-PROPOSED ◈) · benchmark design / interface-vs-store (w16 `hub/maze-wm`, T1, VAL only, 0 scored runs)
+
+**Source:** `w16-maze-wm/t1/BARS-B-val.json` (`bars_nway`, `ALL_PASS: false`, `verdict: "FAIL"`) and
+`w16-maze-wm/FINDINGS.md` l.123–128 (§2.4). The bar comes from `PREREG-w16-maze-wm-T1.md` l.41. The run order comes from
+AMENDMENT 2 (l.84–91) and AMENDMENT 3 (l.93–94, *"Config B FAILED VAL (VB3)"*).
+- **What was tried:** the match bits `[pocket==door, pocket==tint]` were given **identically to every arm**, at
+  latent 64, K 2, 6 atoms (`BARS-B-val.json` → `config`). The config was picked by the crossover rule over the
+  iface=match sweep, with the AMENDMENT-1 control.
+- **The bar it missed:** VB3 (the falsifier) requires `max(learned BLIND-COLOUR, learned BLIND-SEQUENTIAL)` n-way to be
+  **≤ CLU − 0.05**. On VAL n-way the CLU reads **0.925798548530976** and the bar is **0.8757985485309759**. Learned
+  BLIND-SEQUENTIAL reads **0.8781795009119285** and fails the bar; BLIND-COLOUR reads 0.03358024691358025.
+  VB1, VB2 and VB4 passed: the composition margin over the best rival (transformer, 0.7901579387928662) is 0.13564060973810976,
+  ahead on every seed.
+- **The w14 comparison, which AMENDMENT 2 required as a reported figure and not a bar** (FINDINGS l.126–128). On VAL n-way the CLU goes
+  0.7247 → 0.9258 (**+0.20**) and the best matched rival goes 0.3891 → 0.7902 (**+0.40**). *"The interface lifts the
+  rival twice as much as the store."*
+- **Failing link: INTERFACE.** The record says *"the bits are the interaction"* (FINDINGS l.126;
+  `MAZE-WM.json` l.376).
+- **Scope:** VAL only. **0 scored runs; deletion DECLARED_NOT_RUN** (FINDINGS l.268–269). ⭐ This is the **second
+  instrument** on which a task-shaped interface lifts the rivals or floors more than the store. `N338` / `CM-W14-3` record
+  the first (CMAZE-2b, the w14 verb). The w16 record calls this *"the w14 pattern for the third time"*
+  (FINDINGS l.37–39), counting C-field (`N348`) as the other one.
+
+### N346 — ⛔ **CMAZE-O CONFIG A (AE latent, rank/width ≤ 0.30) FAILED VAL on VB0: the best CLU unseen n-way over the whole grid is 0.0208 against a viability bar of 0.05. In the AE latent the store cannot be both load-bearing and alive.** · tier B (CURATOR-PROPOSED ◈) · memory-architecture (w16 `hub/maze-wm`, T2, VAL only, 0 scored runs)
+
+**Source:** `w16-maze-wm/t2/SELECT-A.json` (`CONFIG`, `best_per_K`). Also `w16-maze-wm/FINDINGS.md` l.185–191 (§4.1),
+`PREREG-w16-maze-wm-T2.md` l.35 (VB0) and AMENDMENT 2 l.62–67.
+- **The number:** the selection pick is K 2, 16 atoms, span 0.25, read floats 69,152. Its CLU `unseen_nway` is
+  **0.020833333333333332**, per seed **0.0125 / 0.015 / 0.035**, and its controls (removed / shuffled_channels / across_wells / random_atoms) are 0.0 / 0.0008333333333333334 / 0.0 / 0.0016666666666666668. The best at K 4
+  is **0.005**. FINDINGS: *"every other config ≤ 0.011"*.
+- **The bar it missed:** VB0 viability requires CLU `unseen_nway` **≥ 0.05**. AMENDMENT 2: *"its CLU read is a deterministic function
+  of the cached AE, bank and pool, so a VAL `full` run would print the identical CLU number: VB0 cannot pass.
+  DECLARED; no scored run."*
+- **Failing link: CONTENT/READ** (FINDINGS l.188; `MAZE-WM.json` l.377). *"a ≤ 0.3 × 128 = 38-dim latent subspace cannot
+  carry a decodable picture through this AE."*
+- **Context, from the same lines:** above 0.3, C-rank reaches only **0.137** at rank/width 0.5
+  (`t2/SELECT-C-rank.json`). w15's configuration at rank/width 0.688 gave **0.116** *"with controls not collapsing"*
+  (FINDINGS l.189–191; see `N353`). Low rank kills the read; high rank kills the store gate. That is the whole of
+  *"cannot be both load-bearing and alive"* (FINDINGS l.32–33).
+
+### N347 — ⛔⛔ **CMAZE-O CONFIG C2 (latent, rank/width 0.5) PASSED VAL against the recipe's rivals and FAILED VAL (VB1) against rivals trained 30,000 steps: CLU 0.1367 against MLP 0.3967, margin −0.26, behind on every seed. The recipe-rival "WIN" was an under-training artefact.** · tier A (CURATOR-PROPOSED ◈) · benchmark design / rival training budget (w16 `hub/maze-wm`, T2, VAL only, 0 scored runs; ⭐ **the cleanest single exhibit of `N339`/M1 recurring**)
+
+**Source:** `w16-maze-wm/t2/BARS-C2-val.json` (recipe rivals) and `t2/BARS-C2r-val.json` (30k-step rivals), both
+`bars_unseen_nway`. Also `w16-maze-wm/FINDINGS.md` l.218–221, `PREREG-w16-maze-wm-T2.md` AMENDMENT 3 (l.82–88) and
+AMENDMENT 4 (l.91–100).
+- **Config** (both files): K 2, 32 atoms, ridge 1.0, pair block, space `latent`, dim 128, `ward_balanced`. The
+  AMENDMENT-3 ledger gives rank/width 0.50 and read floats 138,304.
+- **Against recipe rivals (3,000 steps), `BARS-C2-val.json`:** CLU **0.13666666666666666** against best rival MLP
+  **0.03416666666666667**, margin 0.1025, `ALL_PASS: true`, `verdict: "WIN: STORE row on unseen_nway"`.
+- **Against 30k-step rivals, `BARS-C2r-val.json`:** CLU **0.13666666666666666** (per seed **0.0875 / 0.15 / 0.1725**)
+  against MLP **0.39666666666666667** (per seed **0.315 / 0.4125 / 0.4625**). Transformer reads 0.385 and LSTM 0.2333. Margin
+  **−0.26**, `every_seed_ahead: false`, `ALL_PASS: false`, `verdict: "FAIL"`. VB0, VB2, VB3 and VB4 all pass: every one of the four
+  controls is ≤ 0.0217 against a bar of 0.0683.
+- **The bar it missed:** VB1 requires CLU `unseen_nway` **≥ best matched rival + 0.03, and ahead on every seed**
+  (`PREREG-T2` l.36–37). After AMENDMENT 4 that is evaluated against rivals at **30,000 steps** (l.95).
+- **Failing link: READ.** The record says *"latent pipeline caps the CLU"* (FINDINGS l.250; `MAZE-WM.json` l.379).
+  The AE-latent pipeline ceiling on this row is 0.4766666666666666 (`BARS-C2r-val.json`, `unseen_nway`).
+- ⚠ **Rounding, declared and not corrected.** FINDINGS l.220 prints the CLU as 0.088 / 0.150 / 0.173 and the rival
+  as 0.315 / 0.413 / 0.463. The JSON values are above. `~/clu/outputs/w18-seeds-and-tables/FINDINGS.md` §6
+  says the same.
+- ⛔ **These are the triples the Hub's first report attached to the C-field withdrawal.** They belong here, to C2.
+  See `N351`, disagreement 1.
+- ⭐ **Why tier A:** one configuration and one row, where the verdict flips from WIN to FAIL on the rivals' training
+  budget alone. The CLU number is identical in both files. That is the M1 defect (`N339`) reproduced inside one wave.
+
+### N348 — ⛔⛔ **CMAZE-O C-FIELD, SCORED RUNS 4–6: THE RIVAL MARGIN IS WITHDRAWN BY THE HUB — BUT THE C-FIELD STORE GATE HOLDS. These are two different statements, and neither may be collapsed into the other.** · tier A (CURATOR-PROPOSED ◈) · benchmark design / claims hygiene (w16 `hub/maze-wm`, T2, TEST, 3 scored runs, **spent on a claim that does not stand**)
+
+**Source:** `w16-maze-wm/MAZE-WM.json` l.22 (verdict) and l.369 (control gate). `t2/BARS-C-test.json` holds the scored
+rows and `t2/BARS-C-val.json` the VAL rows. `t2/C_rivaldiag_val_seed{0,1,2}.json` is the diagnostic. Also
+`w16-maze-wm/FINDINGS.md` l.17, l.193–221 and l.259, and `PREREG-w16-maze-wm-T2.md` AMENDMENT 4 l.91–100.
+- **Config:** K 8, 64 atoms, ridge 1.0, pair block. Space `field`, dim 2,475: the store and head are fitted in the
+  observation field and read by the parameterless `decode_state`, with **no AE in the read path**. Every rival regresses the
+  identical field (FINDINGS l.194–197). Read floats 1,232,064 (FINDINGS l.197, l.235).
+- **The scored result by the pre-registered rule (TEST, `BARS-C-test.json`):**
+  - CLU `unseen_nway` is **0.6933333333333334**, per seed 0.6375 / 0.73 / 0.7125.
+  - The best recipe rival, the MLP, reads **0.16666666666666666**, a margin of 0.5266666666666667, ahead on every seed.
+  - All four controls read **0.0** on every seed.
+  - SB0–SB4 all PASS, and the file's `verdict` is `"WIN: STORE row on unseen_nway"`.
+- **⛔ STATEMENT 1: the composition-over-rivals claim is WITHDRAWN.**
+  - **Numbers:** the diagnostic re-trains the same four matched rivals at the same parameter count and on the same field
+    output, for **30,000 steps** instead of the recipe's 3,000. On VAL `unseen_nway` they read:
+    - **MLP 0.9875 / 0.99 / 0.99**
+    - transformer 0.7475 / 0.6425 / 0.6275
+    - LSTM 0.47 / 0.4825 / 0.4175
+    - cont_mlp 0.215 / 0.22 / 0.255
+
+    The C-field CLU on the same VAL row reads **0.64 / 0.73 / 0.73** (`BARS-C-val.json`). The MLP parameter count is 1,231,290.
+  - **Verdict:** `MAZE-WM.json` l.22 reads *"WIN by the pre-registered rule; rival margin WITHDRAWN by the VAL
+    training-budget diagnostic (matched MLP at 10x steps 0.99 vs CLU 0.70); store gate holds (controls 0.000);
+    INTERFACE finding"*.
+  - **Consequence:** *"No CMAZE-O config can pass VB1 against a converged matched MLP (it would need ≥ 1.02)"*
+    (FINDINGS l.214–215).
+  - **Failing link: INTERFACE.** *"the field output space is the lever, and it lifts a plain MLP further than the store"*
+    (FINDINGS l.217–218; `MAZE-WM.json` l.378).
+- **⭐ STATEMENT 2: the C-field STORE GATE HOLDS.** `MAZE-WM.json` l.369: *"PASS: all four controls 0.000 on every seed;
+  the STORE is load-bearing, but the composition-over-rivals claim is withdrawn"*. FINDINGS l.215–217 lists what
+  survives:
+  - (i) the store gate, *"a STORE row relative to its controls"*;
+  - (ii) the read-space effect for the CLU: field 0.69 against latent ≤ 0.14 on the same rows;
+  - (iii) exact deletion. On TEST, both scopes and every seed: relative ΔS = 0.0, after-deletion == refit-without, and CLU
+    adaptation 1.8–3.3 s against MLP retrain-without 27.7–29.3 s (FINDINGS l.204–208). ⚠ **It RAN.** See `N351`, disagreement 8.
+- ⛔⛔ **How to state it.**
+  - Correct: *"CMAZE-O C-field: the store is load-bearing relative to its controls (all four at 0.000 on every seed). There is no
+    composition-over-rivals row: a converged matched MLP reads 0.99."*
+  - ⛔ Never *"CMAZE-O yields no store row at any config"*. That contradicts `MAZE-WM.json` l.369 and was withdrawn from
+    the Hub's own report (`N351`, disagreement 2).
+  - ⛔ Never print 0.693 vs 0.167 as a win.
+- ⚠ **The fifth "control" is not a control.** `CTRL:landscape_shuffled` (atom rows) equals the CLU on every row
+  (`BARS-C-test.json`: 0.6933333333333334). It is a **proved identity** for a re-solved address book
+  (`PREREG-w16-maze-wm-T2.md` l.21–23; derived in `w15-cmaze-o-harness/FINDINGS.md` §3.6(a), see `N353`). It is not
+  in the four the gate counts, and ⛔ it must never be read as a control that failed to collapse.
+- **Budget consequence:** runs **4–6 are SPENT** on this row (FINDINGS l.259). Runs **10–12 are DECLARED NOT-RUN**:
+  *"Seeding a VAL-failing config is forbidden"* (l.261). A 10×-steps re-score of the C-field TEST leg was **not**
+  run, because *"the VAL diagnostic already decides it"* (l.267–268).
+- ⭐⭐ **This is M1 recurring live.** A recorded win was withdrawn purely because the rivals were under-trained. See the
+  `⟲ PASS 2` line inserted at `N339`, and the Hub's own framing at `w16-advisor-report.md` (corrected) l.40 and l.51.
+  On CMAZE-T the same diagnostic (80,000 steps, **Config A1 on VAL**, `t1/A1_rivaldiag_val_seed*.json`) left the margin
+  intact (FINDINGS l.116–121), and the scored leg against 80k-step rivals is C-512 (FINDINGS l.145–172). ⇒ **The
+  training-budget check is what separates the w16 result that stands from the one that does not.**
+
+### N349 — ⛔ **THE WAVE-16 FAILING-LINK LEDGER: CMAZE-O has THREE failing links, not one (Config A content/read · C-field interface · C2 read), and CMAZE-T's rollout row fails on READ (validity 0.000 for the CLU and every matched rival; per-step 0.925).** · tier B (CURATOR-PROPOSED ◈) · benchmark design (w16 `hub/maze-wm`, T1 and T2)
+
+**Source:** `w16-maze-wm/MAZE-WM.json` l.372–380 (`failing_links`), `w16-maze-wm/FINDINGS.md` §5 (l.240–250), and
+`~/clu/outputs/w18-seeds-and-tables/TABLES.md` W16-T3 and W16-O6.
+
+| instrument · row or config | failing link (`MAZE-WM.json`) | evidence (the record's own) | registry |
+|---|---|---|---|
+| **T2 · Config A** | **content/read** (l.377) | best n-way 0.0208, VB0 bar 0.05 | `N346` |
+| **T2 · C-field vs converged rivals** | **interface** (l.378) | MLP at 30k steps 0.9875 / 0.99 / 0.99 against CLU VAL 0.64 / 0.73 / 0.73 | `N348` |
+| **T2 · C2** | **read** (l.379) | CLU 0.1367 against MLP 0.3967 at 30k steps | `N347` |
+| **T1 · rollout** | **read** (l.375) | *"Rollout validity 0.000 for every learned arm (per-step exactness CLU 0.925 vs transformer 0.818; 0.93^43 ≈ 0.04 — arithmetic, as w15 said)"* (FINDINGS l.107–108). C-512: per-step CLU 0.925 against transformer 0.897, validity 0.000 (l.174–175) | this entry |
+| T1 · `pair` | interface (l.373) | A1 TEST: CLU 0.410 against learned BLIND-SEQUENTIAL **0.557**. The control gate passes by **0.0001** (across-wells 0.2596 against bar 0.2597). ⇒ **nothing claimed** (FINDINGS l.101–105; `MAZE-WM.json` l.370) | this entry |
+| T1 · `value` | content (l.374) | A1 TEST: CLU 0.465 against best rival 0.511 and learned blind-seq 0.485. ⇒ **nothing claimed** (FINDINGS l.105–106) | this entry |
+| T1 · Config B | interface (l.376) | blind-seq 0.8782 against bar 0.8758 | `N345` |
+
+- ⛔ **CMAZE-O has no single link.** The Hub's first report named only INTERFACE (`N351`, disagreement 3).
+- ⚠ **Rollout scope.** *"Every learned arm"* holds for **the CLU and every matched rival**. The 10×-float
+  **diagnostic** transformer reads a **non-zero** validity on seed 2 (`w16-maze-wm/TABLES.md` l.138; `N351`,
+  disagreement 6). ⚠ The corrected report still asks, at l.72, whether a world-model claim survives when *"Rollout validity is 0.000
+  for every arm"*. That residual is flagged in `N351`.
+- ⚠ **A ceiling on CMAZE-T that is not a failing link but binds every n-way number.** VAL n-way sits at **0.7247
+  with the same per-seed triple for ~15 configs** (latent 64–512, K 2–16, rank/width 0.03–0.25). Seed 1 caps at
+  0.569 everywhere. *"The ceiling is the request design, not the store"* (FINDINGS l.136–141).
+- **Other w16 not-runs, from the record** (FINDINGS l.266–273):
+  - Task 3 (runs 13–18), gated on *"no win in Tasks 1–2"*;
+  - T2 runs 10–12;
+  - a 10×-steps re-score of the C-field TEST leg;
+  - deletion rows for B, C2 and C2r;
+  - GPU and cluster, and any seed beyond 3;
+  - any edit to the w8, w9 or w15 harness modules;
+  - a CMAZE-O value hold-out comparison, because `value_holdout` is 0.000 for every arm (a judge-integrity row).
+
+### N350 — ⛔⛔ **THE SHIPPED `landscape_shuffled_across_wells` CONTROL WAS PARTLY THE IDENTITY: `rng.permutation(K)` at K = 2 is the identity half the time, and on the w16 Config-A VAL run it WAS the identity on seeds 0 and 1 (control == CLU to every digit). Fixed by a derangement before any scored run. ⚠ w15's CMAZE-T smoke numbers carry the same risk — its Config-A was K 4 / 4 / 8.** · tier A (CURATOR-PROPOSED ◈) · instrument integrity (w16 `hub/maze-wm` AMENDMENT 1; affects w15 `cmaze-t-harness`, `cmaze-o-harness` and `crossover-seeds`)
+
+**Source:** `w16-maze-wm/FINDINGS.md` l.56–66 (§1.1), `PREREG-w16-maze-wm-T1.md` AMENDMENT 1 (l.68 ff.),
+`PREREG-w16-maze-wm-T2.md` AMENDMENT 1 (l.54–60) and `t1/BARS-A-val.json` (`seen` row). The superseded runs are
+kept as `t1/A_val_seed*.json` and `t1/BARS-A-val.json`.
+- **The defect:** the control *"dealt well blocks with `rng.permutation(K)`. At K = 2 that is the identity half the time —
+  and on Config A's VAL run it **was** the identity on seeds 0 and 1: control == CLU to every digit (0.8019,
+  0.5689 …). The 3-seed mean (0.489) cleared the gate only because seed 2 swapped. At any K a random permutation
+  leaves ~1 well in place."* The same identity shows in `t1/BARS-A-val.json` on `seen`: across-wells per seed
+  **0.9745 / 0.97625 / 0.19725**, against CLU **0.9745 / 0.97625 / 0.95925**.
+- **The fix:** a **derangement** (`scripts/w16_cmaze_t.py::make_control`, and the same in `w16_cmaze_o.py`), printed in every
+  JSON. Deranged, the control reads **0.2504** on VAL n-way, where it read **0.489** (FINDINGS l.64–65). The sweep, the selection and the VAL
+  run were redone as `*_am1*` / `A1_*`. ⛔ The w15 files were **not** edited.
+- **⚠ What it touches downstream, and has not been re-measured:**
+  - **`w15-cmaze-t-harness`**: its VAL smoke used per-seed Config-A **K 4 / K 4 / K 8**
+    (`w15-cmaze-t-harness/FINDINGS.md` l.555–557). *"w15's own CMAZE-T numbers at K = 4/8 carry the same
+    partial-identity risk"* (w16 FINDINGS l.65–66). This covers the w15 smoke's across-wells column, including the
+    `pair` non-collapse (0.2535) in `N352`.
+  - **`w15-crossover-seeds`**: it kept the non-deranged control on purpose. *"A derangement version … DECLARED NOT-RUN"*
+    keeps its rows comparable with w12's (`w15-crossover-seeds/FINDINGS.md` l.245–248). It checked the one non-collapsing
+    cell at K = 20 and found the fixed point **does not** explain it (l.195–199). See `N354`.
+  - **`w15-cmaze-o-harness`**: CMAZE-O AMENDMENT 1 applies the derangement from the first w16 number and removes K = 1
+    (`PREREG-T2` l.55–60). The w15 CMAZE-O smoke's across-wells numbers used the old control.
+- **Rule for every later instrument:** a "shuffled across wells" control is a **derangement**, and it is printed. A permutation that can fix a well
+  is not a control.
+
+### N351 — ⛔⛔⭐ **PROCESS NEGATIVE: THE HUB'S WAVE-16 ADVISOR REPORT DISAGREED WITH THE PRIMARY ARTEFACT IN EIGHT PLACES, AND THE ARTEFACT WON IN ALL EIGHT. The report was written from a summary and folded on a machine that did not yet hold the primary record. The reusable rule: A PARAPHRASE IS NOT A SOURCE.** · tier A (CURATOR-PROPOSED ◈) · process / provenance (w16 Hub report; caught by w18 `seeds-and-tables` pass 2; ⭐ **an entry in its own right**)
+
+**Pointers:**
+- The reconciliation: `~/clu/outputs/w18-seeds-and-tables/FINDINGS.md` §1 (items 1–8) and `~/clu/outputs/w18-seeds-and-tables/TABLES.md` §4b (the eight-row table, each row with both pointers).
+- The primary side: `w16-maze-wm/{FINDINGS.md, TABLES.md, MAZE-WM.json, PREREG-w16-maze-wm-T2.md, t2/C2r_val_seed*.json}`.
+- The report side: `w16-advisor-report.md`. Its original wording is preserved in `TABLES-w18.json` (see provenance below).
+
+- **What happened.**
+  - The Hub compiled `w16-advisor-report.md` saying *"⚠ Every number is quoted from the hub's own artefact. ⛔ The Hub
+    re-derived nothing"* (report l.5).
+  - It re-derived nothing, but **it paraphrased**, and at the time the primary record `w16-maze-wm/` was not on batmac.
+    w18 `seeds-and-tables` pass 1 folded the paraphrase, because it was the only w16 source on the machine
+    (`~/clu/outputs/w18-seeds-and-tables/LOG.md` l.5: *"Wave 16 folded from `w16-advisor-report.md` only (primary …
+    is on FORGIS_14, not here)"*).
+  - When the record arrived, pass 2 re-read every cell from it and found eight disagreements. **The artefact wins in every one.**
+- **The eight** (curator-checked against both sides; the report line numbers are the *original* version's, see provenance below):
+
+| # | the report said | the primary artefact says |
+|---|---|---|
+| 1 | the triples **0.088 / 0.150 / 0.173 vs 0.315 / 0.413 / 0.463**, placed under the **C-field** withdrawal | those are **Config C2 (latent), VAL** (`w16-maze-wm/FINDINGS.md` l.219–220; `N347`). C-field against its own 30k rivals is MLP **0.988 / 0.990 / 0.990** (l.212; `N348`) |
+| 2 | *"CMAZE-O yields no store row at any config"* | the C-field **store gate holds** (`MAZE-WM.json` l.369). Only the composition-over-rivals claim is withdrawn (`N348`) |
+| 3 | one named link for CMAZE-O, INTERFACE | **three**: content/read, interface, read (`MAZE-WM.json` l.377–379; `N349`) |
+| 4 | Task 1 *"re-tested … against 80,000-step rivals"* | that is **Config A1 on VAL**, a diagnostic and not a TEST re-score (`w16-maze-wm/TABLES.md` l.1281). The scored 80k-step leg is **C-512 on TEST** |
+| 5 | *"relative ΔS = 0.0 on every seed; after-deletion == refit-without"* for the winner | on the CMAZE-T winner the statistic residual is **7.7e-16 … 1.2e-15**, and only the **atoms** Δ is 0.0 (`w16-maze-wm/FINDINGS.md` l.110). The report's wording belongs to the **CMAZE-O C-field** deletion (l.205) |
+| 6 | *"CMAZE-T rollout validity = 0.000 for every learned arm"* | true for the CLU and the matched rivals. The 10×-float **diagnostic** transformer is **non-zero** on seed 2 (`w16-maze-wm/TABLES.md` l.138) |
+| 7 | *"Config C-512 seed 1: `random_atoms` 0.464 vs CLU"*, with the CLU's value missing | **0.464 against the CLU's 0.567** (0.103 < 0.15) (`w16-maze-wm/FINDINGS.md` l.169; `MAZE-WM.json` l.368) |
+| 8 | CMAZE-O deletion not stated, so the fold inferred it DECLARED NOT-RUN "by construction" | **it ran**: C-field TEST, both scopes, every seed (`w16-maze-wm/TABLES.md` l.877–888). The only declared not-runs are B, C2 and C2r (FINDINGS l.268–269) |
+
+- ⭐ **Curator's verification.** Each primary-side pointer above was opened and read at this pass, not taken from §4b. This
+  includes `MAZE-WM.json` l.22, l.368, l.369 and l.372–380, `FINDINGS.md` l.110, l.169, l.205, l.212 and l.219–220, and the
+  C2/C2r JSONs (`N347`).
+- ⚠⚠ **Provenance of the report side. This belongs in the entry, because it is the same failure in miniature.**
+  - The `w16-advisor-report.md` on disk **today is the CORRECTED version**, sha256
+    `a533a67c222c6152671882a4aa58706eaa6fb3ca340443307572ea4904d61cd4`, mtime 2026-09-23 13:16. Its §2 opens *"⚠
+    CORRECTED 2026-09-23 against the primary record … got eight things wrong"* (l.41).
+  - The **§4b line pointers (l.42, 44, 48, 49, 51, 52) resolve against the SUPERSEDED version**, sha256
+    `3c2115bd524bdcc8d17dba1513131ce4af612d1138186b811f40d2ce4a533a34`, recorded in
+    `~/clu/outputs/w18-seeds-and-tables/TABLES-w18.json` → `source_sha256`.
+  - That version is **no longer on batmac** (`find ~/clu -name 'w16-advisor-report*'` returns one file). ⇒ The superseded wording
+    survives **only** as the verbatim cells of `TABLES-w18.json`, for example:
+    - `t_del`, line 52: *"relative ΔS = 0.0 on every seed; after-deletion == refit-without"*;
+    - `t_roll`, line 48: *"CMAZE-T rollout validity = 0.000 for every learned arm"*;
+    - `t_c512_cav`, line 51;
+    - `t_80k`, line 44: *"re-tested Task 1 against **80,000-step** rivals"*.
+  - ⇒ **A line pointer into a file that is later corrected in place is not a stable pointer.** Cite the sha256 of the version read.
+- ⚠ **A residual in the corrected report.** §3 is corrected to *"every arm that is the CLU or a MATCHED rival"*
+  (l.54), but §5 question 3 still reads *"⚠ **Rollout validity is 0.000 for every arm.**"* (l.72). The curator flags it and
+  ⛔ does not edit it. That file is the Hub's and it is evidence.
+- **Why it matters.** Six of the eight change a printed claim or a verdict label: 1, 2, 3, 4, 5 and 8. Items 2 and 8 run
+  **against** the programme's own interest in opposite directions:
+  - item 2 under-claimed, erasing a store gate that holds;
+  - item 8 under-reported, declaring a deletion not-run that had run.
+
+  A paraphrase does not err in one direction, so it cannot be corrected by applying a known bias.
+- **Registry check.** ⭐ This file's **first pass did not fold the report.** At the time no `w16-advisor-report.md` existed on
+  batmac (`◈.0`), so no registry number was contaminated. The contamination was confined to the
+  `seeds-and-tables` pass-1 fold spec, and that spoke's pass 2 withdrew it (`TABLES-w18.json` →
+  `cells_unused_in_template`, 69 cells).
+- ⭐⭐ **THE REUSABLE RULE: a paraphrase is not a source.**
+  - (i) A wave report is a **pointer to** the primary record and never a substitute for it. No number is folded into the registry, the matrix or a
+    draft from a report unless the cited primary file is on the folding machine and the number has been read there.
+  - (ii) When the primary is absent, the fold **declares "awaiting"**. The ◈ pass-1 practice is the model: *"No w15 or w16 number is
+    written anywhere in this block"*.
+  - (iii) A cited line carries the **sha256 of the version read**.
+  - (iv) A report that says *"re-derived nothing"* has made a claim about arithmetic, not about fidelity.
+- **Matrix row:** `CM-W16-4`.
+
+### N352 — ⚠ **w15 `cmaze-t-harness`: THE VAL SMOKE'S DECLARED NEGATIVES — the `pair` row is INTERFACE-only (across-wells 0.2535 against a bar of 0.2432), the composition-blind PLANNER reads 0.9135 against the CLU's 0.6911, the cross-maze WORDS floor is 0.9967 on `seen`, rollout validity is 0.0000, and Config-A was not pinned across seeds** · tier B (CURATOR-PROPOSED ◈) · instrument (w15, VAL only, 0 scored runs)
+
+**Source:** `w15-cmaze-t-harness/FINDINGS.md` §5.2 (l.334 ff.), §5.5 (l.397–432), §4.3–§4.5 (l.229–313), §8 (l.546–565),
+§9 (l.567–589) and §10 (l.591–614). Also `w15-cmaze-t-harness/HARNESS-READY.json` l.280, l.289 and l.298 (`instrument_warnings`)
+and l.1925 (`DECLARED_NOT_RUN`).
+- **Three instrument warnings shipped** (`HARNESS-READY.json` l.280 / l.289 / l.298). ⚠ The w16 report named one
+  (`~/clu/outputs/w18-seeds-and-tables/FINDINGS.md` §2):
+  1. `composition_blind_PLANNER_scores_near_the_clu_on_unseen_nway`: planner BLIND-SEQUENTIAL **0.9135** against CLU
+     **0.6911**. The planner columns are *"rule-KNOWING relaxed oracles … an UPPER BOUND … not a policy"*. The falsifier is the
+     **learned** arm, and it does not fire: learned BLIND-SEQUENTIAL reads 0.1485 and BLIND-COLOUR 0.0000, against a bar of 0.6411
+     (FINDINGS §5.1).
+  2. `charter_C_control_did_not_collapse` on `pair`: across-wells **0.2535** against CLU **0.3932** and a bar of **0.2432**, a
+     miss of **0.0103**. ⇒ *"on this row no STORE claim is available; it is an INTERFACE claim or nothing"* (FINDINGS
+     l.403, l.407–409, l.626). ⚠ This is the control `N350` found partly the identity.
+  3. `cross_maze_lookup_floor_scores_near_the_clu` on `seen`: WORDS floor **0.9967** against CLU 0.9709. `seen` is a
+     sanity row.
+- **Rollout:** validity **0.0000** for the CLU (per-step **0.9147**, mean route 43.4 steps, *"0.9147^43.4 ≈ 0.02"*)
+  and for every matched rival (FINDINGS §4.5). ⇒ w16's READ link (`N349`) was **predicted by w15**.
+- ⚠ **Not claimed by the w15 spoke, recorded here for completeness.** The falsifier bar was evaluated on n-way only
+  (`PREREG.md` §4.4). On `value`, learned BLIND-SEQUENTIAL reads **0.5260** against CLU **0.5386** (FINDINGS l.259, l.266).
+  w16 A1 later claimed nothing on `value` for the same reason (`N349`). The curator states the two quoted numbers and
+  ⛔ draws no bar from them.
+- **Saturation limit:** the controls stop collapsing above span ≈ 0.25 (a Johnson–Lindenstrauss effect on a 26-point code
+  cloud). The worst control is 0.9394 at span 0.75 (D12; FINDINGS §5.5 table). *"A store claim on CMAZE-T is available only
+  below about span 0.25."*
+- **Defects D8–D17, each caught by a number and fixed with the superseded runs kept** (FINDINGS §9). Three of them:
+  - D8: the row-permutation control is a no-op, 0.8195 == 0.8195;
+  - D14: the frozen codec capped `value`, ceiling 0.4963;
+  - D15: the exactness check compared two different objects, `max_relative_delta` 1.26.
+
+  ⚠ D14, D15 and D17 were found *after* the first smoke's numbers existed.
+- **Config-A was not pinned:** it was K 4 / K 4 / K 8 per seed, *"a large part of the seed-to-seed spread"* (n-way 0.802 /
+  0.468 / 0.803; FINDINGS §8). w16 pinned it (`w16-maze-wm/FINDINGS.md` l.50–51).
+- **DECLARED NOT-RUN** (FINDINGS §10; `HARNESS-READY.json` l.1925):
+  - any scored run;
+  - the TEST maze block (reserved for w16);
+  - a refusal display (retired);
+  - pinning Config-A;
+  - k ≠ 4, h/w ≠ 7 or any other generator parameter;
+  - a variant without tinted doors;
+  - any change to w8, w9 or `w9_maze`;
+  - GPU or cluster;
+  - a per-class rollout breakdown.
+
+### N353 — ⛔⛔ **w15 `cmaze-o-harness`: CMAZE-O AT ITS SHIPPED CONFIG-A SUPPORTS AN INTERFACE CLAIM, NOT A STORE CLAIM. B2 FAILS (only `landscape_removed` collapses); the deployed read is 99.24 % address book; and the atom-row `landscape_shuffled` control is a PROVED IDENTITY that can never be evidence** · tier A (CURATOR-PROPOSED ◈) · memory-architecture / instrument (w15, VAL only, 0 scored runs)
+
+**Source:** `w15-cmaze-o-harness/FINDINGS.md` §0 (l.13–31), §3.6 (l.255–301), §6 (l.444–485), §7 `valid` table
+(l.489–500) and §8 (l.640–655). Also `w15-cmaze-o-harness/HARNESS-READY.json` l.946, l.953 and l.960 (three
+`CHARTER_C_CONTROL_DID_NOT_COLLAPSE`).
+- **B2 fails.** On `unseen n-way` the CLU reads **0.1158 ± 0.0396**. The controls read:
+  - `landscape_removed` 0.0000;
+  - `landscape_shuffled_across_wells` **0.0650**;
+  - `random_atoms` **0.0667**;
+  - atom-row `landscape_shuffled` 0.1158, *"identical to the CLU"*.
+
+  The bar was ≤ 0.10 × the CLU (FINDINGS §3.6 table). *"**The honest verdict this spoke ships: CMAZE-O supports an
+  INTERFACE claim. It does not support a STORE claim as configured.**"* (l.455–456).
+- **Why:** the atoms are **1,536** floats (**0.76 %**) and the address book is **201,312** floats (**99.24 %**) of a 202,848-float read. The
+  span fraction is **0.688** (FINDINGS l.286–296). w16 reproduced this from the other side: Config A at ≤ 0.30 is dead (`N346`),
+  and C-rank at 0.5 reads 0.137.
+- **The identity.** The atom-row `landscape_shuffled` agrees with the CLU *"to every printed digit on all five rows and all three
+  seeds"*. The reason: the address book is re-solved against the deployed atoms, so a row permutation `P` is absorbed as
+  `W* Pᵀ` (FINDINGS l.272–284). It was measured at a **4.8e-07** read gap (l.472). *"Any signed-span read whose address book is re-solved
+  against the atoms is invariant to atom ordering."* ⇒ It is carried into w16 as a declared identity (`N348`), and the same
+  class of defect is CMAZE-T's D8 (`N352`).
+- **Other negatives:**
+  - `BLIND-no-layout` is **ahead of the CLU on `unseen 2-way` on 2/3 seeds** (FINDINGS l.452).
+  - The AE ceiling is row-dependent, **0.2946** on `unseen 2-way` (l.155, l.476).
+  - `value_slot_holdout` ceiling **0.0092**, so *"no arm can be measured on it"* (l.480–482).
+  - Strict value hold-out: **0.0000** for every arm, including the AE ceiling (§7 table l.495).
+- **DECLARED NOT-RUN** (FINDINGS §8):
+  - the **pair-block ablation** (`HeadSpec(pair_block=False)`, *"the single highest-value next measurement"*);
+  - the TEST split and any scored run;
+  - an `n_atoms` sweep on the 2-way and value rows;
+  - more than 12 layouts;
+  - a refusal or certificate arm;
+  - CMAZE-1, CMAZE-2 or CMAZE-2b comparison rows;
+  - a `cont_mlp` off-grid row;
+  - more than 3 seeds.
+
+  ⚠ The pair-block ablation is still not run in w16. Every w16 T2 config keeps `pair_block: true` (`BARS-C*-*.json` → `config`).
+
+### N354 — ⚠ **w15 `crossover-seeds`: AT n = 3 THE FROZEN K\*-SELECTION RULE IS NOT RESOLVABLE (seed sd > the 0.02 tolerance at six of nine K), K = 20 FAILS the strict control gate (one corner at 0.0139), and w12's n = 1 "composition drops with K" story inverts — so the draft's "+0.012731 at K = 10" is false at n = 3** · tier B (CURATOR-PROPOSED ◈) · selection / claims hygiene (w15, VAL only, 0 scored runs)
+
+**Source:** `w15-crossover-seeds/FINDINGS.md` §2 (l.108–142), §2b (l.144–157), §3 (l.160–202) and §5 (l.232–254). Also
+`w15-crossover-seeds/CROSSOVER-3SEED.json` → `per_K.<K>.selection_resolvability`, `.control_gate` and
+`.controls_not_collapsing`.
+- **Not resolvable.** *"The frozen tolerance is 0.02. The seed sd on composition exceeds it at six of the nine K: K = 10, 16,
+  20, 24, 28, 32 … **K\* = 32 is what the rule returns; it is not a K that three seeds can distinguish from K = 24 or
+  K = 28.**"* (l.146–152). The rule was not moved, and the tolerance was not widened.
+  - ⭐ This confirms, from the primary artefact, the one secondary quote pass 1 declined to fold
+    (`w17-advisor-report.md` §7 item 3; pass-1 `◈.3` and `§I8.11` item 2). ⇒ Pass-1 flag 2 is **closed**.
+- **K = 20 fails the strict gate.** Across-wells worst cell **0.0139** (seed 1, one of 24 corners, mean 0.000579), where the gate
+  is exactly zero on the worst corner. *"K = 20 FAILS and no row may be claimed there"* (l.185). The spoke checked whether the
+  permutation's fixed point explains it, and it **does not** (l.195–199; cf. `N350`). The store claim stands at the U-shape minimum K = 24.
+- **The inversion.** At n = 3 every drop against K = 5 is **≤ 0**, and composition rises monotonically from **0.8953** to **0.9290**
+  (l.114–131). w12's n = 1 interior rows showed drops of up to +0.0127 (K = 10). *"a seed-0 artefact"*.
+  - ⛔ **Draft state, by grep of the live draft:** `~/clu/outputs/w17-paper/DRAFT-v2.tex` L1247 still reads *"the largest drop
+    anywhere is $+0.012731$ at $K=10$"*, and L1231 prints the n = 1 row. Both are superseded at n = 3 (as flagged by
+    `~/clu/outputs/w18-seeds-and-tables/FINDINGS.md` §2). ⛔ AMENDMENT-1 governs the replacement.
+  - ⚠ **A w12-internal discrepancy, flagged and not adjudicated.** w12's own FINDINGS gives the largest drop as **0.0093**
+    at K = 10 (`w12-single-design-crossover/FINDINGS.md` l.199, l.212), and the w15 spoke quotes that figure (l.131).
+    w12's LOG gives **0.0127** (`w12-single-design-crossover/LOG.md` l.427), and so does the w15 table's n = 1 column.
+    The draft prints +0.012731. Both are superseded at n = 3.
+- **DECLARED NOT-RUN** (FINDINGS §5):
+  - no scored run and no `test` condition, so the scored K\* control gate was not re-run at n = 3;
+  - **seeds 3 and 4**, because there is no generation-2 feature cache (this is *"what caps the seed band at n = 3"*);
+  - any K outside the ladder;
+  - **a derangement version of the across-wells control**, kept non-deranged for comparability with w12 (`N350`);
+  - w12 artefacts, read and never written.
+
+### N355 — ⛔⛔ **w15 `single-design-seeds`: DELETING EVERY RED ROW LEAVES THE RED CORNERS STILL ABLE TO COMPOSE RED, AT ALL THREE SEEDS. The deletion claim is store-scoped exactness plus a data-free adaptation cost — NOT capability erasure.** · tier A (CURATOR-PROPOSED ◈) · unlearning / claims hygiene (w15, 0 scored runs; deletion rows at seeds 1–2 on already-charged arms)
+
+**Source:** `w15-single-design-seeds/FINDINGS.md` §0 item 4 (l.29–33), §6 (l.283–311), §5.2 (l.251–268), §5.3
+(l.270–281), §7.4 (l.380–405) and §8 (l.407–424). Also `w15-single-design-seeds/deletion/test_seed{1,2}_K32/deletion.json`.
+- **The number.** Value scope, the 20 deleted red-requesting corners. Novel per corner, before → after:
+  - seed 0: **32.250 → 32.250**
+  - seed 1: **33.500 → 33.500**
+  - seed 2: **33.600 → 33.550**
+
+  Judge accuracy, before → after: 0.8958 → 0.8958, 0.9306 → 0.9306 and 0.9333 → 0.9319 (§6 table).
+- **The reading, in the source's own words:** *"that is composition working, not deletion failing"*. But *"if a reader's question is
+  'after deletion, can the system still produce the deleted content?', the answer on this object is **yes**, at all three
+  seeds. **The deletion claim here is store-scoped exactness plus a data-free adaptation cost, not capability
+  erasure.**"* Capability removal is the hole's job, and the hole is a **DISPLAY** row whose comparator is **DECLARED NOT-RUN**,
+  so it is **not claimed** (§5.3, §6).
+- **Consequence:** this is a companion to `N340` / M3. That entry scopes exactness away from the address book; this one scopes the **word "deletion"** away
+  from capability. Both are open wordings for the Head and the Advisor (`CM-W15-1`).
+- **Other negatives:**
+  - **A w12 harness defect** surfaced at seed 1: the value scope, well 14, where the raw post basis is 43 columns wide against the book's 44. It
+    was fixed by reading through the carried basis and recorded on the row. ⛔ *"changes no published number"* (§5.2).
+  - **The rivals are too weak for their deletion delta to be informative**: 0.03–10.7 novel per corner against the arm's 47.4–52.6.
+  - `cont_mlp` "improves" after retrain-without, which is noise at the floor.
+  - The item-scope masks index **two different row spaces** (131,072 against 16,384), so the two sides delete different random 1 % subsets (§7.4).
+- **DECLARED NOT-RUN** (§8):
+  - runs 2/3 and 3/3, *"NOT-NEEDED and NOT AVAILABLE"*: they were already spent by w12b, and this hub spent 0;
+  - **the 1× comparator column**;
+  - **scale-matched comparators**. *"The checkpoints on disk were fitted at `n_fit_rows_used = 16,384` against the store's 131,072.
+    A scale-matched rival would be **stronger**."* ⇒ **M1 again** (`N339`);
+  - rival retrain-without on `red ∧ cube`, which *"cannot exist"* because the scope deletes 0 rows;
+  - the refusal-display comparator;
+  - the `unlearn_neggrad` and `unlearn_finetune` comparators;
+  - seeds 3 and 4, which have no decoder or classifier;
+  - a re-scored T7, which is read instead and reproduces at a max per-corner deviation of 0.0.
+- ⚠ **Also from the fold spec:** the draft's *"every row rewrites 2,081,024 bytes"* is **seed 0 only**
+  (`~/clu/outputs/w18-seeds-and-tables/FINDINGS.md` §2, citing `T7-3SEEDS.md` l.86–87).
+
+### N356 — ⛔⛔ **w15 `maze-deletion-2b`: ON CMAZE-2b DELETION IS EXACT BUT DOES NOT INDUCE REFUSAL — green refusal FALLS on all three seeds — the pre-registered carry path DESTROYS the surviving targets (→ 0.0000), and the downdate is NOT much faster than refitting its own store** · tier A (CURATOR-PROPOSED ◈) · unlearning / claims hygiene (w15, CMAZE-2b only, 0 scored runs)
+
+**Source:** `w15-maze-deletion-2b/FINDINGS.md` Verdict (l.8–18), §4 (l.101–131), §5 (l.133–147), §6 (l.149–154) and §7
+(l.156–165). Also `w15-maze-deletion-2b/runs/deletion_primary_seed{0,1,2}.json` → `adaptation_cost`, and
+`w15-maze-deletion-2b/TABLE.md` l.16–20.
+- **What stands (positive, for context):** the statistic residual is **7.212e-16 / 9.093e-16 / 8.937e-16**, and the projector, Gram and read
+  residuals are **0.000e+00**. A clean checkout reproduces this bit-identically (Verdict).
+- **Negative 1: deletion does not induce refusal.** On the exact-head path, VAL green refusal **falls** on every seed:
+  **0.6333 → 0.5333, 0.7248 → 0.4404, 0.5638 → 0.5319** (§4 table; l.126–128). *"The paper must not claim 'deleted ⇒
+  refused'. The claim is store-scoped exactness, nothing more."*
+- **Negative 2: the carry path destroys the survivors.** Under the basis-change carry `W ← WR` (w9 as pre-registered), other-target
+  validity goes **0.2609 / 0.1849 / 0.2490 → 0.0000** on every seed (l.122–125). The path to print is the exact-head
+  downdate (w9 Amendment 1), which costs −0.0198 / −0.0021 / −0.0059.
+- **Negative 3: it is light in compute, not in extent.** *"every atom and ≈ 99.98 % of the address book change"*: address-book floats changed
+  are 402,656–402,737 of 402,752, and atom floats 7,936 of 7,936 (§4). The downdate takes **≈ 0.8–0.9 s** against **≈ 1.1–1.2 s** for a refit of
+  the CLU's own store. *"The differentiator is not speed"*. It is that the downdate is exact without keeping the items. The rival
+  keeps ~1,200 rows and reads them 256,000 times (§5).
+- ⚠ **An internal inconsistency in the artefact**, flagged and not resolved. `TABLE.md` l.16–20 prints **"—"** for the
+  carry path's seconds and changed-float columns, while FINDINGS §4 prints them (0.009 / 0.004 / 0.012 s).
+- ⭐ **This independently confirms `N343`, and traces the defect further back.** *"The seed-2 artefact says **7.818e-16**, not the
+  '8.2e-16' that `w9-maze/LOG.md:220` and later documents quote"* (l.152–153). ⇒ The bad figure originates at
+  **`w9-maze/LOG.md` l.220**, and `w14-read-verb/FINAL-REPORT.md` l.297 inherited it. The paper's replacement numbers are the
+  CMAZE-2b rows; ⛔ the two environments are never merged.
+- **DECLARED NOT-RUN** (§7):
+  - test-leg adaptation composition, since reading test rows would be a scored act;
+  - MLP and LSTM retrain-without (only the transformer was timed);
+  - charter-C controls, which are not part of a deletion claim.
+
+  `runs_old/` is superseded by `runs/`.
+
+### N357 — ⚠ **w15 `table-fixes`: MOVING THE BLIND COLUMNS INTO THE MAZE TABLE MAKES THE CLAIM READ WEAKER — two request-ignoring references outscore the CLU 7.07× / 31.7× — reported, not softened; the referee's 23.5117 is a rounding slip (23.5121) that the LIVE draft still carries; four referee N-items and four OPEN-W15 items left behind** · tier B (CURATOR-PROPOSED ◈) · claims hygiene / provenance (w15, zero compute)
+
+**Source:** `w15-table-fixes/FINDINGS.md` §3 (l.103–135), §4 (l.137–166), §5 (l.168–184) and §6 (l.186–195). Also
+`w15-table-fixes/TABLE-FIXES.md` l.83–85.
+- **The weaker reading.** With the BLIND columns in place, BLIND-SEQUENTIAL scores **7.07×** and **31.7×** the CLU on the two composition rows,
+  and BLIND-FACTOR **3.72×** and **16.6×** (§3). *"It costs **no result**, because §6.1 claims none"*. It changes the reading:
+  *"the environment's own tripwire fires before the arm is reached"*. ⛔ Neither blind column may be quoted as a baseline the
+  CLU lost a fair comparison to, because both are class `reference` and are not byte-matched.
+- **The rounding slip.** REFEREE-v1 gives **23.5117×**. Recomputed by the spoke, `12,327,096 / 524,288 = 23.512069702148438`, which gives **23.5121×**
+  (§4a; `TABLE-FIXES.md` l.83–85). ⚠ **Live-draft state, by grep:** `~/clu/outputs/w17-paper/DRAFT-v2.tex` **L1317 and
+  L2262 still read 23.5117**. The fix landed in DRAFT-v1 and did not carry to v2 (as flagged by
+  `~/clu/outputs/w18-seeds-and-tables/FINDINGS.md` §2, "MF2"). The same source flags **MF14(i)**: the BLIND columns sit in prose after
+  `tab:cmaze2` and not in the table (DRAFT-v2 L1591 against L1573). ⛔ Both are the Head's or `placeholder-fill`'s edits.
+- **Environment defect:** `env_w3.sh` sets `PYTHONPATH` with the POSIX `:` separator for a Windows interpreter. The pinned site-packages
+  never reach `sys.path`, but `import chlu` still succeeds from CWD, *"so the COMMON.md assert can pass on a box where **no** pinned
+  dependency is importable"* (§4c). `w15-maze-deletion-2b` hit the same defect (its "Environment notes").
+- **DECLARED NOT-RUN / NOT-DONE** (§5):
+  - any scored run, val run or figure regeneration;
+  - `verify_tables.py`;
+  - **REFEREE-v1 N1–N4**, which are *"substantive, not bookkeeping … still open"*;
+  - the twelve should-fixes and five nice-to-haves, except SF-a;
+  - merging the w10 branches.
+- **Left open** (§6):
+  - **OPEN-W15-1**: `fig1_cmaze2_main_scoreboard.png` no longer matches its table;
+  - **OPEN-W15-2**: short-form T7–T12 `TABLES.md` citations;
+  - **OPEN-W15-3**: N1–N4 open while the draft's §A says all MFs are closed;
+  - **OPEN-W15-4**: correction C20 is not rewritten.
+
+## ◈.6 ⭐ THE FOLD-IN LEDGER, PASS 2 — every item the pass-2 launch named, and where it now lives
+
+| launch item | status | where |
+|---|---|---|
+| 1. every w16 config that failed VAL, with numbers and the bar missed: **B (T, VB3) · A (O, VB0) · C2 (O, VB1 vs 30k rivals)** | ⭐ **FOLDED from the primary JSONs** | `N345`, `N346`, `N347` |
+| 2. the w16 scored config that missed: **C-field, rival margin WITHDRAWN BY THE HUB. The store gate HOLDS**, as two separate statements | ⭐ **FOLDED** | `N348`; matrix `CM-W16-1` |
+| 3. CMAZE-O's **three** failing links, and CMAZE-T's rollout link (READ) | ⭐ **FOLDED** | `N349` (ledger) with `N346` / `N347` / `N348` |
+| 4. the six landed w15 spokes' declared not-runs and negatives, from their own artefacts | ⭐ **FOLDED** | `N352` (cmaze-t-harness), `N353` (cmaze-o-harness), `N354` (crossover-seeds), `N355` (single-design-seeds), `N356` (maze-deletion-2b), `N357` (table-fixes) |
+| 5. ⭐⭐ the Hub's w16 report disagreed with the primary artefact in **eight** places. **A paraphrase is not a source** | ⭐ **FOLDED as an entry in its own right** | `N351`; matrix `CM-W16-4` |
+| *(curator-added)* the shipped across-wells control was partly the identity, and w15's smoke is exposed | ⭐ FOLDED | `N350` |
+| referee-2 / `REFEREE-v2` **M1 and M3**: HELD, stay OPEN | ⭐ **carried forward, OPEN** | `⟲ PASS 2` lines at `N339` and `N340`; matrix `CM-W17-5` |
+| **M1 recurred LIVE in w16** | ⭐ recorded against the M1 entry | `⟲ PASS 2` line at `N339`; `N347`, `N348`; `CM-W17-5` |
+| pass-1 *"close items against `w18/referee-fixes`' finished FINDINGS"* | ⭐ **DONE**: M2, M4, M5, M6 and M7(e) APPLIED to the live draft (hash-verified); M1 and M3 HELD | `CM-W17-5` |
+
+## ◈.7 ⛔ STILL AWAITING — THIRD PASS REQUIRED (exactly what is missing)
+
+These are still running on the other box. ⛔ Nothing below was guessed, and ⛔ no number from them appears anywhere in this file.
+
+| w15 spoke | what the third pass must fold | table / placeholder it feeds (per `~/clu/outputs/w18-seeds-and-tables/TABLES.md` §6.1) |
+|---|---|---|
+| **`bar-d-score`** | BAR D's full-decoder GPU row, store minus matched learner in `alone` / `unfrozen` / `loop_swap`; the decomposition paragraph on that leg (`N321`, `N-I8-4`); every declared not-run | the new `tab:bard`, ⛔ never `tab:encloop`; P11, P31 |
+| **`coverage-control`** | the n = 6 store with its fit pool restricted to n = 3's train index, and its reading against `N327` / `CM-W12-2`; every declared not-run | one new row in `tab:ladder`, n = 6 column; P4 |
+| **`lace-poe-rows`** | separate LACE and PoE rows on rows 3–4 and every ladder rung, 3 seeds; generation-table run 3; ⚠ if they out-compose the store, `REFEREE-v2.md` S6 applies; every declared not-run | `tab:t7`, `tab:ladder`, the generation table; P3, P7 |
+
+**Carried open (not awaiting an artefact; awaiting a ruling):** **M1** (`N339`) and **M3** (`N340`), both HELD for the
+Head and the Advisor.
+
+## ⛔ DECLARED NOT-RUNs — the ◈ pass 2
+
+| not run | reason |
+|---|---|
+| ⛔ any scored run, compute or GPU | `w18/COMMON.md`: ZERO scored runs |
+| ⛔ folding `bar-d-score`, `coverage-control` or `lace-poe-rows` | not on batmac (`◈.7`); ⛔ nothing guessed |
+| ⛔ re-deriving or rounding any statistic | numbers are quoted from JSON or FINDINGS with a path. Where the two differ in rounding, both are named (`N347`) |
+| ⛔ ruling M1 or M3 | the Head's and the Advisor's (`~/clu/outputs/w18-referee-fixes/FINDINGS.md` l.4–5) |
+| ⛔ editing `w16-advisor-report.md` (the l.72 residual, `N351`), `w14-read-verb/FINAL-REPORT.md` (`N343`), `w9-maze/LOG.md` (`N356`) or `w15-maze-deletion-2b/TABLE.md` (`N356`) | read-only evidence |
+| ⛔ editing any draft (23.5117, +0.012731, MF14(i)) | AMENDMENT-1 plus ownership. The grep results are recorded only |
+| ⛔ adjudicating w12's 0.0093 against 0.0127 (`N354`) | both are superseded at n = 3. Which K = 5 reference each used is a re-derivation |
 | ⛔ writing `~/clu/evidence/` | read-only by standing rule |
