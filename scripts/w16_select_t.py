@@ -17,7 +17,7 @@ for s, doc in enumerate(S):
         if "CLU" in r:
             rows.setdefault(key(r), []).append(r)
 table = []
-for k, rs in sorted(rows.items()):
+for k, rs in sorted(rows.items(), key=lambda kv: str(kv[0])):
     if len(rs) != 3:
         continue
     m = lambda f: float(np.mean([f(r) for r in rs]))

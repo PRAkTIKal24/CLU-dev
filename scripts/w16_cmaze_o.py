@@ -247,7 +247,9 @@ def sweep(seed, cache, out):
 
 
 # ------------------------------------------------------------------- FULL
-def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True, space="latent"):
+def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True, space="latent",
+         rival_steps=None):
+    rival_steps = int(rival_steps or KW["rival_steps"])
     os.makedirs(out, exist_ok=True)
     t0 = time.time()
     d, ae, Z_lat = load(seed, cache)
@@ -269,7 +271,7 @@ def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True, space=
         enc_rows = lambda reqs: encode_all(ae, _items(bank, reqs))
     cfg = {"K": int(K), "n_atoms": int(na), "ridge": 1.0, "pair_block": bool(pair),
            "space": space, "dim": int(Z.shape[1]), "partition": "ward_balanced"}
-    res = {"seed": seed, "leg": leg, "tag": tag, "config": cfg,
+    res = {"seed": seed, "leg": leg, "tag": tag, "config": cfg, "rival_steps": rival_steps,
            "scored_run": leg == "test", "tolerance_used": None,
            "test_receipt": d["test_receipt"] if leg == "test" else None,
            "disjointness_val": disjointness_report(pool)["pass"]}
@@ -302,7 +304,7 @@ def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True, space=
                         n_tokens=Tok.shape[1])
             Xin = Tok
         t = time.time()
-        rv.fit(Xin, Z, steps=KW["rival_steps"], seed=seed, verbose=False)
+        rv.fit(Xin, Z, steps=rival_steps, seed=seed, verbose=False)
         rivals[kind] = rv
         res["rivals"][kind] = dict(rv.ledger(), fit_seconds=time.time() - t)
         log("[%s %d %s] rival %s params %d matched=%s" % (tag, seed, leg, kind,
@@ -344,7 +346,7 @@ def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True, space=
         from types import SimpleNamespace
         p2 = SimpleNamespace(train=pool.train, rows=rows_src, hold=pool.hold)
         res["DELETION"] = deletion_study(bank, p2, ae, Z, seed, cfg,
-                                         rival_steps=KW["rival_steps"])
+                                         rival_steps=rival_steps)
     res["seconds"] = time.time() - t0
     p = os.path.join(out, "%s_%s_seed%d.json" % (tag, leg, seed))
     with open(p, "w") as fh:
@@ -424,4 +426,4 @@ if __name__ == "__main__":
         kw = {sys.argv[i].lstrip("-"): sys.argv[i + 1] for i in range(5, len(sys.argv), 2)}
         full(seed, sys.argv[3], sys.argv[4], kw["leg"], int(kw["K"]), int(kw["atoms"]),
              kw.get("pair", "1") == "1", kw.get("tag", "A"), kw.get("deletion", "1") == "1",
-             kw.get("space", "latent"))
+             kw.get("space", "latent"), int(kw.get("rival_steps", KW["rival_steps"])))
