@@ -4,3 +4,4 @@
 - 2026-09-23T18:20:24Z installed staged drafts + bib into w17-paper
 - 2026-09-23T18:21:24Z final build 0 undefined x2; style diffs EMPTY; prose YES x2; zotero + CITATIONS.md regenerated
 - 2026-09-23T18:22:47Z CITATION-PRUNE.md written; deliverables copied into worktree w20_citation_prune/
+- 2026-09-23T18:22:52Z END; bundle w20-citation-prune.bundle
