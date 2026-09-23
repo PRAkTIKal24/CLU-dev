@@ -107,6 +107,42 @@ class Iface:
         return k2
 
 
+
+# --------------------------------------------- AMENDMENT 1: deranged across-wells control
+def derangement(K, rng):
+    """A permutation with NO fixed point.  The w15 control drew ``rng.permutation(K)``,
+    which at K = 2 is the identity with probability 1/2 (measured: seeds 0 and 1 of the
+    Config-A VAL run, control == CLU to every digit) and at any K leaves ~1 well in
+    place on average -- i.e. not "dealt to a different well" as its own docstring says."""
+    while True:
+        p = rng.permutation(K)
+        if K < 2 or not np.any(p == np.arange(K)):
+            return p
+
+
+def make_control(Ztr, Wtr, grids, K, n_atoms, ridge, control, seed, pair_block=True):
+    if control != "landscape_shuffled_across_wells":
+        return A.TransitionClu(Ztr, Wtr, grids, K=K, n_atoms=n_atoms, ridge=ridge,
+                               control=control, seed=seed, pair_block=pair_block)
+    obj = A.TransitionClu(Ztr, Wtr, grids, K=K, n_atoms=n_atoms, ridge=ridge,
+                          seed=seed, pair_block=pair_block)
+    rng = np.random.default_rng(seed + 991)
+    pool = [np.asarray(M) for M in obj.store.modes]
+    perm = derangement(obj.K, rng)
+    new = []
+    for j, ch in enumerate(obj.well_channels):
+        src = pool[perm[j]]
+        d = int(ch.size)
+        M = np.zeros((obj.n_atoms, d), np.float32)
+        w = min(d, src.shape[1])
+        M[:, :w] = src[:, :w]
+        new.append(M)
+    obj.store.modes = new
+    obj.control = control + " (deranged)"
+    obj.fit_head(np.asarray(Ztr, np.float32), Wtr)
+    obj.derangement = [int(x) for x in perm]
+    return obj
+
 # ----------------------------------------------------------------- banks
 def banks(seed_index, leg, n_train_mazes=90, n_eval_mazes=45, per_tuple=2):
     base = 2_000_000 + 400_000 * seed_index
@@ -185,8 +221,7 @@ def sweep(seed_index, out_dir, iface="none", codec_steps=2500):
                 row["CLU"] = ev(clu, IF.words)
                 row["controls"] = {}
                 for c in A.TransitionClu.CONTROLS:
-                    cobj = A.TransitionClu(Ztr, Wtr, grids, K=K, n_atoms=na, ridge=1.0,
-                                           control=c, seed=seed_index)
+                    cobj = make_control(Ztr, Wtr, grids, K, na, 1.0, c, seed_index)
                     row["controls"][c] = ev(cobj, IF.words)
                 bc = A.TransitionClu(Ztr, A.colour_blind_words(Wtr_raw, K_COLOURS),
                                      cb_grids, K=K, n_atoms=na, ridge=1.0,
@@ -204,7 +239,7 @@ def sweep(seed_index, out_dir, iface="none", codec_steps=2500):
                        max(v.get("nway", -1) for v in row["controls"].values()),
                        row["blind_seq"].get("nway", -1)))
     res["seconds"] = time.time() - t0
-    p = os.path.join(out_dir, "sweep_%s_seed%d.json" % (iface, seed_index))
+    p = os.path.join(out_dir, "sweep_%s_am1_seed%d.json" % (iface, seed_index))
     with open(p, "w") as fh:
         json.dump(res, fh, indent=1, default=R._json_default)
     log("wrote %s [%.1fs]" % (p, res["seconds"]))
@@ -279,9 +314,10 @@ def full(seed_index, out_dir, leg, latent, K, n_atoms, ridge=1.0, iface="none",
         "cap": SPAN_CAP}
     out["clu_request_only"] = bool(clu.assert_request_only(IF.words(A.build_words(
         va_split["seen"]))) is not False)
-    controls = {c: A.TransitionClu(Ztr, Wtr, grids, K=cfgA["K"], n_atoms=cfgA["n_atoms"],
-                                   ridge=cfgA["ridge"], control=c, seed=seed_index)
+    controls = {c: make_control(Ztr, Wtr, grids, cfgA["K"], cfgA["n_atoms"],
+                                cfgA["ridge"], c, seed_index)
                 for c in A.TransitionClu.CONTROLS}
+    out["across_wells_derangement"] = controls["landscape_shuffled_across_wells"].derangement
     cb_grids = [np.arange(c, dtype=np.float64)
                 for c in A.colour_blind_alphabets(K_COLOURS)]
     blind_arms = {

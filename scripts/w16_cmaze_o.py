@@ -120,6 +120,42 @@ def test_rows(bank, pool, seed, n_row=400, n_seen=600, lbf=0.25):
     return rows, rec
 
 
+
+def derangement(K, rng):
+    """No fixed point (PREREG-T1 AMENDMENT 1, applied here before any CMAZE-O number)."""
+    while True:
+        p = rng.permutation(K)
+        if K < 2 or not np.any(p == np.arange(K)):
+            return p
+
+
+def make_control(Z, train, grids, K, na, pair, c, seed):
+    if c != "landscape_shuffled_across_wells":
+        return OCluRead(Z, train, grids, K=K, n_atoms=na, ridge=1.0, pair_block=pair,
+                        control=c, seed=seed)
+    obj = OCluRead(Z, train, grids, K=K, n_atoms=na, ridge=1.0, pair_block=pair,
+                   seed=seed)
+    if K < 2:
+        obj.derangement = None          # one well: no other well to deal to
+        obj.store.modes = [np.zeros_like(M) for M in obj.store.modes]
+        obj.refit_head_to_store()
+        return obj
+    rng = np.random.default_rng(seed + 991)
+    pool_m = [np.asarray(M) for M in obj.store.modes]
+    perm = derangement(K, rng)
+    new = []
+    for k, ch in enumerate(obj.well_channels):
+        src = pool_m[perm[k]]
+        d = int(len(ch))
+        M = np.zeros((na, d), np.float32)
+        w = min(d, src.shape[1])
+        M[:, :w] = src[:, :w]
+        new.append(M)
+    obj.store.modes = new
+    obj.refit_head_to_store()
+    obj.derangement = [int(x) for x in perm]
+    return obj
+
 # ------------------------------------------------------------------- PREP
 def prep(seed, cache):
     os.makedirs(cache, exist_ok=True)
@@ -162,7 +198,7 @@ def judge_valid(ae, bank, reqs, Zr):
 
 # ------------------------------------------------------------------ SWEEP
 SWEEP = []
-for K in (1, 2, 4, 8, 16):
+for K in (2, 4, 8, 16):
     dk = LATENT_D // K
     for na in sorted({1, 2, 4, 6, 8, 12, 16, 24, 32, 38}):
         if na / dk <= SPAN_CAP + 1e-9:
@@ -196,8 +232,7 @@ def sweep(seed, cache, out):
             for c in CONTROLS_SHIPPED:
                 if c == "landscape_shuffled":
                     continue            # proved identity for this read (w15 s3.6a)
-                co = OCluRead(Z, pool.train, grids, K=K, n_atoms=na, ridge=1.0,
-                              pair_block=pair, control=c, seed=seed)
+                co = make_control(Z, pool.train, grids, K, na, pair, c, seed)
                 row["controls"][c] = {r: judge_valid(ae, bank, pool.rows[r],
                                                      co.read(pool.rows[r])) for r in rows}
             res["grid"].append(row)
@@ -233,8 +268,8 @@ def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True):
     res["request_only"] = clu.assert_request_only(pool.train[:64])
     arms = {"CLU": clu}
     for c in CONTROLS_SHIPPED:
-        arms["CTRL:" + c] = OCluRead(Z, pool.train, grids, K=K, n_atoms=na, ridge=1.0,
-                                     pair_block=pair, control=c, seed=seed)
+        arms["CTRL:" + c] = make_control(Z, pool.train, grids, K, na, pair, c, seed)
+    res["across_wells_derangement"] = arms["CTRL:landscape_shuffled_across_wells"].derangement
     lookup = OLookupRead(Z, pool.train, budget_floats=led["read_floats"], seed=seed)
     res["lookup_ledger"] = lookup.ledger()
     Phi_main, mspec = main_effect_design(pool.train, grids)
