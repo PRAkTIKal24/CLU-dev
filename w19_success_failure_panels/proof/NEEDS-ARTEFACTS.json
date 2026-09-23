@@ -1,0 +1,17 @@
+{
+  "schema": "w19-success-failure-panels/needs-artefacts/1",
+  "machine": "batmac (Apple M4)",
+  "scope": "CMAZE-T arm columns ONLY. Every T7 (Shapes3D, K*=32) panel was built from staged artefacts; nothing is needed for those.",
+  "why": "w16 maze-wm (scripts/w16_cmaze_t.py::full, branch w16/maze-wm 9f80f59) trains the frozen codec, frozen state encoder, CLU store, controls, blind arms and matched rivals IN-PROCESS and never writes any of them to disk. The primary record w16-maze-wm/t1/A1_test_seed{0,1,2}.json holds aggregate scores only, with no per-transition prediction. So these objects do NOT exist on the ThinkPad either (C:/chlu/outputs/w16-maze-wm/ holds the same JSONs). Re-training here would be a new TEST-leg run with a new codec, and the task forbids both.",
+  "what_would_unblock": "A persistence-only re-run of the SCORED config on the ThinkPad: `python scripts/w16_cmaze_t.py full <seed> <out> --leg test --latent 128 --K 2 --atoms 6 --ridge 1.0 --iface none --tag A1`, patched to pickle the objects below. It must first reproduce A1_test_seed<N>.json's ROWS/ROLLOUT/DELETION numbers to every digit, or it is not the scored object. That is a Hub/ledger decision, because it re-executes the TEST leg. This spoke does not make it.",
+  "paths_needed": [
+    {"path": "C:/chlu/outputs/w16-maze-wm/t1/persist/A1_test_seed0/codec.eqx", "what": "the frozen codec (latent 128), with a param hash written beside it", "for": "decoding every CLU/control read to s_t+1; the hash-asserted 'same codec'"},
+    {"path": "C:/chlu/outputs/w16-maze-wm/t1/persist/A1_test_seed0/state_encoder.eqx", "what": "the frozen state encoder", "for": "the rivals' observations"},
+    {"path": "C:/chlu/outputs/w16-maze-wm/t1/persist/A1_test_seed0/clu.pkl", "what": "TransitionClu (store + head) at A1", "for": "CLU column"},
+    {"path": "C:/chlu/outputs/w16-maze-wm/t1/persist/A1_test_seed0/rival_{mlp,lstm,transformer}.eqx", "what": "matched rivals (8000 steps)", "for": "rival columns"},
+    {"path": "C:/chlu/outputs/w16-maze-wm/t1/persist/A1_test_seed0/deletion_colour1/{clu_after.pkl,rival_{mlp,lstm,transformer}_retrain_without.eqx}", "what": "the downdated CLU and the rivals retrained without colour 1", "for": "post-deletion panel"},
+    {"path": "C:/chlu/outputs/w16-maze-wm/t1/persist/A1_test_seed0/predictions.npz", "what": "ALTERNATIVE to all of the above: per-transition emitted codes for every arm on the capped TEST split (seen/pair/nway/value) plus the deletion arms, keyed by split index", "for": "every arm column; lighter, needs no model load"}
+  ],
+  "seeds": "seed 0 is enough for the figure. Seeds 1-2 are the same paths with seed1/seed2, and are needed only if the rule_a family row (seed 2) is to carry arm columns.",
+  "ready_on_this_side": "w19_success_failure_panels/cmazet.py already fixes the transitions (REQUESTS-w19.json cmazet.transitions, with maze generator seed, action prefix, s_t, action and words), draws the engine truth, and leaves one hatched column per arm to fill."
+}
