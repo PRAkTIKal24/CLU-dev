@@ -1,0 +1,305 @@
+--- /Users/batmac/clu/worktrees/CHLU-w18-seeds-and-tables/w18_seeds_and_tables/draft_pass4/DRAFT-v2-style.pass3-70b7d89c.tex	2026-09-23 23:19:15
++++ /Users/batmac/clu/outputs/w17-paper/DRAFT-v2-style.tex	2026-09-23 23:25:01
+@@ -373,7 +373,7 @@
+ before any number. % SRC: w13-seeds-and-tables/TABLES.md
+ Where an experiment was pre-registered, its success and falsification criteria were written before
+ its first number; we refer to each as a \emph{pre-registered criterion}, labelled as in that
+-pre-registration (for example, criterion D or criterion S1).
++pre-registration (for example, criterion S1 or criterion S2).
+ Seed count is a column of every table.
+ 
+ % =======================================================================================
+@@ -676,24 +676,38 @@
+ sphere everywhere; the conjunction first named in the design, red $\wedge$ cube, deletes zero rows,
+ because cube is the shape held out of the split entirely, and it is printed as vacuous, never as
+ a deletion result. \emph{Item}: a random 1\% of fit rows.
+-Table~\ref{tab:del} gives each deletion with its cost. Post-deletion adaptation of the store is
+-\emph{light and data-free}: the covariance and count are downdated by subtraction, the atoms are
+-re-eigendecomposed from the downdated statistic and the address book is carried across the basis
+-change, with no row of data read. The reference, in contrast, can delete only by refitting from
++Table~\ref{tab:del} gives each deletion with its cost. \emph{Forgetting a value $c$} consists of
++three operations on one object: the store is downdated, the address book's statistics are
++downdated, and the hole for $c$ is punched (\S\ref{sec:hole}). Each deletion row therefore prints
++four measurements: (a) the store equals the store refit without the rows, a result; (b) the
++address book's statistics equal those refit without the rows, a result; (c) requests for $c$ are
++refused through the hole, only a display row, since the hole is a flag and symbolic refusal is
++not claimed; and (d) composition on the other values is unchanged, a result. Post-deletion
++adaptation of the store is \emph{light and data-free}: the covariance and count are downdated by
++subtraction and the atoms are re-eigendecomposed from the downdated statistic, with no row of data
++read. The (a) and (d) rows printed here were measured with the address book carried across the
++basis change rather than downdated; the address-book downdate is new, and its cells are named
++placeholders in Table~\ref{tab:del}. The reference, in contrast, can delete only by refitting from
+ scratch without the deleted rows.
+ 
+ \begin{table}[t]
+ \centering\small
+-\caption{\textbf{Exact (store-scoped) deletion on the single design, $\Kstar=32$, TEST, seeds 0, 1 % SRC: w13-seeds-and-tables/TABLES.md
+-and 2, one row per seed ($n=1$ each).} ``Exactness'' is the store's maximum absolute mode deviation against the store refit
+-without the rows. Survivor $\Delta$ is the paired composition change on corners that do not
+-request the deleted scope. Seeds 1 and 2 are the lower block, one row per seed ($n=1$ each), so
++\caption{\textbf{Exact (store-scoped) deletion on the single design, $\Kstar=32$, TEST, fit pool 131,072 rows, seeds 0, 1 % SRC: w13-seeds-and-tables/TABLES.md
++and 2, one row per seed ($n=1$ each): four measurements per scope.} Forgetting $c$ is: downdate the
++store, downdate the address book's statistics, punch the hole. \textbf{(a) A result}: the store
++equals the store refit without the rows (``exactness'', the store's maximum absolute mode deviation
++against it). \textbf{(b) A result}: the address book's statistics equal those refit without the
++rows; the address-book downdate is new, and every (b) cell is a named placeholder.
++\textbf{(c) A display, never a result}: requests for $c$ refused through the hole, a flag in the
++coupling table; symbolic refusal is not claimed. \textbf{(d) A result}: survivor $\Delta$, the
++paired composition change on corners that do not request the deleted scope, measured with the
++address book carried across the basis change, not downdated. Seeds 1 and 2 are the lower block, one row per seed ($n=1$ each), so
+ every scope prints three seeds; they re-read the single design's scored artefacts and spend no new scored run.}
+ \label{tab:del}
+ \setlength{\tabcolsep}{2.4pt}
+ \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lccccccccc}
+ \toprule
+-scope & seeds & rows del. & store s & store rows read & ref. refit s & ref. rows read & exactness & survivor $\Delta$ & cos$_{\min}$ \\
++scope & seeds & rows del. & store s & store rows read & ref. refit s & ref. rows read & (a) exactness & (d) survivor $\Delta$ & cos$_{\min}$ \\
+ \midrule
+ % SRCBLOCK: w13-seeds-and-tables/TABLES.md
+ value: red & 1 & 11,044 & 0.8998 & 0 & 9.259 & 120,028 & \sci{5.960}{-08} & +0.0000 (89) & 0.006538 \\
+@@ -711,6 +725,16 @@
+ item: random 1\%, seed 1 & 1 & 1,311 & 0.4182 & 0 & 17.624 & 129,761 & \sci{1.486}{-08} & 0.0000 (109) & 0.06958072632551195 \\
+ item: random 1\%, seed 2 & 1 & 1,311 & 0.3837 & 0 & 18.649 & 129,761 & \sci{3.162}{-08} & 0.0000 (109) & 0.18117547035211387 \\
+ % ENDSRC
++\midrule
++\multicolumn{10}{l}{\textbf{(b) address-book statistics $=$ refit-without}: a result; the address-book downdate is new} \\
++value: red & 3 & \multicolumn{8}{p{12cm}}{\PLACEHOLDER{w20 matched deletion, measurement (b) on the value red: the address book's statistics after the address-book downdate against those refit without the red rows, on the store's fit pool, seeds 0, 1 and 2, with measurement (d) re-read with the address book downdated rather than carried; may land as a negative}} \\
++conj.: red sphere & 3 & \multicolumn{8}{p{12cm}}{\PLACEHOLDER{w20 matched deletion, measurement (b) on the red sphere: as for the value red, seeds 0, 1 and 2; may land as a negative}} \\
++item: random 1\% & 3 & \multicolumn{8}{p{12cm}}{\PLACEHOLDER{w20 matched deletion, measurement (b) on the random 1\% of items: as for the value red, seeds 0, 1 and 2; may land as a negative}} \\
++\midrule
++\multicolumn{10}{l}{\textbf{(c) requests for $c$ refused through the hole}: a \textsc{display} row, never a result; the hole is a flag} \\
++value: red & 3 & \multicolumn{8}{p{12cm}}{\PLACEHOLDER{w20 matched deletion, measurement (c) on the value red: a hole for the value red on the $\Kstar$ object; the holes punched there are red $\wedge$ cube and the red sphere, and none for the value red is in the artefacts}} \\
++conj.: red sphere & 3 & \multicolumn{8}{l}{hole punched: 2 B rewritten for two holes (red $\wedge$ cube and the red sphere) in the 1,322 B coupling table, 0 rows read, no refit, every seed} \\ % SRC: w15-single-design-seeds/FINDINGS.md
++item: random 1\% & 3 & \multicolumn{8}{l}{no hole: an item deletion makes no request impossible (0 of 164 on the comparator's 16,384-row pool, every seed)} \\ % SRC: w12-deletion-baselines/FINDINGS.md
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+ \end{table}
+@@ -727,26 +751,16 @@
+ cost at seeds 1 and 2 is Table~\ref{tab:rivals-del-seeds} (Appendix~\ref{app:delbase}).
+ % ENDSRC
+ 
+-\paragraph{Deletion is not capability erasure, at three seeds.} After every red row is deleted,
+-the 20 deleted (red-requesting) corners still compose red on all three seeds: 32.250 $\to$ 32.250 % SRC: w15-single-design-seeds/FINDINGS.md
+-novel valid tuples per corner (judge accuracy 0.8958 $\to$ 0.8958) on seed 0, 33.500 $\to$ 33.500 % SRC: w15-single-design-seeds/FINDINGS.md
+-(0.9306 $\to$ 0.9306) on seed 1, and 33.600 $\to$ 33.550 (0.9333 $\to$ 0.9319) on seed 2. % SRC: w15-single-design-seeds/FINDINGS.md
+-The deletion claim on this object is store-scoped exactness plus a data-free adaptation cost,
+-not capability erasure. Removing the capability is the hole's job (\S\ref{sec:hole}), and the
+-hole is a display row with a declared not-run comparator, so it is not claimed.
+-
+ \paragraph{The probe that bounds the claim.} The store-scoping of exactness is measurable, not
+-only definitional. Deleting all 11,044 red rows leaves the 20 red-requesting corners at 32.2500
+-novel valid tuples per corner before and after, and judge accuracy at 0.8958 before and after.
+-% SRC: w13-seeds-and-tables/TABLES.md
++only definitional.
+ The store itself has changed. Without the address-book carry, the read moves by 0.610083
+ relative RMS on the 720 red-requesting requests, but also by 0.614277 on the 4,968 requests
+ that do not ask for red; the basis change is therefore generic, not targeted. With the carry,
+ the read moves by \sci{6.194}{-08} and \sci{6.163}{-08}, respectively. The carry rewrites
+ 1,015,808 of the address book's 1,060,864 bytes and touches 0 data rows. % SRC: w13-seeds-and-tables/TABLES.md
+-\emph{``The store has forgotten red'' and ``the object no longer answers red'' are different
+-statements, and at $\Kstar$ only the first is demonstrated.} At $\Kstar$ the value identity
+-resides in the address book, which the deletion carries rather than refits. The trade-off moved
++At $\Kstar$ the value identity
++resides in the address book, which the carry rotates rather than refits; this is why the deletion
++now also downdates the address book's statistics (measurement (b) of Table~\ref{tab:del}). The trade-off moved
+ rather than vanished: at $K=5$ (rank/width 0.156), the same red deletion was concentrated, with
+ $\cos_{\min}$ 0.1999 against 0.9976 for a size-matched random deletion of the same number of
+ rows. % SRC: w13-seeds-and-tables/TABLES.md; w13-draft-revise/DRAFT-v1.md
+@@ -787,8 +801,9 @@
+ slots. % SRC: w13-seeds-and-tables/TABLES.md
+ One hole (red $\wedge$ cube) is refusable although no red cube was ever written: refusal does
+ not require a deleted row to have existed. % SRC: w13-seeds-and-tables/TABLES.md
+-Because the downdate does not stop the object answering red (the probe above), the hole is the
+-only mechanism on this object that can. An item deletion, in contrast, makes nothing impossible:
++The hole is the only mechanism on this object that refuses, and it is a flag: a request for a
++holed value is refused by construction, so refusal is measurement (c) of Table~\ref{tab:del}, a
++display row, and symbolic refusal is not claimed. An item deletion, in contrast, makes nothing impossible:
+ 0 of 164 requests built from the deleted rows are certifiably impossible, on all three seeds, so
+ the item row has no refusal row at all. % SRC: w12-deletion-baselines/FINDINGS.md
+ 
+@@ -864,11 +879,9 @@
+ images, grows the store's margin over a 180k-parameter learner on all three seeds under an
+ anchored full unfreeze ($+0.5688\to+1.3303$, $-0.0275\to-0.0092$, $+1.1009\to+1.3028$) and on two
+ of three under a low-rank adapter. % SRC: w13-encoder-adapt/CROSS-ARM.md
+-Training the encoder through the store licenses no store claim. Pre-registered criterion D, whether
+-the store's margin over a matched learner grows, is mixed on the longer leg, with no claim in either
+-direction, and unmeasured on the shortened leg, whose learner rows are a rival fitted on the frozen
+-encoder's features; the swap loss helps on both legs, and ``unfreezing hurts'' does not survive the
+-longer leg (Appendices~\ref{app:encoder-main} and~\ref{app:encloop}).
++Training the encoder through the store licenses no store claim: the swap loss helps on both legs,
++and ``unfreezing hurts'' does not survive the longer leg (Appendices~\ref{app:encoder-main}
++and~\ref{app:encloop}).
+ 
+ \paragraph{LACE and PoE, at their own budgets.}
+ LACE~\citep{nie2021controllable} and PoE~\citep{hinton2002training}, re-implemented at their own
+@@ -1193,9 +1206,8 @@
+   64 (the validation sweep labels itself a smoke, not a claim).
+   % SRC: w13-referee-2/REFEREE-v1.md; w13-seeds-and-tables/TABLES.md; w13-draft-revise/DRAFT-v1.md
+ \item \emph{The encoder loop licenses no store claim.} Training the encoder through the store
+-  fired the pre-declared falsifier on row 3 of the shortened leg, a falsifier that involves no rival; % SRC: w13-seeds-and-tables/TABLES.md
+-  criterion D, growth of the store's margin over a matched learner, is mixed on the longer leg and
+-  unmeasured on the shortened one (\S\ref{sec:bard}).
++  fired the pre-declared falsifier on row 3 of the shortened leg, a falsifier that involves no rival % SRC: w13-seeds-and-tables/TABLES.md
++  (Appendix~\ref{app:encloop}).
+ \item \emph{No functioning generative baseline.} LACE and PoE, re-implemented at their own budgets
+   in this feature space, render no exact-match request on the generation table and score at the level
+   of our landscape controls (Table~\ref{tab:lace-poe}); the study compares naive units only and has no
+@@ -1579,7 +1591,9 @@
+ \caption{\textbf{The $K$-curve, validation, symmetric-triangle convention.} The validation sweep
+ labels itself a smoke, not a claim. Seeds: 3 at $K=5$ and $K=32$, 1 elsewhere. Two totals are % SRC: w13-seeds-and-tables/TABLES.md
+ printed and move in different directions: parts 1+2+4 (no address book) fall monotonically; the
+-honest four-part total is U-shaped.}
++honest four-part total is U-shaped. The $n=1$ middle rows are superseded by Table~\ref{tab:kcurve3},
++which prints $K=5\ldots32$ as a plateau, not a selection. % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
++}
+ \label{tab:kcurve}
+ \setlength{\tabcolsep}{2.4pt}
+ \begin{adjustbox}{max width=\linewidth}\begin{tabular}{rcccccccc}
+@@ -1636,7 +1650,9 @@
+ \caption{\textbf{The $K$-curve at $n=3$ seeds on every row, validation (a smoke, not a claim).} % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
+ Byte convention: the honest four-part total, summed and never netted: atoms (float32), covariance
+ and count (float64, as retained), address book, and the 6,610 B coupling/hole table; 524,288 B is a % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
+-reference, not a budget. The seed sd is printed beside every mean. $K=20$ fails the strict control gate (text).} % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
++reference, not a budget. The seed sd is printed beside every mean. $K=20$ fails the strict control gate (text). % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
++\textbf{$K=5\ldots32$ is a plateau, not a $\Kstar$ selection}: three seeds do not resolve the validation % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
++composition across it, $\Kstar=32$ is what the frozen rule returns, and the byte minimum is near $K=24$.} % SRC: w15-crossover-seeds/CROSSOVER-3SEED.md
+ \label{tab:kcurve3}
+ \setlength{\tabcolsep}{2.4pt}
+ \begin{adjustbox}{max width=\linewidth}\begin{tabular}{rcccccccc}
+@@ -1794,7 +1810,7 @@
+ % SRC: w13-seeds-and-tables/TABLES.md
+ 
+ % ---------------------------------------------------------------------------------------
+-\figslot{fig_deletion}{\textbf{Deletion on the single design at $\Kstar$.} Post-deletion composition and adaptation cost per arm (store: downdate and carry, 0 rows read; rivals: retrain without). Placeholder figure (Appendix~\ref{app:placeholders}), seed 0 only; the seed-1--2 rows are in Table~\ref{tab:del} and Table~\ref{tab:rivals-del-seeds}.}{fig:deletion}
++\figslot{fig_deletion}{\textbf{Deletion on the single design at $\Kstar$.} Survivor composition before and after deletion (measurement (d) of Table~\ref{tab:del}) and adaptation cost per arm (store: downdate and carry, 0 rows read; rivals: retrain without). Placeholder figure (Appendix~\ref{app:placeholders}), seed 0 only; the seed-1--2 rows are in Table~\ref{tab:del} and Table~\ref{tab:rivals-del-seeds}.}{fig:deletion}
+ 
+ \section{Deletion comparators in full (fit pool, 0 scored runs)}
+ \label{app:delbase}
+@@ -1966,16 +1982,13 @@
+ $A''$ (swap loss) & 3 & $-0.800$ / +2.367 / +3.983 & $-1.367$ / +5.694 / +7.388 \\
+ $A$ (net) & 3 & $-6.767$ / $-0.250$ / +1.700 & $-0.714$ / +0.857 / +3.939 \\
+ $A$, CI95 low & 3 & $-8.717$ / $-1.600$ / $-0.050$ & $-3.694$ / $-1.796$ / +0.714 \\
+-margin over the frozen-feature rival (not a measurement of the refitted learner), alone $\to$ arm & 3 & +12.078 $\to$ +10.311 & +24.687 $\to$ +26.048 \\
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+ \end{table}
+ 
+ \noindent The falsifier, which involves no rival (net $\Delta\le0$ on two or more seeds), fires on
+-row 3. The pre-declared success bar, growth of the store's margin over the matched learner, is not
+-assessed on this leg: the learner rows its scorer loaded are the frozen-feature rival (below), which
+-sits at or within 0.02 of zero (0.006 on row 3), so criterion D on this leg is unmeasured.
++row 3.
+ The instrument retains no statistic and makes no deletion claim. % SRC: w13-seeds-and-tables/TABLES.md
+ The longer leg (4,000 joint steps, 1,800 decoder-refit steps, 4,000 warm steps, 32,768 training
+ images) is a separate table. Equal compute passes on all three seeds. Its equal-seconds control is
+@@ -1984,43 +1997,15 @@
+ $-0.0862$, $A'$ $+0.0666$ / $-0.0066$ / $+0.1108$ (inconsistent) and $A''$ $+0.0100$ / $+0.0129$ /
+ $+0.0075$ (consistent), and \texttt{alone} probes worse than an untrained encoder on two of three
+ seeds, the same instability that another harness found in its own encoder. % SRC: w8-BAR-D-fold.md
+-\paragraph{Criterion D on the longer leg, scored.} One
+-pre-registered scored run of the encoder loop, under its own pre-registration and one amendment
+-written before any TEST number, 3 seeds, 0 \textsc{void} seeds, in its own table % SRC: w15-bar-d-score/FINDINGS.md
+-(Table~\ref{tab:bard-gpu}), never merged with Table~\ref{tab:encloop}. $M(X)$ is the mean paired
+-difference, store minus the matched-parameter learner refitted on arm $X$'s own features (178,952 % SRC: w15-bar-d-score/FINDINGS.md
+-parameters, a parameter count; the store's atom block is 524,288 B, 64 atoms $\times$ 2048 % SRC: w15-bar-d-score/FINDINGS.md
+-float32, with its address book printed separately and never netted); growth is
+-$M(\texttt{loop\_swap})-M(\texttt{alone})$. \textbf{By the pre-declared rule Criterion D is
+-\textsc{mixed} on row 4 and on row 3, so no claim is made in either direction.} Growth is positive
+-on two seeds and not on the third on each row, every row-4 growth interval spans 0, and the
+-margin is inside $\pm1$ novel tuple per corner in all six row-4 arm-seed cells. All three
+-landscape controls collapse on every scored \texttt{alone} and \texttt{loop\_swap} leg (at most % SRC: w15-bar-d-score/FINDINGS.md
+-0.490 per corner; the lookup argmax is a printed floor at 0.000, never a rival): the store reads % SRC: w15-bar-d-score/FINDINGS.md
+-what is in its atoms, but with the margin at about zero this licenses no claim of the store over
+-the baseline, in either direction.
+-\emph{Why growth could not show here (descriptive, not a bar).} \texttt{loop\_swap} saturates: the
+-store reaches 1.000 / 0.995 / 0.998 of the row-4 ceiling and the learner 1.000 / 0.991 / 0.997, so % SRC: w15-bar-d-score/FINDINGS.md
+-$M(\texttt{loop\_swap})\approx0$ by construction, and \texttt{alone}$\to$\texttt{loop\_swap} lifts
+-the learner as much as the store (row 4: +33.47 against +34.39, +7.18 against +6.84, +32.59 % SRC: w15-bar-d-score/FINDINGS.md
+-against +31.67). Better features help every arm; this is a result about the encoder, not the store. % SRC: w15-bar-d-score/FINDINGS.md
+-\emph{A wiring defect, found and repaired before any TEST number.} The scoring path loaded a
+-rival fitted on the \emph{frozen} encoder's features instead of the arm's refitted learner; the
+-repair loads the arm's own learner and refuses a feature-hash mismatch. The same scorer served
+-the shortened-decoder leg of Table~\ref{tab:encloop}; by the criterion-D scoring record, that leg's
+-\texttt{rival\_mlp\_180k} rows at 0.000 are the frozen-feature rival, not a measurement of the
+-refitted baseline, so Criterion D on the shortened leg is \emph{unmeasured}, not void, and
+-re-scoring it (its remaining pre-registered run) is a declared not-run. % SRC: w15-bar-d-score/FINDINGS.md
++Criterion D, the pre-registered success bar, in one line: the GPU (longer, full-decoder) leg is \textsc{mixed}; the CPU (shortened-decoder) leg is \textsc{unmeasured} after the scorer defect (registry N359). % SRC: w15-bar-d-score/FINDINGS.md; w15-advisor-report.md
+ 
+ \begin{table}[h]
+ \centering\small
+-\caption{\textbf{Criterion D and the decomposition on the longer leg only (4,000 joint steps, % SRC: w15-bar-d-score/FINDINGS.md
++\caption{\textbf{The unfreezing decomposition on the longer leg only (4,000 joint steps, % SRC: w15-bar-d-score/FINDINGS.md
+ 32,768 training images, 1,800 decoder-refit steps, 4,000 warm steps), TEST, 3 seeds, % SRC: w15-bar-d-score/FINDINGS.md
+ one pre-registered scored run.} Never shares a table with the shortened-decoder leg
+ (Table~\ref{tab:encloop}). Distinct valid novel tuples per corner (ceiling 36 on row 3, 72 on
+-row 4); store: the \texttt{pca\_tensor} atom block (524,288 B, float32); learner: the % SRC: w15-bar-d-score/FINDINGS.md
+-matched-parameter MLP refitted on each arm's features (178,952 parameters). Paired intervals are % SRC: w15-bar-d-score/FINDINGS.md
+-10,000-draw bootstraps over corners.} % SRC: w15-bar-d-score/FINDINGS.md
++row 4); store: the \texttt{pca\_tensor} atom block (524,288 B, float32).} % SRC: w15-bar-d-score/FINDINGS.md
+ \label{tab:bard-gpu}
+ \setlength{\tabcolsep}{2.4pt}
+ \begin{adjustbox}{max width=\linewidth}\begin{tabular}{lcp{4.6cm}p{4.6cm}}
+@@ -2028,15 +2013,6 @@
+ quantity (seeds 0 / 1 / 2) & seeds & row 3 (60 corners) & row 4 (49 corners) \\ % SRC: w15-bar-d-score/FINDINGS.md
+ \midrule
+ % SRCBLOCK: w15-bar-d-score/FINDINGS.md
+-$M(\texttt{alone})$, store $-$ learner & 3 & $-0.517$ / +0.867 / $-2.783$ & +0.918 / $-0.061$ / $-0.837$ \\
+-$M(\texttt{loop\_swap})$ & 3 & +0.217 / $-0.017$ / +1.183 & +0.000 / +0.286 / +0.082 \\
+-growth & 3 & +0.733 / $-0.883$ / +3.967 & $-0.918$ / +0.347 / +0.918 \\
+-growth, CI95 & 3 & [$-0.950$, +2.450] / [$-2.133$, +0.400] / [+1.983, +6.117] & [$-3.245$, +1.694] / [$-1.163$, +1.898] / [$-2.163$, +4.000] \\
+-\textbf{Criterion D (pre-declared rule)} & 3 & \textsc{mixed}: no claim & \textsc{mixed}: no claim \\
+-store, \texttt{alone} / \texttt{loop\_swap} & 3 & 14.650 / 30.783 / 16.883; 35.817 / 35.767 / 35.650 & 38.531 / 64.449 / 39.286; 72.000 / 71.633 / 71.878 \\
+-learner, \texttt{alone} / \texttt{loop\_swap} & 3 & 15.167 / 29.917 / 19.667; 35.600 / 35.783 / 34.467 & 37.612 / 64.510 / 40.122; 72.000 / 71.347 / 71.796 \\
+-three landscape controls & 3 & \multicolumn{2}{c}{collapse on every scored leg, both rows (at most 0.490 per corner; bar $\le1.0$)} \\
+-\midrule
+ $A'$ (unfreeze: \texttt{loop\_nosw} $-$ \texttt{alone}) & 3 & +18.367 / $-10.867$ / +18.600 & +32.245 / $-19.367$ / +32.224 \\
+ $A''$ (swap loss: \texttt{loop\_swap} $-$ \texttt{loop\_nosw}) & 3 & +2.800 / +15.850 / +0.167 & +1.224 / +26.551 / +0.367 \\
+ ordering (pre-declared rule) & 3 & \multicolumn{2}{c}{$A'<0$ in 2/6 cells, $A''>0$ in 6/6: \textsc{not reproduced}} \\
+@@ -2784,11 +2760,7 @@
+ real effects cancel. Unfreezing the encoder with the store on the gradient path hurts ($A'$
+ negative on 5 of 6 seed-rows), and a swap loss repairs that damage ($A''$ positive on 4 of 6;
+ the four two-sided sign-test $p$-values are 0.0001751, 0.000198, 0.000346 and 0.0001564, three
+-of them at or below 0.0003). On this leg the store's margin
+-over the matched-parameter learner is not measured: the printed $+12.078\to+10.311$ (row 3) and
+-$+24.687\to+26.048$ (row 4) are margins over the frozen-feature rival, not over the refitted learner
+-(Appendix~\ref{app:encloop}), so criterion D here is unmeasured, and on the longer leg, where it was
+-measured, it is mixed with no claim either way. This is a finding about the encoder, and the claim
++of them at or below 0.0003). This is a finding about the encoder, and the claim
+ that the store shapes the representation is not made. % SRC: w13-seeds-and-tables/TABLES.md; w13-draft-revise/DRAFT-v1.md
+ A longer leg at ten times the steps (4,000 joint steps, 256,000 images per arm) corroborates
+ the direction of the swap-loss ingredient on its probe margin, with $A''$ positive on all three
+@@ -2805,10 +2777,7 @@
+ \texttt{alone} control trained well (probe margin over random initialisation $-0.0505$ / % SRC: w15-bar-d-score/FINDINGS.md
+ $+0.0242$ / $-0.0862$; row-4 score 38.5 / 64.4 / 39.3). ``Unfreezing hurts'' is therefore not a % SRC: w15-bar-d-score/FINDINGS.md
+ general finding: at these pins it is a property of one seed's well-trained control. What both legs
+-support is that the swap loss helps. Criterion D is \textsc{mixed} on both rows, so the margin
+-does not grow in the pre-declared sense and no claim is made either way; the features improved
+-for every arm, \texttt{loop\_swap} lifting the matched learner as much as the store, both ending at
+-0.99--1.00 of the 72-tuple ceiling, which is a finding about the encoder, not about the store. % SRC: w15-bar-d-score/FINDINGS.md
++support is that the swap loss helps.
+ 
+ \section{The two laws on this study's store, stated in full}
+ \label{app:laws}
+@@ -2876,15 +2845,17 @@
+ \section{Placeholder index}
+ \label{app:placeholders}
+ 
+-Eleven rows remain pending, each marked in the text by a red \textsc{placeholder} whose argument names
++Fifteen rows remain pending, each marked in the text by a red \textsc{placeholder} whose argument names
+ the row and states that it may land as a negative or not at all, and each awaits a further run: the
+-data-matched rival set that replaces both rival sets of \S\ref{sec:shapes-t7} (one); the
++data-matched rival set that replaces both rival sets of \S\ref{sec:shapes-t7} (one); the new
++deletion cells of Table~\ref{tab:del}, measurement (b) on each scope and measurement (c) for the
++value red, which the matched deletion measures (four); the
+ CMAZE-T per-arm generated states in Figures~\ref{fig:cmazet-families}, \ref{fig:cmazet-door-tint}
+ and~\ref{fig:cmazet-deletion} (three); and the seven rows of Table~\ref{tab:cmazet-sym}. Rows
+ that were pending earlier are now written in from their artefacts: LACE and PoE with the generation-table run
+ (\S\ref{sec:adapt}, Tables~\ref{tab:t7}, \ref{tab:ladder} and~\ref{tab:gentable-kstar});
+-Criterion D and its decomposition paragraph (Appendices~\ref{app:encloop}
+-and~\ref{app:encoder-main}, Table~\ref{tab:bard-gpu}); and the coverage control
++the decomposition paragraph (Appendix~\ref{app:encoder-main}, Table~\ref{tab:bard-gpu}); and the
++coverage control
+ (\S\ref{sec:ladder}). Figure slots are marked as placeholders where they depend on pending rows.
+ Three figures are placeholder figures in addition to the eleven rows, and each carries an in-image
+ placeholder banner: Figure~\ref{fig:ladder} (three seeds, but without the data-matched MLP of

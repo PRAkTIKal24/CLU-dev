@@ -39,6 +39,10 @@ SRC.update(SRC2)
 # Pass 3: w19 `maze-t-symmetric`, the drafts after pass 3, the Hub's corrected report.
 from cells_pass3 import SRC3, CELLS3  # noqa: E402
 SRC.update(SRC3)
+# Pass 4: the Head's DELETION-RULE-AMENDMENT (2026-09-23 22:05) and the drafts after pass 4. The pass-3 draft
+# aliases (DNOW, DSTY) are pinned to exact copies of the pass-3 text in draft_pass4/.
+from cells_pass4 import SRC4, CELLS4  # noqa: E402
+SRC.update(SRC4)
 # The pass-2 draft cells describe DRAFT-v2.tex as it was at pass 2 (md5 e7745f2c). The live file has
 # since moved, so they are pinned to that exact text, reconstructed from the pass-2 patched copy
 # (caption_conventions/DRAFT-v2.captions.tex + `patch -R CAPTIONS.diff`; sha256 equals the pass-2 register).
@@ -152,7 +156,7 @@ CELLS = {
     "ladder_note": ("PLAN", 26, "we beat the naive fair rivals at every n; the CLU's own 2-way→6-way rise is not to be inferred because rungs 3–6 share corners and differ in coverage"),
 }
 
-for _reg in (CELLS2, CELLS3):
+for _reg in (CELLS2, CELLS3, CELLS4):
     for _cid in _reg:
         if _cid in CELLS:
             raise SystemExit(f"duplicate cell id {_cid}")

@@ -8,8 +8,10 @@ SRC3 = {'W19F': 'w19-maze-t-symmetric/FINDINGS.md',
  'W19P': 'w19-maze-t-symmetric/PREREG-w19-maze-t-symmetric.md',
  'W19L': 'w19-maze-t-symmetric/LOG.md',
  'W19E': 'w19-maze-t-symmetric/END_UTC.txt',
- 'DNOW': '/Users/batmac/clu/outputs/w17-paper/DRAFT-v2.tex',
- 'DSTY': '/Users/batmac/clu/outputs/w17-paper/DRAFT-v2-style.tex',
+ # PASS 4: the pass-3 cells describe the drafts as pass 3 left them (md5 bb489831 / 70b7d89c). Pass 4 edited
+ # both drafts, so these aliases are pinned to exact copies of that text; post-pass-4 facts are cells_pass4.py.
+ 'DNOW': '@here/draft_pass4/DRAFT-v2.pass3-bb489831.tex',
+ 'DSTY': '@here/draft_pass4/DRAFT-v2-style.pass3-70b7d89c.tex',
  'W16NOW': 'w16-advisor-report.md',
  'CAB': '/Users/batmac/clu/outputs/w17-paper/CORRECTIONS-ABSORBED.tex'}
 

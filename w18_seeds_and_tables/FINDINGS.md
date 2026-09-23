@@ -1,4 +1,62 @@
-# w18 spoke/seeds-and-tables: FINDINGS (THIRD PASS; extends pass 2, which is kept below)
+# w18 spoke/seeds-and-tables: FINDINGS (FOURTH PASS; extends pass 3, which is kept below)
+
+**Branch:** `w18/seeds-and-tables`. **Machine:** batmac. **Scored runs: 0. Compute: 0**, apart from LaTeX compiles and one figure rebuild.
+**Pass 4 applies ONLY the Head's DELETION-RULE-AMENDMENT** (2026-09-23 22:05; pinned as `draft_pass4/DELETION-RULE-AMENDMENT.md`). This is **not** the w17 AMENDMENT-1 ("no w15/w16 number enters a draft"). That ruling is unchanged and still binds. Pass 3's work stands.
+**Both drafts were edited**, `DRAFT-v2.tex` (bb489831 → **6caf80cd**) and `DRAFT-v2-style.tex` (70b7d89c → **5a58d5d9**). `fig_deletion` was rebuilt. **No pre-existing `\PLACEHOLDER{}` was touched**: the script checks the ordered sequence. **Four new, named ones were added**, as the amendment directs.
+Every number here is quoted from `TABLES.md` (the section is named) or carries its own `path:line`.
+
+**Lock check:** `tmux ls` at start and again before each live write showed only authtest, hubhost, w18-registry-fold (finished, per the brief; gone by the second check) and this spoke. None of placeholder-fill / referee3-fixes / citation-prune / referee4-fixes / draft-figure-slots was live, and `ps` showed no such process.
+
+## 1. The five items
+
+| # | ruling | TABLES.md | both drafts |
+|---|---|---|---|
+| **1** | "Forget c" = downdate store + downdate ADDRESS BOOK statistics + punch hole; four measurements per row | ⭐ **§12.1**: one table, value / red sphere / 1 % items × seeds 0, 1 and 2 (plus the vacuous red ∧ cube, printed as vacuous), with (a) exactness, (b), (c) and (d), store seconds, and bytes (convention in the table). Every (a) and (d) cell comes from `w15-single-design-seeds/T7-3SEEDS.md:85–96` | `tab:del`: caption restated around (a) to (d); header "(a) exactness", "(d) survivor Δ"; new (b) block and (c) block; the section's definition paragraph states the three operations and the four measurements |
+| **2** | retire "red still composes after deleting red" | §6.2b's deleted-corner table retired | the paragraph `DRAFT-v2.tex:729` (pass-3 text; the "1 hit"), the probe's restating sentence, and the hole sentence's "the object answering red (the probe above)" are removed; **`fig_deletion` panel (a) "red corners" bars removed**, figure rebuilt |
+| **3** | BAR D: one appendix line | §6.1 note, §12.3 | main text: the `sec:adapt` and limitations Criterion D clauses removed, and the §2 example label changed to "criterion S1 or criterion S2". Appendix: **one line** — *"Criterion D, the pre-registered success bar, in one line: the GPU (longer, full-decoder) leg is MIXED; the CPU (shortened-decoder) leg is UNMEASURED after the scorer defect (registry N359)."* Removed: `tab:encloop`'s frozen-feature margin row and sentence, the scored-leg paragraph, `tab:bard-gpu`'s Criterion D rows, the Criterion D sentences in `app:encoder-main`, and the placeholder-index pointer. `tab:bard-gpu` is kept as the **unfreezing-decomposition** table ($A'$, $A''$, ordering), because `app:encoder-main` cites it |
+| **4** | drop w15 smoke control columns (N350) | §6.2d: the charter-C unseen-2-way gate row, the "control did not collapse" warning and CMAZE-O's control finding are dropped | ⚠ **No draft table carries one.** Nothing to edit in a table (see §3) |
+| **5** | K as the plateau | §6.2a leads with the plateau, K = 5…32, with the byte minimum near K = 24 | `tab:kcurve3` caption: "K = 5…32 is a plateau, not a K\* selection … K\* = 32 is what the frozen rule returns, and the byte minimum is near K = 24"; `tab:kcurve` points to it |
+| pass-2 leftover | `tab:k5` n ≥ 3 note | — | ✔ **already closed by pass 3.** Present in both live drafts; re-checked |
+
+## 2. ⛔ What is a placeholder, and why (item 1)
+
+- **(b) address-book statistics == refit-without: in no artefact on batmac.** Every artefact measured the deletion with the address book **carried** (`w15-single-design-seeds/FINDINGS.md:189`). No w20 `shapes-data-matched` output is on batmac (checked again: `evidence/outputs/` and `outputs/` hold no w20 hub directory, only `tasks/w20/shapes-data-matched.md`). So each scope's (b) is a **named `\PLACEHOLDER`**, three in all. Each also asks for (d) to be re-read with the address book downdated.
+- **(c) for the value red: in no artefact.** The holes punched on the K\* object are **red ∧ cube and the red sphere** (`w15-single-design-seeds/FINDINGS.md:272–274`), not the value red. That makes one more named `\PLACEHOLDER`. The red-sphere (c) row is a DISPLAY, printed at every seed from that artefact. The item (c) row reads "no hole". Its "0 of 164" is w12's comparator pool, and it is labelled that way.
+- **(a) and (d) are printed as measured.** ⚠ (d) and the bytes-rewritten figure were measured **under the carry**. The table and the section say so. **None of the numbers was invented.**
+- The placeholder index now reads "Fifteen rows remain pending" (11 + 4).
+
+## 3. ⚠ For the Head (not edited: outside the amendment's letter, or the Head's wording)
+
+1. **M3 prose.** The amendment says the address-book downdate closes M3. The abstract, §1.2 ("the deletable object equals …"), the method paragraph ("the address book is carried … by a closed-form rotation") and the scope box still describe the **measured** object, with the address book carried. They were not rewritten: (b) has not landed, and M3's wording is the Head's. Once w20 lands, those four places need that wording.
+2. **The w15 smoke controls in prose.** `app:mazewm`'s "The harness smokes" paragraph still quotes the w15 CMAZE-T across-wells reading on unseen 2-way (`DRAFT-v2.tex:2560`), and says that a landscape control did not collapse. The N350 caveat is already printed by name. They are prose, not a table column, so they were left. Item 4's spirit may want them gone too.
+3. `crossover-seeds`' across-wells control (`tab:kcurve3`) is the identity-**rejected** permutation, not the N350 control, and was kept. The draft declares it.
+4. The rivals' conjunction paragraph (`sec:del-comparators`: "composition survives a conjunction deletion" for **retrained rivals**) is prose, is about rivals and not "red after deleting red", and was kept.
+5. The K = 5 deletion smoke paragraph (`app:impl`) is a validation smoke measured under the carry. It is not a four-measurement row, and it was left.
+
+## 4. Checks (`draft_pass4/COMPILE.md`, `STYLE-DIFF-CHECK-pass4.md`)
+
+- `draft_pass4/apply_pass4_edits.py`: 25 guarded anchors per file.
+  - It refuses to write if an anchor is missing or ambiguous, if the pre-existing `\PLACEHOLDER` sequence changes, if the new four are not exactly the declared list, or if a retired phrase survives ("still compose", "capability erasure", "answering red", "criterion D or criterion S1", …).
+  - It is idempotent.
+  - From the pass-3 text it gives the same bytes as the live files. The pass-4b migration (the last two Criterion D mentions) was tested both ways.
+  - The edits ran on scratch copies first, and the live files are byte-identical to the tested copies.
+- **All four style diffs EMPTY** (exit 0; 109 headings).
+- **The provenance checker's findings are identical to the pass-3 baseline** on both files.
+- **Both drafts compile**: exit 0, **0 undefined citations** (32 and 30 `\cite` lines), 0 undefined references, 0 overfull boxes, 47 pages each.
+- **Figure:** two builds are byte-identical, and every other `make_figures.py` output is byte-identical to the installed build. Only `fig_deletion.{pdf,png}`, its PROVENANCE entry, `make_figures.py` and `SHA256-build{1,2}.txt` changed. Pre-install copies are in `draft_pass4/figures_before/`.
+- **TABLES build:** 770 cells verified (117 new), 669 used, 29 historical. Two builds are byte-identical. The negative tests (a mutated T7 cell, a wrong live-draft cell, an orphan value-only token) each exit 1. The pass-3 draft cells are pinned to exact copies (`draft_pass4/DRAFT-v2*.pass3-*.tex`), because pass 4 moved the drafts.
+
+## 5. DECLARED NOT-DONE / what did NOT run (pass 4)
+
+- **w20 `shapes-data-matched`: still not on batmac and NOT FOLDED.** Its rows are the four new placeholders, plus the pre-existing one at `tab:t7`.
+- **No (b) value and no value-red hole was produced or guessed.** No deletion was re-run: 0 compute.
+- **Not edited:** abstract / §1.2 / method / scope box (M3 wording, §3.1); the w15 smoke prose (§3.2); `CORRECTIONS-ABSORBED.tex`; MF14(i); the pass-2 caption patch; the `tab:cmaze-del` label collision; the draft header comment ("Eleven PLACEHOLDERs remain", a comment line, now stale; the index in the text is correct); `figures/FIGURES.md` (the rebuilt figure's PROVENANCE notes carry the change).
+- **The w15 `bar-d-score` / `coverage-control` / `lace-poe-rows` fold into `TABLES.md` (pass-3 §5):** still not done. This pass is amendment-only, as the brief says. §6.1 stays marked STALE.
+- **Background jobs:** none left running. The compiles ran in the foreground, and `PIDS.txt` reads None. **Sub-agents: none.** Nothing was killed, and `tmux kill-server` was not used.
+
+---
+
+# PASS 3 FINDINGS (retained verbatim; where pass 4 above says otherwise, pass 4 wins)
 
 **Branch:** `w18/seeds-and-tables`. **Machine:** batmac. **Scored runs: 0. Compute: 0**, apart from LaTeX compiles of the drafts in scratch build directories.
 **Pass 3 EDITED BOTH DRAFTS**, `outputs/w17-paper/DRAFT-v2.tex` and `DRAFT-v2-style.tex`, as the Head directed. **No `\PLACEHOLDER{}` was touched**: the ordered, byte-identical sequence was checked by the edit script and by the style-diff tool. **No w19 number entered either draft.**
