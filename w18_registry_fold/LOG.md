@@ -25,3 +25,4 @@
 - 2026-09-23T17:26:40Z registry: N358–N365 + ◈.8–◈.11 appended; header note; ⟲ PASS 3 at N-I8-21, N321, N327, N339, N340, ◈.7. difflib vs pass-2: 0 replaced/0 deleted, 348 inserted; 357 N headings, 0 dups
 - 2026-09-23T17:28:06Z matrix v2.24: §I8.14 (CM-W15-2..4, CM-W19-1..2, CM-W17-6) + §I8.15 (10 flags); ⟲ lines at §I8.12 note and §I8.13 flag 1; title replaced with prior verbatim tail. difflib: 1 replaced (title), 120 inserted. Number audit: 127 registry / 40 matrix tokens, all found in sources except log line nos 2398/2399 (observed) and section id 8.14
 - 2026-09-23T17:28:35Z FINDINGS.md rewritten for pass 3 (pass-2 text, which already contains pass 1, kept verbatim below). evidence base md5 unchanged. END pass 3. Fourth pass required: w19 maze-t-symmetric only.
+- 2026-09-23T17:28:45Z committed 51952a1; bundle re-created + verified; files synced to ~/clu/outputs/w18-registry-fold/. END.
