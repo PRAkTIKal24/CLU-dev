@@ -10,3 +10,4 @@
 - 2026-09-23T17:57:56Z M5 audit (M5-ENV-AUDIT.md): 0 floats with rows from two maze envs; no M5 edit needed
 - 2026-09-23T17:57:56Z (g) verified untouched by grep of both diffs; TODO sequence identical before/after
 - NOT DONE: visual PDF check (no pdftoppm/pdftotext/pypdf on box); no bib entries added (CDM/PINN/HNN left to citation-prune); w20 shapes-data-matched numbers not filled (not landed)
+- 2026-09-23T17:58:09Z END. commit 02072eb + END_UTC commit; bundle w20-referee3-fixes.bundle
