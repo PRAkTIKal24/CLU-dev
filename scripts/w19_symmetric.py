@@ -679,6 +679,15 @@ def deletion_rows(IN, train_rows, tr_insts, Wtr_true, Wtr_fit, Otr, Ztr, Ctr, co
         block = {"n_rows_deleted": int(sel.size), "n_rows_kept": int(keep.size)}
         clu = A.TransitionClu(Ztr, Wtr_fit, grids, K=cfg["K"], n_atoms=cfg["n_atoms"],
                               ridge=cfg["ridge"], pair_block=pb, seed=seed_index)
+        # w21 (Advisor artefact ruling, measurement (d)): the PRE-deletion composition on the
+        # SAME surviving-colour rows, read from this object BEFORE the downdate (``read`` is
+        # pure), printed beside the post-deletion number.  Outside the timed block.
+        pre = {}
+        for name in ("seen", "pair", "nway"):
+            rs = [r for r in va_split.get(name, []) if not T._has_colour(r.words, k, c)]
+            if rs:
+                Wr = words_for(rs, obs_rows(rs, va_insts, va_feats, va_g))
+                pre[name] = T.decode_codes(k, A.codec_decode(codec, clu.read(Wr)))
         t0 = time.time()
         rec = clu.delete_rows_exact(Ztr[sel], Wtr_fit[sel])
         block["clu_downdate_receipt"] = {kk: vv for kk, vv in rec.items()
@@ -711,6 +720,8 @@ def deletion_rows(IN, train_rows, tr_insts, Wtr_true, Wtr_fit, Otr, Ztr, Ctr, co
             d1 = T.decode_codes(k, A.codec_decode(codec, clu.read(Wr)))
             d2 = T.decode_codes(k, A.codec_decode(codec, ref.read(Wr)))
             surv[name] = {"n": len(rs),
+                          "CLU BEFORE deletion (as fitted, same rows)":
+                              W16.sc(va_insts, rs, pre[name]),
                           "CLU after deletion (downdate)": W16.sc(va_insts, rs, d1),
                           "CLU fitted WITHOUT the rows": W16.sc(va_insts, rs, d2),
                           "reads_identical_rows_frac": float((d1 == d2).all(1).mean())}
