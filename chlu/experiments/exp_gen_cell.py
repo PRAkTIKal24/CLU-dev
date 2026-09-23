@@ -2004,6 +2004,13 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
             if wanted_rows <= set(manifest["arms"]):
                 tlog("  [x0] every row is already on disk for this seed — skipped")
                 continue
+        elif arm == "kstar":
+            # ⭐ w15/lace-poe-rows: the K* single design is FIVE rows (the arm + four
+            # charter-C controls), so the resume check is per ROW.
+            from . import exp_gen_cell_kstar as _ks
+            if {_ks.kstar_label(r) for r in _ks.KSTAR_ROWS} <= set(manifest["arms"]):
+                tlog("  [kstar] every row is already on disk for this seed — skipped")
+                continue
         elif arm in manifest["arms"]:
             tlog(f"  [{arm}] already on disk for this seed — skipped")
             continue
@@ -2111,6 +2118,45 @@ def run_seed(dataset: str, pretext: str, seed: int, out_dir: Path, config: CHLUC
                 manifest["x0"] = {"preflight": pre, "artefact_dir": str(art),
                                   "budgets": x0_runs}
                 _write_json(manifest, man_path)
+            elif arm == "kstar":
+                # ⭐ w15/lace-poe-rows — THE K* SINGLE DESIGN (``exp_gen_cell_kstar``).
+                # ⛔ Deliberately NOT on ARMS (the pin's rival-row list), as x0/dynread.
+                from . import exp_gen_cell_kstar as _ks
+                built = _ks.build(X_store, lab_store, cards, int(seed), log=tlog)
+                kobjs = _ks.objects(built, int(seed))
+                vals = {k: _ks.request_values(grid.values, lab[k])
+                        for k in list(REQUEST_SETS) + ["val"]}
+                # ⭐ VAL FIRST: the gate is evaluated on the cell's val rows and written
+                # to the manifest BEFORE any B/MS number of this arm is recorded.
+                val_scores = {}
+                for r, o in kobjs.items():
+                    fv, _ = _ks.read(built, o, vals["val"], grid.values)
+                    val_scores[r] = float(score_images(
+                        external, render(decoder, fv, feat_shape, cfg.eval_batch),
+                        lab["val"], names, cfg.eval_batch)["aggregate"])
+                gate = _ks.val_gate(val_scores)
+                manifest["kstar_val"] = {"gate": gate, "info": built["info"],
+                                         "ledger": built["ledger"]}
+                _write_json(manifest, man_path)
+                tlog(f"  ⭐ [kstar] VAL GATE: arm {gate['arm_val_aggregate']:.4f} · "
+                     f"controls {gate['controls_val_aggregate']} · PASS={gate['PASS']}")
+                if os.environ.get("CHLU_KSTAR_VAL_ONLY") == "1":
+                    raise RuntimeError("val-only invocation (CHLU_KSTAR_VAL_ONLY=1): the "
+                                       "gate is on disk, ⛔ no table row is recorded")
+                if not gate["PASS"]:
+                    raise AssertionError(f"⛔ the K* arm FAILED its val bar: {gate}")
+                snapshot = set(manifest["arms"])
+                for r in _ks.KSTAR_ROWS:
+                    label = _ks.kstar_label(r)
+                    if label in snapshot:
+                        continue
+                    feats, per_set = {}, {}
+                    for rs_ in REQUEST_SETS:
+                        f_, oor_ = _ks.read(built, kobjs[r], vals[rs_], grid.values)
+                        feats[rs_] = f_
+                        per_set[rs_] = {"n": int(f_.shape[0]),
+                                        "n_out_of_range": int(np.sum(oor_))}
+                    _record(label, feats, _ks.row_extra(built, r, per_set), 0)
             else:
                 raise ValueError(
                     f"unknown arm {arm!r} (have {ARMS} + {X0_ARM!r}; ⛔ {X0_ARM!r} is "
