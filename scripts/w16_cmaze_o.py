@@ -247,15 +247,28 @@ def sweep(seed, cache, out):
 
 
 # ------------------------------------------------------------------- FULL
-def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True):
+def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True, space="latent"):
     os.makedirs(out, exist_ok=True)
     t0 = time.time()
-    d, ae, Z = load(seed, cache)
+    d, ae, Z_lat = load(seed, cache)
     bank, pool = d["bank"], d["pool"]
     rows_src = pool.rows if leg == "val" else d["test_rows"]
     grids = make_grids(len(bank))
+    if space == "field":
+        #: C-field: every arm (CLU, controls, rivals, lookup) lives in the observation
+        #: FIELD and is read out by the parameterless decode_state.  IDENTICAL for all.
+        Z = _items(bank, pool.train).reshape((len(pool.train), -1)).astype(np.float32)
+        J = judge_field
+        enc_rows = lambda reqs: _items(bank, reqs).reshape((len(reqs), -1)).astype(np.float32)
+        import chlu.exp_w15_cmaze_o_deletion as DEL
+        DEL.decode_all = lambda _ae, Zr: np.asarray(Zr, np.float32).reshape(
+            (-1, 15, 15, N_CH)) - 0.5
+    else:
+        Z = Z_lat
+        J = lambda b, q, R: judge_valid(ae, b, q, R)
+        enc_rows = lambda reqs: encode_all(ae, _items(bank, reqs))
     cfg = {"K": int(K), "n_atoms": int(na), "ridge": 1.0, "pair_block": bool(pair),
-           "latent_d": LATENT_D, "partition": "ward_balanced"}
+           "space": space, "dim": int(Z.shape[1]), "partition": "ward_balanced"}
     res = {"seed": seed, "leg": leg, "tag": tag, "config": cfg,
            "scored_run": leg == "test", "tolerance_used": None,
            "test_receipt": d["test_receipt"] if leg == "test" else None,
@@ -301,7 +314,7 @@ def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True):
         reqs = rows_src[row]
         if not reqs:
             continue
-        reads = {"AE-CEILING": encode_all(ae, _items(bank, reqs)),
+        reads = {"PIPELINE CEILING (true item through this space's decode)": enc_rows(reqs),
                  "LOOKUP (printed floor)": lookup.read(reqs)}
         for a, obj in arms.items():
             reads[a] = obj.read(reqs)
@@ -311,7 +324,9 @@ def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True):
         for kind, rv in rivals.items():
             reads["RIVAL:" + kind] = rv.read(Pm if kind == "mlp" else
                                              (Cn if kind == "cont_mlp" else Tk))
-        R[row] = {a: judge_valid(ae, bank, reqs, Zr) for a, Zr in reads.items()}
+        R[row] = {a: J(bank, reqs, Zr) for a, Zr in reads.items()}
+        if space == "field":
+            R[row]["reference: AE-latent CEILING (w15 pipeline; not this arm's path)"] =                 judge_valid(ae, bank, reqs, encode_all(ae, _items(bank, reqs)))
         for b in BLIND_NAMES:
             st = [blind.state(b, r, rng_rand) for r in reqs]
             ok = [judge_state(s, render_state(bank[r.layout], r))["valid"]
@@ -322,7 +337,7 @@ def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True):
             % (tag, seed, leg, row, len(reqs), R[row]["CLU"]["valid"], best,
                max(v["valid"] for k, v in R[row].items()
                    if k.startswith("CTRL:") and k != "CTRL:landscape_shuffled"),
-               R[row]["AE-CEILING"]["valid"]))
+               R[row]["PIPELINE CEILING (true item through this space's decode)"]["valid"]))
     res["ROWS"] = R
     if deletion:
         from chlu.exp_w15_cmaze_o_deletion import deletion_study
@@ -337,13 +352,76 @@ def full(seed, cache, out, leg, K, na, pair=True, tag="A", deletion=True):
     log("[%s %d %s] wrote %s [%.0fs]" % (tag, seed, leg, p, res["seconds"]))
 
 
+# ============================================================ Config C sweep (VAL)
+#: C-field: the store is fitted in the OBSERVATION FIELD (the item tensor, 15x15x11 =
+#: 2,475 dims) instead of the AE latent, and read out by the parameterless
+#: ``decode_state`` (logit = read - 0.5, i.e. sigmoid > 0.5 iff read > 0.5).  No AE is
+#: in the read path.  C-rank: the latent store above rank/width 0.30.
+FIELD_GRID = [(K, M) for K in (2, 4, 8, 16) for M in (4, 8, 16, 32, 64)
+              if M / (2475 // K) <= SPAN_CAP and K * M <= 512]
+RANK_GRID = [(2, 32), (4, 16), (8, 8), (8, 12), (4, 24)]
+
+
+def judge_field(bank, reqs, R):
+    R = np.asarray(R, np.float32).reshape((-1, 15, 15, N_CH)) - 0.5
+    v, lg = [], []
+    for i, r in enumerate(reqs):
+        j = judge_state(decode_state(R[i]), render_state(bank[r.layout], r))
+        v.append(j["valid"])
+        lg.append(j["legal"])
+    return {"n": len(reqs), "valid": float(np.mean(v)), "legal": float(np.mean(lg))}
+
+
+def sweep_c(seed, cache, out):
+    d, ae, Z = load(seed, cache)
+    bank, pool = d["bank"], d["pool"]
+    grids = make_grids(len(bank))
+    rows = ("seen", "unseen_2way", "unseen_nway")
+    Zf = _items(bank, pool.train).reshape((len(pool.train), -1)).astype(np.float32)
+    res = {"seed": seed, "field_dim": int(Zf.shape[1]), "field": [], "rank": []}
+    for space, grid, ZZ, J in (("field", FIELD_GRID, Zf, judge_field),
+                               ("rank", RANK_GRID, Z,
+                                lambda b, q, R: judge_valid(ae, b, q, R))):
+        for (K, na) in grid:
+            t = time.time()
+            try:
+                clu = OCluRead(ZZ, pool.train, grids, K=K, n_atoms=na, ridge=1.0,
+                               pair_block=True, seed=seed)
+            except AssertionError as exc:
+                res[space].append({"K": K, "n_atoms": na, "DECLARED_NOT_RUN": str(exc)})
+                continue
+            led = clu.ledger()
+            row = {"K": K, "n_atoms": na, "span": na / (ZZ.shape[1] // K),
+                   "read_floats": led["read_floats"],
+                   "CLU": {r: J(bank, pool.rows[r], clu.read(pool.rows[r])) for r in rows},
+                   "controls": {}}
+            for c in CONTROLS_SHIPPED:
+                if c == "landscape_shuffled":
+                    continue
+                co = make_control(ZZ, pool.train, grids, K, na, True, c, seed)
+                row["controls"][c] = {r: J(bank, pool.rows[r], co.read(pool.rows[r]))
+                                      for r in rows}
+            res[space].append(row)
+            log("  %s K %2d at %2d span %.3f rf %8d | CLU %s | ctl nway %s [%.0fs]"
+                % (space, K, na, row["span"], row["read_floats"],
+                   " ".join("%.4f" % row["CLU"][r]["valid"] for r in rows),
+                   " ".join("%.4f" % v["unseen_nway"]["valid"]
+                            for v in row["controls"].values()), time.time() - t))
+            with open(os.path.join(out, "sweepC_seed%d.json" % seed), "w") as fh:
+                json.dump(res, fh, indent=1, default=str)
+    log("[sweepC %d] wrote" % seed)
+
+
 if __name__ == "__main__":
     mode, seed = sys.argv[1], int(sys.argv[2])
     if mode == "prep":
         prep(seed, sys.argv[3])
     elif mode == "sweep":
         sweep(seed, sys.argv[3], sys.argv[4])
+    elif mode == "sweepC":
+        sweep_c(seed, sys.argv[3], sys.argv[4])
     else:
         kw = {sys.argv[i].lstrip("-"): sys.argv[i + 1] for i in range(5, len(sys.argv), 2)}
         full(seed, sys.argv[3], sys.argv[4], kw["leg"], int(kw["K"]), int(kw["atoms"]),
-             kw.get("pair", "1") == "1", kw.get("tag", "A"), kw.get("deletion", "1") == "1")
+             kw.get("pair", "1") == "1", kw.get("tag", "A"), kw.get("deletion", "1") == "1",
+             kw.get("space", "latent"))
