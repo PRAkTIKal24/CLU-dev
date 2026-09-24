@@ -26,6 +26,13 @@ Classification (a definition, stated here and applied mechanically -- it is not 
                             pair's train evidence says a DIFFERENT outcome -- the answer needs
                             a 3-way (agent,door,tint) interaction that train never shows;
   D  UNREACHABLE-NO-SUPPORT no such triple and at least one colour pair has ZERO train rows.
+
+Second, colour-FREE criterion (``relation``): the tuple's signature = which roles are empty and
+which colours are EQUAL (pocket==door, pocket==tint, door==tint); its outcome is re-expressed
+colour-free (legal, event relative to the pocket, pocket_next empty/same/other).  A tuple is
+REACHABLE-BY-RELATION if train rows with the same signature (any colours) have that outcome as
+their mode.  C/D tuples that are reachable by relation are unreachable for a colour-IDENTITY
+(one-hot + pair) design but not for a representation that codes colour equality.
 """
 
 from __future__ import annotations
@@ -58,6 +65,25 @@ def key4(w):
 
 def outc(r):
     return (int(r.legal), int(r.ev), int(r.pocket_next))
+
+
+def rel_sig(a, d, t, k=None):
+    """Colour-FREE signature of (agent, door, tint): which roles are empty and which colours
+    are EQUAL -- the relation, not the colour identity."""
+    k = K if k is None else k
+    dk = "none" if d == 0 else ("closed" if 1 <= d <= k else ("open" if d == k + 1 else "wall"))
+    return (a == 0, dk, t == 0,
+            bool(a and dk == "closed" and a == d), bool(a and t and a == t),
+            bool(dk == "closed" and t and d == t))
+
+
+def rel_out(a, o):
+    """Colour-FREE outcome: (legal, event kind relative to the pocket, pocket_next relation)."""
+    legal, ev, pn = o
+    evk = "none" if ev == 0 else ("pickup" if ev <= K else
+                                  ("consume_pocket" if ev - K == a else "consume_other"))
+    pr = "empty" if pn == 0 else ("same" if pn == a else "other")
+    return (legal, evk, pr)
 
 
 def family_of(tup, value_colour):
@@ -117,6 +143,21 @@ def diagnose(seed, leg):
         else:
             cls = "C UNREACHABLE-CONFLICT"
         rec["class"] = cls
+        # colour-RELATION reachability (w21 addition): train rows with the same colour-free
+        # signature under OTHER colours, and whether their colour-free outcome = the truth's
+        if tmode is not None:
+            sig = rel_sig(*tup[:3])
+            rtruth = rel_out(tup[0], tmode)
+            rsup = [rel_out(k4[0], o) for k4, o in zip(tk, to) if rel_sig(*k4[:3]) == sig]
+            rc = Counter(rsup)
+            rmode = rc.most_common(1)[0][0] if rc else None
+            rec["relation"] = {"signature": [str(x) for x in sig], "truth_rel_outcome": list(rtruth),
+                               "train_rows_same_signature": len(rsup),
+                               "train_modal_rel_outcome": list(rmode) if rmode else None,
+                               "frac_same_rel_outcome": (rc[rtruth] / len(rsup)) if rsup else None,
+                               "reachable_by_relation": bool(rmode == rtruth)}
+        else:
+            rec["relation"] = None
         rec["why"] = why(rec)
         out.append(rec)
     n_ev = sum(r["n_eval"] for r in out)
@@ -125,6 +166,7 @@ def diagnose(seed, leg):
     for r in out:
         rows_by[r["class"]] += r["n_eval"]
     unreach = [r for r in out if r["class"].startswith(("C", "D"))]
+    unreach_rel = [r for r in unreach if not (r["relation"] or {}).get("reachable_by_relation")]
     return {"seed": seed, "leg": leg, "value_colour": int(ho.value_colour),
             "n_train_rows_seen": len(train), "n_eval_nway_rows": n_ev,
             "n_tuples": len(out), "class_count_tuples": dict(summ),
@@ -138,6 +180,11 @@ def diagnose(seed, leg):
                                 "unidentified row by prior/default (e.g. predicting the modal "
                                 "outcome); it says only that train does not DETERMINE the answer"),
             "heldout_2way_pairs": [list(p) for p in ho.pairs],
+            "n_unidentified_tuples_ALSO_unreachable_by_colour_relation": len(unreach_rel),
+            "unidentified_rows_ALSO_unreachable_by_colour_relation":
+                int(sum(r["n_eval"] for r in unreach_rel)),
+            "unreachable_by_relation_list": [[r["tuple"], r["family"], r["n_eval"]]
+                                             for r in unreach_rel],
             "unreachable_list": [[r["tuple"], r["family"], r["n_eval"], r["class"]] for r in unreach],
             "tuples": out, "seconds": time.time() - t0}
 
@@ -181,9 +228,16 @@ if __name__ == "__main__":
                      d["unreachable_eval_rows"], d["unreachable_row_fraction"] or 0,
                      d["identified_row_fraction"] or 0, d["class_count_tuples"],
                      d["seconds"]), flush=True)
+            print("    ...of which ALSO unreachable by colour relation: %d tuples, %d rows"
+                  % (d["n_unidentified_tuples_ALSO_unreachable_by_colour_relation"],
+                     d["unidentified_rows_ALSO_unreachable_by_colour_relation"]), flush=True)
             for r in d["tuples"]:
-                print("    %-14s %-16s n=%-4d %-26s %s" % (r["tuple"], ",".join(r["family"]),
-                                                          r["n_eval"], r["class"], r["why"]),
-                      flush=True)
+                rl = r["relation"]
+                print("    %-14s %-16s n=%-4d %-26s rel:%s(%s/%s) %s"
+                      % (r["tuple"], ",".join(r["family"]), r["n_eval"], r["class"],
+                         "-" if rl is None else ("Y" if rl["reachable_by_relation"] else "N"),
+                         "-" if rl is None else rl["train_rows_same_signature"],
+                         "-" if rl is None or rl["frac_same_rel_outcome"] is None
+                         else "%.2f" % rl["frac_same_rel_outcome"], r["why"]), flush=True)
             with open(op, "w") as fh:
                 json.dump(res, fh, indent=1, default=R._json_default)
