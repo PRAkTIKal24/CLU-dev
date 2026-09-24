@@ -24,7 +24,8 @@ CAPTION = (
     "**Set B** (w20 data-matched): the rung's **131,072**-row pool, 130,433–131,891 params; DECLARED "
     "**20,480** steps, TENX **204,800** steps (mlp and cont_mlp carried at TENX, lstm and transformer at DECLARED). "
     "**Set C** (w21, this table): the store's own **32,768** content rows, the same four families at the same "
-    "read-path float match; DECLARED **5,120** steps, TENX **51,200** steps, and a step-matched column at set B's "
+    "read-path float match (mlp 130,514 / lstm 130,721 / transformer 130,433 / cont_mlp 131,891 params, as set B), "
+    "spoke-A selection re-run on these rows (lr 3e-3, 40 epochs on all 60 legs); DECLARED **5,120** steps, TENX **51,200** steps, and a step-matched column at set B's "
     "carried budget (mlp and cont_mlp **204,800**, lstm and transformer **20,480**). "
     "`learned_ref_ownpool`: the same **32,768** rows, 130,514 params, **2,560** steps. "
     "Margin = store − the strongest rival per seed (max over families of max(DECLARED, TENX); w20's convention), "
@@ -183,6 +184,20 @@ def main():
         w("| n=%s | %s | %s | %s | %s | %s | %s |" % (
             k, msd(rf), msd(mn), f2(X.get("delta_mean_mine_minus_ref"), sign=True), f2(X.get("seed_spread_bar")),
             "; ".join(pp), X.get("verdict", "NOT RUN")))
+    w("")
+    w("Diagnostic, NOT the verdict (`crosscheck.X1_diagnostic_ref_recipe_replay`): `learned_ref_ownpool`'s own "
+      "recipe replayed with its own PRNG keys and trainer (`scripts/w21_x1_replay.py`), compared per corner to the "
+      "EXISTING rows file:")
+    w("")
+    w("| rung | replay s0/s1/s2 | ref s0/s1/s2 | corners differing s0/s1/s2 | identical per corner |")
+    w("|---|---|---|---|---|")
+    for k in RUNGS:
+        dg = R[k]["crosscheck"].get("X1_diagnostic_ref_recipe_replay", {}).get("per_seed", {})
+        g = [dg.get(s, {}) for s in SEEDS]
+        w("| n=%s | %s | %s | %s | %s |" % (
+            k, " / ".join(f2(x.get("replay_mean")) for x in g), " / ".join(f2(x.get("ref_mean")) for x in g),
+            " / ".join("%s/%s" % (x.get("n_corners_differing", "—"), x.get("n_corners", "—")) for x in g),
+            " / ".join(str(x.get("identical_per_corner", "NOT RUN")) for x in g)))
     w("")
     w("## Table X2 — same rows, DIFFERENT steps (expected to differ: the measured steps effect)")
     w("")

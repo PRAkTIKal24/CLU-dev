@@ -270,6 +270,23 @@ def rung_block(rung):
                   verdict="REPRODUCES within seed spread" if abs(d) <= spread
                   else "DISCREPANCY (reported, not resolved)")
     out["crosscheck"]["X1_same_rows_same_steps"] = X1
+    # DIAGNOSTIC (not the verdict): the ref's own recipe replayed with its own PRNG keys
+    dg = {}
+    for s in SEEDS:
+        rr, rp = my_score(rung, s, "mlp", "refreplay")
+        if rr is None or ref[s] is None:
+            dg[s] = {"status": "NOT RUN"}
+            continue
+        A_ = {r["corner_id"]: r["distinct_valid_novel_tuples"] for r in rr}
+        B_ = {r["corner_id"]: r["distinct_valid_novel_tuples"] for r in ref[s]}
+        dg[s] = {"replay_mean": mean_rows(rr), "ref_mean": mean_rows(ref[s]), "source": rp,
+                 "n_corners": len(B_), "n_corners_differing": sum(A_.get(c) != v for c, v in B_.items()),
+                 "identical_per_corner": A_ == B_}
+    out["crosscheck"]["X1_diagnostic_ref_recipe_replay"] = {
+        "what": ("learned_ref_ownpool's recipe (w12_ladder_1x.fit_one) replayed with ITS OWN PRNG keys "
+                 "and trainer (scripts/w21_x1_replay.py). A check on what differs between the X1 arms; "
+                 "the X1 verdict is computed from mlp__ownpoolsched only."),
+        "per_seed": dg}
     X2 = {"ref_2560_steps": rs}
     for st in ("declared", "tenx", "steps204800"):
         X2["mine_%s" % st] = out["setC_w21_32768"]["mlp"][st]["summary"]
