@@ -1,5 +1,35 @@
 # FIGURES.md
 
+## ⭐ w22 `figures-redraw` pass 2 (2026-09-24): the current state. Read this section first.
+
+**Zero scored runs; nothing written to any ledger.** Build: `bash build.sh` = `make_figures.py` then
+`make_figures_w22.py` (which imports `make_figures_w21.py` as a library; `maze_six.py` reads the
+six-seed CMAZE-T artefacts), twice, SHA256-compared (`SHA256-w22-build{1,2}.txt`), installed
+byte-identically into **both** `w17-paper/figures/` and `outputs/paper-visuals/`.
+
+| stem | what it shows | source (every value read, never typed) |
+|---|---|---|
+| `fig_ladder` | store vs **three** rival sets, one panel each; **pool rows AND optimiser steps in every panel title**: (a) 32,256 rows · 5,040 steps (spoke-A `@ref`), (b) 32,768 rows · 2,560 steps (data-matched MLP), (c) **131,072 rows · 20,480/204,800 steps** (w20, P1-carried fit per family × seed; filled dot = seed carried at 204,800) | `data/ladder_rival_sets.json`; w20 `SHAPES-MATCHED.json ladder.*`; steps asserted per rung × seed × family |
+| `fig_headline_steps` (NEW, `fig:headline-steps`) | rows 3–4 TEST: rival score against optimiser steps at 16,384 / 32,768 / 131,072 rows — the operative variable was steps, not data | `SHAPES-MATCHED.json rows34.arms`; each fit's `declared.json`/`tenx.json` `optimizer_steps`, `n_fit_rows` |
+| `fig_maze_conditions` | (a) condition table + CLU-REL-A10 row (Head's rule, seeds 0–2); (b) A1 and (c) CLU-REL-A10, **six seeds**, per-seed **ceiling** bars, **hard seeds 1, 4 shaded** (A1 ceiling < cut 0.6407), best matched rival (open ▲), best **+rel** rival (filled ▲), highest control (×); every seed where a rival/control reaches the CLU is **marked by rule** (seed 4: control = CLU; seed 5: rival = CLU; A1 seeds 1, 5: rival > CLU) | per-seed run JSONs `ROWS.nway`, asserted float-equal to `REL-NEWSEEDS.json nway_summary`; `MAZE-T-SEED4.json classification` |
+| `fig_maze_rel_tuples` (NEW, `fig:maze-rel-tuples`) | CLU-REL-A10, every held-out n-way tuple × 6 seeds: CLU, best matched rival, best +rel, highest control; "= CLU on k/n" per row (seed 4: control and +rel 16/16; seed 5: rival and +rel 16/16) | `w21-rel-newseeds/replay/BOTH_test_seed*_PERTUPLE.json` (stored `[n, correct]`); objects hash-identical to the staged ones |
+| `fig_deletion` | the **four measurements** (w20, book refit): (a) store = refit-without, (b) book = refit-without, (c) refusal display, (d) before→after with **the random-1 % item control beside the conjunction**, (e) paired Δ + CI, (f) CLU after − each rival retrained without | `SHAPES-MATCHED.json deletion_matched.per_scope.*` |
+| `fig_crossover`, `fig_cmazet_*`, others | unchanged from pass 1 | — |
+
+**Colour roles (dataviz, validated palette unchanged):** CLU blue; per-seed "best matched rival" is a
+*role* (its family varies by seed) → slot 2 orange; **open = without the relational request columns,
+filled = with them**, for both the CLU (A1 vs REL) and the rival (matched vs +rel); controls grey ×;
+ceiling ink bar. Families keep their pass-1 hues wherever a family is the entity.
+
+**Pending slots (data, not code):**
+- `data/ladder_rival_sets.json` → `ladder_rivals_32k` (32,768 rows; still running on forgis-14). Set
+  `status: landed`, `source`, `reader`, `arms`, `steps`, `steps_check`; rebuild. Tested with a stand-in
+  4th set: the figure becomes a 2 × 3 grid, no code change.
+- `data/cmazet_panels.json` → `fig_cmazet_rel_per_arm` (CLU-REL-A10 per-row panels): gate 1 PASSED
+  (192/192 objects), gate 2 cannot run — the REL pickles need module `w21_clu`, absent on batmac
+  (`NEEDS-ARTEFACTS.json` in the w22 outputs).
+
+
 ## ⭐ w21 `figures-redraw` (2026-09-24): the current state. Read this section first.
 
 **No figure carries an in-image banner.** Placeholder status lives only in PROVENANCE.json and the

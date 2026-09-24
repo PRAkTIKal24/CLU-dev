@@ -1,5 +1,5 @@
 {
- "_doc": "Rows of fig_maze_conditions, top to bottom. One entry = one row. To add a row: append an entry with status 'landed', its BARS artefact and schema ('w16' = rows.nway[arm].per_seed; 'w19' = rows.nway.per_seed[arm]). No code change. Labels are the Head's rule (PREREG-w21-words-full-test.md, THE LABEL RULE), applied by one function to every symmetric row; an asymmetric row is labelled ASYMMETRIC and gets no claim label. Where the artefact carries HEAD_LABEL the build asserts equality.",
+ "_doc": "Rows of fig_maze_conditions, top to bottom. One entry = one row. To add a row: append an entry with status 'landed', its BARS artefact and schema ('w16' = rows.nway[arm].per_seed; 'w19' = rows.nway.per_seed[arm]). No code change. Labels are the Head's rule (PREREG-w21-words-full-test.md, THE LABEL RULE), applied by one function to every symmetric row; an asymmetric row is labelled ASYMMETRIC and gets no claim label. Where the artefact carries HEAD_LABEL the build asserts equality. w22: schema 'runs' = one scored run JSON per seed (ROWS.nway[arm]); 'check_source' = an artefact whose rows.nway.R_star and CLU_per_seed must equal the recomputed ones. The six-seed, two-config words-plus-observation read is panel (b), drawn by maze_six.py from the per-seed run JSONs (no claim label: the rule is written for 3 seeds).",
  "rule_source": "w21-words-full-test/PREREG-w21-words-full-test.md",
  "primary_row": "nway",
  "rows": [
@@ -8,7 +8,10 @@
    "status": "landed",
    "label": "Rivals on the observation",
    "note": "ASYMMETRIC: rivals read a 636-dim observation, the CLU the 318-wide word design",
-   "note_sources": ["w15-cmaze-t-harness/FINDINGS.md", "w21-words-full-test/TABLES.md"],
+   "note_sources": [
+    "w15-cmaze-t-harness/FINDINGS.md",
+    "w21-words-full-test/TABLES.md"
+   ],
    "leg": "TEST",
    "source": "w16-maze-wm/t1/BARS-A1-test.json",
    "schema": "w16",
@@ -41,17 +44,24 @@
   {
    "id": "words_plus_observation",
    "status": "landed",
-   "label": "Words + observation",
+   "label": "Words + observation, A1",
    "leg": "TEST",
    "source": "w19-maze-t-symmetric/test/BARS-BOTH-test.json",
    "schema": "w19"
   },
   {
    "id": "words_plus_observation_improved",
-   "status": "not_landed",
-   "label": "Words + observation, improved CLU",
+   "status": "landed",
+   "label": "Words + observation, CLU-REL-A10",
    "leg": "TEST",
-   "awaiting": "w21-maze-t-clu-improve (second pass)"
+   "schema": "runs",
+   "runs": [
+    "w21-maze-t-clu-improve/test/BOTH_test_seed0.json",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed1.json",
+    "w21-maze-t-clu-improve/test/BOTH_test_seed2.json"
+   ],
+   "check_source": "w21-maze-t-clu-improve/test/LABEL-BOTH-test.json",
+   "note": "seeds 0-2; seeds 3-5 of both configs in panel (b)"
   }
  ]
 }

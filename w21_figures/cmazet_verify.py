@@ -7,7 +7,8 @@ For every <stage>/BOTH_seed{0,1,2}/{test,val}/:
     bytes == the file's size;
   * every MANIFEST entry has its file and every non-.sha256, non-MANIFEST file is in MANIFEST.
 A single mismatch exits 1 (STOP: nothing is drawn). Writes a JSON report.
-usage: python cmazet_verify.py <stage root> <report.json>
+usage: python cmazet_verify.py <stage root> <report.json> [--seeds 0,1,2] [--legs test,val]
+(w22: seeds/legs are arguments so the CLU-REL-A10 stage, test only, seeds 0-5, runs the same gate.)
 """
 import hashlib
 import json
@@ -24,10 +25,19 @@ def fsha(p):
 
 
 def main():
-    root, rep_path = sys.argv[1], sys.argv[2]
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("root")
+    ap.add_argument("report")
+    ap.add_argument("--seeds", default="0,1,2")
+    ap.add_argument("--legs", default="test,val")
+    a = ap.parse_args()
+    root, rep_path = a.root, a.report
+    seeds = [int(x) for x in a.seeds.split(",")]
+    legs = a.legs.split(",")
     report, bad, n_ok = {}, [], 0
-    for seed in (0, 1, 2):
-        for leg in ("test", "val"):
+    for seed in seeds:
+        for leg in legs:
             d = os.path.join(root, f"BOTH_seed{seed}", leg)
             if not os.path.isdir(d):
                 bad.append(f"missing dir {d}")
