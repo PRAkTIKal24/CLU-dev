@@ -169,9 +169,18 @@ def main(out):
                     f(np.mean([a["per_step_exactness"] for a in A])),
                     " / ".join("—" if x is None else "%.2f" % x for x in fe),
                     " / ".join(f(a["validity"]) for a in A)))
-    L += ["", "⚠ **No arm validates a rollout**: validity = every step of the ~%.0f-step oracle "
-          "route exact AND goal within budget, chained on the arm's own states; per-step error "
-          "compounds. Printed once, as a limitation." % test[0]["ROLLOUT"]["mean_route_len"]]
+    def vmax(pref):
+        ks = [k for k in arms if k.startswith(pref)]
+        return max(((r["ROLLOUT"]["arms"][k]["validity"], k, r["seed_index"])
+                    for r in test for k in ks))
+    vm, vd = vmax("rival"), vmax("diagnostic@")
+    L += ["", "⚠ **No arm validates rollouts** (limitation, printed once): validity = every step "
+          "of the ~%.0f-step oracle route exact AND goal within budget, chained on the arm's own "
+          "states; per-step error compounds. CLU validity 0.000 on every seed; the highest "
+          "matched-rival validity on any seed is %.3f (%s, seed %d); the 10×-read-floats "
+          "diagnostic's highest is %.3f (%s, seed %d). No rollout claim is made for any arm. "
+          "Mean first-error step is averaged over the rollouts that fail."
+          % (test[0]["ROLLOUT"]["mean_route_len"], vm[0], vm[1], vm[2], vd[0], vd[1], vd[2])]
     # full arm tables
     L += ["", "## 5. Full arm tables (every arm, every seed)"]
     for leg, runs in (("test", test), ("val", val)):
