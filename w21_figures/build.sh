@@ -13,6 +13,8 @@
 # artefacts). A second destination (paper-visuals) receives the same bytes.
 # Rows / rival sets / panel sets are DATA: data/maze_conditions.json, data/ladder_rival_sets.json,
 # data/cmazet_panels.json. Adding one is an edit there plus a rebuild, not a code change.
+# w22 pass 3: + fig_task_cmazet (w19_task_figures, --only cmazet; fig_task_shapes is never rebuilt
+# here) and its glyph-identity gate; fig_cmazet_rel_per_arm from data/cmazet_items_rel.json.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DEST="${1:-/Users/batmac/clu/outputs/w17-paper/figures}"
@@ -21,19 +23,31 @@ TMP="${TMPDIR:-/tmp}/w21-figures-build.$$"
 PANELS=()
 [ -f "$HERE/data/cmazet_items.json" ] && PANELS=(--panels "$HERE/data/cmazet_items.json")
 mkdir -p "$TMP/a" "$TMP/b"
+REPO="$(dirname "$HERE")"
 for d in a b; do
   python "$HERE/make_figures.py" --out "$TMP/$d"
   python "$HERE/make_figures_w22.py" --out "$TMP/$d" ${PANELS[@]+"${PANELS[@]}"} --merge "$TMP/$d/PROVENANCE.json"
+  # w22 figures3 (AMENDMENT-1): fig_task_cmazet, drawn with the panels' own draw_state; the glyph
+  # identity gate (task figure agent == result-panel agent) must pass before anything is installed
+  (cd "$REPO" && python -m w19_task_figures.make_task_figures --only cmazet \
+      --assets /Users/batmac/clu/outputs/w19-task-figures/assets --out "$TMP/task_$d")
+  mv "$TMP/task_$d/fig_task_cmazet.pdf" "$TMP/task_$d/fig_task_cmazet.png" "$TMP/$d/"
+  (cd "$REPO" && python -m w19_task_figures.verify_glyph "$TMP/$d" "$TMP/$d" "$TMP/$d/GLYPH-IDENTITY.json" > /dev/null)
+  python "$HERE/tools/merge_task_prov.py" "$TMP/$d/PROVENANCE.json" \
+      "$TMP/task_$d/PROVENANCE-task-figures.json" "$TMP/$d/GLYPH-IDENTITY.json"
+  rm -r "$TMP/task_$d"
 done
 (cd "$TMP/a" && shasum -a 256 * | sort -k2) > "$TMP/sha_a.txt"
 (cd "$TMP/b" && shasum -a 256 * | sort -k2) > "$TMP/sha_b.txt"
 if diff "$TMP/sha_a.txt" "$TMP/sha_b.txt"; then echo "REBUILD: BYTE-IDENTICAL"; else echo "REBUILD: DIFFERS"; exit 1; fi
 for D in "$DEST" "$DEST2"; do
   mkdir -p "$D" "$D/data"
-  cp "$TMP"/a/fig_*.pdf "$TMP"/a/fig_*.png "$TMP/a/PROVENANCE.json" "$D/"
+  cp "$TMP"/a/fig_*.pdf "$TMP"/a/fig_*.png "$TMP/a/PROVENANCE.json" "$TMP/a/GLYPH-IDENTITY.json" "$D/"
   cp "$HERE/make_figures.py" "$HERE/make_figures_w21.py" "$HERE/make_figures_w22.py" \
      "$HERE/maze_six.py" "$HERE/validate_palette.py" "$HERE/build.sh" "$D/"
   [ -f "$HERE/cmazet_panels.py" ] && cp "$HERE/cmazet_panels.py" "$D/"
+  cp "$HERE/cmazet_extract_rel.py" "$HERE/cmazet_ambiguity.py" "$REPO/w19_task_figures/make_task_figures.py" \
+     "$REPO/w19_task_figures/verify_glyph.py" "$D/"
   cp "$HERE"/data/*.json "$D/data/"
   cp "$TMP/sha_a.txt" "$D/SHA256-w22-build1.txt"
   cp "$TMP/sha_b.txt" "$D/SHA256-w22-build2.txt"

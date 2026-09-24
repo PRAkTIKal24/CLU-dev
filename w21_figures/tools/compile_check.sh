@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# usage: compile_check.sh <dir holding DRAFT-v2.tex and DRAFT-v2-style.tex> <build dir (new)>
+# usage: compile_check.sh <dir holding DRAFT-v2.tex and DRAFT-v2-style.tex> <build dir (new)> [figures dir]
 # Lays the build out like w17-paper (iclr2027/, figures/, references.bib), runs
 # pdflatex -> bibtex -> pdflatex x3 on each draft, and prints one metrics row per draft.
 set -uo pipefail
-SRC="$1"; B="$2"; P=/Users/batmac/clu/outputs/w17-paper
+SRC="$1"; B="$2"; P=/Users/batmac/clu/outputs/w17-paper; FIG="${3:-$P/figures}"
 mkdir -p "$B"
 cp "$SRC/DRAFT-v2.tex" "$SRC/DRAFT-v2-style.tex" "$B/"
 cp -R "$P/iclr2027" "$B/iclr2027"
 cp "$P/references.bib" "$B/"
-ln -s "$P/figures" "$B/figures"
+ln -s "$FIG" "$B/figures"
 cd "$B"
 export BIBINPUTS="$B:$P:" BSTINPUTS="$B/iclr2027:$P/iclr2027:"
 for d in DRAFT-v2 DRAFT-v2-style; do

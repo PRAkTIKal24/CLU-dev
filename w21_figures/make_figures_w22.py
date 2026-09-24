@@ -11,7 +11,11 @@ check are used unchanged). Stems drawn here (each overwrites the pass-1 file of 
                         per-seed ceilings, hard/easy marking, the '+rel' series, ties marked
   fig_maze_rel_tuples   NEW: per-tuple held-out n-way, CLU-REL-A10, six seeds (hash-linked replay)
   fig_deletion          the four-measurement rule (w20 matched deletion, 131,072-row pool)
-  fig_cmazet_*          pass-1 panels, rebuilt from the verified per-item file (unchanged)
+  fig_cmazet_*          pass-1 panels, rebuilt from the verified per-item file; pass 3: under every
+                        s_{t+1} a strip shows the facts the judge scores (legality, move, key event,
+                        pocket-next), so no two panels with the same picture carry opposite marks
+  fig_cmazet_rel_per_arm  pass 3: CLU-REL-A10 per-arm panels from the gate-2 re-read
+                        (cmazet_extract_rel.py -> data/cmazet_items_rel.json)
 
 No number is new evidence: every value is read from an artefact named in PROVENANCE.json.
 usage: python make_figures_w22.py --out <dir> [--panels <items json>] --merge <PROVENANCE.json>
@@ -780,8 +784,11 @@ def main():
     base["figures_redraw"] = {
         "built_by": "make_figures.py then make_figures_w22.py (build.sh)",
         "stems_redrawn_or_added": sorted(W.PROV),
-        "cmazet_rel_panels": "not drawn: see NEEDS-ARTEFACTS.json (data/cmazet_panels.json, "
-                             "fig_cmazet_rel_per_arm, status not_landed)"}
+        "cmazet_rel_panels": "drawn (pass 3): gate 2 passed, 132/132 arms float== the scored run "
+                             "JSONs (data/cmazet_items_rel.REPRO.json)",
+        "cmazet_fact_strip": "pass 3: every CMAZE-T s_{t+1} panel carries the emitted facts the "
+                             "judge scores; same-picture opposite-mark pairs 0 "
+                             "(cmazet_ambiguity.py)"}
     with open(args.merge, "w", encoding="utf-8") as f:
         json.dump(base, f, indent=1, sort_keys=True)
         f.write("\n")

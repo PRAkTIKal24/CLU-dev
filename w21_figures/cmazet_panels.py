@@ -20,8 +20,11 @@ REPO = os.path.dirname(HERE)
 
 VALID = ("✓", "#1f7a32")
 INVALID = ("✗", "#c0392b")
+# c4 re-stepped in w22 figures3 from (0.48, 0.25, 0.63): the old 4-set FAILED the dataviz
+# normal-vision floor (blue<->purple dE 13.7 < 15; CVD 7.1). This one passes all pairs (validate_palette.py
+# --pairs all: CVD dE 8.2, normal 17.8); amber stays < 3:1 on white (WARN: relieved by digits / row labels).
 MAZE_RGB = {1: (0.80, 0.19, 0.17), 2: (0.20, 0.40, 0.80), 3: (0.88, 0.66, 0.0),
-            4: (0.48, 0.25, 0.63)}
+            4: (0.61, 0.25, 0.63)}
 DIRS = {"N": "north", "E": "east", "S": "south", "W": "west", "P": "pick up"}
 CELL = 10
 
@@ -85,6 +88,15 @@ def draw_state(inst, pos, ks, centre, win):
     return img
 
 
+def draw_grid(inst, pos, ks):
+    """The WHOLE maze drawn by draw_state (same function, same glyphs): a window wide enough to
+    hold the grid, centred so that window row/column i is maze row/column i, then cropped."""
+    H, W = inst.grid.shape
+    win = 2 * max(H, W) + 1
+    h = win // 2
+    return draw_state(inst, pos, ks, (h, h), win)[:H * CELL, :W * CELL]
+
+
 def arrow(ax, action, win):
     import matplotlib
     h = win // 2
@@ -100,13 +112,63 @@ def arrow(ax, action, win):
                                 shrinkA=0, shrinkB=0))
 
 
+#: glyphs of the emitted displacement block {stay, N, E, S, W} (exp_w15_cmaze_t.MOVE_ORDER)
+KEY_LINE = ("Under each $s_{t+1}$: the four facts the judge scores, as emitted (engine column: the "
+            "truth). Line 1: legal / illegal. Line 2: move (↑ → ↓ ←, · = stay), key event (+ colour = "
+            "picked up, − colour = used at a door, blank = none), pocket after the move (disc centre; "
+            "white = empty). An illegal emission leaves the agent in place and is scored on its pocket "
+            "alone, so only the pocket is shown. ✓/✗ is the judge's verdict on all four facts.")
+DISP_GLYPH = {0: "·", 1: "↑", 2: "→", 3: "↓", 4: "←"}
+INK, INK2 = "#0b0b0b", "#52514e"
+
+
+def facts_shown(em, k=4):
+    """The facts the strip DISPLAYS for an emission ``(legal, disp, ev, pocket_next)``.
+
+    An illegal emission is scored on its pocket alone (judge_transition: apply_outcome ignores
+    displacement and event when legal = 0), so only the pocket is shown. A legal emission shows
+    all of displacement, key event and pocket. The judge's verdict on an item is a function of
+    this tuple, so two panels showing the same tuple cannot carry opposite marks."""
+    legal, disp, ev, pn = (int(x) for x in em)
+    return (0, pn) if legal == 0 else (1, disp, ev, pn)
+
+
+def fact_strip(fig, rect, em, k=4):
+    """Draw the emitted fact vector under a state panel: line 1 the legality word, line 2
+    move / key event / pocket-next. Deterministic; no data-dependent layout."""
+    import matplotlib
+    f = facts_shown(em, k)
+    ax = fig.add_axes(rect)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+    ax.text(0.5, 0.97, "legal" if f[0] else "illegal", ha="center", va="top", fontsize=5.3,
+            color=INK if not f[0] else INK2, fontweight="bold" if not f[0] else "normal")
+    yc = 0.27
+    if f[0]:
+        ax.text(0.17, yc, DISP_GLYPH[f[1]], ha="center", va="center", fontsize=5.4, color=INK)
+        ev = f[2]
+        if ev:
+            c = ev if ev <= k else ev - k
+            ax.text(0.40, yc, "+" if ev <= k else "−", ha="center", va="center", fontsize=5.0,
+                    color=INK)
+            ax.add_patch(matplotlib.patches.Rectangle((0.47, yc - 0.17), 0.13, 0.34,
+                                                      fc=MAZE_RGB[c], ec="none"))
+    pn = f[-1]
+    ax.add_patch(matplotlib.patches.Ellipse((0.83, yc), 0.20, 0.52, fc="#0d0d0d", ec="none"))
+    ax.add_patch(matplotlib.patches.Ellipse((0.83, yc), 0.11, 0.29,
+                                            fc=MAZE_RGB[pn] if pn else (1.0, 1.0, 1.0),
+                                            ec="none"))
+    return f
+
+
 class Maze:
     """TEST bank of one seed, re-derived; rows asserted against the per-item record."""
     _cache = {}
 
     def __init__(self, seed_rec):
         T, W16 = _engine()
-        s = seed_rec["seed"]
+        s = (seed_rec["seed"], json.dumps(seed_rec["bank"], sort_keys=True))
         if s not in Maze._cache:
             insts, rows, _nat, meta = T.build_bank(seed_rec["bank"]["ev_base"], 45, per_tuple=2,
                                                    n_natural=150)
@@ -140,7 +202,7 @@ def row_label(item, seed):
 
 
 def grid(plt, out_stem, cols, rows, save_fn, sources, notes, extra, win=5, panel=0.40,
-         left=1.35, title=None, col_groups=None, blocks=1):
+         left=1.35, title=None, col_groups=None, blocks=1, strip=0.21, key_line=True):
     """cols: [(header, colour or None, key)], key None = s_t, 'engine' = true s_{t+1}, else arm.
     rows: [(label, seed_rec, item, {arm: (verdict, emitted)})]."""
     import matplotlib
@@ -149,15 +211,20 @@ def grid(plt, out_stem, cols, rows, save_fn, sources, notes, extra, win=5, panel
     top = 0.42 + (0.2 if col_groups else 0.0)
     bw = left + nc * panel + 0.08
     fw = blocks * bw
-    fh = top + per * panel + 0.08
+    pitch = panel + strip
+    import textwrap
+    key_lines = textwrap.wrap(KEY_LINE, max(40, int(fw * 72 / 2.45))) if key_line else []
+    foot = 0.05 + 0.078 * len(key_lines) if key_lines else 0.0
+    fh = top + per * pitch + 0.08 + foot
     fig = plt.figure(figsize=(fw, fh))
     gap = 0.04
+    shown = []
     for rr, (lab, srec, item, arms) in enumerate(rows):
         mz = Maze(srec)
         bx, r = (rr // per) * bw, rr % per
         for c, (hdr, colr, key) in enumerate(cols):
             x0 = (bx + left + c * panel + gap / 2) / fw
-            y0 = 1.0 - (top + (r + 1) * panel - gap / 2) / fh
+            y0 = 1.0 - (top + r * pitch + panel - gap / 2) / fh
             ax = fig.add_axes([x0, y0, (panel - gap) / fw, (panel - gap) / fh])
             ax.set_xticks([])
             ax.set_yticks([])
@@ -170,6 +237,7 @@ def grid(plt, out_stem, cols, rows, save_fn, sources, notes, extra, win=5, panel
                 inst, st, nxt = mz.states(item)
                 ax.imshow(draw_state(inst, nxt.pos, nxt.ks, st.pos, win), interpolation="nearest")
                 v = None
+                em = item["truth"]
             else:
                 ok, em = arms[key]
                 inst, st, gen = mz.states(item, em)
@@ -178,12 +246,19 @@ def grid(plt, out_stem, cols, rows, save_fn, sources, notes, extra, win=5, panel
             for s in ax.spines.values():
                 s.set_edgecolor("#9a9994")
                 s.set_linewidth(0.5)
+            if key is not None:
+                srect = [x0, 1.0 - (top + r * pitch + panel + strip - 0.075) / fh,
+                         (panel - gap) / fw, (strip - 0.075) / fh]
+                shown.append(dict(row=rr, col=hdr.replace("\n", " "), key=key,
+                                  emitted=[int(x) for x in em],
+                                  facts_shown=list(fact_strip(fig, srect, em)),
+                                  mark=None if v is None else bool(v)))
             if v is not None:
                 ch, fc = VALID if v else INVALID
                 ax.text(0.96, 0.96, ch, transform=ax.transAxes, ha="right", va="top",
                         fontsize=6.5, fontweight="bold", color="white",
                         bbox=dict(boxstyle="circle,pad=0.1", fc=fc, ec="white", lw=0.5))
-        fig.text((bx + left - 0.06) / fw, 1.0 - (top + (r + 0.5) * panel) / fh, lab, ha="right",
+        fig.text((bx + left - 0.06) / fw, 1.0 - (top + r * pitch + 0.5 * panel) / fh, lab, ha="right",
                  va="center", fontsize=4.9, linespacing=1.2, color="#0b0b0b")
     for bx, (c, (hdr, colr, key)) in [(b * bw, cc) for b in range(blocks) for cc in enumerate(cols)]:
         xc = (bx + left + (c + 0.5) * panel) / fw
@@ -205,6 +280,10 @@ def grid(plt, out_stem, cols, rows, save_fn, sources, notes, extra, win=5, panel
                      color="#333333")
     if title:
         fig.text(0.005, 0.995, title, ha="left", va="top", fontsize=6.2, color="#0b0b0b")
+    if key_lines:
+        fig.text(0.005, 0.04 / fh, "\n".join(key_lines), ha="left", va="bottom", fontsize=4.9,
+                 color=INK2, linespacing=1.25)
+    extra = dict(extra, facts_shown=shown)
     save_fn(fig, os.path.dirname(out_stem), os.path.basename(out_stem), sources, notes, extra)
 
 
@@ -237,9 +316,24 @@ def build(out, items_path, PROV, save_fn):
         pos += n
     base_cols = [("$s_t$ + action", None, None), ("engine\n$s_{t+1}$", None, "engine")]
     fams = spec["families_order"]
+    base = dict(seeds=seeds, arms=arms, srcs=srcs, src_notes=src_notes, ish=ish)
     for ps in spec["panel_sets"]:
         if ps.get("status", "landed") != "landed":
             continue
+        if ps.get("items"):
+            # a panel set with its OWN gate-passed per-item file (e.g. CLU-REL-A10)
+            ip = os.path.join(HERE, "data", ps["items"])
+            d2 = json.load(open(ip))
+            assert d2["summary"]["all_arms_equal_artefact"], "re-read gate did not pass: " + ip
+            assert d2["summary"]["config"] == ps["config"], (d2["summary"]["config"], ps)
+            seeds = {r["seed"]: r for r in d2["seeds"]}
+            arms = base["arms"] + ps.get("extra_arms", [])
+            srcs = sorted({r["artefact"] for r in d2["seeds"]})
+            src_notes = ps["gate_note"] + " items file sha256 recorded under items_sha256"
+            ish = hashlib.sha256(open(ip, "rb").read()).hexdigest()
+        else:
+            seeds, arms, srcs = base["seeds"], base["arms"], base["srcs"]
+            src_notes, ish = base["src_notes"], base["ish"]
         rows, chosen = [], []
         if ps["select"] == "first_per_family":
             for f in fams:
@@ -277,7 +371,7 @@ def build(out, items_path, PROV, save_fn):
                         continue
                     j = int(cand[int(rng.integers(len(cand)))])
                     it = srec["items"][j]
-                    lab = f"{a['name']} {tag}\n" + row_label(it, srec["seed"])
+                    lab = f"{a['name']}\n{tag} · " + row_label(it, srec["seed"])
                     rows.append((lab, srec, it, {"subject": (bool(V[j][0]), V[j][2])}))
                     chosen.append(dict(arm=a["key"], want=tag, i=j, n_candidates=len(cand)))
             cg = None

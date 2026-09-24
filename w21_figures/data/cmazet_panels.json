@@ -136,9 +136,9 @@
    ],
    "rng_seed": 21,
    "panel_in": 0.34,
-   "left_in": 1.45,
+   "left_in": 1.15,
    "notes": "For every arm, one seed-0 TEST n-way transition on which it is right and one on which it is wrong, each a uniform draw (numpy default_rng(21), arms in manifest order) among the qualifying rows; an arm with no qualifying row gets no row (recorded in selection).",
-   "blocks": 2
+   "blocks": 3
   },
   {
    "stem": "fig_cmazet_deletion",
@@ -193,7 +193,7 @@
   },
   {
    "stem": "fig_cmazet_rel_per_arm",
-   "status": "not_landed",
+   "status": "landed",
    "config": "CLU-REL-A10",
    "select": "success_failure_per_arm",
    "seed_order": [
@@ -201,23 +201,55 @@
    ],
    "rng_seed": 21,
    "panel_in": 0.34,
-   "left_in": 1.45,
-   "blocks": 2,
+   "left_in": 1.15,
+   "blocks": 3,
    "extra_arms": [
-    "diagnostic+rel@8k: mlp +rel",
-    "diagnostic+rel@8k: lstm +rel",
-    "diagnostic+rel@8k: transformer +rel",
-    "diagnostic+rel@80k: mlp +rel",
-    "diagnostic+rel@80k: lstm +rel",
-    "diagnostic+rel@80k: transformer +rel"
+    {
+     "key": "diagnostic+rel@8k: mlp +rel",
+     "header": "MLP +rel",
+     "group": "+rel diagnostic",
+     "name": "MLP +rel, 8k steps"
+    },
+    {
+     "key": "diagnostic+rel@8k: lstm +rel",
+     "header": "LSTM +rel",
+     "group": "+rel diagnostic",
+     "name": "LSTM +rel, 8k steps"
+    },
+    {
+     "key": "diagnostic+rel@8k: transformer +rel",
+     "header": "Transformer +rel",
+     "group": "+rel diagnostic",
+     "name": "Transformer +rel, 8k steps"
+    },
+    {
+     "key": "diagnostic+rel@80k: mlp +rel",
+     "header": "MLP +rel",
+     "group": "+rel diagnostic",
+     "name": "MLP +rel, 80k steps"
+    },
+    {
+     "key": "diagnostic+rel@80k: lstm +rel",
+     "header": "LSTM +rel",
+     "group": "+rel diagnostic",
+     "name": "LSTM +rel, 80k steps"
+    },
+    {
+     "key": "diagnostic+rel@80k: transformer +rel",
+     "header": "Transformer +rel",
+     "group": "+rel diagnostic",
+     "name": "Transformer +rel, 80k steps"
+    }
    ],
    "stage_roots": [
     "/Users/batmac/clu/stage/rel-persist/w21-maze-t-clu-improve",
     "/Users/batmac/clu/stage/rel-persist/w21-rel-newseeds"
    ],
    "gate1": "PASSED 192/192 (w22 HASH-VERIFY-REL-seeds012.json, -seeds345.json)",
-   "awaiting": "the w21_clu module (see w22 NEEDS-ARTEFACTS.json): the REL pickles cannot be loaded without it, so gate 2 (local re-read == scored run JSON) cannot run and nothing is drawn. When it lands: a REL reader in cmazet_extract.py writes data/cmazet_items_rel.json; flip status to landed.",
-   "notes": "Same selection rule as fig_cmazet_per_arm, for the CLU-REL-A10 objects, with the six +rel diagnostic arms as extra columns."
+   "notes": "CLU-REL-A10 (the improved CLU config). For every arm, including the six '+rel' diagnostic rivals (rivals given the CLU's relational request columns; not matched rivals), one seed-0 TEST n-way transition on which it is right and one on which it is wrong, each a uniform draw (numpy default_rng(21), arms in manifest order) among the qualifying rows; an arm with no qualifying row gets no row (recorded in selection). Same rows and rule as fig_cmazet_per_arm.",
+   "items": "cmazet_items_rel.json",
+   "gate2": "PASSED 132/132 arms float== the scored run JSONs, seeds 0-5; 144 objects hash-checked before and after load (w21_figures/cmazet_extract_rel.py; data/cmazet_items_rel.REPRO.json)",
+   "gate_note": "per-item re-read of the persisted CLU-REL-A10 BOTH TEST objects (hash-verified; every arm's n-way score equals the scored run JSON, float ==, asserted in cmazet_extract_rel.py, seeds 0-5);"
   }
  ]
 }

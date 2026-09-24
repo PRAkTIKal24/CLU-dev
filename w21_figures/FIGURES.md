@@ -1,5 +1,32 @@
 # FIGURES.md
 
+## ⭐ w22 `figures-redraw` pass 3 (2026-09-25): the current state. Read this section first.
+
+**Zero scored runs; nothing written to any ledger; no PREREG.** Build: `bash build.sh` (unchanged
+recipe + `fig_task_cmazet` and its glyph gate), twice, byte-identical, installed into both
+`w17-paper/figures/` and `paper-visuals/`, re-hashed at each.
+
+| stem | change | source |
+|---|---|---|
+| `fig_cmazet_families`, `_per_arm`, `_door_then_tint`, `_deletion` | ⭐ **fact strip under every $s_{t+1}$** (engine column: the truth): line 1 `legal`/**`illegal`**; line 2 move (↑→↓←, · = stay), key event (+/− colour), pocket after the move (disc, white = empty). An illegal emission shows only its pocket (the judge scores nothing else then). The ✓/✗ is the judge's verdict on all four facts. Drawn state and disc UNCHANGED. `_per_arm` now 3 blocks (page fit). | `cmazet_panels.fact_strip`/`facts_shown`; `data/cmazet_items.json` |
+| `fig_cmazet_rel_per_arm` (NEW, `fig:cmazet-rel-per-arm`) | CLU-REL-A10 per-arm success/failure, 19 arms incl. six `+rel` diagnostics; same rule/seed as `_per_arm` | gate 2: `cmazet_extract_rel.py` → `data/cmazet_items_rel.json`; 132/132 arm scores float== run JSONs, seeds 0–5 (`data/cmazet_items_rel.REPRO.json`) |
+| `fig_task_cmazet` (AMENDMENT-1) | every maze cell drawn by `cmazet_panels.draw_state` (via `draw_grid`): agent = black disc, centre = pocket colour (white = empty); keys diamonds, goal a cross; c1–c4 = the panels' `MAZE_RGB`; **no t / budget line**; digits overlaid; leader order = fewest crossings (0) | `w19_task_figures/make_task_figures.py --only cmazet`; `GLYPH-IDENTITY.json` (`verify_glyph.py`) |
+
+**Same-picture / opposite-mark pairs** (`cmazet_ambiguity.py` → `data/CMAZET-AMBIGUITY.json`; picture = rendered pixels):
+
+| items | arms | opposite-mark pairs | same picture BEFORE | … legality only visible | Head's rule (differ only in legal bit) | AFTER (pixels + strip) |
+|---|---|---|---|---|---|---|
+| A1 (w19), seeds 0–2 | all 16 | 92,628 | 33,412 | 18,035 | 3,740 | **0** |
+| A1 (w19), seeds 0–2 | 13 drawn | 63,624 | 22,340 | 12,624 | 1,261 | **0** |
+| CLU-REL-A10, seeds 0–5 | all 22 | 373,583 | 154,671 | 107,148 | 19,915 | **0** |
+| CLU-REL-A10, seeds 0–5 | 19 drawn | 295,294 | 124,450 | 88,384 | 13,115 | **0** |
+
+⚠ Legality alone does not reach 0: the emitted pocket-next and incoherent key events are also invisible in the state; the strip prints all scored facts, so the count is 0 by construction and measured 0.
+
+⚠ **Palette change (task figure only):** `fig_task_cmazet`'s c1–c4 were dataviz slots 1/2/3/7 (blue, orange, aqua, violet), which disagreed with every result panel (c1 red there). They are now the panels' `MAZE_RGB` (red, blue, amber, purple), so a colour means the same key everywhere. Identity also carried by digits.
+⚠ **`MAZE_RGB` c4 re-stepped** (0.48, 0.25, 0.63) → (0.61, 0.25, 0.63): the pass-1 4-set FAILED the dataviz normal-vision floor (blue↔purple ΔE 13.7 < 15; CVD 7.1). New set, `validate_palette.py --pairs all`: CVD ΔE 8.2, normal 17.8, ALL CHECKS PASS; amber stays below 3:1 on white (WARN; relieved by digits in the task figure and by the colour numbers in every panel row label).
+
+
 ## ⭐ w22 `figures-redraw` pass 2 (2026-09-24): the current state. Read this section first.
 
 **Zero scored runs; nothing written to any ledger.** Build: `bash build.sh` = `make_figures.py` then
@@ -25,7 +52,7 @@ ceiling ink bar. Families keep their pass-1 hues wherever a family is the entity
 - `data/ladder_rival_sets.json` → `ladder_rivals_32k` (32,768 rows; still running on forgis-14). Set
   `status: landed`, `source`, `reader`, `arms`, `steps`, `steps_check`; rebuild. Tested with a stand-in
   4th set: the figure becomes a 2 × 3 grid, no code change.
-- `data/cmazet_panels.json` → `fig_cmazet_rel_per_arm` (CLU-REL-A10 per-row panels): gate 1 PASSED
+- ~~`data/cmazet_panels.json` → `fig_cmazet_rel_per_arm`~~ LANDED in pass 3 (see above). Was: gate 1 PASSED
   (192/192 objects), gate 2 cannot run — the REL pickles need module `w21_clu`, absent on batmac
   (`NEEDS-ARTEFACTS.json` in the w22 outputs).
 
