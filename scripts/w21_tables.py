@@ -84,9 +84,13 @@ def arm_keys(rows):
     return order
 
 
-def ceiling(rowd):
+MATCHED_PREFIX = ("CLU", "rival: ", "rival@10x-steps: ")
+
+
+def ceiling(rowd, prefix=CEIL_PREFIX):
     c = {k: v for k, v in rowd.items() if isinstance(v, (int, float)) and k != "n"
-         and not k.endswith(":coverage") and k.startswith(CEIL_PREFIX)}
+         and not k.endswith(":coverage") and k.startswith(prefix)
+         and not (prefix is MATCHED_PREFIX and "+rel" in k)}
     best = max(c.values())
     arms = sorted(k for k, v in c.items() if v == best)
     return best, arms
@@ -160,6 +164,21 @@ def arm_table(title, runs, row, cls, note=""):
     L.append("| " + " | ".join(cells) + " |")
     L.append("| ceiling reached by | | " + ("| | " if cls else "") + "| "
              + " | ".join("; ".join(ce[s][1]) for s in seeds) + " |")
+    cm = {s: ceiling(runs[s][0]["ROWS"][row], MATCHED_PREFIX) for s in seeds}
+    L.append("| ceiling among MATCHED arms only (CLU + matched rivals 8k/80k) | %s | " % f(
+        np.mean([cm[s][0] for s in seeds])) + ("| | " if cls else "") + "| "
+             + " | ".join("%s (%s)" % (f(cm[s][0]), "; ".join(cm[s][1])) for s in seeds) + " |")
+    rp = ("rival: ", "rival@10x-steps: ")
+    rb = {s: (lambda d: (max(d.values()), sorted(k for k, v in d.items() if v == max(d.values()))))(
+        {k: v for k, v in runs[s][0]["ROWS"][row].items() if isinstance(v, (int, float))
+         and k.startswith(rp) and "+rel" not in k}) for s in seeds}
+    L.append("| best MATCHED RIVAL per seed (over kinds, input variants, 8k AND 80k) | %s | "
+             % f(np.mean([rb[s][0] for s in seeds])) + ("| | " if cls else "") + "| "
+             + " | ".join("%s (%s)" % (f(rb[s][0]), "; ".join(rb[s][1])) for s in seeds) + " |")
+    L.append("| CLU − best matched rival (per seed) | %+.3f | " % np.mean(
+        [runs[s][0]["ROWS"][row]["CLU"] - rb[s][0] for s in seeds]) + ("| | " if cls else "")
+             + "| " + " | ".join("%+.3f" % (runs[s][0]["ROWS"][row]["CLU"] - rb[s][0])
+                                 for s in seeds) + " |")
     L.append("| CLU − ceiling | | " + ("| | " if cls else "") + "| "
              + " | ".join("%+.3f" % (runs[s][0]["ROWS"][row]["CLU"] - ce[s][0]) for s in seeds)
              + " |")
@@ -291,6 +310,9 @@ def main(out):
         L += ["**Cut:** %s → cut = %.4f (gap %.4f between %.4f and %.4f). Easy = %s; hard = %s."
               % (cutinfo["rule"], cutinfo["cut"], cutinfo["gap"], cutinfo["between"][0],
                  cutinfo["between"][1], easy, hard), ""]
+    L += ["**Main text / appendix split:** in every arm table below, the columns marked `(easy)` and "
+          "the `mean easy` column are the MAIN-TEXT view; the columns marked `(hard)` and `mean hard` "
+          "are the APPENDIX view. Both are printed in full in every table; nothing is dropped.", ""]
     L += ["| seed | origin | BOTH TEST ceiling | reached by | CLU | CLU − ceiling | class | "
           "OBS VAL ceiling | WORDS-FULL TEST ceiling | CLU-REL-A10 BOTH VAL (CLU / ceiling) | "
           "zero-fit: unidentified n-way rows (TEST) | …also unreachable by colour relation |",
@@ -315,6 +337,13 @@ def main(out):
                  % (s, "added" if s > 2 else "original", f(c), "; ".join(who),
                     f(J["ROWS"]["nway"]["CLU"]), J["ROWS"]["nway"]["CLU"] - c, cls.get(s, "?"),
                     f(oc), f(wc) if wc is not None else "— (not run on this seed)", prs, ds, dr))
+    cmx = {s: ceiling(S["BOTH-TEST"][s][0]["ROWS"]["nway"], MATCHED_PREFIX)[0] for s in S["BOTH-TEST"]}
+    L += ["", "Ceiling among MATCHED arms only (CLU + matched rivals, 8k/80k; excludes the unmatched "
+          "10x-read-floats diagnostic): " + "; ".join("seed %d %s" % (s, f(v)) for s, v in sorted(cmx.items()))
+          + ". Largest-gap classification under THIS ceiling: hard = %s."
+          % (lambda xs: sorted(s for s, v in xs if v < ((lambda g: (xs[g][1] + xs[g + 1][1]) / 2)(
+              max(range(len(xs) - 1), key=lambda i: xs[i + 1][1] - xs[i][1])))))(
+              sorted(cmx.items(), key=lambda kv: kv[1])) if len(cmx) > 1 else "—"]
     L += ["", "Sensitivity — every possible cut between consecutive sorted ceilings:", "",
           "| cut between | gap | hard seeds |", "|---|---|---|"]
     for x in sens:
