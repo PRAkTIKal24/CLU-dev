@@ -423,6 +423,24 @@ def main():
                                                       "their own declared budgets -- NOT a refutation of LACE in general"),
                                  "fit_rows": "130,560 fit + 512 val (w15: 32,256 + 512)",
                                  "legs": lacepoe_block()}
+    p3 = doc["rows34"]["P3_margin"].get("store_K32_n131072", {})
+    ba = doc["rows34"].get("P3_vs_best_over_all_fits_incl_30x", {})
+    dr = doc["rows34"].get("draft_margin_recomputed_vs_16k_comparators", {})
+    allv = [v for f in dr.values() for v in f.values()]
+    doc["headline"] = {
+        "data_matched_margin_rows34_K32": {"per_seed": {s: v["delta"] for s, v in p3.get("vs_strongest", {}).items()},
+                                           "mean": p3.get("vs_strongest_mean"), "verdict": p3.get("verdict"),
+                                           "rule": "P1-carried strongest data-matched rival (131,072 rows)"},
+        "vs_best_over_all_fits_incl_30x": {"mean": ba.get("mean"), "verdict": ba.get("verdict")},
+        "draft_margin_recomputed": {"min": min(allv) if allv else None, "max": max(allv) if allv else None,
+                                    "vs": "the draft's 16,384-row comparators, same score files"},
+        "statement": ("The data-matched margin SHRINKS about 6x (+39.7..+49.1 -> ~+7); it does not collapse. "
+                      "The rivals' deficit in the draft was a training-schedule deficit, not a data deficit.")}
+    doc["budget"] = {"target": "shapes-matched", "scored_runs_spent": 3, "of": 3,
+                     "runs": {"1/3": "2026-09-23T19:55:47Z M-131k rows 3-4 (+LACE/PoE@131k, diagnostics)",
+                              "2/3": "2026-09-23T21:50:00Z M-16k rows 3-4",
+                              "3/3": "2026-09-23T23:36:23Z matched deletion (rival retrain-without)"},
+                     "free": ["val stage", "ladder (w12b precedent)", "store-side deletion (a)-(d) (Head AMENDMENT-2)"]}
     jdump(doc, OUT / "SHAPES-MATCHED.json")
     print("wrote", OUT / "SHAPES-MATCHED.json")
 
