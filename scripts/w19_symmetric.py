@@ -45,6 +45,18 @@ CONDS = ("WORDS-MAIN", "WORDS-FULL", "OBS", "BOTH")
 BSEQ = "BLIND-SEQUENTIAL (learned: main effects only, no interaction terms)"
 BCOL = "BLIND-COLOUR (learned: colour identity removed from the request)"
 
+#: w21: the CLU class and its control builder.  Default = w19's A1 CLU, unchanged.  The
+#: w21 runner (``--clu_cfg <json>``) swaps in ``w21_clu.CluFactory`` -- ONLY the CLU and
+#: the four charter-C controls built from it change; blind arms, rivals, judge, codec,
+#: banks, floors are untouched.
+CLU_CLS = A.TransitionClu
+MAKE_CONTROL = W16.make_control
+CLU_CFG = None
+#: w21 printed DIAGNOSTIC only: the candidate's colour-relational columns, appended to a
+#: copy of each rival's shared input ('+rel').  Labelled 'diagnostic+rel@...', so it is
+#: never inside R* (w19_bars reads only 'rival: ' / 'rival@10x-steps: ').
+REL_FN = None
+
 
 def log(*a):
     print(*a, flush=True)
@@ -96,6 +108,9 @@ class Inputs:
     def rival_x(self, variant, W, O=None, We=None):
         """The rival input for ``variant`` from true words W, obs O, extracted words We."""
         c = self.cond
+        if variant == "+rel":
+            base = self.rival_x("", W, O, We)
+            return np.concatenate([base, REL_FN(W)], axis=1).astype(np.float32)
         if variant == "cont":
             return self.cont10(W)
         if c == "WORDS-MAIN":
@@ -110,6 +125,8 @@ class Inputs:
 
     @staticmethod
     def rival_name(kind, variant):
+        if variant == "+rel":
+            return kind + " +rel"
         if variant == "cont":
             return "cont_mlp"
         return kind + (" " + variant if variant else "")
@@ -282,6 +299,8 @@ def _array_leaves(obj, depth=0):
 
 
 def _slug(name):
+    name = (name.replace("diagnostic+rel@8k: ", "diagrel8k_")
+            .replace("diagnostic+rel@80k: ", "diagrel80k_").replace(" +rel", "_plusrel"))
     return (name.replace("rival@10x-steps: ", "rival10xsteps_").replace(
         "diagnostic@10x-read-floats: ", "rival10xfloats_").replace("rival: ", "rival_")
         .replace(" +extractor", "_plusextractor").replace(" ", "_"))
@@ -320,7 +339,7 @@ def trajectory_triples(insts, rng, per_maze=6, T_len=R.SEQ_T):
 # ===================================================================== the run
 def run(seed_index, out_dir, cond, leg, latent=128, K=2, n_atoms=6, ridge=1.0,
         rival_steps=8000, diag_mult=10, deletion=None, smoke=False,
-        enc_steps=1500, codec_steps=2500, ext_steps=6000, x10_diag=False):
+        enc_steps=1500, codec_steps=2500, ext_steps=6000, x10_diag=False, rel_diag=False):
     t_start = time.time()
     IN = Inputs(cond)
     if deletion is None:
@@ -346,7 +365,9 @@ def run(seed_index, out_dir, cond, leg, latent=128, K=2, n_atoms=6, ridge=1.0,
                       "obs + extractor one-hots; CLU reads the EXTRACTED words (request-only)",
                "BOTH": "rivals obs + 318 design; CLU the true words"}[cond],
            "rival_steps_matched": int(rival_steps),
-           "rival_steps_10x_diagnostic": int(diag_steps)}
+           "rival_steps_10x_diagnostic": int(diag_steps),
+           "w21_clu_cfg": CLU_CFG,
+           "w21_rel_diagnostic": bool(rel_diag and REL_FN is not None)}
     PS = Persist(os.path.join(out_dir, "persist", "%s_seed%d" % (cname, seed_index),
                               leg + ("_SMOKE" if smoke else "")))
     out["persist_dir"] = PS.root
@@ -440,14 +461,14 @@ def run(seed_index, out_dir, cond, leg, latent=128, K=2, n_atoms=6, ridge=1.0,
     # ---- the CLU, controls, learned blind arms (the condition's design) ----
     grids = IN.grids
     pb = IN.clu_pair_block
-    clu = A.TransitionClu(Ztr, Wtr_fit, grids, K=cfg["K"], n_atoms=cfg["n_atoms"],
-                          ridge=cfg["ridge"], pair_block=pb, seed=seed_index)
+    clu = CLU_CLS(Ztr, Wtr_fit, grids, K=cfg["K"], n_atoms=cfg["n_atoms"],
+                  ridge=cfg["ridge"], pair_block=pb, seed=seed_index)
     out["clu_ledger"] = clu.ledger()
     out["clu_design"] = "[bias|main|pair] 318" if pb else "[bias|main] 28 (== learned BLIND-SEQUENTIAL)"
     out["rank_over_width_printed"] = {"per_well": clu.ledger()["span_fraction_n_atoms_over_d_k"],
                                       "cap": W16.SPAN_CAP}
     out["clu_request_only"] = bool(clu.assert_request_only(Wtr_fit[:8]) is not False)
-    controls = {c: W16.make_control(Ztr, Wtr_fit, grids, cfg["K"], cfg["n_atoms"],
+    controls = {c: MAKE_CONTROL(Ztr, Wtr_fit, grids, cfg["K"], cfg["n_atoms"],
                                     cfg["ridge"], c, seed_index, pair_block=pb)
                 for c in A.TransitionClu.CONTROLS}
     der = controls["landscape_shuffled_across_wells"].derangement
@@ -499,8 +520,12 @@ def run(seed_index, out_dir, cond, leg, latent=128, K=2, n_atoms=6, ridge=1.0,
 
     Wetr = Wtr_fit if ext is not None else None
     rivals, reps, out["matched_parameters"], out["capacity_diagnostic"] = {}, {}, {}, {}
+    out["rel_diagnostic_parameters"] = {}
     rival_inputs = {}
-    for variant, kinds in IN.variants():
+    variants = list(IN.variants())
+    if rel_diag and REL_FN is not None:
+        variants.append(("+rel", ("mlp", "lstm", "transformer")))
+    for variant, kinds in variants:
         if x10_diag and variant == "":
             continue
         Xs1 = IN.rival_x(variant, Wtr_true, Otr, Wetr)
@@ -515,11 +540,15 @@ def run(seed_index, out_dir, cond, leg, latent=128, K=2, n_atoms=6, ridge=1.0,
         for kind in kinds:
             nm = IN.rival_name(kind, variant)
             w, p, kw = widths[kind]
-            out["matched_parameters"][nm] = {"input_dim": od, "width": int(w), "params": int(p),
+            out["matched_parameters" if variant != "+rel" else "rel_diagnostic_parameters"][nm] = {"input_dim": od, "width": int(w), "params": int(p),
                                              "residual_pct": 100.0 * (p - target) / max(target, 1)}
-            for lab, steps, wd in (("rival: ", rival_steps, widths[kind]),
-                                   ("rival@10x-steps: ", diag_steps, widths[kind]),
-                                   ("diagnostic@10x-read-floats: ", rival_steps, big_w[kind])):
+            budgets = (("rival: ", rival_steps, widths[kind]),
+                       ("rival@10x-steps: ", diag_steps, widths[kind]),
+                       ("diagnostic@10x-read-floats: ", rival_steps, big_w[kind]))
+            if variant == "+rel":
+                budgets = (("diagnostic+rel@8k: ", rival_steps, widths[kind]),
+                           ("diagnostic+rel@80k: ", diag_steps, widths[kind]))
+            for lab, steps, wd in budgets:
                 if x10_diag and lab.startswith("diagnostic"):
                     continue
                 ww, pp, kkw = wd
@@ -590,6 +619,9 @@ def run(seed_index, out_dir, cond, leg, latent=128, K=2, n_atoms=6, ridge=1.0,
         rows_out[name] = b
         best8 = max(v for k2, v in b.items() if k2.startswith("rival: "))
         best80 = max(v for k2, v in b.items() if k2.startswith("rival@10x-steps: "))
+        if any(k2.startswith("diagnostic+rel") for k2 in b):
+            log("  row %-5s diag+rel best %.4f (never a bar)" % (name, max(
+                v for k2, v in b.items() if k2.startswith("diagnostic+rel"))))
         log("  row %-5s n=%-5d CLU %.4f best-rival8k %.4f best-rival80k %.4f worst-ctl %.4f "
             "bseq %.4f bcol %.4f%s" % (name, len(rs), b["CLU"], best8, best80,
                                        max(v for k2, v in b.items() if k2.startswith("control: ")),
@@ -677,8 +709,8 @@ def deletion_rows(IN, train_rows, tr_insts, Wtr_true, Wtr_fit, Otr, Ztr, Ctr, co
             continue
         keep = np.setdiff1d(idx_all, sel)
         block = {"n_rows_deleted": int(sel.size), "n_rows_kept": int(keep.size)}
-        clu = A.TransitionClu(Ztr, Wtr_fit, grids, K=cfg["K"], n_atoms=cfg["n_atoms"],
-                              ridge=cfg["ridge"], pair_block=pb, seed=seed_index)
+        clu = CLU_CLS(Ztr, Wtr_fit, grids, K=cfg["K"], n_atoms=cfg["n_atoms"],
+                      ridge=cfg["ridge"], pair_block=pb, seed=seed_index)
         t0 = time.time()
         rec = clu.delete_rows_exact(Ztr[sel], Wtr_fit[sel])
         block["clu_downdate_receipt"] = {kk: vv for kk, vv in rec.items()
@@ -686,7 +718,7 @@ def deletion_rows(IN, train_rows, tr_insts, Wtr_true, Wtr_fit, Otr, Ztr, Ctr, co
         block["clu_adaptation_cost"] = {"seconds": time.time() - t0,
                                         "passes_over_retained_data": 0, "items_kept": False,
                                         "gradient_steps": 0, "examples_seen": 0}
-        ref = A.TransitionClu(Ztr[keep], Wtr_fit[keep], grids, K=cfg["K"],
+        ref = CLU_CLS(Ztr[keep], Wtr_fit[keep], grids, K=cfg["K"],
                               n_atoms=cfg["n_atoms"], ridge=cfg["ridge"], pair_block=pb,
                               seed=seed_index, well_channels=clu.well_channels)
         devs, scales = [], []
@@ -763,9 +795,18 @@ if __name__ == "__main__":
     for i in range(3, len(sys.argv), 2):
         kw[sys.argv[i].lstrip("-")] = sys.argv[i + 1]
     os.makedirs(od, exist_ok=True)
+    if "clu_cfg" in kw:
+        import hashlib
+        import w21_clu
+        raw = open(kw["clu_cfg"], "rb").read()
+        CLU_CFG = dict(json.loads(raw.decode("utf-8")), sha256=hashlib.sha256(raw).hexdigest(),
+                       path=kw["clu_cfg"])
+        fac = w21_clu.CluFactory(CLU_CFG)
+        CLU_CLS, MAKE_CONTROL, REL_FN = fac, fac.make_control, fac.relations_block
+        log("w21 CLU cfg %s sha256 %s" % (kw["clu_cfg"], CLU_CFG["sha256"]))
     run(si, od, kw["cond"], kw["leg"], ext_steps=int(kw.get("ext_steps", 6000)),
         x10_diag=bool(int(kw.get("x10_diag", 0))), latent=int(kw.get("latent", 128)),
         K=int(kw.get("K", 2)), n_atoms=int(kw.get("atoms", 6)),
         rival_steps=int(kw.get("rival_steps", 8000)), diag_mult=int(kw.get("diag_mult", 10)),
         deletion=(None if "deletion" not in kw else bool(int(kw["deletion"]))),
-        smoke=bool(int(kw.get("smoke", 0))))
+        smoke=bool(int(kw.get("smoke", 0))), rel_diag=bool(int(kw.get("rel_diag", 0))))
