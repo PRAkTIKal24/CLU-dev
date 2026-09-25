@@ -7,9 +7,9 @@ check are used unchanged). Stems drawn here (each overwrites the pass-1 file of 
                         every panel title; a 32,768-row slot left in data/ladder_rival_sets.json
   fig_headline_steps    NEW: rows 3-4 TEST, rival score against optimiser steps at three pool sizes
                         (w20: the operative variable was steps, not data)
-  fig_maze_conditions   (a) the condition table (+ the CLU-REL-A10 row); (b) six seeds x two configs,
-                        per-seed ceilings, hard/easy marking, the '+rel' series, ties marked
-  fig_maze_rel_tuples   NEW: per-tuple held-out n-way, CLU-REL-A10, six seeds (hash-linked replay)
+  fig_maze_conditions   PW-1 item 1: (a) four input conditions, every seed; (b) / (c) six seeds
+                        without / with relational coding; no labels, ceiling, hard/easy or overlay
+  fig_maze_rel_tuples   retired from the build (PW-1 item 15); the function is kept, not called
   fig_deletion          the four-measurement rule (w20 matched deletion, 131,072-row pool)
   fig_cmazet_*          pass-1 panels, rebuilt from the verified per-item file; pass 3: under every
                         s_{t+1} a strip shows the facts the judge scores (legality, move, key event,
@@ -335,191 +335,175 @@ def fig_headline_steps(out):
 
 
 # ---------------------------------------------------------------- 3. maze condition table + six seeds
-def _ps_runs(r):
-    ps = {}
-    for rel in r["runs"]:
-        nw = load(rel)["ROWS"]["nway"]
-        for k, v in nw.items():
-            if k != "n":
-                ps.setdefault(k, []).append(v)
-    return ps
+MATCHED6 = ("rival: mlp", "rival: lstm", "rival: transformer",
+            "rival@10x-steps: mlp", "rival@10x-steps: lstm", "rival@10x-steps: transformer")
+TREL = ("diagnostic+rel@8k: transformer +rel", "diagnostic+rel@80k: transformer +rel")
+
+
+def _budget(k):
+    """PW-1 item 1.8: the baseline's step limit, in the paper's words."""
+    return r"$10\times$ training steps" if ("10x-steps" in k or "@80k" in k) \
+        else "declared training steps"
+
+
+def _fam(k):
+    return k.split(":", 1)[1].strip().split(" ")[0]
 
 
 def fig_maze_conditions(out):
+    """PW-1 item 1 (Head-ruled 2026-09-25): (a) four input conditions, every seed drawn, seed count
+    printed; (b) / (c) six seeds without / with relational coding. No claim labels, no ceiling,
+    no hard/easy marking, no text over the data."""
+    import cmazet_panels  # the rendered-string vocabulary and overlap checks
     man = data("maze_conditions.json")
     rows = [r for r in man["rows"] if r["status"] == "landed"]
-    sources = [man["rule_source"]]
+    six = maze_six.read()
+    sources = list(six["sources"])
+    S = six["seeds"]
     comp = []
     for r in rows:
-        if r["schema"] == "runs":
-            ps = _ps_runs(r)
-            sources += r["runs"] + [r["check_source"]]
-            for i, rel in enumerate(r["runs"]):
-                dd = load(rel)
-                assert dd["leg"].upper() == r["leg"] and dd["seed_index"] == i
-        else:
+        if r["schema"] == "w19":
             d = load(r["source"])
             sources.append(r["source"])
             assert d["leg"].upper() == r["leg"], (r["id"], d["leg"])
             ps = W.maze_per_seed(d, r["schema"], man["primary_row"])
-            if "HEAD_LABEL" in d:
-                pass
-        sources += r.get("note_sources", [])
-        assert len(ps["CLU"]) == 3
-        h = W.head_label(ps)
-        if r["schema"] != "runs":
-            d = load(r["source"])
-            if "HEAD_LABEL" in d:
-                assert d["HEAD_LABEL"]["PRIMARY"] == h["label"], (r["id"], h["label"])
-                assert d["HEAD_LABEL"]["rows"][man["primary_row"]]["R_star"] == h["R_star"]
+            rstar = max((k for k in ps if k.startswith("rival")), key=lambda k: mean(ps[k]))
+            assert rstar == W.head_label(ps)["R_star"]  # the same comparator the draft's table uses
+            clu, base, seeds = ps["CLU"], ps[rstar], [0, 1, 2]
+            assert len(clu) == len(base) == 3
         else:
-            chk = load(r["check_source"])["rows"]["nway"]
-            assert chk["R_star"] == h["R_star"] and chk["CLU_per_seed"] == ps["CLU"]
-            assert chk["R_star_per_seed"] == h["R_star_per_seed"]
-        shown = "ASYMMETRIC" if r.get("asymmetric") else h["label"]
-        comp.append((r, ps, h, shown))
-    six = maze_six.read()
-    sources += six["sources"]
+            P = six["config"][r["config"]]
+            clu = [P[s]["CLU"] for s in S]
+            keys = MATCHED6 if r["comparator"] == "best_matched" else TREL
+            rstar = max(keys, key=lambda k: mean([P[s]["arms"][k] for s in S]))
+            base, seeds = [P[s]["arms"][rstar] for s in S], S
+            if r.get("check_source"):
+                c3 = W.maze_per_seed(load(r["check_source"]), "w19", man["primary_row"])
+                sources.append(r["check_source"])
+                assert c3["CLU"] == clu[:3], (r["id"], c3["CLU"], clu[:3])
+                for k in MATCHED6:
+                    assert c3[k] == [P[s]["arms"][k] for s in (0, 1, 2)], (r["id"], k)
+        comp.append(dict(row=r, clu=clu, base=base, seeds=seeds, rstar=rstar))
+    rel_arm = next(c["rstar"] for c in comp if c["row"].get("comparator") == "transformer_rel")
+    a1_arm = next(c["rstar"] for c in comp if c["row"].get("comparator") == "best_matched")
+    assert _fam(a1_arm) == "transformer" and _fam(rel_arm) == "transformer", (a1_arm, rel_arm)
 
+    TC = ARMS["transformer"]
+    fams_used = {_fam(c["rstar"]) for c in comp}
     n = len(comp)
-    fig = plt.figure(figsize=(TEXT_W, 0.37 * n + 3.0), layout="constrained")
-    top, bot = fig.subfigures(2, 1, height_ratios=[0.37 * n + 0.72, 2.28])
-    gs = top.add_gridspec(1, 3, width_ratios=[1.55, 1.9, 0.62])
-    tl, ax, tr = top.add_subplot(gs[0]), top.add_subplot(gs[1]), top.add_subplot(gs[2])
-    for a in (tl, tr):
-        a.set_axis_off()
-    for a in (tl, ax, tr):
-        a.set_ylim(n - 0.5, -0.75)
-    used = set()
-    for i, (r, ps, h, shown) in enumerate(comp):
+    fig = plt.figure(figsize=(TEXT_W, 0.40 * n + 3.05), layout="constrained")
+    top, bot = fig.subfigures(2, 1, height_ratios=[0.40 * n + 0.80, 2.25])
+    gs = top.add_gridspec(1, 2, width_ratios=[1.45, 2.6])
+    tl, ax = top.add_subplot(gs[0]), top.add_subplot(gs[1])
+    tl.set_axis_off()
+    for a in (tl, ax):
+        a.set_ylim(n - 0.5, -0.5)
+    texts = []
+    for i, c in enumerate(comp):
+        r = c["row"]
         if i % 2 == 0:
             ax.axhspan(i - 0.5, i + 0.5, color="#f4f3ef", lw=0, zorder=0)
-        rname, fam = W.pretty_arm(h["R_star"])
-        used.add(fam)
+        fam = _fam(c["rstar"])
         rc = ARMS[fam]
-        dy = 0.14
-        ax.scatter(ps["CLU"], [i - dy] * 3, s=16, marker="o", color=CLU_C, zorder=4,
+        is_rel = r.get("comparator") == "transformer_rel"
+        dy = 0.15
+        ax.scatter(c["clu"], [i - dy] * len(c["clu"]), s=16, marker="o", color=CLU_C, zorder=4,
                    edgecolor="white", lw=0.4)
-        ax.plot([mean(ps["CLU"])] * 2, [i - dy - 0.13, i - dy + 0.13], color=CLU_C, lw=1.4,
+        ax.plot([mean(c["clu"])] * 2, [i - dy - 0.13, i - dy + 0.13], color=CLU_C, lw=1.4,
                 zorder=3)
-        ax.scatter(h["R_star_per_seed"], [i + dy] * 3, s=16, marker=rc["marker"],
-                   color=rc["color"], zorder=4, edgecolor="white", lw=0.4)
-        ax.plot([mean(h["R_star_per_seed"])] * 2, [i + dy - 0.13, i + dy + 0.13],
-                color=rc["color"], lw=1.4, zorder=3)
-        muted = r.get("asymmetric")
-        yl, ys = (i - 0.30, i - 0.03) if muted else (i - 0.12, i + 0.17)
-        tl.text(0.0, yl, r["label"], fontsize=6.4, color=INK2 if muted else INK,
-                va="center", ha="left", fontweight="bold")
-        sub = f"{r['leg']} · seeds 0–2 · best matched rival: {rname}"
-        tl.text(0.0, ys, sub, fontsize=5.2, color=INK2, va="center", ha="left")
-        if muted:
-            tl.text(0.0, i + 0.30, r["note"].replace(", the CLU", ",\nthe CLU"), fontsize=4.9,
-                    color=INK2, va="center", ha="left", style="italic", linespacing=1.1)
-        tr.text(0.04, i - 0.08, shown, fontsize=6.4, va="center", ha="left",
-                color=INK2 if muted else INK, fontweight="bold")
-        tr.text(0.04, i + 0.24, "store gate " + ("holds" if h["store_gate"] else "fails"),
-                fontsize=5.0, va="center", ha="left", color=INK2)
+        ax.scatter(c["base"], [i + dy] * len(c["base"]), s=16, marker=rc["marker"], zorder=4,
+                   facecolor="white" if is_rel else rc["color"],
+                   edgecolor=rc["color"], lw=0.9 if is_rel else 0.4)
+        ax.plot([mean(c["base"])] * 2, [i + dy - 0.13, i + dy + 0.13], color=rc["color"],
+                lw=1.4, zorder=3)
+        texts.append(tl.text(0.0, i - 0.13, r["label"], fontsize=6.4, color=INK, va="center",
+                             ha="left", fontweight="bold"))
+        leg = {"TEST": "test", "VAL": "validation"}[r["leg"]]
+        seeds = (f"seeds 0–{c['seeds'][-1]}" if c["seeds"] == list(range(len(c["seeds"])))
+                 else "seeds " + ", ".join(map(str, c["seeds"])))
+        name = ARMS[fam]["name"] + ("-REL" if is_rel else "")
+        sub = (f"{leg} · {len(c['seeds'])} seeds ({seeds})\n"
+               f"{'baseline' if is_rel else 'best baseline'}: {name}, {_budget(c['rstar'])}")
+        texts.append(tl.text(0.0, i + 0.20, sub, fontsize=5.2, color=INK2, va="center",
+                             ha="left", linespacing=1.15))
     ax.set_xlim(-0.02, 1.0)
     ax.set_yticks([])
     ax.spines["left"].set_visible(False)
     ax.grid(axis="y", visible=False)
-    ax.set_xlabel("unseen n-way validity, exact judge (fraction)", fontsize=6.4)
-    ax.set_title("(a) CLU (●) and best matched rival, seeds 0–2", loc="left", fontsize=6.8)
-    tl.text(0.0, -0.62, "condition", fontsize=6.2, color=INK2, va="center")
-    tr.text(0.04, -0.62, "label", fontsize=6.2, color=INK2, va="center")
-    handles = [Line2D([0], [0], color=CLU_C, marker="o", lw=0, label="CLU, each seed")]
+    ax.set_xlabel("unseen n-way validity, the engine's judge (fraction)", fontsize=6.4)
+    ax.set_title("(a) n-CLU vs Best Matched Baseline for Different Input Choices", loc="left",
+                 fontsize=6.8)
+    ns = sorted({len(c["seeds"]) for c in comp})
+    handles = [Line2D([0], [0], color=CLU_C, marker="o", lw=0, label="n-CLU, each seed")]
     handles += [Line2D([0], [0], color=ARMS[f]["color"], marker=ARMS[f]["marker"], lw=0,
-                       label=f"{ARMS[f]['name']} rival") for f in FAMS if f in used]
-    handles += [Line2D([0], [0], color=INK2, lw=1.4, label="mean of 3 seeds")]
+                       label=f"{ARMS[f]['name']}, each seed")
+                for f in ("mlp", "lstm", "transformer", "cont_mlp") if f in fams_used]
+    handles += [Line2D([0], [0], color=TC["color"], marker=TC["marker"], lw=0,
+                       markerfacecolor="white", label="Transformer-REL, each seed")]
+    handles += [Line2D([0], [0], color=INK2, lw=1.4,
+                       label="mean of " + " or ".join(map(str, ns)) + " seeds")]
     top.legend(handles=handles, loc="outside lower center", ncol=len(handles), fontsize=5.6)
 
-    # (b) six seeds x two configs
-    b1, b2 = bot.subplots(1, 2, sharey=True)
-    marks = []
-    off = {"clu": -0.21, "rival": -0.07, "rel": 0.07, "ctrl": 0.21}
-    for bx, cfg, ttl in ((b1, "A1", "(b) A1 (no relational request coding)"),
-                         (b2, "REL", "(c) CLU-REL-A10 (colour-relational request coding)")):
+    # (b) / (c): the six seeds of the two words-plus-observation rows, x = seed number only
+    sb1, sb2 = bot.subfigures(1, 2)
+    b1, b2 = sb1.subplots(), sb2.subplots()
+    per_seed = {}
+    off = {"clu": -0.18, "base": 0.0, "ctrl": 0.18}
+    for bx, sb, cfg, arm, ttl, lab_c, lab_b in (
+            (b1, sb1, "A1", a1_arm, "(b) Test Results w/o Relational Coding Across Seeds", "n-CLU",
+             "Transformer (best baseline)"),
+            (b2, sb2, "REL", rel_arm, "(c) Test Results with Relational Coding Across Seeds",
+             "n-CLU-REL", "Transformer-REL (best baseline)")):
         P = six["config"][cfg]
-        filled = cfg == "REL"
-        for s in six["seeds"]:
-            if six["class"][s] == "hard":
-                bx.axvspan(s - 0.45, s + 0.45, color=HARD_BG, lw=0, zorder=0)
+        rel = cfg == "REL"
+        per_seed[cfg] = {}
+        for s in S:
             p = P[s]
-            ceil = p["ceiling_incl_rel"] if cfg == "REL" else p["ceiling"]
-            bx.plot([s - 0.34, s + 0.34], [ceil] * 2, color=INK, lw=1.1, zorder=2,
-                    solid_capstyle="butt")
+            per_seed[cfg][str(s)] = dict(n_CLU=p["CLU"], baseline=p["arms"][arm], baseline_arm=arm,
+                                         highest_control=p["max_control"],
+                                         highest_control_arms=p["max_control_arms"],
+                                         source=p["source"])
             bx.scatter([s + off["ctrl"]], [p["max_control"]], marker="x", s=18, color=FLOOR,
                        lw=1.0, zorder=4)
-            bx.scatter([s + off["rival"]], [p["best_matched"]], marker="^", s=22,
-                       facecolor="white", edgecolor=RIVAL_C, lw=1.0, zorder=4)
-            if cfg == "REL":
-                bx.scatter([s + off["rel"]], [p["best_rel"]], marker="^", s=22, color=RIVAL_C,
-                           edgecolor="white", lw=0.4, zorder=5)
-            bx.scatter([s + off["clu"]], [p["CLU"]], marker="o", s=24,
-                       facecolor=CLU_C if filled else "white", edgecolor=CLU_C, lw=1.0, zorder=6)
-            # every seed where a rival or a control reaches the CLU is marked, by rule
-            notes = []
-            if p["best_matched"] > p["CLU"]:
-                notes.append("rival > CLU")
-            elif p["best_matched"] == p["CLU"]:
-                notes.append("rival = CLU")
-            if p["max_control"] >= p["CLU"]:
-                notes.append("control " + ("=" if p["max_control"] == p["CLU"] else ">") + " CLU")
-            if notes:
-                marks.append(dict(config=cfg, seed=s, marks=notes, CLU=p["CLU"],
-                                  best_matched=p["best_matched"],
-                                  best_matched_arms=p["best_matched_arms"],
-                                  max_control=p["max_control"],
-                                  max_control_arms=p["max_control_arms"]))
-                top_y = max(p["CLU"], p["best_matched"], p["max_control"],
-                            p["ceiling_incl_rel"] if cfg == "REL" else p["ceiling"])
-                bx.text(s, top_y + 0.03, "\n".join(n_.replace(" CLU", "\nCLU") for n_ in notes),
-                        ha="center", va="bottom", fontsize=4.9, color=INK, fontweight="bold",
-                        linespacing=1.0)
-        bx.set_xticks(six["seeds"])
-        bx.set_xticklabels([f"{s}\n{six['class'][s]}" for s in six["seeds"]], fontsize=5.8)
+            bx.scatter([s + off["base"]], [p["arms"][arm]], marker=TC["marker"], s=22, zorder=5,
+                       facecolor="white" if rel else TC["color"],
+                       edgecolor=TC["color"] if rel else "white", lw=1.0 if rel else 0.4)
+            bx.scatter([s + off["clu"]], [p["CLU"]], marker="o", s=24, color=CLU_C,
+                       edgecolor="white", lw=0.4, zorder=6)
+        bx.set_xticks(S)
+        bx.set_xticklabels([str(s) for s in S], fontsize=5.8)
         bx.set_xlim(-0.55, 5.55)
-        bx.set_ylim(0, 1.2)
+        bx.set_ylim(0, 1.02)
         bx.set_yticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
         bx.grid(axis="x", visible=False)
         bx.set_title(ttl, loc="left", fontsize=6.6)
-        bx.set_xlabel("seed (shaded: hard, by A1's ceiling)", fontsize=6.2)
-    b1.axhline(six["cut"], color=INK2, lw=0.7, ls=":", zorder=1)
-    b1.text(5.5, six["cut"] - 0.02, f"hard/easy cut {six['cut']:.3f}", fontsize=5.0,
-            color=INK2, ha="right", va="top")
-    b1.set_ylabel("unseen n-way, TEST, words + observation", fontsize=6.2)
-    h2 = [Line2D([0], [0], marker="o", lw=0, color=CLU_C, markerfacecolor="white", ms=4.5,
-                 label="CLU, A1"),
-          Line2D([0], [0], marker="o", lw=0, color=CLU_C, ms=4.5, label="CLU, CLU-REL-A10"),
-          Line2D([0], [0], marker="^", lw=0, color=RIVAL_C, markerfacecolor="white", ms=4.5,
-                 label="best matched rival (of 6)"),
-          Line2D([0], [0], marker="^", lw=0, color=RIVAL_C, ms=4.5,
-                 label="best rival + relational columns"),
-          Line2D([0], [0], marker="x", lw=0, color=FLOOR, ms=4.5, label="highest control"),
-          Line2D([0], [0], color=INK, lw=1.1, label="ceiling (best train-fitted arm)")]
-    bot.legend(handles=h2, loc="outside lower center", ncol=3, fontsize=5.6)
-    labels = {r["id"]: dict(shown=shown, head_rule=h["label"], R_star=h["R_star"],
-                            R_star_per_seed=h["R_star_per_seed"], CLU_per_seed=ps["CLU"],
-                            diff_per_seed=h["diff_per_seed"], mean_diff=h["mean_diff"],
-                            sigma_paired=h["sigma"], seeds_ahead=h["seeds_ahead"],
-                            store_gate=h["store_gate"], leg=r["leg"])
-              for r, ps, h, shown in comp}
-    six_rec = {cfg: {str(s): {k: v for k, v in six["config"][cfg][s].items() if k != "arms"}
-                     for s in six["seeds"]} for cfg in ("A1", "REL")}
+        bx.set_xlabel("seed", fontsize=6.2)
+        h = [Line2D([0], [0], marker="o", lw=0, color=CLU_C, ms=4.5, label=lab_c),
+             Line2D([0], [0], marker=TC["marker"], lw=0, color=TC["color"], ms=4.5,
+                    markerfacecolor="white" if rel else TC["color"], label=lab_b),
+             Line2D([0], [0], marker="x", lw=0, color=FLOOR, ms=4.5, label="Highest control")]
+        sb.legend(handles=h, loc="outside lower center", ncol=2, fontsize=5.4)
+    b1.set_ylabel("unseen n-way validity (fraction)", fontsize=6.2)
+    cmazet_panels.check_vocab(fig)
+    cmazet_panels.check_no_overlap(fig, texts)
+    rows_rec = {c["row"]["id"]: dict(label=c["row"]["label"], leg=c["row"]["leg"],
+                                     seeds=c["seeds"], n_CLU_per_seed=c["clu"],
+                                     comparator_arm=c["rstar"], comparator_per_seed=c["base"],
+                                     n_CLU_mean=mean(c["clu"]), comparator_mean=mean(c["base"]),
+                                     source=c["row"].get("source", "maze_six.py (six-seed read)"))
+                for c in comp}
     save(fig, out, "fig_maze_conditions", sources,
-         "(a) CMAZE-T condition table, primary row unseen n-way (exact judge), seeds 0-2; label = "
-         "the Head's rule (head_label(), PREREG-w21-words-full-test.md), asserted equal to the "
-         "artefact's own R* (and HEAD_LABEL where carried). (b), (c) words + observation TEST, "
-         "six seeds, both configs, read from each seed's scored run JSON (ROWS.nway) and asserted "
-         "float-equal to REL-NEWSEEDS.json nway_summary; ceilings per REL-NEWSEEDS "
-         "ceiling_definition ((c): incl. the +rel arms); hard = A1 ceiling below the cut of "
-         "MAZE-T-SEED4.json (largest gap; seeds 1, 4) - never by the CLU's own score. Best "
-         "matched rival = max over the six matched arms (3 families x 8k/80k steps) on that seed. "
-         "No claim label on the six-seed panels (the rule is written for 3 seeds). Every seed "
-         "where a rival or control reaches the CLU is annotated by rule.",
-         extra={"labels": labels, "six_seed": six_rec, "marked": marks,
-                "class": six["class"], "cut": six["cut"]})
-    return marks
+         "PW-1 item 1. (a) four input conditions, primary row unseen n-way (the engine's judge); "
+         "every seed a row has is drawn (3 for the words-full and observation rows, from their "
+         "BARS artefacts; 6 for the two words-plus-observation rows, from each seed's run JSON "
+         "via maze_six.py, asserted float-equal to REL-NEWSEEDS.json). Comparator = the matched "
+         "baseline with the highest mean over the row's seeds (every kind, both step limits); for "
+         "the n-CLU-REL row, Transformer-REL at the step limit with the higher six-seed mean. "
+         "(b), (c) per seed: n-CLU / n-CLU-REL, the (a) comparator of that row, and the highest "
+         "control (max over the four controls on that seed). No claim label, no ceiling, no "
+         "hard/easy class, no text over the data.",
+         extra={"rows": rows_rec, "six_seed": per_seed})
+    return rows_rec
 
 
 # ---------------------------------------------------------------- 4. per-tuple, CLU-REL-A10
@@ -762,7 +746,6 @@ def main():
     fig_ladder(args.out)
     fig_headline_steps(args.out)
     fig_maze_conditions(args.out)
-    fig_maze_rel_tuples(args.out)
     fig_deletion(args.out)
     if args.panels:
         import cmazet_panels  # noqa: E402

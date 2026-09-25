@@ -1,30 +1,7 @@
 {
- "_doc": "Rows of fig_maze_conditions, top to bottom. One entry = one row. To add a row: append an entry with status 'landed', its BARS artefact and schema ('w16' = rows.nway[arm].per_seed; 'w19' = rows.nway.per_seed[arm]). No code change. Labels are the Head's rule (PREREG-w21-words-full-test.md, THE LABEL RULE), applied by one function to every symmetric row; an asymmetric row is labelled ASYMMETRIC and gets no claim label. Where the artefact carries HEAD_LABEL the build asserts equality. w22: schema 'runs' = one scored run JSON per seed (ROWS.nway[arm]); 'check_source' = an artefact whose rows.nway.R_star and CLU_per_seed must equal the recomputed ones. The six-seed, two-config words-plus-observation read is panel (b), drawn by maze_six.py from the per-seed run JSONs (no claim label: the rule is written for 3 seeds).",
- "rule_source": "w21-words-full-test/PREREG-w21-words-full-test.md",
+ "_doc": "Rows of fig_maze_conditions panel (a), top to bottom (PW-1 item 1, Head-ruled 2026-09-25). One entry = one row. schema 'w19' = a 3-seed BARS artefact, rows.nway.per_seed[arm]; the comparator is the matched baseline with the highest mean over the row's seeds (every kind, both step limits). schema 'six' = the six-seed words-plus-observation TEST read of maze_six.py (per-seed run JSONs, asserted float-equal to REL-NEWSEEDS.json); 'comparator' = 'best_matched' (the matched baseline with the highest six-seed mean) or 'transformer_rel' (the Transformer given the relational columns, the step limit with the higher six-seed mean); 'check_source' = a 3-seed BARS artefact whose seeds 0-2 must equal the six-seed read. No claim label, no ceiling, no hard/easy class anywhere. Panels (b), (c) are the six-seed read of the two 'six' rows.",
  "primary_row": "nway",
  "rows": [
-  {
-   "id": "pixel_rivals",
-   "status": "landed",
-   "label": "Rivals on the observation",
-   "note": "ASYMMETRIC: rivals read a 636-dim observation, the CLU the 318-wide word design",
-   "note_sources": [
-    "w15-cmaze-t-harness/FINDINGS.md",
-    "w21-words-full-test/TABLES.md"
-   ],
-   "leg": "TEST",
-   "source": "w16-maze-wm/t1/BARS-A1-test.json",
-   "schema": "w16",
-   "asymmetric": true
-  },
-  {
-   "id": "words_main",
-   "status": "landed",
-   "label": "Words, main effects",
-   "leg": "VAL",
-   "source": "w19-maze-t-symmetric/val/BARS-WORDS-MAIN-val.json",
-   "schema": "w19"
-  },
   {
    "id": "words_full",
    "status": "landed",
@@ -44,24 +21,25 @@
   {
    "id": "words_plus_observation",
    "status": "landed",
-   "label": "Words + observation, A1",
+   "label": "Words + observation (n-CLU)",
    "leg": "TEST",
-   "source": "w19-maze-t-symmetric/test/BARS-BOTH-test.json",
-   "schema": "w19"
+   "schema": "six",
+   "config": "A1",
+   "comparator": "best_matched",
+   "check_source": "w19-maze-t-symmetric/test/BARS-BOTH-test.json"
   },
   {
-   "id": "words_plus_observation_improved",
+   "id": "words_plus_observation_rel",
    "status": "landed",
-   "label": "Words + observation, CLU-REL-A10",
+   "label": "Words + observation (n-CLU-REL)",
    "leg": "TEST",
-   "schema": "runs",
-   "runs": [
-    "w21-maze-t-clu-improve/test/BOTH_test_seed0.json",
-    "w21-maze-t-clu-improve/test/BOTH_test_seed1.json",
-    "w21-maze-t-clu-improve/test/BOTH_test_seed2.json"
-   ],
-   "check_source": "w21-maze-t-clu-improve/test/LABEL-BOTH-test.json",
-   "note": "seeds 0-2; seeds 3-5 of both configs in panel (b)"
+   "schema": "six",
+   "config": "REL",
+   "comparator": "transformer_rel"
   }
- ]
+ ],
+ "retired_rows": {
+  "pixel_rivals": "PW-1 item 1.1: the asymmetric (w16) observation row is removed",
+  "words_main": "PW-1 item 1.1: the 'words, main effects' row is removed"
+ }
 }
