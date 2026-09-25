@@ -14,3 +14,4 @@
 - Registry pass 7: build_pass7.py (insert-only) -> verify_pass7 PASS (257 / 82 lines inserted, 0 replaced, 0 deleted; N398–N405 once each; 0 dup CM rows/sections); audit_pass7 strict 0 failures (one CA7 formatting addition for "2,228"); rounding check 0. Base md5 re-checked (2df8597a… / 9464e408…) right before install; installed; re-verified in place.
 - Register FINDINGS.md (10 lines prepended) and LOG.md (1 line appended), insert-only, verified.
 - NOT RUN: PRNG-replicate rival fits (Head: "not cheap enough"); no scored run/compute; no draft/figure/paper-visuals write; no .tex lock; no audit of other checkers' negative tests; no JSON-leaf check for pass-7 cells. No NEEDS-ARTEFACTS.json (nothing missing).
+- 2026-09-25T09:36:29Z END. Final commit carries END_UTC; bundle 148f3b7..w23/fold written to ~/clu/outputs/w23-fold/w23-fold.bundle and verified (git bundle verify + fetch into a clean clone, tip == branch). Background jobs: none. Sub-agents: none.
