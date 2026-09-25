@@ -124,6 +124,36 @@ def save(fig, out, stem, sources, placeholder, awaiting, notes):
                       awaiting=awaiting, notes=notes)
 
 
+# PW-1 items 2, 3, 13: words no rendered string of the figures this module family owns may carry
+# (fig_ladder, fig_crossover, fig_deletion, fig_headline_steps, fig_encoder_adapt). The maze
+# figures have their own check (cmazet_panels.check_vocab). A bare "CLU" is banned: n-CLU only.
+import re  # noqa: E402
+
+PW1_BANNED = re.compile(
+    r"(?<!n-)\bCLU\b|rival|corner|\bstore\b|\bgate\b|artefact|artifact|pre-?regist|\bA1\b|"
+    r"\bA10\b|C-512|improved|config|spoke|\bhub\b|\bwave\b|charter|ledger|oblong|exact|"
+    r"budget|Transf\.|Cont\. MLP|∧|10x|\bpric|\bbuys?\b|\bpaid\b|\bpays?\b|scored run|"
+    r"landscape_|random_atoms|composition \(|held-out composition", re.IGNORECASE)
+
+
+PW1_TEXT = []  # rendered strings per checked figure, in call order (read by build_shapes_only)
+
+
+def check_vocab_pw1(fig):
+    """Assert every rendered string obeys the PW-1 vocabulary; returns the strings checked."""
+    fig.canvas.draw()  # tick labels are only set on draw
+    seen = []
+    for t in fig.findobj(matplotlib.text.Text):
+        s = t.get_text()
+        if not s:
+            continue
+        m = PW1_BANNED.search(s)
+        assert m is None, f"PW-1 vocabulary: {m.group(0)!r} in rendered text {s!r}"
+        seen.append(s)
+    PW1_TEXT.append(sorted(set(seen)))
+    return sorted(set(seen))
+
+
 def legend_handle(key, line=True):
     a = ARMS[key]
     return Line2D([0], [0], color=a["color"], marker=a["marker"],
@@ -417,8 +447,11 @@ def fig_encoder_adapt(out):
     ax.set_xticks([0, 1, 2])
     ax.set_xticklabels(["frozen encoder", "adapter", "anchor"])
     ax.set_xlim(-0.55, 2.25)
-    ax.set_ylabel("margin vs MLP-180k\n(novel tuples / corner)")
+    # PW-1 items 2-3: no internal arm name, "held-out combination" (never corner)
+    ax.set_ylabel("n-CLU margin over the 180k-parameter\nMLP baseline, novel tuples\nper held-out combination",
+                  fontsize=6.2)
     ax.set_title("Encoder adaptation, K* = 32, 3 seeds", loc="left")
+    check_vocab_pw1(fig)
     save(fig, out, "fig_encoder_adapt", [src], False, None,
          "3 seeds x 3 configurations = 9 arm-runs (3 SEEDS). Margin = single design - best "
          "learned baseline (mlp_180k, chosen per arm); a DIFFERENT opponent from the ladder's "
@@ -540,8 +573,8 @@ def main():
     fig_ladder(args.out)
     fig_deletion(args.out)
     fig_encoder_adapt(args.out)
-    fig_maze_readverb(args.out)
-    fig_maze_requestlayer(args.out)
+    # PW-1 item 14 retires fig_maze_readverb and fig_maze_requestlayer: the functions are kept,
+    # they are no longer built
     with open(os.path.join(args.out, "PROVENANCE.json"), "w", encoding="utf-8") as f:
         json.dump({"evidence_root": EVIDENCE, "matplotlib": matplotlib.__version__,
                    "backend": matplotlib.get_backend(), "figures": PROV}, f, indent=1,

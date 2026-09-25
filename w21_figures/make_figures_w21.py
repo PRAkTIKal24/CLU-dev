@@ -132,11 +132,11 @@ def fig_crossover(out):
     a1.scatter(Ks, cmax, marker="x", s=14, color=CONTROL, lw=1.0, zorder=3)
     a1.set_xticks(Ks)
     a1.set_xlabel("K, wells")
-    a1.set_ylabel("val composition (valid fraction)")
+    a1.set_ylabel("validation composition")  # PW-1 item 11.1
     a1.set_title("(a) Composition vs K, 3 seeds", loc="left")
     a1.set_ylim(-0.03, 1.0)
     a1.legend(handles=[
-        Line2D([0], [0], color=clu["color"], marker="o", ms=3.5, label="CLU, mean of 3 seeds"),
+        Line2D([0], [0], color=clu["color"], marker="o", ms=3.5, label="n-CLU, mean of 3 seeds"),  # PW-1 item 11.4
         Patch(facecolor=clu["color"], alpha=0.16, label="± 1 seed sd"),
         Line2D([0], [0], color=clu["color"], marker="o", ms=3.5, lw=0, markerfacecolor="white",
                label="each seed"),
@@ -157,10 +157,11 @@ def fig_crossover(out):
     a2.axhline(ref, color=INK2, lw=0.8, ls="--", label=f"{ref:,} B reference")
     a2.set_xticks(Ks)
     a2.set_xlabel("K, wells")
-    a2.set_ylabel("bytes (×10⁶), four parts,\nsummed, never netted")
-    a2.set_title("(b) Four-part byte ledger vs K", loc="left")
+    a2.set_ylabel(r"Bytes ($\times 10^6$)")  # PW-1 item 11.2
+    a2.set_title("(b) Memory footprint vs K", loc="left")  # PW-1 item 11.3
     a2.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v / 1e6:g}"))
     a2.legend(loc="upper right", ncol=1)
+    M.check_vocab_pw1(fig)
     save(fig, out, "fig_crossover", [src],
          "n = 3 seeds (0, 1, 2) at EVERY K = 5..32; no single-seed line. (a) line = the "
          "artefact's val_composition.mean, band = +-1 val_composition.sd (sample sd, asserted "

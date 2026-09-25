@@ -3,14 +3,15 @@
 Built on top of make_figures_w21.py (imported; its style, save(), provenance and forbidden-word
 check are used unchanged). Stems drawn here (each overwrites the pass-1 file of the same stem):
   fig_crossover         unchanged from pass 1 (make_figures_w21.fig_crossover)
-  fig_ladder            + the w20 131,072-row data-matched rival set; POOL SIZE AND STEP BUDGET in
-                        every panel title; a 32,768-row slot left in data/ladder_rival_sets.json
+  fig_ladder            PW-1 item 10: ONE panel, the w20 131,072-row data-matched set; no title
+                        (pool size and steps in the caption), legend at the right, no end labels
   fig_headline_steps    NEW: rows 3-4 TEST, rival score against optimiser steps at three pool sizes
                         (w20: the operative variable was steps, not data)
   fig_maze_conditions   PW-1 item 1: (a) four input conditions, every seed; (b) / (c) six seeds
                         without / with relational coding; no labels, ceiling, hard/easy or overlay
   fig_maze_rel_tuples   retired from the build (PW-1 item 15); the function is kept, not called
-  fig_deletion          the four-measurement rule (w20 matched deletion, 131,072-row pool)
+  fig_deletion          PW-1 item 12: two panels (former (e), (f)); the four measurements' other
+                        values are asserted and recorded in PROVENANCE, no longer drawn
   fig_cmazet_*          pass-1 panels, rebuilt from the verified per-item file; pass 3: under every
                         s_{t+1} a strip shows the facts the judge scores (legality, move, key event,
                         pocket-next), so no two panels with the same picture carry opposite marks
@@ -115,90 +116,89 @@ def fig_ladder(out):
             for n, ps in zip(rungs, store):
                 assert d["ladder"][str(n)]["arms"][s["store_key"]]["all"]["per_seed"] == ps
 
-    ncol = min(len(sets), 3)
-    nrow = (len(sets) + ncol - 1) // ncol
-    fig, axs = plt.subplots(nrow, ncol, figsize=(TEXT_W, 2.75 * nrow), squeeze=False,
-                            sharey=True, layout="constrained")
+    # PW-1 item 10 (Head, 2026-09-25): ONE panel, the data-matched 131,072-row set; no title (pool
+    # and steps go to the caption), x label only "n, factors jointly held out", legend at the right
+    # arranged vertically, no line-end labels, legend names per item 10.6, y label per item 10.7
+    assert [s["id"] for s in sets] == ["data_matched_131072"], [s["id"] for s in sets]
+    s = sets[0]
+    fig, ax = plt.subplots(figsize=(TEXT_W, 2.6), layout="constrained")
     x = rungs
     set_notes, below = [], []
     any_tenx = False
-    for i, s in enumerate(sets):
-        ax = axs[i // ncol][i % ncol]
-        end_labels = []
+    base = min(s["steps"])
+    tenx = max(s["steps"])
+    assert s["steps"] == [base, tenx] and tenx == 10 * base, s["steps"]  # the "10x" in the legend
+    tenx_seen = []
 
-        def draw(series, color, marker, ls="-", lw=1.2, label=None, z=3, steps=None):
-            mu = [mean(v) for v in series]
-            ax.plot(x, mu, color=color, marker=marker, ms=3.4, lw=lw, ls=ls, zorder=z)
-            base = min(s["steps"]) if isinstance(s.get("steps"), list) else s.get("steps")
-            for j, (n, v) in enumerate(zip(x, series)):
-                big = [steps is not None and steps[j][k] > base for k in range(len(v))]
-                for k, vv in enumerate(v):
-                    ax.scatter([n], [vv], s=7, lw=0.6, zorder=z + 1, edgecolor=color,
-                               facecolor=color if big[k] else "white")
-            if label:
-                end_labels.append([mu[-1], label])
-            return mu
+    def draw(series, color, marker, ls="-", lw=1.2, z=3, steps=None):
+        mu = [mean(v) for v in series]
+        ax.plot(x, mu, color=color, marker=marker, ms=3.4, lw=lw, ls=ls, zorder=z)
+        for j, (n, v) in enumerate(zip(x, series)):
+            big = [steps is not None and steps[j][k] > base for k in range(len(v))]
+            for k, vv in enumerate(v):
+                ax.scatter([n], [vv], s=7, lw=0.6, zorder=z + 1, edgecolor=color,
+                           facecolor=color if big[k] else "white")
+        return mu
 
-        draw(store, CLU_C, ARMS["clu"]["marker"], lw=1.8, label="CLU", z=5)
-        draw(floor, FLOOR, ARMS["table"]["marker"], ls="--", lw=1.0, label="table")
-        for key in FAMS:
-            if key not in s["arms"]:
-                continue
-            ser, steps = read_set(s, key, rungs, seeds)
-            if isinstance(s.get("steps"), list):
-                any_tenx |= any(v > min(s["steps"]) for r in steps for v in r)
-            if s.get("constant_for_n_ge_3"):
-                for v in ser[1:]:
-                    assert v == ser[1], f"{s['id']}:{key} not constant on n >= 3"
-            a = ARMS[key]
-            draw(ser, a["color"], a["marker"], label=SHORT[key], steps=steps)
-            # recorded, never a build gate: rung/seed cells where the rival is at or above the store
-            for n, sv, rv in zip(x, store, ser):
-                for sd, a_, b_ in zip(seeds, sv, rv):
-                    if b_ >= a_:
-                        below.append(dict(set=s["id"], arm=key, n=n, seed=sd, store=a_, rival=b_))
-        end_labels.sort()
-        for j in range(1, len(end_labels)):
-            end_labels[j][0] = max(end_labels[j][0], end_labels[j - 1][0] + 4.2)
-        for yv, lab in end_labels:
-            ax.text(x[-1] + 0.18, yv, lab, va="center", ha="left", fontsize=5.8, color=INK)
-        ttl = s["title"].split(",")[0]
-        ax.set_title(f"({'abcdef'[i]}) {ttl}\n{fmt_int(s['pool_rows'])} rows · {s['steps_label']}",
-                     loc="left", fontsize=6.2)
-        ax.set_xticks(x)
-        ax.set_xlim(x[0] - 0.3, x[-1] + 1.25)
-        ax.set_xlabel("n, factors jointly held out\n(n ≥ 3: the same 120 corners)", fontsize=6.4)
-        set_notes.append(f"{s['id']}: {s['title']}, {fmt_int(s['pool_rows'])} rows, "
-                         f"{s['steps_label']} ({s['pool_note']}); source {s['source']}")
-    for j in range(len(sets), nrow * ncol):
-        axs[j // ncol][j % ncol].set_visible(False)
-    axs[0][0].set_ylabel("distinct valid novel tuples / corner")
-    axs[0][0].set_ylim(0, 75)
-    handles = [Line2D([0], [0], color=CLU_C, marker="o", lw=1.8, label="CLU, K* = 32")]
+    draw(store, CLU_C, ARMS["clu"]["marker"], lw=1.8, z=5)
+    draw(floor, FLOOR, ARMS["table"]["marker"], ls="--", lw=1.0)
+    for key in FAMS:
+        if key not in s["arms"]:
+            continue
+        ser, steps = read_set(s, key, rungs, seeds)
+        assert all(v in (base, tenx) for r in steps for v in r), (key, steps)
+        tenx_seen += [dict(arm=key, n=n, seed=sd) for n, r in zip(x, steps)
+                      for sd, v in zip(seeds, r) if v == tenx]
+        any_tenx |= any(v > base for r in steps for v in r)
+        a = ARMS[key]
+        draw(ser, a["color"], a["marker"], steps=steps)
+        # recorded, never a build condition: rung/seed cells where the baseline is at or above
+        for n, sv, rv in zip(x, store, ser):
+            for sd, a_, b_ in zip(seeds, sv, rv):
+                if b_ >= a_:
+                    below.append(dict(set=s["id"], arm=key, n=n, seed=sd, store=a_, rival=b_))
+    ax.set_xticks(x)
+    ax.set_xlim(x[0] - 0.3, x[-1] + 0.3)
+    ax.set_xlabel("n, factors jointly held out")
+    ax.set_ylabel("distinct valid novel tuples\nper held-out combination")
+    ax.set_ylim(0, 75)
+    set_notes.append(f"{s['id']}: {s['title']}, {fmt_int(s['pool_rows'])} rows, "
+                     f"{s['steps_label']} ({s['pool_note']}); source {s['source']}")
+    handles = [Line2D([0], [0], color=CLU_C, marker=ARMS["clu"]["marker"], lw=1.8, label="n-CLU")]
     handles += [Line2D([0], [0], color=ARMS[k]["color"], marker=ARMS[k]["marker"], lw=1.2,
-                       label=ARMS[k]["name"]) for k in FAMS if any(k in s["arms"] for s in sets)]
-    handles += [Line2D([0], [0], color=FLOOR, marker="x", ls="--", lw=1.0,
+                       label=ARMS[k]["name"]) for k in FAMS if k in s["arms"]]
+    handles += [Line2D([0], [0], color=FLOOR, marker=ARMS["table"]["marker"], ls="--", lw=1.0,
                        label="Lookup table (floor)"),
                 Line2D([0], [0], color=INK2, marker="o", lw=0, markerfacecolor="white", ms=3,
                        label="each seed; line = mean")]
     if any_tenx:
         handles.append(Line2D([0], [0], color=INK2, marker="o", lw=0, ms=3,
-                              label="seed carried at 204,800 steps"))
-    fig.legend(handles=handles, loc="outside lower center", ncol=4, fontsize=6)
+                              label=r"seed at $10{\times}$ steps"))
+    ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.02, 0.5), ncol=1,
+              fontsize=6.5, borderaxespad=0.0)
+    # every legend entry is a drawn series (item 10: no legend entry without its series)
+    assert [h.get_label() for h in handles[1:1 + sum(k in s["arms"] for k in FAMS)]] == \
+        [ARMS[k]["name"] for k in FAMS if k in s["arms"]]
+    assert [ARMS[k]["name"] for k in FAMS] == ["MLP", "LSTM", "Transformer", "Continuous MLP"]
+    rendered = M.check_vocab_pw1(fig)
     pending = [f"{s['id']} ({fmt_int(s['pool_rows'])} rows): {s['awaiting']}"
-               for s in man["sets"] if s["status"] != "landed"]
+               for s in man["sets"] if s["status"] == "not_landed"]
     save(fig, out, "fig_ladder", sources,
+         "PW-1 item 10: one panel, no title, legend at the right. "
          "3 seeds (0, 1, 2) on every rung; line = mean of the three per-seed values, dots = seeds. "
-         "One panel per landed rival column set (data/ladder_rival_sets.json), each beside the "
-         "same store (KSTAR-LADDER.json by_rung.*.kstar_K32.store; for the w20 set asserted equal, "
+         "The one landed rival column set (data/ladder_rival_sets.json; the 32,256-row and the "
+         "32,768-row data-matched MLP sets are retired by item 10.1), beside the store "
+         "(KSTAR-LADDER.json by_rung.*.kstar_K32.store; asserted equal, "
          "seed by seed, to SHAPES-MATCHED.json ladder.*.arms.store_K32_n131072) and table floor. "
-         "Pool size and optimiser-step budget in every panel title, each asserted from its "
-         "artefact. Sets drawn: " + "; ".join(set_notes) + ". w20 set: the P1-carried fit per "
+         "Pool size and optimiser steps are asserted from the artefact and printed in the "
+         "caption. Set drawn: " + "; ".join(set_notes) + ". w20 set: the P1-carried fit per "
          "family and seed (P3_margin.store_K32_n131072.per_family.*.*.carried_rival); a filled "
          "dot is a seed carried at its 204,800-step (10x) fit, an open dot the 20,480-step fit. "
          "For n >= 3 the rungs probe the identical 120 corners.",
          extra={"rival_sets_drawn": [s["id"] for s in sets], "rival_sets_not_landed": pending,
-                "rival_at_or_above_store": below, "step_sources": step_sources})
+                "rival_sets_retired": [s_["id"] for s_ in man["sets"] if s_["status"] == "retired"],
+                "rival_at_or_above_store": below, "step_sources": step_sources,
+                "tenx_points": tenx_seen, "rendered_text": rendered})
     return below
 
 
@@ -277,9 +277,9 @@ def fig_headline_steps(out):
         ax.set_xticklabels(["1,280", "\n2,560", "20,480", "204,800", "\n614,400"], fontsize=5.6)
         ax.minorticks_off()
         ax.set_xlim(900, 900000)
-        ax.set_xlabel("rival optimiser steps (log)")
+        ax.set_xlabel("baseline optimiser steps (log)")
     a1.text(1000, mean(store[131072]) + 1.2,
-            "CLU, K* = 32: fit on 16,384 / 32,768 / 131,072 rows\n"
+            "n-CLU, K* = 32: fit on 16,384 / 32,768 / 131,072 rows\n"
             f"{mean(store[16384]):.1f} / {mean(store[32768]):.1f} / {mean(store[131072]):.1f}",
             fontsize=5.4, color=INK, va="bottom")
     a1.text(30000, mean(floor) + 0.8, f"lookup table (floor) {mean(floor):.1f}", fontsize=5.4,
@@ -292,8 +292,9 @@ def fig_headline_steps(out):
         m = POOL_M[rows]
         a1.scatter([st], [mean(ps)], marker=m, s=26, color=c, edgecolor="white", lw=0.6, zorder=5)
         a1.scatter([st] * 3, ps, marker=m, s=7, facecolor="white", edgecolor=c, lw=0.6, zorder=4)
-    a1.set_title("(a) MLP rival: every pool × step cell", loc="left", fontsize=7)
-    a1.set_ylabel("distinct valid novel tuples / corner\n(rows 3–4, TEST, 109 corners)")
+    a1.set_title("(a) MLP baseline: every pool × step cell", loc="left", fontsize=7)
+    a1.set_ylabel("distinct valid novel tuples\nper held-out combination\n(rows 3–4, test, 109 combinations)",
+                  fontsize=6.6)
     a1.set_ylim(0, 58)
     a1.legend(handles=[Line2D([0], [0], marker=POOL_M[r], color=c, lw=0, ms=4.5,
                               label=f"{fmt_int(r)} rows") for r in (16384, 32768, 131072)],
@@ -315,9 +316,11 @@ def fig_headline_steps(out):
             a2.scatter([st] * 3, ps, marker=a["marker"], s=6, facecolor="white",
                        edgecolor=a["color"], lw=0.5, zorder=4)
         last = cells[-1]
-        a2.text(last[0] * 1.15, mean(last[2]), SHORT[f], fontsize=5.6, va="center", color=INK)
+        a2.text(last[0] * 1.15, mean(last[2]), ARMS[f]["name"], fontsize=5.6, va="center", color=INK)
     a2.set_title("(b) Four families: 1,280 steps on 16,384 rows,\nthen 131,072 rows at "
                  "20,480 / 204,800 / 614,400", loc="left", fontsize=6.6)
+    a2.set_xlim(900, 2600000)  # room for the full family names (PW-1 item 2: no "Transf.")
+    M.check_vocab_pw1(fig)
     save(fig, out, "fig_headline_steps", sources,
          "Rows 3-4 TEST, all 109 corners, 3 seeds (0, 1, 2); big marker = mean, small open = "
          "seeds. Scores: SHAPES-MATCHED.json rows34.arms.*.all.per_seed. Steps and fit rows per "
@@ -600,88 +603,38 @@ DSCOPES = [("value", "red value", "value"), ("conjunction_live", "red ∧ sphere
 
 
 def fig_deletion(out):
+    """PW-1 item 12 (Head, 2026-09-25): former panels (a)-(d) removed; former (e), (f) relettered
+    (a), (b). The removed panels' numbers are still read and asserted here and written to
+    PROVENANCE (deletion_facts) for the deletion table; they are no longer drawn."""
     d = load(W20)["deletion_matched"]
     PS = d["per_scope"]
     seeds = ["0", "1", "2"]
-    fig = plt.figure(figsize=(TEXT_W, 5.6), layout="constrained")
-    r1, r2, r3 = fig.subfigures(3, 1, height_ratios=[1.0, 1.05, 1.1])
-    aa, ab, ac = r1.subplots(1, 3, gridspec_kw={"width_ratios": [1, 1, 1.15]})
-    # (a) store == refit without; (b) book statistic / rendered features
-    xs = range(len(DSCOPES))
-    for i, (sc, lab, _) in enumerate(DSCOPES):
+    # the removed panels' measurements: asserted and recorded, not drawn
+    facts = {}
+    for sc, lab, _ in DSCOPES:
         st = PS[sc]["store"]
-        a_dev = [st[s]["a"]["max_abs_mode_dev"] for s in seeds]
-        b_dev = [st[s]["b"]["b2_book"]["rendered_features_rel_dev_on_survivor_requests"]
-                 for s in seeds]
+        assert all(st[s]["a"]["RESULT"] and st[s]["b"]["RESULT"] for s in seeds)
         b1 = [(st[s]["b"]["b1_statistic"]["max_abs_count_dev"],
                st[s]["b"]["b1_statistic"]["max_abs_first_moment_dev"]) for s in seeds]
-        assert all(st[s]["a"]["RESULT"] and st[s]["b"]["RESULT"] for s in seeds)
         assert all(x == (0, 0.0) for x in b1)
-        aa.scatter([i + (k - 1) * 0.12 for k in range(3)], a_dev, s=12, color=CLU_C, zorder=4,
-                   edgecolor="white", lw=0.4)
-        ab.scatter([i + (k - 1) * 0.12 for k in range(3)], b_dev, s=12, color=CLU_C, zorder=4,
-                   edgecolor="white", lw=0.4)
-    for ax, ttl, yl in ((aa, "(a) store = refit without", "max |mode deviation|"),
-                        (ab, "(b) book = refit without",
-                         "rendered-feature rel. deviation\n(book statistic: 0 on 9/9)")):
-        ax.set_yscale("log")
-        ax.set_ylim(1e-10, 1e-5)
-        ax.set_xticks(list(xs))
-        ax.set_xticklabels(["value", "red ∧\nsphere", "1 %\nitems"], fontsize=5.8)
-        ax.set_xlim(-0.5, 2.5)
-        ax.set_title(ttl, loc="left", fontsize=6.6)
-        ax.set_ylabel(yl, fontsize=5.8)
-        ax.grid(axis="x", visible=False)
-    # (c) display, never a result
-    ac.set_axis_off()
-    ac.set_title("(c) refusal (a display only)", loc="left", fontsize=6.6)
-    lines = []
-    for sc, lab, _ in DSCOPES:
-        c = [PS[sc]["store"][s]["c_DISPLAY"] for s in seeds]
+        c = [st[s]["c_DISPLAY"] for s in seeds]
         assert all(x["DISPLAY_NEVER_A_RESULT"] for x in c)
-        if "DECLARED_NA" in c[0]:
-            txt = "no hole exists; nothing to refuse"
-        else:
-            rr = {x["refusal_rate_on_deleted_corner_requests"] for x in c}
-            fr = {x["false_refusal_rate_on_survivor_requests"] for x in c}
-            nd = {x["n_deleted_corner_requests"] for x in c}
-            assert len(rr) == len(fr) == len(nd) == 1
-            rr, fr, nd = rr.pop(), fr.pop(), nd.pop()
-            txt = (f"refused {rr:.3f} of {nd:,} requests" if rr is not None
-                   else "no corner requests it") + f";\nfalse refusal {fr:.3f}"
-        lines.append((lab.split("\n")[0], txt))
-    for j, (lab, txt) in enumerate(lines):
-        ac.text(0.0, 0.80 - j * 0.28, lab, fontsize=6.0, fontweight="bold", color=INK,
-                transform=ac.transAxes)
-        ac.text(0.0, 0.80 - j * 0.28 - 0.03, txt, fontsize=5.4, color=INK2, transform=ac.transAxes,
-                va="top", linespacing=1.15)
-    ac.text(0.0, -0.05, "every seed identical", fontsize=5.2, color=INK2, style="italic",
-            transform=ac.transAxes)
-    # (d) survivors before -> after, three seeds, the random-1 % control beside the conjunction
-    dax = r2.subplots(1, 3, sharey=True)
-    for ax, (sc, lab, short) in zip(dax, DSCOPES):
-        st = PS[sc]["store"]
-        for k, s in enumerate(seeds):
-            b, a = st[s]["d"]["before_mean"], st[s]["d"]["after_mean"]
-            ax.plot([0, 1], [b, a], color=CLU_C, lw=1.0, zorder=3)
-            ax.scatter([0], [b], s=14, facecolor="white", edgecolor=CLU_C, lw=0.9, zorder=4)
-            ax.scatter([1], [a], s=14, color=CLU_C, zorder=4)
-        dl = " / ".join(f"{st[s]['d']['paired_after_minus_before']['mean_paired_delta']:+.2f}"
-                        for s in seeds)
         nc = {st[s]["d"]["n_survivor_corners"] for s in seeds}
         assert len(nc) == 1
-        ax.set_xticks([0, 1])
-        ax.set_xticklabels(["before", "after"], fontsize=6)
-        ax.set_xlim(-0.3, 1.3)
-        ax.set_title(f"{lab.replace(chr(10), ' ')}, {nc.pop()} corners\nΔ seeds 0/1/2: {dl}",
-                     loc="left", fontsize=6.0)
-        ax.grid(axis="x", visible=False)
-    dax[0].set_ylabel("CLU novel tuples / survivor\ncorner (d)", fontsize=6)
-    dax[0].set_ylim(38, 55)
-    r2.suptitle("(d) Composition on the corners that survive, before → after",
-                x=0.01, ha="left", fontsize=7)
-    # (e) paired delta with CI;  (f) CLU after - rival retrained without, same rows
-    e, f = r3.subplots(1, 2, gridspec_kw={"width_ratios": [0.8, 1.4]})
+        facts[sc] = {s: dict(
+            max_abs_mode_dev=st[s]["a"]["max_abs_mode_dev"],
+            book_statistic_count_dev=b1[k][0], book_statistic_first_moment_dev=b1[k][1],
+            book_rendered_features_rel_dev=st[s]["b"]["b2_book"][
+                "rendered_features_rel_dev_on_survivor_requests"],
+            refusal={x: c[k].get(x) for x in (
+                "refusal_rate_on_deleted_corner_requests", "n_deleted_corner_requests",
+                "false_refusal_rate_on_survivor_requests", "n_survivor_requests", "DECLARED_NA")
+                if x in c[k]},
+            before_mean=st[s]["d"]["before_mean"], after_mean=st[s]["d"]["after_mean"],
+            n_survivor_combinations=st[s]["d"]["n_survivor_corners"]) for k, s in enumerate(seeds)}
+    fig, (e, f) = plt.subplots(1, 2, figsize=(TEXT_W, 2.45), layout="constrained",
+                               gridspec_kw={"width_ratios": [0.8, 1.4]})
+    ticks = ["value", "red sphere", "1 % items\n(control)"]  # item 12.5: "red sphere"
     for i, (sc, lab, short) in enumerate(DSCOPES):
         st = PS[sc]["store"]
         for k, s in enumerate(seeds):
@@ -694,9 +647,11 @@ def fig_deletion(out):
             assert z["mean_paired_delta"] == 0.0 and z["corners_tied"] == st[s]["d"]["n_survivor_corners"]
     e.axhline(0, color=INK2, lw=0.7)
     e.set_xticks(range(3))
-    e.set_xticklabels(["value", "red ∧\nsphere", "1 % items\n(control)"], fontsize=5.8)
-    e.set_ylabel("after − before, paired\n(95 % bootstrap CI)", fontsize=5.8)
-    e.set_title("(e) (d) as a paired change, 3 seeds", loc="left", fontsize=6.4)
+    e.set_xticklabels(ticks, fontsize=5.8)
+    e.set_ylabel("after − before, novel tuples per held-out\ncombination (95 % bootstrap CI)",
+                 fontsize=5.8)
+    e.set_title("(a) Composition on the surviving\ncombinations, after − before\n(3 seeds)",
+                loc="left", fontsize=6.4)
     e.grid(axis="x", visible=False)
     for i, (sc, lab, short) in enumerate(DSCOPES):
         for j, fam in enumerate(FAMS):
@@ -711,29 +666,31 @@ def fig_deletion(out):
                           marker=ARMS[fam]["marker"], zorder=4, edgecolor="white", lw=0.3)
     f.axhline(0, color=INK2, lw=0.7)
     f.set_xticks([1.5, 6.5, 11.5])
-    f.set_xticklabels(["value", "red ∧ sphere", "1 % items"], fontsize=5.8)
-    f.set_ylabel("CLU after − rival retrained\nwithout, same rows (95 % CI)", fontsize=5.8)
-    f.set_title("(f) against each rival retrained without the rows", loc="left", fontsize=6.4)
+    f.set_xticklabels([t.replace("\n", " ") for t in ticks], fontsize=5.8)
+    f.set_ylabel("n-CLU after − baseline retrained\nwithout, same rows (95 % CI)", fontsize=5.8)
+    f.set_title("(b) n-CLU after deletion − baseline\nretrained without the rows", loc="left",
+                fontsize=6.4)
     f.grid(axis="x", visible=False)
+    # item 12.6: the legend moves to the right of (b), vertical, clear of every interval
     f.legend(handles=[Line2D([0], [0], marker=ARMS[k]["marker"], color=ARMS[k]["color"], lw=0,
                              ms=4, label=ARMS[k]["name"]) for k in FAMS],
-             loc="upper right", fontsize=5.4, ncol=2)
+             loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=5.8, ncol=1,
+             borderaxespad=0.0)
+    rendered = M.check_vocab_pw1(fig)
     rows_read = {sc: {fam: sorted({PS[sc]["rivals"][fam][s]["rival_cost_line"]["data_rows_read"]
                                    for s in seeds}) for fam in FAMS} for sc, _, _ in DSCOPES}
     save(fig, out, "fig_deletion", [W20],
+         "PW-1 item 12: two panels, former (e) and (f) relettered (a) and (b); former (a)-(d) "
+         "removed and their values moved to the deletion table (deletion_facts below, asserted "
+         "and recorded, not drawn). "
          "Rows 3-4 TEST, K* = 32, fit pool 131,072 rows, seeds 0, 1, 2; all from SHAPES-MATCHED.json "
          "deletion_matched.per_scope.<scope> (definition: forget c = downdate the store, downdate "
-         "the address book's statistic and refit the book from it, punch the hole). (a) "
-         "store.<seed>.a.max_abs_mode_dev; (b) b.b2_book.rendered_features_rel_dev_on_survivor_"
-         "requests (b1 count and first-moment deviations are 0 on every leg, asserted); (c) "
-         "c_DISPLAY, a display never a result; (d) d.before_mean -> d.after_mean with "
-         "paired_after_minus_before.mean_paired_delta; the random 1 % item deletion is the "
-         "refit-instability control beside the conjunction; (e) the paired delta with its "
-         "bootstrap_ci95 (downdate minus refit-without = 0.000, all corners tied, asserted); (f) "
+         "the address book's statistic and refit the book from it, punch the hole). "
+         "(a) store.<seed>.d.paired_after_minus_before.mean_paired_delta with its "
+         "bootstrap_ci95 (downdate minus refit-without = 0.000, all corners tied, asserted); (b) "
          "rivals.<fam>.<seed>.ours_minus_rival_retrain_without with ci95, rivals retrained on the "
          "same surviving rows of the same pool at their declared schedule.",
-         extra={"rival_rows_read": rows_read})
-
+         extra={"rival_rows_read": rows_read, "deletion_facts": facts, "rendered_text": rendered})
 
 def main():
     ap = argparse.ArgumentParser()
