@@ -19,6 +19,10 @@ import re
 import sys
 
 PV, PAPER, AUX, OUT, COMMIT = sys.argv[1:6]
+# PW-1 item 4: the README's Rebuild section and the build-code bullet live in one place
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                "pw1_visuals_tooling"))
+import readme_block  # noqa: E402
 DRAFTS = ["DRAFT-v2.tex", "DRAFT-v2-style.tex"]
 NAME = "paper-visuals" if PV.rstrip("/").endswith("paper-visuals") else "w17-paper-figures"
 W19TASK = "/Users/batmac/clu/outputs/w19-task-figures/proof"
@@ -48,7 +52,7 @@ DESCRIPTIONS = {
     "fig_cmazet_rel_per_arm": "Maze task with relational coding: as fig_cmazet_per_arm for the n-CLU-REL, the matched baselines, controls and blind arms of the same runs, and MLP-REL, LSTM-REL and Transformer-REL at 8,000 and 80,000 steps; the n-CLU-REL success row is a door success at seed 2.",
     "fig_cmazet_door_then_tint": "Maze task, door-then-tint moves (a door opens with the key and the move enters a tint of the same colour): rows 1-3 at seed 0 (north, south, west), where the n-CLU is wrong; rows 4-6 door successes from the n-CLU-REL run at seed 2 (east, south, west), below a rule; every model's next state with tick or cross and fact strip.",
     # retired (in retired-pw1/)
-    "fig_headline_steps": "Retired (no slot since w22 Ruling 2; still produced by build.sh): distinct valid novel tuples per held-out combination against the baselines' optimiser steps (log), 3 seeds.",
+    "fig_headline_steps": readme_block.RETIRED_HEADLINE,
     "fig_maze_readverb": "Retired (PW-1 item 14): route-task read-verb figure.",
     "fig_maze_requestlayer": "Retired (PW-1 item 14): request-layer audit figure.",
     "fig_maze_rel_tuples": "Retired (PW-1 item 15): per-held-out-tuple relational heat maps.",
@@ -221,6 +225,7 @@ def md(t):
 
 def write_readme(rows, ret_rows, c):
     L = ["# %s — figure index\n" % ("paper-visuals" if NAME == "paper-visuals" else "w17-paper/figures")]
+    L.append(readme_block.REBUILD_MD)
     L.append("Every figure file the two ICLR drafts (`w17-paper/DRAFT-v2.tex`, `DRAFT-v2-style.tex`) include, one line per file. "
              "\"Where used\" comes from each draft's `\\figslot{stem}{caption}{label}` calls and its `figure` environments with "
              "`\\includegraphics` (the rendered Shapes3D figures); figure numbers, section numbers and pages are read from the compiled "
@@ -244,14 +249,6 @@ def write_readme(rows, ret_rows, c):
                  ", ".join(c["files_here_unreferenced"]) or "none", c["retired_files"]))
     L.append("- **PNG/PDF parity:** %d stems, %s.\n" % (c["stems_here"], "every one has both" if not c["png_pdf_parity_failures"]
                                                         else "MISSING A FORMAT: " + ", ".join(c["png_pdf_parity_failures"])))
-    L.append("## Rebuild\n")
-    L.append("- Build figures: `cd <a CHLU worktree at %s or later>; source ~/clu/env_bm.sh; bash w21_figures/build.sh <dest1> <dest2>` "
-             "builds every build figure twice, checks byte-identity and installs into both destinations. The build also produces "
-             "`fig_headline_steps`, which has no slot and is moved to `retired-pw1/` after an install. "
-             "(Running `build.sh` in place in this folder is PW-1 item 4, not yet done.)" % c["build_commit"][:7])
-    L.append("- `fig_task_shapes`: mirrored from w19 task-figures (needs the Shapes3D dataset file); not rebuilt here.")
-    L.append("- `rendered/rc_pw1_*`: mirrored from pw1 render-shapes (`pw1_render_shapes/build_twice.sh`; needs the frozen decoder, "
-             "the judge classifier and the w20 objects). Their two-build manifest is `rendered/SHA256-pw1-render-build{1,2}.txt`.\n")
     L.append("## Figures (one line per file)\n")
     L.append("| file | what it shows | where used | data source | build hash (SHA-256) |")
     L.append("|---|---|---|---|---|")
@@ -267,8 +264,7 @@ def write_readme(rows, ret_rows, c):
     L.append("- `PROVENANCE.json`: per build figure, every source read with its SHA-256 (written by the build). "
              "`GLYPH-IDENTITY.json`: the task-figure / result-panel glyph identity check. `SHA256-w22-build{1,2}.txt`: the build's two-build manifest "
              "(the file name is the build script's).")
-    L.append("- `build.sh`, `make_figures*.py`, `maze_six.py`, `cmazet_*.py`, `make_task_figures.py`, `verify_glyph.py`, `validate_palette.py`, "
-             "`data/*.json`: the build code and its data, copied by the build.")
+    L.append(readme_block.OTHER_CODE_MD)
     L.append("- `rendered/PROVENANCE-render.json`, `rendered/REQUESTS-pw1.json`: the rendered figures' provenance, drawn requests, the judge's "
              "six read-backs per panel, and the counts quoted in the captions.")
     L.append("- `FIGURES.md`: longer notes per figure; its PW-1 section is on top.")

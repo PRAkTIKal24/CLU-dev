@@ -6,9 +6,19 @@ import json
 import os
 import sys
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import figroot  # noqa: E402  (PW-1 item 4: resolves the sources in the repo or in a flat folder)
+
 SRC = ["w19_task_figures/make_task_figures.py", "w21_figures/cmazet_panels.py",
        "w8_envscout/maze_colour.py", "w9_harness/dynamics.py", "chlu/exp_w15_cmaze_t.py"]
+
+
+def _path(s):
+    """SRC names stay repo-relative (as PROVENANCE.json records them); the file is found in
+    either layout: build scripts via figroot.script, engine sources under the engine root."""
+    if s.split("/")[0] in ("w19_task_figures", "w21_figures"):
+        return figroot.script(s)
+    return figroot.engine_file(s)
 
 
 def main(prov_p, task_p, glyph_p):
@@ -20,7 +30,7 @@ def main(prov_p, task_p, glyph_p):
     P["figures"]["fig_task_cmazet"] = dict(
         t, built_by="w19_task_figures/make_task_figures.py --only cmazet (w22 figures3, AMENDMENT-1)",
         banner=False, placeholder=False, awaiting=None,
-        sources=SRC, source_sha256={s: hashlib.sha256(open(os.path.join(REPO, s), "rb").read())
+        sources=SRC, source_sha256={s: hashlib.sha256(open(_path(s), "rb").read())
                                     .hexdigest() for s in SRC},
         notes="Task definition, no result. Every maze cell is drawn by the result panels' renderer "
               "cmazet_panels.draw_state (agent = black disc, centre = pocket colour, white = empty); "

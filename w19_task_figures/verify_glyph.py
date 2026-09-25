@@ -18,10 +18,20 @@ import sys
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(os.path.dirname(HERE), "w21_figures"))
+# PW-1 item 4: repo layout (w19_task_figures/ next to w21_figures/) or a flat figure folder
+FIGS = os.path.join(os.path.dirname(HERE), "w21_figures")
+if not os.path.isfile(os.path.join(FIGS, "figroot.py")):
+    FIGS = HERE
+sys.path.insert(0, FIGS)
+import figroot  # noqa: E402
+figroot.add_code_to_path()
 import cmazet_panels as CP  # noqa: E402
-from w19_task_figures import make_task_figures as TF  # noqa: E402
+if FIGS == HERE:
+    import make_task_figures as TF  # noqa: E402
+else:
+    from w19_task_figures import make_task_figures as TF  # noqa: E402
 from w9_harness.dynamics import State  # noqa: E402
+figroot.check_loaded()
 
 C = CP.CELL
 yy, xx = np.mgrid[0:C, 0:C]
@@ -33,8 +43,7 @@ def cell(img, r, c, r0=0, c0=0):
 
 
 def panel_agent_block(pocket_want):
-    d = json.load(open(os.path.join(os.path.dirname(HERE), "w21_figures", "data",
-                                    "cmazet_items.json")))
+    d = json.load(open(os.path.join(FIGS, "data", "cmazet_items.json")))
     order = sorted(d["seeds"], key=lambda s: (s["seed"] != 2, s["seed"]))
     for srec in order:
         mz = CP.Maze(srec)
