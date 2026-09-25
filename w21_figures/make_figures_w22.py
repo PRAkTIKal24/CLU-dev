@@ -173,7 +173,7 @@ def fig_ladder(out):
                        label="each seed; line = mean")]
     if any_tenx:
         handles.append(Line2D([0], [0], color=INK2, marker="o", lw=0, ms=3,
-                              label=r"seed at $10{\times}$ steps"))
+                              label=r"seed at $10{\times}$ training steps"))
     ax.legend(handles=handles, loc="center left", bbox_to_anchor=(1.02, 0.5), ncol=1,
               fontsize=6.5, borderaxespad=0.0)
     # every legend entry is a drawn series (item 10: no legend entry without its series)
