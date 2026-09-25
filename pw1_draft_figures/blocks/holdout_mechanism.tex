@@ -1,0 +1,11 @@
+% SRCBLOCK: w21-maze-t-seed4/FINDINGS.md
+\paragraph{Why a hold-out draw can remove a whole colour relation.} The hold-out removes word
+combinations from training at random. On some draws, for some colour, it removes every training
+transition in which the pocket and the target tint share that colour, the combination that decides
+whether a move is legal. A model that codes colour by identity then has no training evidence for the
+held-out transitions of that colour and cannot answer them, however it is trained. A model that is
+also given the relation ``pocket colour equals tint colour'' can: the relation is learned from the
+other colours, where it is seen, and applies unchanged to the colour whose rows were removed. This is
+what the relational columns add (Fig.~\ref{fig:maze-wm}(c)), and it is why every seed is reported
+separately.
+% ENDSRC

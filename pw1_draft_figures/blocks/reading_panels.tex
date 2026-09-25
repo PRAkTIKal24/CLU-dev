@@ -1,0 +1,20 @@
+% pw1-draft-figures (item 16.1): the explanatory paragraph that was printed under every panel image, stated once
+% (pw1-plot-maze/TEXT-INSERTS.tex (a)); the panel captions point here. Drawing rules: w21_figures/cmazet_panels.py
+% (draw_state, fact_strip, facts_shown); outcome code: chlu/exp_w15_cmaze_t.py.
+\paragraph{Reading the CMAZE-T panel figures.} Figs.~\ref{fig:cmazet-families}--\ref{fig:cmazet-door-tint}
+(App.~\ref{app:mazewm}) draw single held-out transitions with every model's next state. Each panel
+is a $5\times5$ crop of the maze centred on the agent's cell at $s_t$. Walls are dark, tinted cells
+pale in their colour, doors framed in their colour with a bar across while closed, untaken keys are
+diamonds, the goal a cross, and the agent a black disc whose centre shows the colour of the key in its
+pocket (white when the pocket is empty). The first column is $s_t$ with the action (an arrow, or a
+ring for pick-up), the second the engine's $s_{t+1}$, and each further column the $s_{t+1}$ that a
+model's emitted outcome produces. The engine's judge does not score the picture: it scores four
+emitted facts, legality, the move, the key event and the pocket after the move, and a picture need
+not show all four. So a strip under every $s_{t+1}$ prints the emitted facts (under the engine's
+column, the true ones). Its first line reads legal or illegal. Its second line shows the move
+($\uparrow$ $\rightarrow$ $\downarrow$ $\leftarrow$, or a dot for staying), the key event ($+$ and a
+colour for a key picked up, $-$ and a colour for a key used at a door, blank for none) and the pocket
+after the move (the disc; white is empty). An illegal emission leaves the agent in place and is scored
+on its pocket alone, so only the pocket is shown. The tick or cross on a panel is the judge's verdict
+on all four facts, so two panels that show the same picture and the same strip never carry opposite
+marks.

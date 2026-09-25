@@ -1,0 +1,20 @@
+% pw1-draft-figures (items 16.1-16.3): caption from pw1-plot-maze/CAPTIONS.tex (fig:cmazet-families); the draws are
+% recorded in ../../outputs/pw1-plot-maze/build/a/DOOR-SEARCH.json (draw seed 16; n_qualifying 199 and 44; counts per seed).
+\figslot{fig_cmazet_families}{\textbf{Held-out CMAZE-T transitions, one per rule family, with every
+model's next state (words plus observation, test).} Columns: $s_t$ with the action, the engine's
+$s_{t+1}$, and the $s_{t+1}$ that each model's emitted outcome produces, marked by the engine's judge:
+the n-CLU, the matched baselines at 8,000 and 80,000 training steps, the four controls and the two
+blind arms. Rows 1--5: per rule family, the first held-out $n$-way transition at seed 0 (rule A has
+none at seeds 0 and 1, so its row is from seed 2). Row 6 is drawn by rule among the 199 held-out % SRC: ../../outputs/pw1-plot-maze/build/a/DOOR-SEARCH.json
+transitions at seeds 0--2 on which the n-CLU is correct and at least 4 of the 6 matched baselines are
+wrong. Row 7 is drawn by rule among door successes: transitions that open a door with the key in the
+pocket and enter a tint of the same colour, on which the model is correct. The n-CLU is correct on
+none of its 204 such transitions at seeds 0--2 (no per-transition outputs of the n-CLU exist for % SRC: ../../outputs/pw1-plot-maze/FINDINGS.md
+seeds 3--5), so row 7 is drawn from the n-CLU-REL at seed 2, which is correct on 44 of its 55, and % SRC: ../../outputs/pw1-plot-maze/build/a/DOOR-SEARCH.json
+every column of row 7 comes from that run. Both draws are one fixed-seed draw (seed 16), stratified % SRC: ../../outputs/pw1-plot-maze/build/a/DOOR-SEARCH.json
+over rule family and colour. The strip under each $s_{t+1}$ is read as described in
+Sec.~\ref{sec:maze-wm}. The models of Tab.~\ref{tab:cmazet} were not persisted:
+\PLACEHOLDER{per-model $s_{t+1}$ for the observation-only input of Tab.~\ref{tab:cmazet}
+(n-CLU, Transformer, MLP, LSTM) with the engine's judge's marks, one success and one failure per model:
+not drawable, those models were not persisted; may remain undrawn, and if drawn may show the n-CLU
+failing where a baseline succeeds}}{fig:cmazet-families}
