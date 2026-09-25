@@ -37,8 +37,9 @@ under `/tmp`), and from a CHLU checkout as `bash w21_figures/build.sh`. No `sour
 - **Inputs it reads:**
   - the evidence tree `$CHLU_EVIDENCE` (default `~/clu/evidence/outputs`);
   - `data/*.json` in this folder;
-  - the maze-engine snapshot `engine/`: 61 files from CHLU commit `%s`, each hash-pinned in
-    `engine/ENGINE.json`, written by `tools/vendor_engine.py`.
+  - the maze-engine snapshot `engine/`: 61 files copied from a CHLU checkout by
+    `tools/vendor_engine.py`, each hash-pinned in `engine/ENGINE.json` with the source commit
+    (the files are byte-identical at `f571b2b` and `%s`).
 
   Set `CHLU_FIG_CODE=<a CHLU checkout>` to use a checkout's engine instead. If no engine is found,
   the build stops before drawing and names exactly this. Every engine module is checked to load
