@@ -5,8 +5,8 @@ check are used unchanged). Stems drawn here (each overwrites the pass-1 file of 
   fig_crossover         unchanged from pass 1 (make_figures_w21.fig_crossover)
   fig_ladder            PW-1 item 10: ONE panel, the w20 131,072-row data-matched set; no title
                         (pool size and steps in the caption), legend at the right, no end labels
-  fig_headline_steps    NEW: rows 3-4 TEST, rival score against optimiser steps at three pool sizes
-                        (w20: the operative variable was steps, not data)
+  fig_headline_steps    retired from the build (no slot; retired-pw1/); the function is kept, not
+                        called (PW-1 item 4)
   fig_maze_conditions   PW-1 item 1: (a) four input conditions, every seed; (b) / (c) six seeds
                         without / with relational coding; no labels, ceiling, hard/easy or overlay
   fig_maze_rel_tuples   retired from the build (PW-1 item 15); the function is kept, not called
@@ -701,12 +701,12 @@ def main():
     os.makedirs(args.out, exist_ok=True)
     W.fig_crossover(args.out)
     fig_ladder(args.out)
-    fig_headline_steps(args.out)
     fig_maze_conditions(args.out)
     fig_deletion(args.out)
     if args.panels:
         import cmazet_panels  # noqa: E402
         cmazet_panels.build(args.out, args.panels, W.PROV, save_fn=save)
+        cmazet_panels.figroot.check_loaded()  # PW-1 item 4: every engine module from the engine root
     with open(args.merge, "r", encoding="utf-8") as f:
         base = json.load(f)
     for stem, e in base["figures"].items():

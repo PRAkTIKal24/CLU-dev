@@ -25,8 +25,14 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(HERE)
+# PW-1 item 4: the re-read loads persisted models and needs a FULL CHLU checkout (the peer runner
+# and w9_harness.encoder are not in a figure folder's engine/): the repo this file sits in, or
+# $CHLU_FIG_CODE. Not part of build.sh; its output data/cmazet_items_rel.json is.
+REPO = os.environ.get("CHLU_FIG_CODE") or os.path.dirname(HERE)
 VEND = os.path.join(REPO, "peer_w21_clu_improve_e7fdb9b")
+if not os.path.isdir(VEND):
+    raise SystemExit("cmazet_extract_rel.py needs a full CHLU checkout with %s: set CHLU_FIG_CODE"
+                     % os.path.basename(VEND))
 for p in (VEND, os.path.join(REPO, "scripts"), REPO):
     if p not in sys.path:
         sys.path.insert(0, p)

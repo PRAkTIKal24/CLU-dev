@@ -20,7 +20,9 @@ import sys
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(HERE)
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+import figroot  # noqa: E402  (PW-1 item 4: the engine root in the repo AND in a flat figure folder)
 
 VALID = ("✓", "#1f7a32")
 INVALID = ("✗", "#c0392b")
@@ -34,13 +36,12 @@ CELL = 10
 
 
 def _engine():
-    for p in (REPO, os.path.join(REPO, "scripts")):
-        if p not in sys.path:
-            sys.path.insert(0, p)
+    root = figroot.add_code_to_path()
     import chlu
-    assert os.path.dirname(os.path.dirname(os.path.abspath(chlu.__file__))) == REPO, chlu.__file__
+    assert os.path.dirname(os.path.dirname(os.path.abspath(chlu.__file__))) == root, chlu.__file__
     import chlu.exp_w15_cmaze_t as T
     import w16_cmaze_t as W16
+    figroot.check_loaded()
     return T, W16
 
 
