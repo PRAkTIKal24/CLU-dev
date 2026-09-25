@@ -1,0 +1,130 @@
+--- /Users/batmac/clu/outputs/w22-seeds-and-tables5/snapshot/DRAFT-v2-style.tex	2026-09-25 00:04:32
++++ /Users/batmac/clu/outputs/w22-seeds-and-tables5/staged-1/DRAFT-v2-style.tex	2026-09-25 08:28:06
+@@ -540,8 +540,13 @@
+ refit on each rung's own 131,072-row pool at the selected schedule (20,480 optimiser steps) and, for % SRC: w20-shapes-data-matched/SHAPES-MATCHED.json
+ the MLP and the continuous MLP, at ten times it (204,800); the margin row is the store minus the % SRC: w20-shapes-data-matched/SHAPES-MATCHED.json
+ strongest of them, paired per corner. \emph{Earlier set}: fitted on 32,256 rows of a % SRC: _thinkpad/w4/spoke-a-rivals/rivals/seed_0/mlp.rival.json
+-combination-split pool that carries the held-out values (\S\ref{sec:shapes-t7}); a rival of that set
+-does not depend on the rung. A third set, fitted on 32,768 rows of each rung's pool, is pending. LACE % SRC: w20-shapes-data-matched/FINDINGS.md
++combination-split pool that carries the held-out values (\S\ref{sec:shapes-t7}), at 5,040 optimiser % SRC: w21-ladder-rivals-32k/CAPTION.md
++steps; a rival of that set does not depend on the rung. \emph{Store-content set}: the same four
++families fitted on the rung's first 32,768 rows, exactly the store's content rows, at the selected % SRC: w21-ladder-rivals-32k/CAPTION.md
++schedule (5,120 steps) and at ten times it (51,200); its margin row is the store minus the strongest % SRC: w21-ladder-rivals-32k/CAPTION.md
++of its selected and ten-times fits, and a second margin row takes the strongest fit step-matched to the
++data-matched set (20,480 steps for the LSTM and the transformer, 204,800 for the MLP and the % SRC: w21-ladder-rivals-32k/CAPTION.md
++continuous MLP), both paired per corner. Every header names its pool and its steps. LACE
+ and PoE are in Table~\ref{tab:lace-poe}. $n=2$: 60 corners; $n\ge3$: the identical % SRC: w12-composition-ladder/FINDINGS.md
+ 120 corners (see the inference note). \emph{Inference note:} for $n\ge3$ the rungs differ in % SRC: w12-composition-ladder/FINDINGS.md
+ fit-pool coverage, not in composition depth.}
+@@ -557,7 +562,7 @@
+ % ENDSRC
+ store, $n=6$ on $n=3$'s fit pool & 3 & \multicolumn{4}{l}{TEST cell \emph{derived, not measured}: the $n=3$ store cell, by construction (text)} & \emph{60.150 / 62.783 / 61.908, derived} \\ % SRC: w15-coverage-control/FINDINGS.md
+ \midrule
+-\multicolumn{7}{l}{\emph{data-matched set: each rung's own 131,072 rows}} \\ % SRC: w20-shapes-data-matched/FINDINGS.md
++\multicolumn{7}{l}{\emph{data-matched set: each rung's own 131,072 rows; 20,480 steps, and 204,800 for the MLP and the continuous MLP}} \\ % SRC: w20-shapes-data-matched/FINDINGS.md; w21-ladder-rivals-32k/CAPTION.md
+ % SRCBLOCK: w20-shapes-data-matched/SHAPES-MATCHED.md; w20-shapes-data-matched/SHAPES-MATCHED.json
+ MLP (20,480) & 3 & 22.450 / 25.200 / 29.267 & 43.558 / 46.742 / 51.592 & 45.408 / 48.642 / 57.300 & 51.192 / 52.825 / 58.842 & 49.525 / 54.692 / 58.867 \\
+ MLP (204,800) & 3 & 27.167 / 25.583 / 29.783 & 47.258 / 46.833 / 57.200 & 50.517 / 50.017 / 60.075 & 53.642 / 53.275 / 60.767 & 54.183 / 52.200 / 60.033 \\
+@@ -569,7 +574,7 @@
+ \quad 3-seed mean & 3 & +5.133 & +11.183 & +12.550 & +10.686 & +10.300 \\
+ % ENDSRC
+ \midrule
+-\multicolumn{7}{l}{\emph{earlier set: 32,256 rows of the combination-split pool}} \\ % SRC: _thinkpad/w4/spoke-a-rivals/rivals/seed_0/mlp.rival.json
++\multicolumn{7}{l}{\emph{earlier set: 32,256 rows of the combination-split pool; 5,040 steps}} \\ % SRC: _thinkpad/w4/spoke-a-rivals/rivals/seed_0/mlp.rival.json; w21-ladder-rivals-32k/CAPTION.md
+ % SRCBLOCK: w13-seeds-and-tables/TABLES.md
+ MLP & 3 & 17.0167 / 22.0000 / 23.3333 & \multicolumn{4}{c}{35.2083 / 41.5667 / 49.7500 (identical on $n=3$--$6$)} \\
+ LSTM & 3 & 19.4167 / 19.3333 / 23.7500 & \multicolumn{4}{c}{44.4333 / 39.4000 / 46.6750 (identical)} \\
+@@ -578,7 +583,21 @@
+ table (floor) & 3 & 5.8333 / 3.4833 / 6.1833 & \multicolumn{4}{c}{8.4333 / 7.9167 / 12.2333 (identical)} \\
+ % ENDSRC
+ \midrule
+-32,768-row set & 3 & \multicolumn{5}{l}{\PLACEHOLDER{ladder rival set fitted on 32,768 rows of each rung's pool, four families, 3 seeds: the column slot, pending; may land as a negative}} \\ % SRC: w20-shapes-data-matched/FINDINGS.md
++\multicolumn{7}{l}{\emph{store-content set: the rung's first 32,768 rows, exactly the store's content rows; 5,120 steps, ten times 51,200}} \\ % SRC: w21-ladder-rivals-32k/CAPTION.md
++% SRCBLOCK: w21-ladder-rivals-32k/TABLES.md
++MLP (5,120) & 3 & 22.07 / 25.13 / 25.90 & 35.79 / 41.36 / 47.81 & 39.32 / 43.39 / 50.93 & 43.64 / 47.91 / 53.64 & 45.77 / 48.77 / 54.26 \\
++MLP (51,200) & 3 & 25.15 / 24.82 / 29.42 & 47.14 / 47.42 / 55.84 & 49.10 / 49.09 / 58.07 & 54.52 / 56.22 / 60.59 & 54.61 / 53.76 / 60.36 \\
++LSTM (5,120) & 3 & 22.42 / 20.67 / 26.55 & 30.52 / 35.98 / 43.42 & 41.54 / 39.98 / 50.76 & 46.10 / 44.67 / 52.17 & 45.64 / 43.67 / 55.12 \\
++LSTM (51,200) & 3 & 22.58 / 22.42 / 27.05 & 36.39 / 37.67 / 45.37 & 42.68 / 41.33 / 53.71 & 45.95 / 45.62 / 55.12 & 48.17 / 46.34 / 55.36 \\
++transformer (5,120) & 3 & 13.87 / 17.50 / 25.17 & 27.98 / 24.17 / 29.76 & 32.04 / 31.27 / 47.18 & 35.08 / 39.42 / 53.47 & 36.87 / 37.83 / 52.74 \\
++transformer (51,200) & 3 & 16.85 / 16.58 / 23.87 & 26.02 / 25.63 / 35.48 & 30.60 / 32.56 / 47.44 & 36.40 / 36.44 / 52.02 & 35.44 / 36.19 / 52.42 \\
++continuous MLP (5,120) & 3 & 3.95 / 6.23 / 10.03 & 6.88 / 11.33 / 14.18 & 6.10 / 8.65 / 18.28 & 9.78 / 17.45 / 23.59 & 9.15 / 13.01 / 23.92 \\
++continuous MLP (51,200) & 3 & 16.88 / 17.38 / 22.32 & 24.69 / 31.81 / 35.46 & 20.59 / 27.65 / 46.14 & 38.71 / 32.98 / 45.76 & 33.28 / 34.03 / 45.79 \\
++\textbf{store $-$ strongest, paired} & 3 & +6.65 / +7.37 / +4.22 & +13.01 / +15.37 / +6.07 & +16.14 / +16.73 / +9.13 & +11.12 / +10.60 / +6.69 & +11.30 / +12.49 / +7.29 \\
++\quad 3-seed mean & 3 & +6.08 & +11.48 & +14.00 & +9.47 & +10.36 \\
++store $-$ strongest step-matched, paired & 3 & +7.57 / +6.80 / +3.25 & +14.35 / +17.79 / +8.07 & +20.15 / +15.02 / +8.44 & +11.20 / +15.36 / +5.30 & +10.88 / +11.75 / +5.27 \\
++\quad 3-seed mean & 3 & +5.87 & +13.40 & +14.54 & +10.62 & +9.30 \\
++% ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+ \end{table}
+@@ -603,6 +622,18 @@
+ token families and were not re-fitted on the ladder's rungs. Nothing in this table is a
+ composition-depth result.
+ % SRC: w12b-nr6-and-kstar/FINDINGS.md
++The store-content set asks whether the data-matched set's 131,072 rows, four times the store's
++32,768 content rows, favour the rivals. They do not: fitted on exactly the store's content rows, % SRC: w21-ladder-rivals-32k/FINDINGS.md
++the rivals leave the margin where the data-matched set left it, +6.08 / +11.48 / +14.00 / +9.47 / % SRC: w21-ladder-rivals-32k/FINDINGS.md
+++10.36 at $n=2,\ldots,6$ (mean over rungs +10.28, and +10.75 step-matched, against +9.97 for the % SRC: w21-ladder-rivals-32k/FINDINGS.md
++data-matched set and +17.53 for the earlier set), and every 95\% interval of the store-content % SRC: w21-ladder-rivals-32k/FINDINGS.md
++margins lies above zero (lowest lower bound +1.98, at $n=2$, seed 2, against the step-matched MLP). % SRC: w21-ladder-rivals-32k/FINDINGS.md
++The MLP is the strongest store-content rival on every rung and seed and is flat from 51,200 to % SRC: w21-ladder-rivals-32k/FINDINGS.md
++204,800 steps; the continuous MLP is still gaining at 204,800 steps and never becomes the strongest % SRC: w21-ladder-rivals-32k/FINDINGS.md
++rival. One more caveat bears on every single-fit rival number in this paper: two MLP fits with the
++same rows, width, schedule and 2,560 steps, differing only in the random draw, differ per seed by % SRC: w21-ladder-rivals-32k/FINDINGS.md
++$-2.15$ to $+4.13$ novel tuples per corner, and their per-corner interval excludes zero on 12 of 15 % SRC: w21-ladder-rivals-32k/FINDINGS.md
++rung--seed legs. Family differences smaller than that on a single seed are not read as real.
+ 
+ \paragraph{The coverage control.} A direct test of the inference note refits $n=6$ with the
+ fit pool restricted to the train index of $n=3$, holding depth at 6 and coverage at that of $n=3$.
+@@ -1423,7 +1454,7 @@
+ PoE (own budget, not matched) & 3 & 0 / 0 / 0 & 0.020 / 0 / 0 & rival $-$ store: $-47.49$ / $-47.40$ / $-49.12$ \\
+ LACE (own budget, 131,072 fit rows) & 3 & \multicolumn{2}{c}{all 109 corners: 0.018 / 0.046 / 0.073} & --- \\ % SRC: w20-shapes-data-matched/SHAPES-MATCHED.md
+ PoE (own budget, 131,072 fit rows) & 3 & \multicolumn{2}{c}{all 109 corners: 0.000 / 0.000 / 0.000} & --- \\ % SRC: w20-shapes-data-matched/SHAPES-MATCHED.md
+-\multicolumn{5}{p{15cm}}{\emph{LACE and PoE are added beside the rivals above, which are not replaced; each runs at its own declared budget (LACE 31.08$\times$, PoE 27.13$\times$ the 524,288 B reference, a parameter count against store-mode bytes), not on the read-path matching rule. Their $\Delta$ is printed as rival minus store, the artefact's sign; the store wins 109/109 corners against each, on every seed. Scope: \S\ref{sec:adapt}.}} \\
++\multicolumn{5}{p{15cm}}{\emph{LACE and PoE are added beside the rivals above, which are not replaced; each runs at its own declared budget (LACE 31.08$\times$, PoE 27.135$\times$ the 524,288 B reference, a parameter count against store-mode bytes), not on the read-path matching rule. Their $\Delta$ is printed as rival minus store, the artefact's sign; the store wins 109/109 corners against each, on every seed. Scope: \S\ref{sec:adapt}.}} \\ % SRC: w15-lace-poe-rows/FINDINGS.md; w15-lace-poe-rows/GENTABLE-KSTAR.json
+ % ENDSRC
+ \bottomrule
+ \end{tabular}\end{adjustbox}
+@@ -1451,7 +1482,7 @@
+ wins every corner against both on every seed (60 of 60 at $n=2$, 120 of 120 at $n\ge3$). % SRC: w15-lace-poe-rows/FINDINGS.md
+ Their budgets are their own and are not byte-matched: LACE 4,073,663 classifier parameters % SRC: w15-lace-poe-rows/FINDINGS.md
+ (31.08$\times$ the 524,288 B reference; 63.10$\times$ counting its whitening and mean), PoE six % SRC: w15-lace-poe-rows/FINDINGS.md
+-experts with 3,556,665 parameters (27.13$\times$), each fitted on 32,256 rows with 512 validation % SRC: w15-lace-poe-rows/FINDINGS.md
++experts with 3,556,665 parameters (27.135$\times$), each fitted on 32,256 rows with 512 validation % SRC: w15-lace-poe-rows/FINDINGS.md; w15-lace-poe-rows/GENTABLE-KSTAR.json
+ rows from the rung's own pool and 36 selection trials. % SRC: w15-lace-poe-rows/FINDINGS.md
+ \emph{This is LACE and PoE as instantiated in this feature space at their own declared budgets,
+ and it must be weighed that way; it is not a refutation of LACE in general.} Both render zero
+@@ -2842,13 +2873,15 @@
+ \section{Placeholder index}
+ \label{app:placeholders}
+ 
+-Four rows remain pending, each marked in the text by a red \textsc{placeholder} whose argument names
+-the row and states that it may land as a negative or not at all: the third ladder rival set, fitted
+-on 32,768 rows of each rung's pool (one; Table~\ref{tab:ladder}); and the per-arm generated states of % SRC: w20-shapes-data-matched/FINDINGS.md
+-the arms of Table~\ref{tab:cmazet} in Figures~\ref{fig:cmazet-families}, \ref{fig:cmazet-door-tint}
+-and~\ref{fig:cmazet-deletion} (three), which were never persisted and need figure work. Rows that
+-were pending earlier are now written in from their artefacts: the data-matched rival set
+-(Tables~\ref{tab:t7} and~\ref{tab:ladder}); the four deletion measurements on every scope
++Three rows remain, each marked in the text by a red \textsc{placeholder} whose argument names
++the row: the per-arm generated states of the arms of Table~\ref{tab:cmazet} in
++Figures~\ref{fig:cmazet-families}, \ref{fig:cmazet-door-tint} and~\ref{fig:cmazet-deletion}. They are
++permanently blocked, not pending: the run behind Table~\ref{tab:cmazet} persisted no arm object and
++no per-transition prediction (its run records hold aggregates only), so these panels cannot be drawn
++from that run, and we keep them as named placeholders rather than draw them from any other run. Rows
++that were pending earlier are now written in from their artefacts: the data-matched rival set
++(Tables~\ref{tab:t7} and~\ref{tab:ladder}); the store-content ladder rival set, fitted on each rung's
++32,768 content rows (Table~\ref{tab:ladder}); the four deletion measurements on every scope % SRC: w21-ladder-rivals-32k/CAPTION.md
+ (Table~\ref{tab:del}); the CMAZE-T symmetric-input conditions at six seeds
+ (Table~\ref{tab:cmazet-sym}); LACE and PoE with the generation-table run (\S\ref{sec:adapt},
+ Tables~\ref{tab:lace-poe} and~\ref{tab:gentable-kstar}); the decomposition paragraph
+@@ -2871,8 +2904,8 @@
+   single-thread CPU per leg). % SRC: w13-referee-2/REFEREE-v1.md
+ \item \texttt{pca\_tensor} at $\Kstar$; therefore whether ``the statistic buys deletion, not
+   composition'' holds at $\Kstar$ is not measured.
+-\item The third ladder rival set on 32,768 rows of each rung's pool (pending); LACE and PoE refit % SRC: w20-shapes-data-matched/FINDINGS.md
+-  on 131,072 rows on the ladder rungs (rows 3--4 only were run); the ten-times fits on the ladder % SRC: w20-shapes-data-matched/FINDINGS.md
++\item LACE and PoE refit on 32,768 or 131,072 rows on the ladder rungs (rows 3--4 only were run, at % SRC: w20-shapes-data-matched/FINDINGS.md; w21-ladder-rivals-32k/FINDINGS.md
++  131,072 rows); the store-content set's continuous MLP past 204,800 steps; the data-matched set's ten-times fits on the ladder % SRC: w20-shapes-data-matched/FINDINGS.md; w21-ladder-rivals-32k/FINDINGS.md
+   beyond the MLP, the continuous MLP and the spot checks; the rivals' retrain-without at ten or
+   thirty times their steps.
+ \item Approximate unlearning of the data-matched rivals; the refusal head-to-head on the same

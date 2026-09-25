@@ -43,6 +43,16 @@ SRC.update(SRC3)
 # aliases (DNOW, DSTY) are pinned to exact copies of the pass-3 text in draft_pass4/.
 from cells_pass4 import SRC4, CELLS4  # noqa: E402
 SRC.update(SRC4)
+# Pass 5: the w15 fold (every w15 number the drafts print, checked three ways), w20 and w21 folded, the ladder
+# placeholder filled. Two new cell kinds: JCELLS5 (a printed value that must BE a named JSON leaf at its printed
+# precision) and JEQ5 (two JSON leaves that must be equal: the two ties). The drafts moved after pass 4 (w22
+# draft-rulings, w22 figures3), so the pass-4 draft aliases are pinned to exact copies of the pass-4 text,
+# reconstructed from the pass-3 copies plus draft_pass4/*.pass4.diff (md5 6caf80cd / 5a58d5d9, as pass 4 recorded).
+from cells_pass5 import SRC5, CELLS5, JCELLS5, JEQ5  # noqa: E402
+SRC.update(SRC5)
+SRC["D4V"] = "@here/draft_pass5/DRAFT-v2.pass4-6caf80cd.tex"
+SRC["D4S"] = "@here/draft_pass5/DRAFT-v2-style.pass4-5a58d5d9.tex"
+from jnum import resolve as _jresolve, matches as _jmatches  # noqa: E402  (a copy of w22_seeds5/jnum.py; the register is self-contained)
 # The pass-2 draft cells describe DRAFT-v2.tex as it was at pass 2 (md5 e7745f2c). The live file has
 # since moved, so they are pinned to that exact text, reconstructed from the pass-2 patched copy
 # (caption_conventions/DRAFT-v2.captions.tex + `patch -R CAPTIONS.diff`; sha256 equals the pass-2 register).
@@ -156,11 +166,16 @@ CELLS = {
     "ladder_note": ("PLAN", 26, "we beat the naive fair rivals at every n; the CLU's own 2-way→6-way rise is not to be inferred because rungs 3–6 share corners and differ in coverage"),
 }
 
-for _reg in (CELLS2, CELLS3, CELLS4):
+for _reg in (CELLS2, CELLS3, CELLS4, CELLS5, JCELLS5, JEQ5):
     for _cid in _reg:
         if _cid in CELLS:
             raise SystemExit(f"duplicate cell id {_cid}")
-    CELLS.update(_reg)
+    if _reg is not JCELLS5 and _reg is not JEQ5:
+        CELLS.update(_reg)
+    else:
+        CELLS.update({_c: None for _c in _reg})  # reserve the id; verified and rendered by verify_json_cells()
+for _c in list(JCELLS5) + list(JEQ5):
+    del CELLS[_c]
 HIST_USED = set()
 
 NUM_RE = re.compile(r"(?<![\w.§])(\d+(?:\.\d+)?[eE][-+]?\d+|\d+\.\d+|\d{1,3}(?:,\d{3})+)(?![\w])")
@@ -174,7 +189,43 @@ def src_path(alias):
     rel = SRC[alias]
     if rel.startswith("@here/"):
         return HERE / rel[len("@here/"):]
+    if rel.startswith("@outputs/"):
+        return Path("/Users/batmac/clu/outputs") / rel[len("@outputs/"):]
     return Path(rel) if rel.startswith("/") else EVIDENCE / rel
+
+
+def verify_json_cells():
+    """JCELLS5: the printed value must BE the JSON leaf at its printed precision (a count: integer equality; a string:
+    equality). JEQ5: the two leaves must be equal (and hold n items where n is given). Nothing is computed."""
+    manifest, failures, cache = {}, [], {}
+
+    def load(alias):
+        if alias not in cache:
+            cache[alias] = json.loads(src_path(alias).read_text(encoding="utf-8"))
+        return cache[alias]
+    for cid, (alias, ptr, printed) in JCELLS5.items():
+        try:
+            val = _jresolve(load(alias), ptr)
+        except (KeyError, IndexError, ValueError) as e:
+            failures.append(f"{cid}: pointer {ptr} not in {SRC[alias]} ({e!r})"); continue
+        m = re.fullmatch(r"(\d+)(?: of |/)(\d+)", printed)
+        if isinstance(val, (str, bool)) or val is None:
+            rule = "equal" if str(val) == printed else None
+        elif m:
+            rule = "count-equal" if val == int(m.group(1)) else None
+        else:
+            rule = _jmatches(printed, val)
+        if rule is None:
+            failures.append(f"{cid}: printed {printed!r} is not {SRC[alias]}#{ptr} = {val!r}")
+        manifest[cid] = {"value": printed, "source": SRC[alias], "json_pointer": ptr, "json_value": val, "rule": rule}
+    for cid, (a, pa, b, pb, printed, n) in JEQ5.items():
+        va, vb = _jresolve(load(a), pa), _jresolve(load(b), pb)
+        ok = va == vb and (n is None or len(va) == n)
+        if not ok:
+            failures.append(f"{cid}: {SRC[a]}#{pa} != {SRC[b]}#{pb} (or not {n} items)")
+        manifest[cid] = {"value": printed, "source": SRC[a], "json_pointer": pa, "equals_source": SRC[b],
+                         "equals_json_pointer": pb, "n_items": n, "equal": va == vb}
+    return manifest, failures
 
 
 def verify_cells():
@@ -201,10 +252,12 @@ def verify_cells():
 
 def main():
     manifest, failures = verify_cells()
+    jmanifest, jfailures = verify_json_cells()
+    failures += jfailures
     template = (HERE / "TABLES.template.md").read_text(encoding="utf-8")
     used = {m[0] for m in TOKEN_RE.findall(template)}
-    unknown = sorted(used - set(CELLS))
-    unused = sorted(set(CELLS) - used)
+    unknown = sorted(used - set(CELLS) - set(JCELLS5) - set(JEQ5))
+    unused = sorted((set(CELLS) | set(JCELLS5) | set(JEQ5)) - used)
     tlines = template.splitlines()
     bare = [(i + 1, m.group(0)) for i, ln in enumerate(tlines)
             for m in NUM_RE.finditer(HEADING_RE.sub("", ANY_RE.sub("", ln)))]
@@ -218,7 +271,9 @@ def main():
             elif not 0 < n <= len(src_path(a).read_text(encoding="utf-8").splitlines()):
                 bad_ptr.append(f"template l.{i + 1}: {a}:{n} out of range")
         for cid, v in TOKEN_RE.findall(ln):
-            if v and cid in CELLS and (CELLS[cid][0], CELLS[cid][1]) not in ptrs:
+            if v and (cid in JCELLS5 or cid in JEQ5):
+                orphans.append(f"template l.{i + 1}: {{{{{cid}:v}}}}: a JSON cell always prints its pointer")
+            elif v and cid in CELLS and (CELLS[cid][0], CELLS[cid][1]) not in ptrs:
                 orphans.append(f"template l.{i + 1}: {{{{{cid}:v}}}} has no pointer {CELLS[cid][0]}:{CELLS[cid][1]} on its line")
     if failures or unknown or bare or orphans or bad_ptr:
         for f in failures:
@@ -237,6 +292,12 @@ def main():
 
     def render(m):
         cid = m.group(1)
+        if cid in JCELLS5:
+            alias, ptr, value = JCELLS5[cid]
+            return f"{value} `[{disp(alias)}#{ptr}]`"
+        if cid in JEQ5:
+            a, pa, b, pb, value, n = JEQ5[cid]
+            return f"{value} `[{disp(a)}#{pa} == {disp(b)}#{pb}]`"
         alias, line, value = CELLS[cid]
         if cid in HIST_USED:
             sha = PASS2["source_sha256"][SRC[alias]][:8]
@@ -259,10 +320,12 @@ def main():
         "evidence_root": str(EVIDENCE),
         "source_sha256": src_hashes,
         "cells": manifest,
+        "json_cells": jmanifest,
         "cells_unused_in_template": unused,
         "cells_historical": sorted(HIST_USED),
     }, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"PASS: {len(CELLS)} cells verbatim-verified on their lines; "
+    print(f"PASS: {len(CELLS)} cells verbatim-verified on their lines; {len(JCELLS5)} JSON cells equal to their leaf "
+          f"at the printed precision; {len(JEQ5)} JSON equalities; "
           f"{len(used)} used in TABLES.md; {len(HIST_USED)} historical (pass-2 manifest); "
           f"0 unsourced numbers in the template; unused={len(unused)}")
 
