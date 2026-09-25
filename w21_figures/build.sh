@@ -58,8 +58,9 @@ for d in a b; do
       "$TMP/task_$d/PROVENANCE-task-figures.json" "$TMP/$d/GLYPH-IDENTITY.json"
   rm -r "$TMP/task_$d"
 done
-(cd "$TMP/a" && shasum -a 256 * | sort -k2) > "$TMP/sha_a.txt"
-(cd "$TMP/b" && shasum -a 256 * | sort -k2) > "$TMP/sha_b.txt"
+# manifests sorted in the C locale, so a fresh copy under any locale writes the same bytes
+(cd "$TMP/a" && shasum -a 256 * | LC_ALL=C sort -k2) > "$TMP/sha_a.txt"
+(cd "$TMP/b" && shasum -a 256 * | LC_ALL=C sort -k2) > "$TMP/sha_b.txt"
 if diff "$TMP/sha_a.txt" "$TMP/sha_b.txt"; then echo "REBUILD: BYTE-IDENTICAL"; else echo "REBUILD: DIFFERS"; exit 1; fi
 # the code a folder needs to rebuild itself (flat; figroot.py resolves the layout)
 SCRIPTS=("$HERE/make_figures.py" "$HERE/make_figures_w21.py" "$HERE/make_figures_w22.py"
@@ -78,7 +79,7 @@ for D in "$DEST" "$DEST2"; do
   cp "$TMP/sha_a.txt" "$D/SHA256-w22-build1.txt"
   cp "$TMP/sha_b.txt" "$D/SHA256-w22-build2.txt"
   # every file this build produced, re-hashed at its destination (other spokes' files are not ours)
-  (cd "$D" && awk '{print $2}' "$TMP/sha_a.txt" | xargs shasum -a 256 | sort -k2) > "$TMP/sha_inst.txt"
+  (cd "$D" && awk '{print $2}' "$TMP/sha_a.txt" | xargs shasum -a 256 | LC_ALL=C sort -k2) > "$TMP/sha_inst.txt"
   if diff "$TMP/sha_a.txt" "$TMP/sha_inst.txt"; then echo "INSTALLED BYTE-IDENTICAL: $D"
   else echo "INSTALL DIFFERS: $D"; exit 1; fi
 done
